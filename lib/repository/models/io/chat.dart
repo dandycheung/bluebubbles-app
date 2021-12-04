@@ -107,8 +107,7 @@ Future<List<Attachment>> getAttachmentsIsolate(List<dynamic> stuff) async {
     /// Query the [messageBox] for all the message IDs and order by date
     /// descending
     final query2 = (messageBox.query(Message_.id.oneOf(messageIds))
-          ..order(Message_.dateCreated, flags: Order.descending)
-          ..order(Message_.originalROWID, flags: Order.descending))
+          ..order(Message_.dateCreated, flags: Order.descending))
         .build();
     final messages = query2.find();
     query2.close();
@@ -161,8 +160,7 @@ Future<List<Message>> getMessagesIsolate(List<dynamic> stuff) async {
     final query = (messageBox.query(Message_.id.oneOf(messageIds).and(includeDeleted
             ? Message_.dateDeleted.isNull().or(Message_.dateDeleted.notNull())
             : Message_.dateDeleted.isNull()))
-          ..order(Message_.dateCreated, flags: Order.descending)
-          ..order(Message_.originalROWID, flags: Order.descending))
+          ..order(Message_.dateCreated, flags: Order.descending))
         .build();
     query
       ..limit = limit
@@ -829,8 +827,7 @@ class Chat {
       final query = (messageBox.query(Message_.id.oneOf(messageIds).and(includeDeleted
               ? Message_.dateDeleted.isNull().or(Message_.dateDeleted.notNull())
               : Message_.dateDeleted.isNull()))
-            ..order(Message_.dateCreated, flags: Order.descending)
-            ..order(Message_.originalROWID, flags: Order.descending))
+            ..order(Message_.dateCreated, flags: Order.descending))
           .build();
       query
         ..limit = limit
