@@ -17,7 +17,6 @@ import 'package:bluebubbles/objectbox.g.dart';
 import 'package:bluebubbles/repository/models/io/attachment.dart';
 import 'package:bluebubbles/repository/models/io/join_tables.dart';
 import 'package:bluebubbles/socket_manager.dart';
-import 'package:collection/collection.dart';
 import 'package:faker/faker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
