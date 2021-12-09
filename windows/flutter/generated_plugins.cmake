@@ -6,7 +6,6 @@ list(APPEND FLUTTER_PLUGIN_LIST
   bitsdojo_window_windows
   connectivity_plus_windows
   desktop_drop
-  launch_at_startup
   maps_launcher
   objectbox_flutter_libs
   printing
