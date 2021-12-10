@@ -130,27 +130,27 @@ class ThemePanel extends GetView<ThemePanelController> {
                           child: SettingsDivider(color: headerColor),
                         ),
                       ),
-                    if (!kIsWeb)
-                      SettingsTile(
-                        title: "Theming",
-                        subtitle: "Edit existing themes and create custom themes",
-                        trailing: nextIcon,
-                        onTap: () async {
-                          Navigator.of(context).push(
-                            CupertinoPageRoute(
-                              builder: (context) => ThemingPanel(),
-                            ),
-                          );
-                        },
-                        backgroundColor: tileColor,
-                      ),
-                    Container(
-                      color: tileColor,
-                      child: Padding(
-                        padding: const EdgeInsets.only(left: 65.0),
-                        child: SettingsDivider(color: headerColor),
-                      ),
-                    ),
+                    // if (!kIsWeb)
+                    //   SettingsTile(
+                    //     title: "Theming",
+                    //     subtitle: "Edit existing themes and create custom themes",
+                    //     trailing: nextIcon,
+                    //     onTap: () async {
+                    //       Navigator.of(context).push(
+                    //         CupertinoPageRoute(
+                    //           builder: (context) => ThemingPanel(),
+                    //         ),
+                    //       );
+                    //     },
+                    //     backgroundColor: tileColor,
+                    //   ),
+                    // Container(
+                    //   color: tileColor,
+                    //   child: Padding(
+                    //     padding: const EdgeInsets.only(left: 65.0),
+                    //     child: SettingsDivider(color: headerColor),
+                    //   ),
+                    // ),
                     Container(
                       decoration: BoxDecoration(
                         color: tileColor,
