@@ -217,21 +217,21 @@ class _ThemingColorOptionsListState extends State<ThemingColorOptionsList> {
                   subtitle:
                       "Make the background of the messages view an animated gradient based on the background color and the primary color",
                 )),
-              SliverGrid(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    return ThemingColorSelector(
-                      currentTheme: currentTheme!,
-                      entry: currentTheme!.entries[index],
-                      editable: editable,
-                    );
-                  },
-                  childCount: ThemeColors.Colors.length, // ThemeColors.values.length,
-                ),
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: kIsDesktop ? (CustomNavigator.width(context) / 150).floor() : 2,
-                ),
-              ),
+              // SliverGrid(
+              //   delegate: SliverChildBuilderDelegate(
+              //     (context, index) {
+              //       return ThemingColorSelector(
+              //         currentTheme: currentTheme!,
+              //         entry: currentTheme!.entries[index],
+              //         editable: editable,
+              //       );
+              //     },
+              //     childCount: ThemeColors.Colors.length, // ThemeColors.values.length,
+              //   ),
+              //   gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              //     crossAxisCount: kIsDesktop ? (CustomNavigator.width(context) / 150).floor() : 2,
+              //   ),
+              // ),
               if (!currentTheme!.isPreset)
                 SliverToBoxAdapter(
                   child: TextButton(
@@ -245,8 +245,7 @@ class _ThemingColorOptionsListState extends State<ThemingColorOptionsList> {
                     onPressed: () async {
                       allThemes.removeWhere((element) => element == currentTheme);
                       currentTheme!.delete();
-                      currentTheme =
-                        widget.isDarkMode ? revertToPreviousDarkTheme() : revertToPreviousLightTheme();
+                      currentTheme = widget.isDarkMode ? revertToPreviousDarkTheme() : revertToPreviousLightTheme();
                       allThemes = ThemeObject.getThemes();
                       if (widget.isDarkMode) {
                         SettingsManager().saveSelectedTheme(context, selectedDarkTheme: currentTheme);

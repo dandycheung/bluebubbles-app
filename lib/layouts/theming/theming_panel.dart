@@ -92,33 +92,33 @@ class _ThemingPanelState extends State<ThemingPanel> {
               )
             ],
           ),
-          floatingActionButton: Padding(
-            padding: const EdgeInsets.only(bottom: .0),
-            child: FloatingActionButton(
-              backgroundColor: Colors.blue,
-              onPressed: () {
-                streamController.sink.add(null);
-              },
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  Icon(
-                    Icons.copy,
-                    color: Colors.white,
-                  ),
-                  PositionedDirectional(
-                    start: 7.5,
-                    top: 8,
-                    child: Icon(
-                      SettingsManager().settings.skin.value == Skins.iOS ? CupertinoIcons.pencil : Icons.edit,
-                      color: Colors.white,
-                      size: 12,
-                    ),
-                  ),
-                ]
-              )
-            ),
-          ),
+          // floatingActionButton: Padding(
+          //   padding: const EdgeInsets.only(bottom: .0),
+          //   child: FloatingActionButton(
+          //     backgroundColor: Colors.blue,
+          //     onPressed: () {
+          //       streamController.sink.add(null);
+          //     },
+          //     child: Stack(
+          //       alignment: Alignment.center,
+          //       children: [
+          //         Icon(
+          //           Icons.copy,
+          //           color: Colors.white,
+          //         ),
+          //         PositionedDirectional(
+          //           start: 7.5,
+          //           top: 8,
+          //           child: Icon(
+          //             SettingsManager().settings.skin.value == Skins.iOS ? CupertinoIcons.pencil : Icons.edit,
+          //             color: Colors.white,
+          //             size: 12,
+          //           ),
+          //         ),
+          //       ]
+          //     )
+          //   ),
+          // ),
           bottomSheet: Container(
             color: tileColor,
             child: TabBar(
