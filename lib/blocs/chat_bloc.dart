@@ -84,7 +84,7 @@ class ChatBloc {
     Logger.info("Fetching chats (${force ? 'forced' : 'normal'})...", tag: "ChatBloc");
 
     // Get the contacts in case we haven't
-    if (ContactManager().contacts.isEmpty) await ContactManager().getContacts();
+    if (ContactManager().contacts.isEmpty) ContactManager().getContacts().then((e) => ChatBloc().chats.refresh());
 
     _messageSubscription ??= setupMessageListener();
 
@@ -200,7 +200,8 @@ class ChatBloc {
     chat.toggleHasUnread(isUnread);
 
     // Remove from notification shade
-    if (clearNotifications) MethodChannelInterface().invokeMethod("clear-chat-notifs", {"chatGuid": chat.guid});
+    if (clearNotifications && !isUnread)
+      MethodChannelInterface().invokeMethod("clear-chat-notifs", {"chatGuid": chat.guid});
 
     updateChatPosition(chat);
   }
@@ -225,13 +226,18 @@ class ChatBloc {
         icon = contact.avatar.value;
         // Otherwise if there isn't, we use the [defaultAvatar]
       } else {
-        // If [defaultAvatar] is not loaded, load it from assets
-        if (NotificationManager().defaultAvatar == null) {
-          ByteData file = await loadAsset("assets/images/person64.png");
-          NotificationManager().defaultAvatar = file.buffer.asUint8List();
+        if (contact != null && (contact.avatar.value?.isEmpty ?? true)) {
+          icon = await ContactManager().getAvatar(contact.id);
         }
+        if (icon == null) {
+          // If [defaultAvatar] is not loaded, load it from assets
+          if (NotificationManager().defaultAvatar == null) {
+            ByteData file = await loadAsset("assets/images/person64.png");
+            NotificationManager().defaultAvatar = file.buffer.asUint8List();
+          }
 
-        icon = NotificationManager().defaultAvatar;
+          icon = NotificationManager().defaultAvatar;
+        }
       }
     } catch (ex) {
       Logger.error("Failed to load contact avatar: ${ex.toString()}");
