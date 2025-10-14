@@ -177,7 +177,7 @@ class Settings {
   List<DetailsMenuAction> get detailsMenuActions => _detailsMenuActions;
 
   // Linux settings
-  final RxBool useCustomTitleBar = RxBool(true);
+  final Rx<BBTitleBarStyle> titleBarStyle = BBTitleBarStyle.custom.obs;
 
   // Desktop settings
   final RxBool useDesktopAccent = RxBool(false);
@@ -362,7 +362,7 @@ class Settings {
       'pinRowsLandscape': pinRowsLandscape.value,
       'pinColumnsLandscape': pinColumnsLandscape.value,
       'maxAvatarsInGroupWidget': maxAvatarsInGroupWidget.value,
-      'useCustomTitleBar': useCustomTitleBar.value,
+      'titleBarStyle': titleBarStyle.value,
       'windowEffect': windowEffect.value.name,
       'windowEffectCustomOpacityLight': windowEffectCustomOpacityLight.value,
       'windowEffectCustomOpacityDark': windowEffectCustomOpacityDark.value,
@@ -500,7 +500,7 @@ class Settings {
     ss.settings.pinRowsLandscape.value = map['pinRowsLandscape'] ?? 1;
     ss.settings.pinColumnsLandscape.value = map['pinColumnsLandscape'] ?? 4;
     ss.settings.maxAvatarsInGroupWidget.value = map['maxAvatarsInGroupWidget'] ?? 4;
-    ss.settings.useCustomTitleBar.value = map['useCustomTitleBar'] ?? true;
+    ss.settings.titleBarStyle.value = map['titleBarStyle'] != null ? BBTitleBarStyle.values[map['titleBarStyle']] : BBTitleBarStyle.custom;
 
     ss.settings.showReplyField.value = map['showReplyField'] ?? true;
     ss.settings.selectedActionIndices.value = _processSelectedActionIndices(map['selectedActionIndices'], ss.settings.showReplyField.value);
@@ -643,7 +643,7 @@ class Settings {
     s.pinRowsLandscape.value = map['pinRowsLandscape'] ?? 1;
     s.pinColumnsLandscape.value = map['pinColumnsLandscape'] ?? 4;
     s.maxAvatarsInGroupWidget.value = map['maxAvatarsInGroupWidget'] ?? 4;
-    s.useCustomTitleBar.value = map['useCustomTitleBar'] ?? true;
+    s.titleBarStyle.value = map['titleBarStyle'] != null ? BBTitleBarStyle.values[map['titleBarStyle']] : BBTitleBarStyle.custom;
 
     s.showReplyField.value = map['showReplyField'] ?? true;
     s.selectedActionIndices.value = _processSelectedActionIndices(map['selectedActionIndices'], s.showReplyField.value);

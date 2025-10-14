@@ -8,6 +8,7 @@ import 'package:bluebubbles/app/wrappers/stateful_boilerplate.dart';
 import 'package:bluebubbles/app/components/avatars/contact_avatar_widget.dart';
 import 'package:bluebubbles/database/models.dart' hide PlatformFile;
 import 'package:bluebubbles/services/services.dart';
+import 'package:bluebubbles/helpers/types/constants.dart';
 import 'package:collection/collection.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/cupertino.dart';
@@ -111,25 +112,46 @@ class _DesktopPanelState extends OptimizedState<DesktopPanel> {
                       ),
                     ),
                   if (Platform.isLinux)
-                    Obx(() => SettingsSwitch(
-                          onChanged: (bool val) async {
-                            ss.settings.useCustomTitleBar.value = val;
-                            await windowManager.setTitleBarStyle(val ? TitleBarStyle.hidden : TitleBarStyle.normal);
-                            saveSettings();
-                          },
-                          initialVal: ss.settings.useCustomTitleBar.value,
-                          title: "Use Custom TitleBar",
-                          subtitle:
-                              "Enable the custom titlebar. This is necessary on non-GNOME systems, and will not look good on GNOME systems. This is also necessary for 'Minimize to Tray' to work correctly.",
-                          backgroundColor: tileColor,
+                    Obx(() {
+                      if (iOS) {
+                        return const SettingsTile(
+                          title: "TitleBar Style",
                           leading: const SettingsLeadingIcon(
                             iosIcon: CupertinoIcons.macwindow,
                             materialIcon: Icons.tab_outlined,
                             containerColor: Colors.orange,
                           ),
-                        )),
+                          subtitle: 
+                            "Select the titlebar style. Native uses system window decorations and looks best on GNOME. Custom is necessary on non-GNOME systems and required for 'Minimize to Tray' to work correctly. Hidden removes all titlebar elements.",
+                        );
+                      } else {
+                        return const SizedBox.shrink();
+                      }
+                    }),
+                  if (Platform.isLinux)
+                    Obx(() => SettingsOptions<BBTitleBarStyle>(
+                      initial: ss.settings.titleBarStyle.value,
+                      onChanged: (val) async {
+                        if (val == null) return;
+                        ss.settings.titleBarStyle.value = val;
+                        await windowManager.setTitleBarStyle(val == BBTitleBarStyle.native ? TitleBarStyle.normal : TitleBarStyle.hidden);
+                        saveSettings();
+                      },
+                      options: BBTitleBarStyle.values,
+                      textProcessing: (val) => val.toString().split(".").last,
+                      // capitalize: false,
+                      title: "TitleBar Style",
+                      subtitle:
+                        "Select the titlebar style. Native uses system window decorations and looks best on GNOME. Custom is necessary on non-GNOME systems and required for 'Minimize to Tray' to work correctly. Hidden removes all titlebar elements.",
+                      secondaryColor: headerColor,
+                      leading: const SettingsLeadingIcon(
+                        iosIcon: CupertinoIcons.macwindow,
+                        materialIcon: Icons.tab_outlined,
+                        containerColor: Colors.orange,
+                      ),
+                    )),
                   Obx(() {
-                    if (ss.settings.useCustomTitleBar.value || !Platform.isLinux) {
+                    if (ss.settings.titleBarStyle.value == BBTitleBarStyle.custom || !Platform.isLinux) {
                       return Container(
                         color: tileColor,
                         child: Padding(
@@ -141,7 +163,7 @@ class _DesktopPanelState extends OptimizedState<DesktopPanel> {
                     return const SizedBox.shrink();
                   }),
                   Obx(() {
-                    if (ss.settings.useCustomTitleBar.value || !Platform.isLinux) {
+                    if (ss.settings.titleBarStyle.value == BBTitleBarStyle.custom || !Platform.isLinux) {
                       return SettingsSwitch(
                         onChanged: (bool val) async {
                           ss.settings.minimizeToTray.value = val;
@@ -161,7 +183,7 @@ class _DesktopPanelState extends OptimizedState<DesktopPanel> {
                     return const SizedBox.shrink();
                   }),
                   Obx(() {
-                    if (ss.settings.useCustomTitleBar.value) {
+                    if (ss.settings.titleBarStyle.value == BBTitleBarStyle.custom) {
                       return Container(
                         color: tileColor,
                         child: Padding(

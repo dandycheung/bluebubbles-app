@@ -182,7 +182,7 @@ dependencies:
       url: https://github.com/BlueBubblesApp/video_thumbnail.git
       ref: master
   win32: ^5.10.1
-  window_manager: ^0.4.3
+  window_manager: ^0.5.1
   windows_taskbar: ^1.1.2
 
 dependency_overrides:

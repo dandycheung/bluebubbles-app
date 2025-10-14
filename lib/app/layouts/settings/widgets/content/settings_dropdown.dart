@@ -1,3 +1,4 @@
+import 'package:bluebubbles/app/layouts/settings/widgets/content/settings_leading_icon.dart';
 import 'package:bluebubbles/helpers/types/constants.dart';
 import 'package:bluebubbles/helpers/ui/theme_helpers.dart';
 import 'package:bluebubbles/services/services.dart';
@@ -21,6 +22,7 @@ class SettingsOptions<T extends Object> extends StatelessWidget {
     this.secondaryColor,
     this.useCupertino = true,
     this.clampWidth = true,
+    this.leading,
   });
   final String title;
   final void Function(T?) onChanged;
@@ -35,6 +37,7 @@ class SettingsOptions<T extends Object> extends StatelessWidget {
   final Color? secondaryColor;
   final bool useCupertino;
   final bool clampWidth;
+  final SettingsLeadingIcon? leading;
 
   @override
   Widget build(BuildContext context) {
@@ -70,8 +73,13 @@ class SettingsOptions<T extends Object> extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: ns.width(context) * 3 / 5, minWidth: ns.width(context) / 5),
+            if (leading != null) ...[
+              Padding(
+                padding: const EdgeInsets.only(left: 5.0, right: 10.0),
+                child: leading,
+              ),
+            ],
+            Expanded(
               child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -92,7 +100,6 @@ class SettingsOptions<T extends Object> extends StatelessWidget {
                   ]),
             ),
             const SizedBox(width: 15),
-            if (clampWidth) const Spacer(),
             Builder(
               builder: (context) {
                 final widget = Container(
@@ -129,11 +136,18 @@ class SettingsOptions<T extends Object> extends StatelessWidget {
                 );
                 if (clampWidth) {
                   return ConstrainedBox(
-                    constraints: BoxConstraints(maxWidth: ns.width(context) * 2 / 5 - 47),
+                    constraints: BoxConstraints(
+                      maxWidth: leading != null 
+                        ? ns.width(context) * 2 / 5 - 80  // Account for leading icon space
+                        : ns.width(context) * 2 / 5 - 47
+                    ),
                     child: widget,
                   );
                 } else {
-                  return Expanded(
+                  return ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: leading != null ? 200 : 250,  // Reasonable max width
+                    ),
                     child: widget,
                   );
                 }
