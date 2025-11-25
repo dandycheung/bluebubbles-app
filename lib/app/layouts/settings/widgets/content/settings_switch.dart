@@ -1,5 +1,5 @@
 import 'package:bluebubbles/app/layouts/settings/widgets/content/settings_leading_icon.dart';
-import 'package:bluebubbles/helpers/ui/theme_helpers.dart';
+import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -45,7 +45,7 @@ class SettingsSwitch extends StatelessWidget {
           ),
           trailing: Switch(
             value: initialVal,
-            activeColor: context.theme.colorScheme.primary.lightenOrDarken(15),
+            activeThumbColor: context.theme.colorScheme.primary.lightenOrDarken(15),
             onChanged: onChanged,
           ),
           subtitle: subtitle != null ? Text(

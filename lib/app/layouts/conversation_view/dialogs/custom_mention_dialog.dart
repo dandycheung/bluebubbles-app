@@ -15,7 +15,7 @@ Future<String?> showCustomMentionDialog(BuildContext context, Mentionable? menti
           actions: [
             TextButton(
               child: Text("Cancel", style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.primary)),
-              onPressed: () => Get.back(),
+              onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
             ),
             TextButton(
               child: Text("OK", style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.primary)),
@@ -25,7 +25,7 @@ Future<String?> showCustomMentionDialog(BuildContext context, Mentionable? menti
                 } else {
                   changed = mentionController.text;
                 }
-                Get.back();
+                Navigator.of(context, rootNavigator: true).pop();
               },
             ),
           ],
@@ -46,7 +46,7 @@ Future<String?> showCustomMentionDialog(BuildContext context, Mentionable? menti
                 val = mention?.handle.displayName ?? "";
               }
               changed = val;
-              Get.back();
+              Navigator.of(context, rootNavigator: true).pop();
             },
           ),
           title: Text("Custom Mention", style: context.theme.textTheme.titleLarge),

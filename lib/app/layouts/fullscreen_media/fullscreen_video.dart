@@ -225,7 +225,7 @@ class _FullscreenVideoState extends OptimizedState<FullscreenVideo> with Automat
                     children: <Widget>[
                       Video(controller: videoController, controls: (state) => Padding(
                         padding: EdgeInsets.all(!kIsWeb && !kIsDesktop ? 0 : 20).copyWith(bottom: !kIsWeb && !kIsDesktop ? 10 : 0),
-                        child: media_kit_video_controls.AdaptiveVideoControls(state),
+                        child: kIsDesktop ? media_kit_video_controls.MaterialDesktopVideoControls(state) : media_kit_video_controls.MaterialVideoControls(state),
                       ), filterQuality: FilterQuality.medium),
                       if (kIsWeb || kIsDesktop)
                         Obx(() {

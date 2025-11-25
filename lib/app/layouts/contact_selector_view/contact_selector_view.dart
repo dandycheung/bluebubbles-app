@@ -163,7 +163,7 @@ class ContactSelectorViewState extends OptimizedState<ContactSelectorView> {
                                     child: InkWell(
                                       onTap: () {
                                         widget.onSelect(contact);
-                                        Get.back();
+                                        Navigator.of(context, rootNavigator: true).pop();
                                       },
                                       child: ListTile(
                                           mouseCursor: MouseCursor.defer,

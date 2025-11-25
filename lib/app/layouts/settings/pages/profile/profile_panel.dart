@@ -59,7 +59,7 @@ class _ProfilePanelState extends OptimizedState<ProfilePanel> with WidgetsBindin
         showSnackbar("Error", "Enter a name!");
         return;
       }
-      Get.back();
+      Navigator.of(context, rootNavigator: true).pop();
       ss.settings.userName.value = nameController.text;
       await ss.settings.saveOne("userName");
       setState(() {});

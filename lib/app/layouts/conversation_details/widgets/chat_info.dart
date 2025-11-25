@@ -107,10 +107,10 @@ class _ChatInfoState extends OptimizedState<ChatInfo> {
           });
       final response = await http.setChatIcon(chat.guid, chat.customAvatarPath!);
       if (response.statusCode == 200) {
-        Get.back();
+        Navigator.of(context, rootNavigator: true).pop();
         showSnackbar("Notice", "Updated group photo successfully!");
       } else {
-        Get.back();
+        Navigator.of(context, rootNavigator: true).pop();
         showSnackbar("Error", "Failed to update group photo!");
       }
     }

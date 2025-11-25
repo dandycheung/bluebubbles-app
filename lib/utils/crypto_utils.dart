@@ -3,7 +3,7 @@ import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
-import 'package:encrypt/encrypt.dart' as encrypt;
+import 'package:encrypter_plus/encrypter_plus.dart' as encrypt;
 import 'package:tuple/tuple.dart';
 
 String encryptAESCryptoJS(String plainText, String passphrase) {

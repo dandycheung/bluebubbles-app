@@ -9,6 +9,7 @@ import 'package:bluebubbles/app/layouts/findmy/findmy_location_clipper.dart';
 import 'package:bluebubbles/app/layouts/findmy/findmy_pin_clipper.dart';
 import 'package:bluebubbles/app/wrappers/scrollbar_wrapper.dart';
 import 'package:bluebubbles/app/wrappers/theme_switcher.dart';
+import 'package:bluebubbles/app/wrappers/trackpad_bug_wrapper.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/app/layouts/settings/widgets/settings_widgets.dart';
 import 'package:bluebubbles/database/models.dart';
@@ -28,6 +29,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:maps_launcher/maps_launcher.dart';
 import 'package:sliding_up_panel2/sliding_up_panel2.dart';
 import 'package:universal_io/io.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class FindMyPage extends StatefulWidget {
   const FindMyPage({super.key});
@@ -1569,7 +1571,8 @@ class _FindMyPageState extends OptimizedState<FindMyPage> with SingleTickerProvi
   }
 
   Widget buildMap() {
-    return FlutterMap(
+    return TrackpadBugWrapper(builder: (context, bugDetected) {
+      return FlutterMap(
       mapController: mapController,
       options: MapOptions(
         initialZoom: 5.0,
@@ -1579,8 +1582,9 @@ class _FindMyPageState extends OptimizedState<FindMyPage> with SingleTickerProvi
         onTap: (_, __) => popupController.hideAllPopups(),
         // Hide popup when the map is tapped.
         keepAlive: true,
-        interactionOptions: const InteractionOptions(
+        interactionOptions: InteractionOptions(
           flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
+          forceOnlySinglePinchGesture: bugDetected,
         ),
         onMapReady: () {
           if (!completer.isCompleted) {
@@ -1654,7 +1658,16 @@ class _FindMyPageState extends OptimizedState<FindMyPage> with SingleTickerProvi
             ),
           ),
         ),
+        RichAttributionWidget(
+          attributions: [
+            // Suggested attribution for the OpenStreetMap public tile server
+            TextSourceAttribution(
+              'OpenStreetMap contributors',
+              onTap: () => launchUrl(Uri.parse('https://openstreetmap.org/copyright')),
+            ),
+          ],
+        ),
       ],
-    );
+    );});
   }
 }

@@ -48,34 +48,25 @@ Future<String?> googleOAuth(BuildContext context) async {
     }
 
     // initialize gsi
-    final gsi = GoogleSignIn(clientId: fdb.getClientId(), scopes: defaultScopes);
-    try {
-      // sign out then sign in
-      await gsi.signOut();
-      final account = await gsi.signIn();
-      if (account != null) {
+    final gsi = GoogleSignIn.instance;
+    await gsi.initialize(clientId: fdb.getClientId());
+    GoogleSignInAccount? account = await gsi.attemptLightweightAuthentication();
+    if (account == null) {
+      try {
+        // sign out then sign in
+        await gsi.signOut();
+        account = await gsi.authenticate(scopeHint: defaultScopes);
         // get access token
-        await account.clearAuthCache();
-        final auth = await account.authentication;
-        token = auth.accessToken;
-        // make sure scopes were granted on web
-        if (kIsWeb && !(await gsi.canAccessScopes(defaultScopes, accessToken: token))) {
-          final result = await gsi.requestScopes(defaultScopes);
-          if (!result) {
-            throw Exception("Scopes not granted!");
-          }
-        }
+        final auth = account.authentication;
+        token = auth.idToken;
         // error if token is not present
         if (token == null) {
           throw Exception("No access token!");
         }
-      } else {
-        // error if account is not present
-        throw Exception("No account!");
+      } catch (e, stack) {
+        Logger.error("Failed to sign in with Google (Android/Web)", error: e, trace: stack);
+        return null;
       }
-    } catch (e, stack) {
-      Logger.error("Failed to sign in with Google (Android/Web)", error: e, trace: stack);
-      return null;
     }
     // desktop implementation
   } else {
@@ -153,6 +144,7 @@ Future<void> requestPassword(BuildContext context, String serverUrl, Future<void
   final TextEditingController passController = TextEditingController();
   final RxBool enabled = false.obs;
   await showDialog(
+    barrierDismissible: false,
     context: context,
     builder: (_) {
       return Obx(
@@ -160,7 +152,7 @@ Future<void> requestPassword(BuildContext context, String serverUrl, Future<void
           actions: [
             TextButton(
               child: Text("Cancel", style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.primary)),
-              onPressed: () => Get.back(),
+              onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
             ),
             AnimatedContainer(
               decoration: BoxDecoration(
@@ -179,7 +171,7 @@ Future<void> requestPassword(BuildContext context, String serverUrl, Future<void
                     if (passController.text.isEmpty) {
                       return;
                     }
-                    Get.back();
+                    Navigator.of(context, rootNavigator: true).pop();
                   },
                 ),
               ),
@@ -203,7 +195,7 @@ Future<void> requestPassword(BuildContext context, String serverUrl, Future<void
               if (passController.text.isEmpty) {
                 return;
               }
-              Get.back();
+              Navigator.of(context, rootNavigator: true).pop();
             },
           ),
           title: Text("Enter Server Password", style: context.theme.textTheme.titleLarge),

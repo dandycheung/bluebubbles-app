@@ -25,7 +25,19 @@ import 'package:universal_html/html.dart' hide File, Platform, Navigator;
 import 'package:universal_io/io.dart';
 import 'package:window_manager/window_manager.dart';
 
-NotificationsService notif = Get.isRegistered<NotificationsService>() ? Get.find<NotificationsService>() : Get.put(NotificationsService());
+NotificationsService notif =
+    Get.isRegistered<NotificationsService>() ? Get.find<NotificationsService>() : Get.put(NotificationsService());
+
+class PendingToastItem {
+  final String? sender;
+  final String text;
+  final bool isReaction;
+  final bool isGroupEvent;
+
+  String get senderText => sender == null ? text : "$sender: $text";
+
+  PendingToastItem({required this.sender, required this.text, required this.isReaction, required this.isGroupEvent});
+}
 
 class NotificationsService extends GetxService {
   static const String NEW_MESSAGE_CHANNEL = "com.bluebubbles.new_messages";
@@ -42,26 +54,26 @@ class NotificationsService extends GetxService {
   int currentCount = 0;
 
   /// For desktop use only
-  static LocalNotification? allToast;
   static LocalNotification? failedToast;
   static LocalNotification? socketToast;
   static LocalNotification? aliasesToast;
-  static Map<String, List<LocalNotification>> notifications = {};
   static Map<String, LocalNotification> facetimeNotifications = {};
-  static Map<String, int> notificationCounts = {};
+  static Map<String, LocalNotification> activeToasts = {};
+  static Map<String, Timer> debounceTimers = {};
+  static Map<String, List<PendingToastItem>> pendingMessages = {};
   static final Lock _lock = Lock();
   static final Player desktopNotificationPlayer = Player();
 
-  /// If more than [maxChatCount] chats have notifications, all notifications will be grouped into one
-  static const maxChatCount = 2;
-  static const maxLines = 4;
+  static const int maxLines = 4;
+  static const int charsPerLineEst = 40;
 
   bool get hideContent => ss.settings.hideTextPreviews.value;
 
   Future<void> init() async {
     if (!kIsWeb && !kIsDesktop) {
       const AndroidInitializationSettings initializationSettingsAndroid = AndroidInitializationSettings('ic_stat_icon');
-      const InitializationSettings initializationSettings = InitializationSettings(android: initializationSettingsAndroid);
+      const InitializationSettings initializationSettings =
+          InitializationSettings(android: initializationSettingsAndroid);
       await flnp.initialize(initializationSettings, onDidReceiveNotificationResponse: (NotificationResponse? response) {
         if (response?.payload != null) {
           intents.openChat(response!.payload);
@@ -101,12 +113,17 @@ class NotificationsService extends GetxService {
 
     // watch for new messages and handle the notification
     if (!kIsWeb) {
-      final countQuery = (Database.messages.query()..order(Message_.id, flags: Order.descending)).watch(triggerImmediately: true);
+      final countQuery =
+          (Database.messages.query()..order(Message_.id, flags: Order.descending)).watch(triggerImmediately: true);
       countSub = countQuery.listen((event) {
         if (!ss.settings.finishedSetup.value) return;
         final newCount = event.count();
         final activeChatFetching = cm.activeChat != null ? ms(cm.activeChat!.chat.guid).isFetching : false;
-        if (ls.isAlive && (!sync.isIncrementalSyncing.value && !kIsDesktop) && !activeChatFetching && newCount > currentCount && currentCount != 0) {
+        if (ls.isAlive &&
+            (!sync.isIncrementalSyncing.value && !kIsDesktop) &&
+            !activeChatFetching &&
+            newCount > currentCount &&
+            currentCount != 0) {
           event.limit = newCount - currentCount;
           final messages = event.find();
           event.limit = 0;
@@ -115,12 +132,8 @@ class NotificationsService extends GetxService {
             message.handle = message.getHandle();
             message.attachments = List<Attachment>.from(message.dbAttachments);
           }
-          if (kIsDesktop && messages.length > 1) {
-            MessageHelper.handleSummaryNotification(messages, findExisting: false);
-          } else {
-            for (Message message in messages) {
-              MessageHelper.handleNotification(message, message.chat.target!, findExisting: false);
-            }
+          for (Message message in messages) {
+            MessageHelper.handleNotification(message, message.chat.target!, findExisting: false);
           }
         }
         currentCount = newCount;
@@ -149,7 +162,8 @@ class NotificationsService extends GetxService {
     });
   }
 
-  Future<void> createReminder(Chat? chat, Message? message, DateTime time, {String? chatTitle, String? messageText}) async {
+  Future<void> createReminder(Chat? chat, Message? message, DateTime time,
+      {String? chatTitle, String? messageText}) async {
     await flnp.zonedSchedule(
       Random().nextInt(9998) + 50000,
       chatTitle ?? 'Reminder: ${chat!.getTitle()}',
@@ -184,7 +198,8 @@ class NotificationsService extends GetxService {
     Uint8List contactIcon = message.isFromMe!
         ? personIcon
         : await avatarAsBytes(
-            participantsOverride: !chat.isGroup ? null : chat.participants.where((e) => e.address == message.handle!.address).toList(),
+            participantsOverride:
+                !chat.isGroup ? null : chat.participants.where((e) => e.address == message.handle!.address).toList(),
             chat: chat,
             quality: 256);
     if (chatIcon.isEmpty) {
@@ -195,12 +210,14 @@ class NotificationsService extends GetxService {
     }
 
     if (kIsWeb && Notification.permission == "granted") {
-      final notif = Notification(title, body: text, icon: "data:image/png;base64,${base64Encode(chatIcon)}", tag: message.guid);
+      final notif =
+          Notification(title, body: text, icon: "data:image/png;base64,${base64Encode(chatIcon)}", tag: message.guid);
       notif.onClick.listen((event) async {
         await intents.openChat(guid);
       });
     } else if (kIsDesktop) {
-      _lock.synchronized(() async => await showDesktopNotif(message, text, chat, guid, title, contactName, isGroup, isReaction));
+      _lock.synchronized(
+          () => showDesktopNotif(text, chat, title, contactName, message, isReaction, message.isGroupEvent));
     } else {
       await mcs.invokeMethod("create-incoming-message-notification", {
         "channel_id": NEW_MESSAGE_CHANNEL,
@@ -219,14 +236,16 @@ class NotificationsService extends GetxService {
     }
   }
 
-  Future<void> createIncomingFaceTimeNotification(String? callUuid, String caller, Uint8List? chatIcon, bool isAudio) async {
+  Future<void> createIncomingFaceTimeNotification(
+      String? callUuid, String caller, Uint8List? chatIcon, bool isAudio) async {
     // Set some notification defaults
     String title = caller;
     String text = "${callUuid == null ? "Incoming" : "Answer"} FaceTime ${isAudio ? 'Audio' : 'Video'} Call";
     chatIcon ??= (await rootBundle.load("assets/images/person64.png")).buffer.asUint8List();
 
     if (kIsWeb && Notification.permission == "granted") {
-      final notif = Notification(title, body: text, icon: "data:image/png;base64,${base64Encode(chatIcon)}", tag: callUuid);
+      final notif =
+          Notification(title, body: text, icon: "data:image/png;base64,${base64Encode(chatIcon)}", tag: callUuid);
       if (callUuid != null) {
         notif.onClick.listen((event) async {
           await intents.answerFaceTime(callUuid);
@@ -238,7 +257,8 @@ class NotificationsService extends GetxService {
       final numeric = callUuid?.numericOnly();
       await mcs.invokeMethod("create-incoming-facetime-notification", {
         "channel_id": FACETIME_CHANNEL,
-        "notification_id": numeric != null ? int.parse(numeric.substring(0, min(8, numeric.length))) : Random().nextInt(9998) + 1,
+        "notification_id":
+            numeric != null ? int.parse(numeric.substring(0, min(8, numeric.length))) : Random().nextInt(9998) + 1,
         "title": title,
         "body": text,
         "caller_avatar": chatIcon,
@@ -253,17 +273,13 @@ class NotificationsService extends GetxService {
       await clearDesktopFaceTimeNotif(callUuid);
     } else if (!kIsWeb) {
       final numeric = callUuid.numericOnly();
-      mcs.invokeMethod(
-        "delete-notification",
-        {
-          "notification_id": int.parse(numeric.substring(0, min(8, numeric.length))),
-          "tag": NEW_FACETIME_TAG
-        }
-      );
+      mcs.invokeMethod("delete-notification",
+          {"notification_id": int.parse(numeric.substring(0, min(8, numeric.length))), "tag": NEW_FACETIME_TAG});
     }
   }
 
-  Future<void> showPersistentDesktopFaceTimeNotif(String? callUuid, String caller, Uint8List? avatar, bool isAudio) async {
+  Future<void> showPersistentDesktopFaceTimeNotif(
+      String? callUuid, String caller, Uint8List? avatar, bool isAudio) async {
     List<String> actions = ["Answer", "Ignore"];
     List<LocalNotificationAction> nActions = actions.map((String a) => LocalNotificationAction(text: a)).toList();
     LocalNotification? toast;
@@ -326,280 +342,211 @@ class NotificationsService extends GetxService {
     facetimeNotifications.remove(callerUuid);
   }
 
-  Future<void> showDesktopNotif(Message message, String text, Chat chat, String guid, String title, String contactName, bool isGroup, bool isReaction) async {
+  void showDesktopNotif(
+      String text, Chat chat, String title, String contactName, Message message, bool isReaction, bool isGroupEvent) {
     if (kIsDesktop && !ss.settings.desktopNotifications.value) return;
-    List<int> selectedIndices = ss.settings.selectedActionIndices;
-    List<String> _actions = ss.settings.actionList;
-    final papi = ss.settings.enablePrivateAPI.value;
 
-    List<String> actions = _actions
+    final String guid = chat.guid;
+
+    pendingMessages[guid] ??= [];
+
+    pendingMessages[guid]!.add(PendingToastItem(
+      sender: chat.isGroup && !isReaction ? contactName.split(" ").first : null,
+      text: text,
+      isReaction: isReaction,
+      isGroupEvent: isGroupEvent,
+    ));
+
+    debounceTimers[guid]?.cancel();
+    debounceTimers[guid] = Timer(
+      const Duration(milliseconds: 1000),
+      () async => await _buildAndShowToast(chat, title, message),
+    );
+  }
+
+  Future<void> _buildAndShowToast(Chat chat, String title, Message message) async {
+    final String guid = chat.guid;
+    if (pendingMessages[guid]?.isEmpty ?? true) return;
+
+    Uint8List avatar = await avatarAsBytes(chat: chat, quality: 256);
+    String path = join(fs.appDocDir.path, "temp", "${randomString(8)}.png");
+    await File(path).create(recursive: true);
+    await File(path).writeAsBytes(avatar);
+
+    int usedLines = 0;
+    int numToShow = 0;
+    int numMessages = pendingMessages[guid]!.length;
+
+    final int numSenders = pendingMessages[guid]!.map((p) => p.sender).nonNulls.toSet().length;
+    for (int i = numMessages - 1; i >= 0; i--) {
+      final PendingToastItem item = pendingMessages[guid]![i];
+      final String displayText = numSenders > 1 ? item.senderText : item.text;
+      final int newLines = _estimateLines(displayText);
+      if (usedLines + newLines > maxLines) {
+        break;
+      }
+
+      usedLines += newLines;
+      numToShow += 1;
+    }
+    if (numToShow == 0) {
+      numToShow = 1;
+    }
+
+    final int overflowCount = numMessages - numToShow;
+    String body = "";
+    body += pendingMessages[guid]!
+        .slice(overflowCount)
+        .map((PendingToastItem e) => numSenders > 1 ? e.senderText : e.text)
+        .join("\n");
+
+    final PendingToastItem lastItem = pendingMessages[guid]!.last;
+
+    final papi = ss.settings.enablePrivateAPI.value;
+    final List<int> selectedIndices = ss.settings.selectedActionIndices;
+    List<String> actions = ss.settings.actionList
         .whereIndexed((i, e) => selectedIndices.contains(i))
         .map((action) => action == "Mark Read"
             ? action
-            : !isReaction && !message.isGroupEvent && papi
+            : !lastItem.isReaction && !lastItem.isGroupEvent && papi
                 ? ReactionTypes.reactionToEmoji[action]!
                 : null)
         .nonNulls
         .toList();
 
     bool showMarkRead = actions.contains("Mark Read");
-
     List<LocalNotificationAction> nActions = actions.map((String a) => LocalNotificationAction(text: a)).toList();
 
-    LocalNotification? toast;
+    activeToasts[guid]?.close();
 
-    notifications.removeWhere((key, value) => value.isEmpty);
-    notifications[guid] ??= [];
-    notificationCounts[guid] = (notificationCounts[guid] ?? 0) + 1;
-
-    Iterable<String> _chats = notifications.keys.toList();
-
-    if (_chats.length > maxChatCount) {
-      return await showSummaryNotifDesktop(notificationCounts.values.sum, _chats, showMarkRead);
+    String displayTitle;
+    if (numSenders == 1 && !lastItem.isReaction && !lastItem.isGroupEvent) {
+      displayTitle = "$title: ${lastItem.sender}";
+    } else {
+      displayTitle = title;
     }
 
-    Uint8List avatar = await avatarAsBytes(chat: chat, quality: 256);
+    final LocalNotification toast = LocalNotification(
+      type: LocalNotificationType.imageAndText03,
+      imagePath: path,
+      title: displayTitle,
+      body: body,
+      attributionText: overflowCount > 0 ? "+$overflowCount earlier message${overflowCount > 1 ? "s" : ""}\n" : null,
+      duration: LocalNotificationDuration.long,
+      actions: numMessages > 1
+          ? showMarkRead
+              ? [LocalNotificationAction(text: "Mark $numMessages Messages Read")]
+              : []
+          : nActions,
+      hasInput: ss.settings.showReplyField.value,
+      inputPlaceholder: "Type a reply...",
+      inputButtonText: "Reply",
+      systemSound: LocalNotificationSound.sms,
+      soundOption: ss.settings.desktopNotificationSoundPath.value != null
+          ? LocalNotificationSoundOption.silent
+          : LocalNotificationSoundOption.defaultOption,
+    );
 
-    // Create a temp file with the avatar
-    String path = join(fs.appDocDir.path, "temp", "${randomString(8)}.png");
-    await File(path).create(recursive: true);
-    await File(path).writeAsBytes(avatar);
+    activeToasts[guid] = toast;
 
-    const int charsPerLineEst = 30;
+    _attachToastHandlers(toast, chat, message, path, actions, numMessages > 1);
 
-    bool combine = false;
-    bool multiple = false;
-    String? sender;
-    RegExp re = RegExp("\n");
-    if (isGroup && !message.isGroupEvent && !isReaction) {
-      Contact? contact = message.handle != null ? cs.getContact(message.handle!.address) : null;
-      sender = contact?.displayName.split(" ")[0];
-    }
-    int newLines = (((sender == null ? 0 : "$sender: ".length) + text.length) / charsPerLineEst).ceil() + re.allMatches(text).length;
-    String body = "";
-    int count = 0;
-    for (LocalNotification _toast in notifications[guid]!) {
-      if (newLines + ((_toast.body ?? "").length ~/ charsPerLineEst).ceil() + re.allMatches("${_toast.body}\n").length <= maxLines) {
-        if (isGroup && count == 0 && notifications[guid]!.isNotEmpty && _toast.title.length > "$title: ".length) {
-          String name = _toast.title.substring("$title: ".length).split(" ")[0];
-          body += "$name: ";
-        }
-        body += "${_toast.body}\n";
-        count += int.tryParse(_toast.subtitle ?? "1") ?? 1;
-        multiple = true;
-      } else {
-        combine = true;
-      }
-    }
-    if (isGroup && sender != null) {
-      body += "$sender: ";
-    }
-    body += text;
-    count += 1;
+    await playDesktopNotificationSound();
 
-    if (!combine && (notificationCounts[guid]! == count)) {
-      bool toasted = false;
-      for (LocalNotification _toast in List.from(notifications[guid]!)) {
-        if (_toast.body != body) {
-          await _toast.close();
-        } else {
-          toasted = true;
-        }
-      }
-      if (toasted) return;
-      toast = LocalNotification(
-        type: LocalNotificationType.imageAndText03,
-        imagePath: path,
-        title: isGroup && count == 1 && !isReaction && !message.isGroupEvent ? "$title: $contactName" : title,
-        subtitle: "$count",
-        body: sender != null && count == 1 ? body.split("$sender: ")[1] : body,
-        duration: LocalNotificationDuration.long,
-        actions: notifications[guid]!.isNotEmpty
-            ? showMarkRead
-                ? [LocalNotificationAction(text: "Mark ${notificationCounts[guid]!} Messages Read")]
-                : []
-            : nActions,
-        hasInput: ss.settings.showReplyField.value,
-        inputPlaceholder: "Type a reply...",
-        inputButtonText: "Reply",
-        systemSound: LocalNotificationSound.sms,
-        soundOption: ss.settings.desktopNotificationSoundPath.value != null ? LocalNotificationSoundOption.silent : LocalNotificationSoundOption.defaultOption,
-      );
-      notifications[guid]!.add(toast);
+    await toast.show();
+  }
 
-      toast.onClick = () async {
-        notifications[guid]!.remove(toast);
-        notificationCounts[guid] = 0;
+  int _estimateLines(String text) {
+    return (text.length / charsPerLineEst).ceil() + "\n".allMatches(text).length;
+  }
 
-        Chat? chat = Chat.findOne(guid: guid);
-        if (chat == null) {
-          await windowManager.show();
-          return;
-        }
+  void _attachToastHandlers(LocalNotification toast, Chat chat, Message message, String avatarPath,
+      List<String> actions, bool multipleMessages) {
+    toast.onClick = () async {
+      _cleanNotificationState(chat.guid);
+      await _openChat(chat);
+      await windowManager.show();
+      _deleteTempFile(avatarPath);
+    };
 
-        if (ChatManager().activeChat?.chat.guid != guid && Get.context != null) {
-          ns.pushAndRemoveUntil(
-            Get.context!,
-            ConversationView(chat: chat),
-            (route) => route.isFirst,
-          );
-        }
-
-        await windowManager.show();
-      };
-
-      toast.onClickAction = (index) async {
-        notifications[guid]!.remove(toast);
-        notificationCounts[guid] = 0;
-
-        Chat? chat = Chat.findOne(guid: guid);
-        if (chat == null) return;
-        if (actions[index] == "Mark Read" || multiple) {
-          chat.toggleHasUnread(false);
-          EventDispatcher().emit('refresh', null);
-        } else if (ss.settings.enablePrivateAPI.value) {
-          String reaction = ReactionTypes.emojiToReaction[actions[index]]!;
-          Message _message = Message(
-            associatedMessageGuid: message.guid,
-            associatedMessageType: reaction,
-            associatedMessagePart: 0,
-            dateCreated: DateTime.now(),
-            handleId: 0,
-          );
-          _message.generateTempGuid();
-          outq.queue(
-            OutgoingItem(
-              type: QueueType.sendMessage,
-              chat: chat,
-              message: _message,
-              selected: message,
-              reaction: reaction,
-            ),
-          );
-        }
-
-        if (await File(path).exists()) {
-          await File(path).delete();
-        }
-      };
-
-      toast.onInput = (text) async {
-        notifications[guid]?.remove(toast);
-        notificationCounts[guid] = 0;
-
-        Chat? chat = Chat.findOne(guid: guid);
-        if (chat == null) return;
-
-        Message _message = Message(
+    toast.onClickAction = (index) {
+      _cleanNotificationState(chat.guid);
+      if (actions[index] == "Mark Read" || multipleMessages) {
+        chat.toggleHasUnread(false);
+        EventDispatcher().emit('refresh', null);
+      } else if (ss.settings.enablePrivateAPI.value) {
+        final String reaction = ReactionTypes.emojiToReaction[actions[index]]!;
+        final Message _message = Message(
+          associatedMessageGuid: message.guid!,
+          associatedMessageType: reaction,
+          associatedMessagePart: 0,
           dateCreated: DateTime.now(),
           handleId: 0,
-          text: text,
-          hasDdResults: true,
         );
-
         _message.generateTempGuid();
-
         outq.queue(
           OutgoingItem(
             type: QueueType.sendMessage,
             chat: chat,
             message: _message,
+            selected: message,
+            reaction: reaction,
           ),
         );
-      };
-
-      toast.onClose = (reason) async {
-        notifications[guid]?.remove(toast);
-        if (reason != LocalNotificationCloseReason.unknown) {
-          notificationCounts[guid] = 0;
-        }
-        if (await File(path).exists()) {
-          await File(path).delete();
-        }
-      };
-    } else {
-      String body = "${notificationCounts[guid]!} messages";
-
-      bool toasted = false;
-      for (LocalNotification _toast in List.from(notifications[guid]!)) {
-        if (_toast.body != body) {
-          await _toast.close();
-        } else {
-          toasted = true;
-        }
       }
-      if (toasted) return;
+      _deleteTempFile(avatarPath);
+    };
 
-      notifications[guid] = [];
-      toast = LocalNotification(
-        type: LocalNotificationType.imageAndText02,
-        imagePath: path,
-        title: title,
-        body: body,
-        duration: LocalNotificationDuration.short,
-        actions: showMarkRead ? [LocalNotificationAction(text: "Mark Read")] : [],
-        systemSound: LocalNotificationSound.sms,
-        soundOption: ss.settings.desktopNotificationSoundPath.value != null ? LocalNotificationSoundOption.silent : LocalNotificationSoundOption.defaultOption,
+    toast.onInput = (text) {
+      _cleanNotificationState(chat.guid);
+      final Message _message = Message(
+        dateCreated: DateTime.now(),
+        handleId: 0,
+        text: text,
+        hasDdResults: true,
       );
-      notifications[guid]!.add(toast);
 
-      toast.onClick = () async {
-        notifications[guid]!.remove(toast);
-        notificationCounts[guid] = 0;
+      _message.generateTempGuid();
 
-        // Show window and open the right chat
-        Chat? chat = Chat.findOne(guid: guid);
-        if (chat == null) {
-          await windowManager.show();
-          return;
-        }
+      outq.queue(
+        OutgoingItem(
+          type: QueueType.sendMessage,
+          chat: chat,
+          message: _message,
+        ),
+      );
 
-        if (ChatManager().activeChat?.chat.guid != guid && Get.context != null) {
-          ns.pushAndRemoveUntil(
-            Get.context!,
-            ConversationView(chat: chat),
-            (route) => route.isFirst,
-          );
-        }
+      _deleteTempFile(avatarPath);
+    };
 
-        await windowManager.show();
+    toast.onClose = (reason) async {
+      if (reason != LocalNotificationCloseReason.unknown) {
+        _cleanNotificationState(chat.guid);
+      }
 
-        if (await File(path).exists()) {
-          await File(path).delete();
-        }
-      };
+      _deleteTempFile(avatarPath);
+    };
+  }
 
-      toast.onClickAction = (index) async {
-        notifications[guid]!.remove(toast);
-        notificationCounts[guid] = 0;
+  void _cleanNotificationState(String guid) {
+    activeToasts.remove(guid);
+  }
 
-        Chat? chat = Chat.findOne(guid: guid);
-        if (chat == null) {
-          return;
-        }
-
-        chat.toggleHasUnread(false);
-        EventDispatcher().emit('refresh', null);
-
-        if (await File(path).exists()) {
-          await File(path).delete();
-        }
-      };
-
-      toast.onClose = (reason) async {
-        notifications[guid]!.remove(toast);
-        if (reason != LocalNotificationCloseReason.unknown) {
-          notificationCounts[guid] = 0;
-          notifications.remove(guid);
-        }
-        if (await File(path).exists()) {
-          await File(path).delete();
-        }
-      };
+  Future<void> _openChat(Chat chat) async {
+    if (cm.isChatActive(chat.guid) && Get.context != null) {
+      ns.pushAndRemoveUntil(
+        Get.context!,
+        ConversationView(chat: chat),
+        (route) => route.isFirst,
+      );
     }
+  }
 
-    await playDesktopNotificationSound();
-    await toast.show();
+  void _deleteTempFile(String path) async {
+    final File file = File(path);
+    if (file.existsSync()) {
+      file.deleteSync();
+    }
   }
 
   Future<void> playDesktopNotificationSound() async {
@@ -610,56 +557,6 @@ class NotificationsService extends GetxService {
       await desktopNotificationPlayer.setVolume(ss.settings.desktopNotificationSoundVolume.value.toDouble());
       await desktopNotificationPlayer.open(Media(ss.settings.desktopNotificationSoundPath.value!));
     }
-  }
-
-  Future<void> showSummaryNotifDesktop(int count, Iterable<String> _chats, bool showMarkRead) async {
-    for (String chat in _chats) {
-      for (LocalNotification _toast in (notifications[chat] ?? [])) {
-        await _toast.close();
-      }
-      notifications[chat] = [];
-    }
-
-    await allToast?.close();
-
-    String title = "$count messages";
-    String body = "from ${_chats.length} chat${_chats.length == 1 ? "" : "s"}";
-
-    // Don't create notification for no reason
-    if (allToast?.title == title && allToast?.body == body) return;
-
-    allToast = LocalNotification(
-      type: LocalNotificationType.text02,
-      title: title,
-      body: body,
-      duration: LocalNotificationDuration.short,
-      actions: showMarkRead ? [LocalNotificationAction(text: "Mark All Read")] : [],
-      systemSound: LocalNotificationSound.sms,
-      soundOption: ss.settings.desktopNotificationSoundPath.value != null ? LocalNotificationSoundOption.silent : LocalNotificationSoundOption.defaultOption,
-    );
-
-    allToast!.onClick = () async {
-      notifications = {};
-      notificationCounts = {};
-      await windowManager.show();
-    };
-
-    allToast!.onClickAction = (_) async {
-      notifications = {};
-      notificationCounts = {};
-
-      chats.markAllAsRead();
-    };
-
-    allToast!.onClose = (reason) {
-      if (reason != LocalNotificationCloseReason.unknown) {
-        notifications = {};
-        notificationCounts = {};
-      }
-    };
-
-    await playDesktopNotificationSound();
-    await allToast!.show();
   }
 
   Future<void> createSocketError() async {
@@ -714,7 +611,9 @@ class NotificationsService extends GetxService {
   Future<void> createAliasesRemovedNotification(List<String> aliases) async {
     const title = "iMessage alias deregistered!";
     const notifId = -3;
-    final text = aliases.length == 1 ? "${aliases[0]} has been deregistered!" : "The following aliases have been deregistered:\n${aliases.join("\n")}";
+    final text = aliases.length == 1
+        ? "${aliases[0]} has been deregistered!"
+        : "The following aliases have been deregistered:\n${aliases.join("\n")}";
 
     if (kIsDesktop) {
       if (aliasesToast?.body == text) {
@@ -737,31 +636,28 @@ class NotificationsService extends GetxService {
 
       await aliasesToast!.show();
     } else {
-        final notifs = await flnp.getActiveNotifications();
+      final notifs = await flnp.getActiveNotifications();
 
-        //Already have this notification
-        if (notifs.firstWhereOrNull((n) => n.id == notifId && n.body == text) != null) {
-          return;
-        }
+      //Already have this notification
+      if (notifs.firstWhereOrNull((n) => n.id == notifId && n.body == text) != null) {
+        return;
+      }
 
-        await flnp.show(
-          notifId,
-          title,
-          text,
-          NotificationDetails(
-            android: AndroidNotificationDetails(
-              ERROR_CHANNEL,
-              'Errors',
+      await flnp.show(
+        notifId,
+        title,
+        text,
+        NotificationDetails(
+          android: AndroidNotificationDetails(ERROR_CHANNEL, 'Errors',
               channelDescription: 'Displays message send failures, connection failures, and more',
               priority: Priority.max,
               importance: Importance.max,
               color: HexColor("4990de"),
               ongoing: false,
               onlyAlertOnce: false,
-              styleInformation: const BigTextStyleInformation('')
-            ),
-          ),
-        );
+              styleInformation: const BigTextStyleInformation('')),
+        ),
+      );
     }
   }
 
@@ -805,7 +701,7 @@ class NotificationsService extends GetxService {
       return;
     }
     await flnp.show(
-      (chat.id!  + 75000) * (scheduled ? -1 : 1),
+      (chat.id! + 75000) * (scheduled ? -1 : 1),
       title,
       subtitle,
       NotificationDetails(
@@ -842,13 +738,11 @@ class NotificationsService extends GetxService {
 
   Future<void> clearDesktopNotificationsForChat(String chatGuid) async {
     await _lock.synchronized(() async {
-      if (!notifications.containsKey(chatGuid)) return;
-      List<LocalNotification> toasts = [...notifications[chatGuid]!];
-      for (LocalNotification toast in toasts) {
-        await toast.close();
-      }
-      notifications.remove(chatGuid);
-      notificationCounts[chatGuid] = 0;
+      await activeToasts[chatGuid]?.close();
+      _cleanNotificationState(chatGuid);
+      debounceTimers[chatGuid]?.cancel();
+      debounceTimers.remove(chatGuid);
+      pendingMessages.remove(chatGuid);
     });
   }
 }

@@ -8,23 +8,23 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:metadata_fetch/metadata_fetch.dart';
-import 'package:share_plus/share_plus.dart' as sp;
+import 'package:share_plus/share_plus.dart';
 import 'package:tuple/tuple.dart';
 import 'package:universal_io/io.dart';
 
 class Share {
   /// Share a file with other apps.
-  static void file(String subject, String filepath) async {
+  static void files(List<String> filepaths) async {
     if (kIsDesktop) {
       showSnackbar("Unsupported", "Can't share files on desktop yet!");
     } else {
-      sp.Share.shareXFiles([sp.XFile(filepath)], text: subject);
+      await SharePlus.instance.share(ShareParams(files: filepaths.map((String path) => XFile(path)).toList()));
     }
   }
 
   /// Share text with other apps.
-  static void text(String subject, String text) {
-    sp.Share.share(text, subject: subject);
+  static void text(String text) async {
+    await SharePlus.instance.share(ShareParams(text: text));
   }
 
   static Future<void> location(Chat chat) async {
@@ -49,7 +49,7 @@ class Share {
                 actions: [
                   if (!kIsDesktop || !Platform.isLinux)
                     TextButton(
-                        onPressed: () => Get.back(),
+                        onPressed: () => Navigator.of(Get.context!, rootNavigator: true).pop(),
                         child: Text("Cancel", style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.primary))),
                   if (!kIsDesktop || !Platform.isLinux)
                     TextButton(
@@ -57,7 +57,7 @@ class Share {
                         child: Text("Open Settings", style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.primary))),
                   if (kIsDesktop && Platform.isLinux)
                     TextButton(
-                        onPressed: () => Get.back(),
+                        onPressed: () => Navigator.of(Get.context!, rootNavigator: true).pop(),
                         child: Text("OK", style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.primary))),
                 ],
               ));
@@ -83,7 +83,7 @@ class Share {
                   ),
                   actions: [
                     TextButton(
-                        onPressed: () => Get.back(),
+                        onPressed: () => Navigator.of(Get.context!, rootNavigator: true).pop(),
                         child: Text("Cancel", style: Get.textTheme.bodyLarge!.copyWith(color: Get.theme.colorScheme.primary))),
                     TextButton(
                         onPressed: () async => await Geolocator.openLocationSettings(),
@@ -98,7 +98,7 @@ class Share {
 
     String? _attachmentGuid;
     String? fileName;
-    late final Uint8List bytes;
+    Uint8List? bytes;
     String? url;
     String? title;
 
@@ -109,10 +109,10 @@ class Share {
       // Build out the file we are going to send
       String _attachmentGuid = "temp-${randomString(8)}";
       String fileName = "$_attachmentGuid-CL.loc.vcf";
-      final bytes = Uint8List.fromList(utf8.encode(vcfString));
-      final meta = await MetadataFetch.extract(
-          "https://maps.apple.com/?ll=${_locationData.latitude},${_locationData.longitude}&q=${_locationData.latitude},${_locationData.longitude}");
-      String url = meta!.image!;
+      Uint8List bytes = Uint8List.fromList(utf8.encode(vcfString));
+
+      Metadata meta = await MetadataHelper.getLocationMetadata(_locationData);
+      String url = meta.image!;
       String? title = meta.title;
 
       return Tuple5(_attachmentGuid, fileName, bytes, url, title);
@@ -181,12 +181,12 @@ class Share {
                 ),
                 actions: [
                   TextButton(
-                      onPressed: () => Get.back(),
+                      onPressed: () => Navigator.of(Get.context!, rootNavigator: true).pop(),
                       child: Text("Cancel", style: Get.textTheme.bodyLarge!.copyWith(color: Get.theme.colorScheme.primary))),
                   TextButton(
                       onPressed: () {
                         send = true;
-                        Get.back();
+                        Navigator.of(Get.context!, rootNavigator: true).pop();
                       },
                       child: Text("Send", style: Get.textTheme.bodyLarge!.copyWith(color: Get.theme.colorScheme.primary)))
                 ],
@@ -197,6 +197,7 @@ class Share {
     }
 
     if (!send) return;
+    if (bytes == null) return;
 
     final message = Message(
       guid: _attachmentGuid,
@@ -211,7 +212,7 @@ class Share {
           uti: "public.vlocation",
           bytes: bytes,
           transferName: fileName,
-          totalBytes: bytes.length,
+          totalBytes: bytes!.length,
         ),
       ],
       isFromMe: true,

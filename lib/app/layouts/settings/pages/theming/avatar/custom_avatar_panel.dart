@@ -108,7 +108,7 @@ class _CustomAvatarPanelState extends OptimizedState<CustomAvatarPanel> {
                                       file.delete();
                                       chats.chats[index].customAvatarPath = null;
                                       chats.chats[index].save(updateCustomAvatarPath: true);
-                                      Get.back();
+                                      Navigator.of(context, rootNavigator: true).pop();
                                     }),
                                 TextButton(
                                     child: Text("Set New", style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.primary)),

@@ -111,7 +111,7 @@ Future<Null> initApp(bool bubble, List<String> arguments) async {
           /* ----- TIME ZONE INITIALIZATION ----- */
           tz.initializeTimeZones();
           try {
-            tz.setLocalLocation(tz.getLocation(await FlutterTimezone.getLocalTimezone()));
+            tz.setLocalLocation(tz.getLocation((await FlutterTimezone.getLocalTimezone()).identifier));
           } catch (_) {}
 
           /* ----- MLKIT INITIALIZATION ----- */
@@ -192,10 +192,10 @@ Future<Null> initApp(bool bubble, List<String> arguments) async {
         light = tuple.item1;
         dark = tuple.item2;
 
-        runApp(Main(
+        runApp(MaterialApp(home: Main(
           lightTheme: light,
           darkTheme: dark,
-        ));
+        )));
       } else {
         runApp(FailureToStart(e: exception, s: stacktrace));
         throw Exception("$exception $stacktrace");
@@ -343,7 +343,8 @@ class Main extends StatelessWidget {
                         localAuth
                             .authenticate(
                                 localizedReason: 'Please authenticate to unlock BlueBubbles',
-                                options: const AuthenticationOptions(stickyAuth: true))
+                                persistAcrossBackgrounding: true,
+                            )
                             .then((result) {
                           isAuthing = false;
                           if (result) {
@@ -384,7 +385,8 @@ class Main extends StatelessWidget {
                                       final localAuth = LocalAuthentication();
                                       bool didAuthenticate = await localAuth.authenticate(
                                           localizedReason: 'Please authenticate to unlock BlueBubbles',
-                                          options: const AuthenticationOptions(stickyAuth: true));
+                                          persistAcrossBackgrounding: true,
+                                      );
                                       if (didAuthenticate) {
                                         controller!.authSuccess(unlock: true);
                                         if (kIsDesktop) {

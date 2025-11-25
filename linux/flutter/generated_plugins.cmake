@@ -25,12 +25,12 @@ list(APPEND FLUTTER_PLUGIN_LIST
   system_tray
   tray_manager
   url_launcher_linux
+  webcrypto
   window_manager
 )
 
 list(APPEND FLUTTER_FFI_PLUGIN_LIST
   jni
-  media_kit_native_event_loop
 )
 
 set(PLUGIN_BUNDLED_LIBRARIES)

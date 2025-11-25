@@ -31,7 +31,7 @@ class _AvatarCropState extends OptimizedState<AvatarCrop> {
         croppedData = croppedImage;
         break;
       case CropFailure(:final cause, :final stackTrace):
-        Get.back();
+        Navigator.of(context, rootNavigator: true).pop();
         showSnackbar("Error", "Failed to crop image");
         Logger.debug("Failed to crop image");
         Logger.error(cause);
@@ -51,7 +51,7 @@ class _AvatarCropState extends OptimizedState<AvatarCrop> {
       await file.writeAsBytes(croppedData);
       ss.settings.userAvatarPath.value = file.path;
       await ss.settings.saveOne("userAvatarPath");
-      Get.back();
+      Navigator.of(context, rootNavigator: true).pop();
       Navigator.of(context).pop();
       showSnackbar("Notice", "User avatar saved successfully");
     } else if (widget.index != null) {
@@ -65,7 +65,7 @@ class _AvatarCropState extends OptimizedState<AvatarCrop> {
       await file.writeAsBytes(croppedData);
       chats.chats[widget.index!].customAvatarPath = file.path;
       chats.chats[widget.index!].save(updateCustomAvatarPath: true);
-      Get.back();
+      Navigator.of(context, rootNavigator: true).pop();
       Navigator.of(context).pop();
       showSnackbar("Notice", "Custom chat avatar saved successfully");
     } else {
@@ -79,7 +79,7 @@ class _AvatarCropState extends OptimizedState<AvatarCrop> {
       await file.writeAsBytes(croppedData);
       widget.chat!.customAvatarPath = file.path;
       widget.chat!.save(updateCustomAvatarPath: true);
-      Get.back();
+      Navigator.of(context, rootNavigator: true).pop();
       Navigator.of(context).pop(widget.chat!.customAvatarPath);
       showSnackbar("Notice", "Custom chat avatar saved successfully");
     }

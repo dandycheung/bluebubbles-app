@@ -171,7 +171,7 @@ class ContactTile extends StatelessWidget {
               );
 
               http.chatParticipant("remove", chat.guid, handle.address).then((response) async {
-                Get.back();
+                Navigator.of(context, rootNavigator: true).pop();
                 Logger.info("Removed participant ${handle.address}");
                 showSnackbar("Notice", "Removed participant from chat!");
               }).catchError((err, stack) {

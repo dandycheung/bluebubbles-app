@@ -107,7 +107,7 @@ class _ChatOptionsState extends OptimizedState<ChatOptions> {
                                       file.delete();
                                       chat.customAvatarPath = null;
                                       chat.save(updateCustomAvatarPath: true);
-                                      Get.back();
+                                      Navigator.of(context, rootNavigator: true).pop();
                                     },
                                   ),
                                   TextButton(
@@ -374,7 +374,7 @@ class _ChatOptionsState extends OptimizedState<ChatOptions> {
                           .reversed
                           .where((e) => e.dateCreated!.isAfter(date));
                       if (messages.isEmpty) {
-                        Get.back();
+                        Navigator.of(context, rootNavigator: true).pop();
                         showSnackbar("Error", "No messages found!");
                         return;
                       }
@@ -398,7 +398,7 @@ class _ChatOptionsState extends OptimizedState<ChatOptions> {
                       File file = File(filePath);
                       await file.create(recursive: true);
                       await file.writeAsString(lines.join('\n'));
-                      Get.back();
+                      Navigator.of(context, rootNavigator: true).pop();
                       showSnackbar("Success", "Saved transcript to the downloads folder");
                     },
                     onLongPress: () async {
@@ -426,7 +426,7 @@ class _ChatOptionsState extends OptimizedState<ChatOptions> {
                           .reversed
                           .where((e) => e.dateCreated!.isAfter(date));
                       if (messages.isEmpty) {
-                        Get.back();
+                        Navigator.of(context, rootNavigator: true).pop();
                         showSnackbar("Error", "No messages found!");
                         return;
                       }
@@ -510,7 +510,7 @@ class _ChatOptionsState extends OptimizedState<ChatOptions> {
                       File file = File(filePath);
                       await file.create(recursive: true);
                       await file.writeAsBytes(await doc.save());
-                      Get.back();
+                      Navigator.of(context, rootNavigator: true).pop();
                       showSnackbar("Success", "Saved transcript to the downloads folder");
                     },
                   ),

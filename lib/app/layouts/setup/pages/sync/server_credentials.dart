@@ -29,7 +29,7 @@ class _ServerCredentialsState extends OptimizedState<ServerCredentials> {
   final TextEditingController urlController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   final controller = Get.find<SetupViewController>();
-  final FocusNode focusNode = FocusNode();
+  final FocusScopeNode focusScopeNode = FocusScopeNode(traversalEdgeBehavior: TraversalEdgeBehavior.stop);
 
   bool showLoginButtons = true;
   bool obscureText = true;
@@ -80,7 +80,8 @@ class _ServerCredentialsState extends OptimizedState<ServerCredentials> {
                         ),
                       const SizedBox(width: 10),
                       Text(googleName ?? "Unknown",
-                          style: context.theme.textTheme.bodyLarge!.apply(fontSizeFactor: 1.1, color: context.theme.colorScheme.onBackground)),
+                          style: context.theme.textTheme.bodyLarge!
+                              .apply(fontSizeFactor: 1.1, color: context.theme.colorScheme.onBackground)),
                     ],
                   ),
                 ),
@@ -102,7 +103,9 @@ class _ServerCredentialsState extends OptimizedState<ServerCredentials> {
                           children: [
                             Padding(
                               padding: const EdgeInsets.all(10.0),
-                              child: Text(fetchingFirebase ? "Loading Firebase projects" : "Select the Firebase project to use"),
+                              child: Text(fetchingFirebase
+                                  ? "Loading Firebase projects"
+                                  : "Select the Firebase project to use"),
                             ),
                             if (!fetchingFirebase)
                               ConstrainedBox(
@@ -112,7 +115,8 @@ class _ServerCredentialsState extends OptimizedState<ServerCredentials> {
                                 child: ListView.builder(
                                   shrinkWrap: true,
                                   itemCount: usableProjects.length,
-                                  findChildIndexCallback: (key) => findChildIndexByKey(usableProjects, key, (item) => item['projectId']),
+                                  findChildIndexCallback: (key) =>
+                                      findChildIndexByKey(usableProjects, key, (item) => item['projectId']),
                                   itemBuilder: (context, index) {
                                     return Obx(() {
                                       if (!triedConnecting[index].value) {
@@ -136,9 +140,11 @@ class _ServerCredentialsState extends OptimizedState<ServerCredentials> {
                                           title: Text.rich(TextSpan(children: [
                                             TextSpan(text: usableProjects[index]['displayName']),
                                             TextSpan(
-                                              text: " ${triedConnecting[index].value ? "${reachable[index].value ? "R" : "Unr"}eachable" : "Checking"}",
+                                              text:
+                                                  " ${triedConnecting[index].value ? "${reachable[index].value ? "R" : "Unr"}eachable" : "Checking"}",
                                               style: TextStyle(
-                                                  fontWeight: reachable[index].value ? FontWeight.bold : FontWeight.normal,
+                                                  fontWeight:
+                                                      reachable[index].value ? FontWeight.bold : FontWeight.normal,
                                                   color: triedConnecting[index].value
                                                       ? reachable[index].value
                                                           ? Colors.green
@@ -188,16 +194,16 @@ class _ServerCredentialsState extends OptimizedState<ServerCredentials> {
             ),
           if (token != null) const SizedBox(height: 10),
           Container(
-              height: 40,
-              padding: const EdgeInsets.all(2),
-              child: TextButton(
-                onPressed: () async {
-                  await showCustomHeadersDialog(context);
-                },
-                child: Text("Enter Custom Headers",
-                        style: context.theme.textTheme.bodyLarge!.apply(color: context.theme.colorScheme.primary)),
-              ),
+            height: 40,
+            padding: const EdgeInsets.all(2),
+            child: TextButton(
+              onPressed: () async {
+                await showCustomHeadersDialog(context);
+              },
+              child: Text("Enter Custom Headers",
+                  style: context.theme.textTheme.bodyLarge!.apply(color: context.theme.colorScheme.primary)),
             ),
+          ),
           const SizedBox(height: 10),
           if (token != null)
             Container(
@@ -229,7 +235,8 @@ class _ServerCredentialsState extends OptimizedState<ServerCredentials> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text("Choose a different account",
-                        style: context.theme.textTheme.bodyLarge!.apply(fontSizeFactor: 1.1, color: context.theme.colorScheme.primary)),
+                        style: context.theme.textTheme.bodyLarge!
+                            .apply(fontSizeFactor: 1.1, color: context.theme.colorScheme.primary)),
                   ],
                 ),
               ),
@@ -280,7 +287,8 @@ class _ServerCredentialsState extends OptimizedState<ServerCredentials> {
                     const SizedBox(width: 10),
                     Padding(
                       padding: const EdgeInsets.only(right: 0.0, left: 5.0),
-                      child: Text("Sign in with Google", style: context.theme.textTheme.bodyLarge!.apply(fontSizeFactor: 1.1, color: Colors.white)),
+                      child: Text("Sign in with Google",
+                          style: context.theme.textTheme.bodyLarge!.apply(fontSizeFactor: 1.1, color: Colors.white)),
                     ),
                   ],
                 ),
@@ -317,7 +325,8 @@ class _ServerCredentialsState extends OptimizedState<ServerCredentials> {
                     const SizedBox(width: 10),
                     Padding(
                       padding: const EdgeInsets.only(right: 0.0, left: 5.0),
-                      child: Text("Scan QR Code", style: context.theme.textTheme.bodyLarge!.apply(fontSizeFactor: 1.1, color: Colors.white)),
+                      child: Text("Scan QR Code",
+                          style: context.theme.textTheme.bodyLarge!.apply(fontSizeFactor: 1.1, color: Colors.white)),
                     ),
                   ],
                 ),
@@ -350,7 +359,6 @@ class _ServerCredentialsState extends OptimizedState<ServerCredentials> {
                 onPressed: () async {
                   setState(() {
                     showLoginButtons = !showLoginButtons;
-                    focusNode.requestFocus();
                   });
                 },
                 child: Row(
@@ -359,7 +367,8 @@ class _ServerCredentialsState extends OptimizedState<ServerCredentials> {
                     Icon(CupertinoIcons.text_cursor, color: context.theme.colorScheme.onBackground, size: 20),
                     const SizedBox(width: 10),
                     Text("Manual entry",
-                        style: context.theme.textTheme.bodyLarge!.apply(fontSizeFactor: 1.1, color: context.theme.colorScheme.onBackground)),
+                        style: context.theme.textTheme.bodyLarge!
+                            .apply(fontSizeFactor: 1.1, color: context.theme.colorScheme.onBackground)),
                   ],
                 ),
               ),
@@ -378,73 +387,68 @@ class _ServerCredentialsState extends OptimizedState<ServerCredentials> {
                       child: Column(
                         children: [
                           const SizedBox(height: 20),
-                          Container(
-                            width: context.width * 2 / 3,
-                            child: Focus(
-                              focusNode: focusNode,
-                              onKeyEvent: (node, event) {
-                                if (event is KeyDownEvent && !HardwareKeyboard.instance.isShiftPressed && event.logicalKey == LogicalKeyboardKey.tab) {
-                                  node.nextFocus();
-                                  return KeyEventResult.handled;
-                                }
-                                return KeyEventResult.ignored;
-                              },
-                              child: TextField(
-                                cursorColor: context.theme.colorScheme.primary,
-                                autocorrect: false,
-                                autofocus: false,
-                                controller: urlController,
-                                textInputAction: TextInputAction.next,
-                                autofillHints: [AutofillHints.username, AutofillHints.url],
-                                decoration: InputDecoration(
-                                  enabledBorder: OutlineInputBorder(
-                                      borderSide: BorderSide(color: context.theme.colorScheme.outline), borderRadius: BorderRadius.circular(20)),
-                                  focusedBorder: OutlineInputBorder(
-                                      borderSide: BorderSide(color: context.theme.colorScheme.primary), borderRadius: BorderRadius.circular(20)),
-                                  labelText: "URL",
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-                          Container(
-                            width: context.width * 2 / 3,
-                            child: Focus(
-                              onKeyEvent: (node, event) {
-                                if (event is KeyDownEvent && HardwareKeyboard.instance.isShiftPressed && event.logicalKey == LogicalKeyboardKey.tab) {
-                                  node.previousFocus();
-                                  node.previousFocus(); // This is intentional. Should probably figure out why it's needed
-                                  return KeyEventResult.handled;
-                                }
-                                return KeyEventResult.ignored;
-                              },
-                              child: TextField(
-                                cursorColor: context.theme.colorScheme.primary,
-                                autocorrect: false,
-                                autofocus: false,
-                                controller: passwordController,
-                                textInputAction: TextInputAction.next,
-                                autofillHints: [AutofillHints.password],
-                                onSubmitted: (pass) => connect(urlController.text, pass),
-                                decoration: InputDecoration(
-                                  enabledBorder: OutlineInputBorder(
-                                      borderSide: BorderSide(color: context.theme.colorScheme.outline), borderRadius: BorderRadius.circular(20)),
-                                  focusedBorder: OutlineInputBorder(
-                                      borderSide: BorderSide(color: context.theme.colorScheme.primary), borderRadius: BorderRadius.circular(20)),
-                                  labelText: "Password",
-                                  contentPadding: const EdgeInsets.fromLTRB(12, 24, 40, 16),
-                                  suffixIcon: IconButton(
-                                    icon: Icon(obscureText ? Icons.visibility_off : Icons.visibility),
-                                    color: context.theme.colorScheme.outline,
-                                    onPressed: () {
-                                      setState(() {
-                                        obscureText = !obscureText;
-                                      });
-                                    },
+                          FocusScope(
+                            node: focusScopeNode,
+                            child: Column(
+                              children: [
+                                Container(
+                                  width: context.width * 2 / 3,
+                                  child: TextField(
+                                    cursorColor: context.theme.colorScheme.primary,
+                                    autocorrect: false,
+                                    autofocus: true,
+                                    controller: urlController,
+                                    textInputAction: TextInputAction.next,
+                                    autofillHints: [AutofillHints.username, AutofillHints.url],
+                                    decoration: InputDecoration(
+                                      enabledBorder: OutlineInputBorder(
+                                          borderSide: BorderSide(color: context.theme.colorScheme.outline),
+                                          borderRadius: BorderRadius.circular(20)),
+                                      focusedBorder: OutlineInputBorder(
+                                          borderSide: BorderSide(color: context.theme.colorScheme.primary),
+                                          borderRadius: BorderRadius.circular(20)),
+                                      labelText: "URL",
+                                    ),
                                   ),
                                 ),
-                                obscureText: obscureText,
-                              ),
+                                const SizedBox(height: 20),
+                                Container(
+                                  width: context.width * 2 / 3,
+                                  child: TextField(
+                                    cursorColor: context.theme.colorScheme.primary,
+                                    autocorrect: false,
+                                    autofocus: false,
+                                    controller: passwordController,
+                                    textInputAction: TextInputAction.next,
+                                    autofillHints: [AutofillHints.password],
+                                    onSubmitted: (pass) => connect(urlController.text, pass),
+                                    decoration: InputDecoration(
+                                      enabledBorder: OutlineInputBorder(
+                                          borderSide: BorderSide(color: context.theme.colorScheme.outline),
+                                          borderRadius: BorderRadius.circular(20)),
+                                      focusedBorder: OutlineInputBorder(
+                                          borderSide: BorderSide(color: context.theme.colorScheme.primary),
+                                          borderRadius: BorderRadius.circular(20)),
+                                      labelText: "Password",
+                                      contentPadding: const EdgeInsets.fromLTRB(12, 24, 40, 16),
+                                      suffixIcon: Focus(
+                                        canRequestFocus: false,
+                                        descendantsAreFocusable: false,
+                                        child: IconButton(
+                                          icon: Icon(obscureText ? Icons.visibility_off : Icons.visibility),
+                                          color: context.theme.colorScheme.outline,
+                                          onPressed: () {
+                                            setState(() {
+                                              obscureText = !obscureText;
+                                            });
+                                          },
+                                        ),
+                                      ),
+                                    ),
+                                    obscureText: obscureText,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                           const SizedBox(height: 20),
@@ -484,8 +488,8 @@ class _ServerCredentialsState extends OptimizedState<ServerCredentials> {
                                       Icon(Icons.close, color: context.theme.colorScheme.onBackground, size: 20),
                                       const SizedBox(width: 10),
                                       Text("Cancel",
-                                          style: context.theme.textTheme.bodyLarge!
-                                              .apply(fontSizeFactor: 1.1, color: context.theme.colorScheme.onBackground)),
+                                          style: context.theme.textTheme.bodyLarge!.apply(
+                                              fontSizeFactor: 1.1, color: context.theme.colorScheme.onBackground)),
                                     ],
                                   ),
                                 ),
@@ -523,7 +527,9 @@ class _ServerCredentialsState extends OptimizedState<ServerCredentials> {
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      Text("Connect", style: context.theme.textTheme.bodyLarge!.apply(fontSizeFactor: 1.1, color: Colors.white)),
+                                      Text("Connect",
+                                          style: context.theme.textTheme.bodyLarge!
+                                              .apply(fontSizeFactor: 1.1, color: Colors.white)),
                                       const SizedBox(width: 10),
                                       const Icon(Icons.arrow_forward, color: Colors.white, size: 20),
                                     ],
@@ -689,7 +695,7 @@ class _ServerCredentialsState extends OptimizedState<ServerCredentials> {
       }
     });
 
-    Get.back();
+    Navigator.of(context, rootNavigator: true).pop();
     SystemChannels.textInput.invokeMethod('TextInput.hide');
     // Unauthorized request
     if (serverResponse?.statusCode == 401) {
@@ -699,11 +705,13 @@ class _ServerCredentialsState extends OptimizedState<ServerCredentials> {
     // Server didn't even respond
     if (serverResponse?.statusCode != 200) {
       socket.forgetConnection();
-      return controller.updateConnectError("Failed to connect to $addr! Please ensure your Server's URL is accessible from your device.");
+      return controller.updateConnectError(
+          "Failed to connect to $addr! Please ensure your Server's URL is accessible from your device.");
     }
     // Ignore any other server errors unless user is using ngrok or cloudflare
     final data = fcmResponse?.data;
-    if ((data == null || isNullOrEmpty(data["data"])) && (addr.contains("ngrok.io") || addr.contains("trycloudflare.com"))) {
+    if ((data == null || isNullOrEmpty(data["data"])) &&
+        (addr.contains("ngrok.io") || addr.contains("trycloudflare.com"))) {
       return controller.updateConnectError("Firebase is required when using Ngrok or Cloudflare!");
     } else {
       try {
@@ -727,7 +735,8 @@ class _ServerCredentialsState extends OptimizedState<ServerCredentials> {
                 backgroundColor: context.theme.colorScheme.properSurface,
                 actions: <Widget>[
                   TextButton(
-                    child: Text("Close", style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.primary)),
+                    child: Text("Close",
+                        style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.primary)),
                     onPressed: () {
                       Navigator.of(context).pop();
                     },

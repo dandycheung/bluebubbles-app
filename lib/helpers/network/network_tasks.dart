@@ -14,6 +14,8 @@ import 'package:network_tools/network_tools.dart'
     if (dart.library.html) 'package:bluebubbles/models/html/network_tools.dart';
 
 class NetworkTasks {
+  static Future<void>? _configureNetworkToolsFuture;
+
   static Future<void> onConnect() async {
     if (ss.settings.finishedSetup.value) {
       
@@ -76,7 +78,7 @@ class NetworkTasks {
                   break;
                 }
               } catch (ex) {
-                Logger.debug('Failed to connect to localhost addres: $addr');
+                Logger.debug('Failed to connect to localhost address: $addr');
               }
             }
             if (address != null) break;
@@ -93,7 +95,7 @@ class NetworkTasks {
                   break;
                 }
               } catch (ex) {
-                Logger.debug('Failed to connect to localhost addres: $addr');
+                Logger.debug('Failed to connect to localhost address: $addr');
               }
             }
             if (address != null) break;
@@ -120,7 +122,9 @@ class NetworkTasks {
     // to vendor information. That info is used to display metadata about an ActiveHost found
     // on the network via a port scan. We don't want that API call to happen on first-boot, nor
     // do we need it to.
-    await configureNetworkTools(fs.appDocDir.path, enableDebugging: kDebugMode);
+    _configureNetworkToolsFuture ??= configureNetworkTools(fs.appDocDir.path, enableDebugging: kDebugMode);
+
+    await _configureNetworkToolsFuture;
 
     Logger.debug("Falling back to port scanning");
     final wifiIP = await NetworkInfo().getWifiIP();
@@ -144,7 +148,7 @@ class NetworkTasks {
                 break;
               }
             } catch (ex) {
-              Logger.debug('Failed to connect to localhost addres: $addr');
+              Logger.debug('Failed to connect to localhost address: $addr');
             }
           }
           if (address != null) break;

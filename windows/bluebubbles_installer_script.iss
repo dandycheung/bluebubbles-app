@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "BlueBubbles"
-#define MyAppVersion "1.15.4.0"
+#define MyAppVersion "1.15.5.0"
 #define MyAppPublisher "BlueBubbles"
 #define MyAppURL "https://bluebubbles.app/"
 #define MyAppExeName "bluebubbles_app.exe"
@@ -36,15 +36,13 @@ WizardStyle=modern
 [Code]
 function InitializeSetup: Boolean;
 begin
-  if not IsMsiProductInstalled('{36F68A90-239C-34DF-B58C-64B30153CE35}', PackVersionComponents(14, 40, 33810, 0)) then begin
-    Dependency_Add('vcredist2022 (x64).exe',
-      '/passive /norestart',
-      'Visual C++ 2015-2022 Redistributable (x64)',
-      'https://aka.ms/vs/17/release/vc_redist.x64.exe',
-      '', False, False);
-  end;
+  Dependency_AddVC2015To2022();
+  Dependency_AddWebView2();
   Result := True;
 end;
+
+[Dirs]
+Name: "{app}\bluebubbles_app.exe.WebView2"; Permissions: users-modify
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"

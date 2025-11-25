@@ -160,7 +160,7 @@ class _TextFieldSuffixState extends OptimizedState<TextFieldSuffix> {
                               ),
                               onPressed: () {
                                 deleteAudioRecording(file.path!);
-                                Get.back();
+                                Navigator.of(context, rootNavigator: true).pop();
                               },
                             ),
                             TextButton(
@@ -174,7 +174,7 @@ class _TextFieldSuffixState extends OptimizedState<TextFieldSuffix> {
                                   "", "", null, null, null, true,
                                 );
                                 deleteAudioRecording(file.path!);
-                                Get.back();
+                                Navigator.of(context, rootNavigator: true).pop();
                               },
                             ),
                           ],

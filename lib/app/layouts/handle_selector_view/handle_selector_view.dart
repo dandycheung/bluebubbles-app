@@ -205,7 +205,7 @@ class HandleSelectorViewState extends OptimizedState<HandleSelectorView> {
                                     child: InkWell(
                                         onTap: () {
                                           widget.onSelect(handle);
-                                          Get.back();
+                                          Navigator.of(context, rootNavigator: true).pop();
                                         },
                                         child: ListTile(
                                             mouseCursor: MouseCursor.defer,

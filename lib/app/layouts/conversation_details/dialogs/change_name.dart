@@ -41,23 +41,23 @@ void showChangeName(Chat chat, String method, BuildContext context) {
                 );
                 final response = await http.updateChat(chat.guid, controller.text);
                 if (response.statusCode == 200) {
-                  Get.back();
-                  Get.back();
+                  Navigator.of(context, rootNavigator: true).pop();
+                  Navigator.of(context, rootNavigator: true).pop();
                   chat.changeName(controller.text);
                   showSnackbar("Notice", "Updated name successfully!");
                 } else {
-                  Get.back();
+                  Navigator.of(context, rootNavigator: true).pop();
                   showSnackbar("Error", "Failed to update name!");
                 }
               } else {
-                Get.back();
+                Navigator.of(context, rootNavigator: true).pop();
                 chat.changeName(controller.text);
               }
             },
           ),
           TextButton(
             child: Text("Cancel", style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.primary)),
-            onPressed: () => Get.back(),
+            onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
           ),
         ],
         content: TextField(

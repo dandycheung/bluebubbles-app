@@ -16,7 +16,7 @@ void showAddParticipant(BuildContext context, Chat chat) {
         actions: [
           TextButton(
             child: Text("Cancel", style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.primary)),
-            onPressed: () => Get.back(),
+            onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
           ),
           TextButton(
             child: Text("Pick Contact", style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.primary)),
@@ -131,11 +131,11 @@ void showAddParticipant(BuildContext context, Chat chat) {
               );
               final response = await http.chatParticipant("add", chat.guid, participantController.text);
               if (response.statusCode == 200) {
-                Get.back();
-                Get.back();
+                Navigator.of(context, rootNavigator: true).pop();
+                Navigator.of(context, rootNavigator: true).pop();
                 showSnackbar("Notice", "Added ${participantController.text} successfully!");
               } else {
-                Get.back();
+                Navigator.of(context, rootNavigator: true).pop();
                 showSnackbar("Error", "Failed to add ${participantController.text}!");
               }
             },

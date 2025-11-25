@@ -593,8 +593,51 @@ class ConversationTextFieldState extends CustomState<ConversationTextField, void
                         controller.showingOverlays = true;
                       }
                       Tenor tenor = Tenor(apiKey: kIsWeb ? TENOR_API_KEY : dotenv.get('TENOR_API_KEY'));
-                      TenorResult? result = await tenor.showAsBottomSheet(
+                      TextEditingController tenorController = TextEditingController();
+                      FocusNode focus = FocusNode();
+                      Future<TenorResult?> resultFuture = tenor.showAsBottomSheet(
+                        maxExtent: 0.8,
+                        minExtent: 0.5,
+                        debounce: const Duration(seconds: 1),
                         context: context,
+                        searchFieldController: tenorController,
+                        // Copied and slightly modified from source, just so I can autofocus
+                        searchFieldWidget: Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              TextField(
+                                focusNode: focus,
+                                controller: tenorController,
+                                decoration: InputDecoration(
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                    borderSide: const BorderSide(
+                                      width: 0,
+                                      style: BorderStyle.none,
+                                    ),
+                                  ),
+                                  contentPadding: const EdgeInsets.fromLTRB(28, 5, 32, 7),
+                                  filled: true,
+                                  hintStyle: const TenorSearchFieldStyle().hintStyle,
+                                  hintText: "Search Tenor",
+                                  isCollapsed: true,
+                                  isDense: true,
+                                ),
+                                style: context.theme.textTheme.bodyMedium!,
+                              ),
+                              const Positioned(
+                                left: 4,
+                                child: Icon(
+                                  Icons.search,
+                                  color: Color(0xFF8A8A86),
+                                  size: 22,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                         style: TenorStyle(
                           color: context.theme.colorScheme.properSurface,
                           attributionStyle: TenorAttributionStyle(brightnes: context.theme.brightness),
@@ -610,11 +653,10 @@ class ConversationTextFieldState extends CustomState<ConversationTextField, void
                             labelColor: context.theme.colorScheme.onSurface,
                             unselectedLabelColor: context.theme.colorScheme.onSurface.withValues(alpha: 0.5),
                           ),
-                          searchFieldStyle: TenorSearchFieldStyle(
-                            fillColor: context.theme.colorScheme.properSurface,
-                          ),
                         ),
                       );
+                      focus.requestFocus();
+                      TenorResult? result = await resultFuture;
                       if (kIsDesktop || kIsWeb) {
                         controller.showingOverlays = false;
                       }
@@ -862,7 +904,6 @@ class TextFieldComponent extends StatefulWidget {
   State<StatefulWidget> createState() => TextFieldComponentState();
 }
 
-
 class TextFieldComponentState extends State<TextFieldComponent> {
   late final ConversationViewController? controller;
   late final FocusNode? focusNode;
@@ -873,6 +914,7 @@ class TextFieldComponentState extends State<TextFieldComponent> {
   late final Future<void> Function({String? effect}) sendMessage;
 
   late final ValueNotifier<bool> isRecordingNotifier;
+
   TextFieldComponentState() : isRecordingNotifier = ValueNotifier<bool>(false);
 
   @override
@@ -1169,27 +1211,70 @@ class TextFieldComponentState extends State<TextFieldComponent> {
     if ((kIsWeb || Platform.isWindows || Platform.isLinux) &&
         (ev.physicalKey == PhysicalKeyboardKey.keyV || ev.logicalKey == LogicalKeyboardKey.keyV) &&
         HardwareKeyboard.instance.isControlPressed) {
-      Pasteboard.image.then((image) {
-        if (image != null) {
-          controller!.pickedAttachments.add(PlatformFile(
-            name: "${randomString(8)}.png",
-            bytes: image,
-            size: image.length,
-          ));
-        }
-      });
-      Pasteboard.files().then((files) {
-        for (final String path in files) {
-          final String name = basename(path);
-          final File file = File(path);
-          controller!.pickedAttachments.add(PlatformFile(
-            name: name,
-            path: path,
-            bytes: file.readAsBytesSync(),
-            size: file.lengthSync(),
-          ));
-        }
-      });
+      if (kIsDesktop) {
+        Pasteboard.files().then((files) {
+          if (files.isEmpty) {
+            Pasteboard.image.then((image) async {
+              if (image != null) {
+                controller!.pickedAttachments.add(PlatformFile(
+                  name: "image-${controller!.pickedAttachments.length + 1}.png",
+                  bytes: image,
+                  size: image.length,
+                ));
+              } else {
+                String? clipboardText = (await Clipboard.getData(Clipboard.kTextPlain))?.text;
+                if (clipboardText == null) return;
+
+                TextSelection selection = controller!.lastFocusedTextController.selection;
+                String oldText = controller!.lastFocusedTextController.text;
+                String newText = oldText.replaceRange(selection.start, selection.end, clipboardText);
+                controller!.lastFocusedTextController.value = TextEditingValue(
+                  text: newText,
+                  selection: TextSelection.fromPosition(
+                    TextPosition(offset: selection.start + clipboardText.length),
+                  ),
+                );
+              }
+            });
+          } else {
+            for (final String path in files) {
+              final String name = basename(path);
+              final File file = File(path);
+              controller!.pickedAttachments.add(PlatformFile(
+                name: name,
+                path: path,
+                bytes: file.readAsBytesSync(),
+                size: file.lengthSync(),
+              ));
+            }
+          }
+        });
+      } else {
+        // This is just web
+        Pasteboard.image.then((image) async {
+          if (image != null) {
+            controller!.pickedAttachments.add(PlatformFile(
+              name: "image-${controller!.pickedAttachments.length + 1}.png",
+              bytes: image,
+              size: image.length,
+            ));
+          } else {
+            String? clipboardText = (await Clipboard.getData(Clipboard.kTextPlain))?.text;
+            if (clipboardText == null) return;
+
+            TextSelection selection = controller!.lastFocusedTextController.selection;
+            String oldText = controller!.lastFocusedTextController.text;
+            String newText = oldText.replaceRange(selection.start, selection.end, clipboardText);
+            controller!.lastFocusedTextController.value = TextEditingValue(
+              text: newText,
+              selection: TextSelection.fromPosition(
+                TextPosition(offset: selection.start + clipboardText.length),
+              ),
+            );
+          }
+        });
+      }
+      return KeyEventResult.handled;
     }
 
     if (HardwareKeyboard.instance.isMetaPressed || HardwareKeyboard.instance.isControlPressed || HardwareKeyboard.instance.isAltPressed) {
@@ -1342,6 +1427,10 @@ class TextFieldComponentState extends State<TextFieldComponent> {
       }
       if (controller!.replyToMessage != null) {
         controller!.replyToMessage = null;
+        return KeyEventResult.handled;
+      }
+      if (controller!.pickedAttachments.isNotEmpty) {
+        controller!.pickedAttachments.clear();
         return KeyEventResult.handled;
       }
     }

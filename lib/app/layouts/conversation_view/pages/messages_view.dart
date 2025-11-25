@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:math';
 
-import 'package:audio_waveforms/audio_waveforms.dart';
 import 'package:bluebubbles/app/layouts/conversation_view/widgets/message/message_holder.dart';
 import 'package:bluebubbles/app/layouts/conversation_view/widgets/message/typing/typing_indicator.dart';
 import 'package:bluebubbles/database/database.dart';
@@ -259,22 +258,6 @@ class MessagesViewState extends OptimizedState<MessagesView> {
         updateReplies(updateConversation: false);
       }
     }
-
-    if (insertIndex == 0 && !message.isFromMe! && ss.settings.receiveSoundPath.value != null) {
-      if (kIsDesktop && (cm.getChatController(chat.guid)?.isActive ?? false)) {
-        Player player = Player();
-        player.stream.completed
-            .firstWhere((completed) => completed)
-            .then((_) async => Future.delayed(const Duration(milliseconds: 500), () async => await player.dispose()));
-        await player.setVolume(ss.settings.soundVolume.value.toDouble());
-        await player.open(Media(ss.settings.receiveSoundPath.value!));
-      } else if (cm.isChatActive(chat.guid)) {
-        PlayerController controller = PlayerController();
-        await controller
-            .preparePlayer(path: ss.settings.receiveSoundPath.value!, volume: ss.settings.soundVolume.value / 100)
-            .then((_) => controller.startPlayer());
-      }
-    }
   }
 
   void handleUpdatedMessage(Message message, {String? oldGuid}) {
@@ -378,10 +361,10 @@ class MessagesViewState extends OptimizedState<MessagesView> {
               fileName = basename(filePath);
             }
             if (filePath.isEmpty) {
-              filePath = "Dragged_File_${randomString(8)}";
+              filePath = "Dragged_File_${controller.pickedAttachments.length + 1}";
             }
             if (fileName.isEmpty) {
-              fileName = "Dragged_File_${randomString(8)}";
+              fileName = "Dragged_File_${controller.pickedAttachments.length + 1}";
             }
             controller.pickedAttachments.add(PlatformFile(
               path: filePath,

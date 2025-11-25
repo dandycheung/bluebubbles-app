@@ -63,7 +63,7 @@ class _ContactAvatarWidgetState extends OptimizedState<ContactAvatarWidget> {
             TextButton(
               onPressed: () async {
                 didReset = true;
-                Get.back();
+                Navigator.of(context, rootNavigator: true).pop();
                 widget.handle!.color = null;
                 widget.handle!.save(updateColor: true);
                 eventDispatcher.emit("refresh-avatar", [widget.handle?.address, widget.handle?.color]);
@@ -100,7 +100,7 @@ class _ContactAvatarWidgetState extends OptimizedState<ContactAvatarWidget> {
     if (!isNullOrEmpty(gradient) && gradient[0] == color) {
       widget.handle!.color = null;
     } else {
-      widget.handle!.color = color.value.toRadixString(16);
+      widget.handle!.color = color.toARGB32().toRadixString(16);
     }
 
     widget.handle!.save(updateColor: true);

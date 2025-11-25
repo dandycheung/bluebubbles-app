@@ -88,7 +88,7 @@ class _AttachmentPanelState extends OptimizedState<AttachmentPanel> {
                                         style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.primary)),
                                     onPressed: () async {
                                       if (pathController.text.isEmpty) {
-                                        Get.back();
+                                        Navigator.of(context, rootNavigator: true).pop();
                                         ss.settings.autoSavePicsLocation.value = "Pictures";
                                       } else {
                                         final regex = RegExp(r"^[a-zA-Z0-9-_]+");
@@ -96,7 +96,7 @@ class _AttachmentPanelState extends OptimizedState<AttachmentPanel> {
                                           showSnackbar("Error", "Enter a valid path!");
                                           return;
                                         }
-                                        Get.back();
+                                        Navigator.of(context, rootNavigator: true).pop();
                                         ss.settings.autoSavePicsLocation.value = "Pictures/${pathController.text}";
                                       }
                                       saveSettings();

@@ -263,7 +263,7 @@ class _AttachmentHolderState extends CustomState<AttachmentHolder, void, Message
                                 ) : const RoundedRectangleBorder(
                                   borderRadius: BorderRadius.all(Radius.circular(5.0)),
                                 ),
-                                useRootNavigator: true,
+                                useRootNavigator: false,
                                 openBuilder: (context, closeContainer) {
                                   return FullscreenMediaHolder(
                                     currentChat: cm.activeChat,

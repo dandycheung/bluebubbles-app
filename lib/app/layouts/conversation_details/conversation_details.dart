@@ -323,10 +323,10 @@ class _ConversationDetailsState extends OptimizedState<ConversationDetails> with
                         );
                         final response = await http.leaveChat(chat.guid);
                         if (response.statusCode == 200) {
-                          Get.back();
+                          Navigator.of(context, rootNavigator: true).pop();
                           showSnackbar("Notice", "Left chat successfully!");
                         } else {
-                          Get.back();
+                          Navigator.of(context, rootNavigator: true).pop();
                           showSnackbar("Error", "Failed to leave chat!");
                         }
                       },

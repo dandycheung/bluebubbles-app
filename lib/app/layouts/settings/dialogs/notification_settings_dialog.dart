@@ -25,7 +25,7 @@ class NotificationSettingsDialog extends StatelessWidget {
                 "Completely ${chat.muteType == "mute" ? "unmute" : "mute"} this chat",
                 style: context.theme.textTheme.bodySmall!.copyWith(color: context.theme.colorScheme.properOnSurface),),
               onTap: () async {
-                Get.back();
+                Navigator.of(context, rootNavigator: true).pop();
                 chat.toggleMute(chat.muteType != "mute");
                 chat.save();
                 updateParent.call();
@@ -39,7 +39,7 @@ class NotificationSettingsDialog extends StatelessWidget {
                 subtitle: Text("Mute certain individuals in this chat",
                   style: context.theme.textTheme.bodySmall!.copyWith(color: context.theme.colorScheme.properOnSurface),),
                 onTap: () async {
-                  Get.back();
+                  Navigator.of(context, rootNavigator: true).pop();
                   List<String?> names = chat.participants
                       .map((e) => e.displayName)
                       .toList();
@@ -109,7 +109,7 @@ class NotificationSettingsDialog extends StatelessWidget {
                                 chat.toggleMute(false);
                                 chat.muteType = "mute_individuals";
                                 chat.muteArgs = existing.join(",");
-                                Get.back();
+                                Navigator.of(context, rootNavigator: true).pop();
                                 chat.save(updateMuteType: true, updateMuteArgs: true);
                                 updateParent.call();
                                 eventDispatcher.emit("refresh", null);
@@ -133,7 +133,6 @@ class NotificationSettingsDialog extends StatelessWidget {
                     : "Mute this chat temporarily",
                 style: context.theme.textTheme.bodySmall!.copyWith(color: context.theme.colorScheme.properOnSurface),),
               onTap: () async {
-                Get.back();
                 if (shouldMuteDateTime(chat.muteArgs)) {
                   chat.muteType = null;
                   chat.muteArgs = null;
@@ -159,6 +158,7 @@ class NotificationSettingsDialog extends StatelessWidget {
                     }
                   }
                 }
+                Navigator.of(context, rootNavigator: true).pop();
               },
             ),
             ListTile(
@@ -168,7 +168,6 @@ class NotificationSettingsDialog extends StatelessWidget {
                 "Completely mute this chat, except when a message contains certain text",
                 style: context.theme.textTheme.bodySmall!.copyWith(color: context.theme.colorScheme.properOnSurface),),
               onTap: () async {
-                Get.back();
                 final TextEditingController controller = TextEditingController();
                 if (chat.muteType == "text_detection") {
                   controller.text = chat.muteArgs!;
@@ -183,6 +182,7 @@ class NotificationSettingsDialog extends StatelessWidget {
                 chat.save(updateMuteType: true, updateMuteArgs: true);
                 updateParent.call();
                 eventDispatcher.emit("refresh", null);
+                Navigator.of(context, rootNavigator: true).pop();
               },
             ),
             ListTile(
@@ -192,13 +192,13 @@ class NotificationSettingsDialog extends StatelessWidget {
               subtitle: Text("Delete your custom settings",
                 style: context.theme.textTheme.bodySmall!.copyWith(color: context.theme.colorScheme.properOnSurface),),
               onTap: () async {
-                Get.back();
                 chat.toggleMute(false);
                 chat.muteType = null;
                 chat.muteArgs = null;
                 chat.save(updateMuteType: true, updateMuteArgs: true);
                 updateParent.call();
                 eventDispatcher.emit("refresh", null);
+                Navigator.of(context, rootNavigator: true).pop();
               },
             ),
           ]),
@@ -233,6 +233,7 @@ class TextDetectionDialog extends StatelessWidget {
             ),
             TextField(
               controller: controller,
+              autofocus: true,
               decoration: InputDecoration(
                 labelText: "Enter text to whitelist...",
                 enabledBorder: OutlineInputBorder(
@@ -244,17 +245,14 @@ class TextDetectionDialog extends StatelessWidget {
                       color: context.theme.colorScheme.primary,
                     )),
               ),
+              onSubmitted: (value) => Navigator.of(context, rootNavigator: true).pop(),
             ),
           ]),
       actions: [
         TextButton(
             child: Text("OK", style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.primary)),
             onPressed: () {
-              if (controller.text.isEmpty) {
-                showSnackbar("Error", "Please enter text!");
-                return;
-              }
-              Get.back();
+              Navigator.of(context, rootNavigator: true).pop();
             }
         ),
       ],

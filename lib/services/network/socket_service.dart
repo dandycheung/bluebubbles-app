@@ -41,14 +41,18 @@ class SocketService extends GetxService {
 
     Logger.debug("Initializing socket service...");
     startSocket();
-    Connectivity().onConnectivityChanged.listen((event) {
-      if (!event.contains(ConnectivityResult.wifi) &&
-          !event.contains(ConnectivityResult.ethernet) &&
-          http.originOverride != null) {
-        Logger.info("Detected switch off wifi, removing localhost address...");
-        http.originOverride = null;
-      }
-    });
+
+    if (!kIsDesktop || !Platform.isWindows) {
+      Connectivity().onConnectivityChanged.listen((event) {
+        if (!event.contains(ConnectivityResult.wifi) &&
+            !event.contains(ConnectivityResult.ethernet) &&
+            http.originOverride != null) {
+          Logger.info("Detected switch off wifi, removing localhost address...");
+          http.originOverride = null;
+        }
+      });
+    }
+
     Logger.debug("Initialized socket service");
   }
 
@@ -99,14 +103,14 @@ class SocketService extends GetxService {
     socket.on("chat-read-status-changed", (data) => ah.handleEvent("chat-read-status-changed", data, 'DartSocket'));
     socket.on("imessage-aliases-removed", (data) => ah.handleEvent("imessage-aliases-removed", data, 'DartSocket'));
 
-    // For some reason desktop needs a separate listener
-    if (kIsDesktop) {
+    socket.connect();
+
+    if (kIsDesktop && Platform.isWindows) {
       internetConnection = InternetConnection.createInstance(
         customCheckOptions: [
           InternetCheckOption(
             uri: Uri.parse(serverAddress),
-            timeout: const Duration(seconds: 5),
-            headers: http.headers,
+            responseStatusFn: (_) => true,
           ),
         ],
         useDefaultOptions: false,
@@ -116,14 +120,12 @@ class SocketService extends GetxService {
         Logger.info("Internet status changed: $status");
         switch (status) {
           case InternetStatus.connected:
-            reconnect();
+            socket.connect();
           case InternetStatus.disconnected:
-            disconnect();
+            socket.disconnect();
         }
       });
     }
-
-    socket.connect();
   }
 
   void disconnect() {
@@ -140,8 +142,8 @@ class SocketService extends GetxService {
 
   void closeSocket() {
     if (isNullOrEmpty(serverAddress)) return;
-    socket.dispose();
     internetConnectionListener?.cancel();
+    socket.dispose();
     state.value = SocketState.disconnected;
   }
 

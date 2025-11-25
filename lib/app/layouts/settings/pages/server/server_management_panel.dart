@@ -454,10 +454,10 @@ class _ServerManagementPanelState extends CustomState<ServerManagementPanel, voi
                               context: context,
                               builder: (connectContext) => ManualEntryDialog(
                                 onConnect: () {
-                                  Get.back();
+                                  Navigator.of(context, rootNavigator: true).pop();
                                 },
                                 onClose: () {
-                                  Get.back();
+                                  Navigator.of(context, rootNavigator: true).pop();
                                 },
                               ),
                             );
@@ -468,10 +468,10 @@ class _ServerManagementPanelState extends CustomState<ServerManagementPanel, voi
                               context: context,
                               builder: (connectContext) => ManualEntryDialog(
                                 onConnect: () {
-                                  Get.back();
+                                  Navigator.of(context, rootNavigator: true).pop();
                                 },
                                 onClose: () {
-                                  Get.back();
+                                  Navigator.of(context, rootNavigator: true).pop();
                                 },
                               ),
                             );
@@ -545,7 +545,7 @@ class _ServerManagementPanelState extends CustomState<ServerManagementPanel, voi
                                 );
                                 await manager!.start();
                               } catch (_) {}
-                              Get.back();
+                              Navigator.of(context, rootNavigator: true).pop();
                               manager = null;
                               sync.isIncrementalSyncing.value = false;
                             }
@@ -656,7 +656,7 @@ class _ServerManagementPanelState extends CustomState<ServerManagementPanel, voi
                           backgroundColor: tileColor,
                           leading: const SettingsLeadingIcon(
                             iosIcon: CupertinoIcons.wifi,
-                            materialIcon: Icons.network_check,
+                            materialIcon: Icons.wifi,
                             containerColor: Colors.green,
                           ),
                           onChanged: (bool val) async {
@@ -682,7 +682,7 @@ class _ServerManagementPanelState extends CustomState<ServerManagementPanel, voi
                                               showSnackbar("Error", "Enter a valid port!");
                                               return;
                                             }
-                                            Get.back();
+                                            Navigator.of(context, rootNavigator: true).pop();
                                             ss.settings.localhostPort.value = portController.text;
                                           },
                                         ),
@@ -724,6 +724,7 @@ class _ServerManagementPanelState extends CustomState<ServerManagementPanel, voi
                               ss.settings.useLocalIpv6.value = val;
                               NetworkTasks.detectLocalhost(createSnackbar: true);
                             },
+                      leading: const SettingsLeadingIcon(iosIcon: CupertinoIcons.globe, materialIcon: Icons.network_check_outlined),
                           )
                         : const SizedBox.shrink()),
                 ]),
@@ -775,7 +776,7 @@ class _ServerManagementPanelState extends CustomState<ServerManagementPanel, voi
                               await logFile.writeAsString(response.data['data']);
 
                               try {
-                                Share.file("BlueBubbles Server Log", logFile.absolute.path);
+                                Share.files([logFile.absolute.path]);
                                 controller.fetchStatus.value = null;
                               } catch (ex) {
                                 controller.fetchStatus.value = "Failed to share file! ${ex.toString()}";

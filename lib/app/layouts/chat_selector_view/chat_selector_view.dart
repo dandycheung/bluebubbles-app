@@ -172,7 +172,7 @@ class ChatSelectorViewState extends OptimizedState<ChatSelectorView> {
                                     child: InkWell(
                                       onTap: () {
                                         widget.onSelect(chat);
-                                        Get.back();
+                                        Navigator.of(context, rootNavigator: true).pop();
                                       },
                                       child: ChatCreatorTile(
                                         key: ValueKey(chat.guid),
