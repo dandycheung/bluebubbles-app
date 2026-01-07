@@ -340,7 +340,7 @@ class ChatCreatorState extends OptimizedState<ChatCreator> {
                                     style: context.theme.textTheme.bodyLarge!
                                         .copyWith(color: context.theme.colorScheme.primary)),
                                 onPressed: () {
-                                  Navigator.of(context).pop();
+                                  Navigator.of(context, rootNavigator: true).pop();
                                 },
                               ),
                             ],
@@ -840,7 +840,7 @@ class ChatCreatorState extends OptimizedState<ChatCreator> {
                               createCompleter?.complete();
 
                               // Navigate to the new chat
-                              Navigator.of(context).pop();
+                              Navigator.of(context, rootNavigator: true).pop();
                               ns.pushAndRemoveUntil(
                                 Get.context!,
                                 ConversationView(chat: newChat),
@@ -856,7 +856,7 @@ class ChatCreatorState extends OptimizedState<ChatCreator> {
                                 ),
                               );
                             }).catchError((error) {
-                              Navigator.of(context).pop();
+                              Navigator.of(context, rootNavigator: true).pop();
                               showDialog(
                                   barrierDismissible: false,
                                   context: context,
@@ -879,7 +879,7 @@ class ChatCreatorState extends OptimizedState<ChatCreator> {
                                               style: context.theme.textTheme.bodyLarge!
                                                   .copyWith(color: Get.context!.theme.colorScheme.primary)),
                                           onPressed: () {
-                                            Navigator.of(context).pop();
+                                            Navigator.of(context, rootNavigator: true).pop();
                                           },
                                         )
                                       ],
