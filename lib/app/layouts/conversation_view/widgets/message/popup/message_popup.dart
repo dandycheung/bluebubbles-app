@@ -661,15 +661,12 @@ class _MessagePopupState extends OptimizedState<MessagePopup> with SingleTickerP
 
   void openDm() {
     popDetails();
-    Navigator.pushReplacement(
+    ns.pushAndRemoveUntil(
       context,
-      cupertino.CupertinoPageRoute(
-        builder: (BuildContext context) {
-          return ConversationView(
-            chat: dmChat!,
-          );
-        },
+      ConversationView(
+          chat: dmChat!,
       ),
+      (route) => route.isFirst,
     );
   }
 
