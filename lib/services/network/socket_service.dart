@@ -110,6 +110,7 @@ class SocketService extends GetxService {
         customCheckOptions: [
           InternetCheckOption(
             uri: Uri.parse(serverAddress),
+            timeout: Duration(milliseconds: ss.settings.apiTimeout.value),
             responseStatusFn: (_) => true,
           ),
         ],
