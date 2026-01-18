@@ -512,12 +512,6 @@ class _ServerCredentialsState extends OptimizedState<ServerCredentials> {
                                     minimumSize: WidgetStateProperty.all(const Size(30, 30)),
                                   ),
                                   onPressed: () async {
-                                    ss.settings.customHeaders.value = {};
-                                    http.onInit();
-                                    connect(urlController.text, passwordController.text);
-                                  },
-                                  onLongPress: () async {
-                                    await showCustomHeadersDialog(context);
                                     connect(urlController.text, passwordController.text);
                                   },
                                   child: Row(
