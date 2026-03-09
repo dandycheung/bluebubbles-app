@@ -46,6 +46,17 @@ class _BubbleEffectsState extends OptimizedState<BubbleEffects> {
   void initState() {
     getTween();
 
+    if (effect == MessageEffect.invisibleInk) {
+      controller = Control.play;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() {
+            size = widget.globalKey?.currentContext?.size ?? Size.zero;
+          });
+        }
+      });
+    }
+
     eventDispatcher.stream.listen((event) async {
       if (event.item1 == 'play-bubble-effect' && event.item2 == '${widget.part}/${widget.message.guid}') {
         size = widget.globalKey?.currentContext?.size ?? Size.zero;
