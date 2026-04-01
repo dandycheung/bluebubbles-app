@@ -119,11 +119,8 @@ class SocketService extends GetxService {
 
       internetConnectionListener = internetConnection!.onStatusChange.listen((InternetStatus status) {
         Logger.info("Internet status changed: $status");
-        switch (status) {
-          case InternetStatus.connected:
-            socket.connect();
-          case InternetStatus.disconnected:
-            socket.disconnect();
+        if (status == InternetStatus.disconnected) {
+            handleStatusUpdate(SocketState.error, null);
         }
       });
     }
@@ -142,8 +139,8 @@ class SocketService extends GetxService {
   }
 
   void closeSocket() {
-    if (isNullOrEmpty(serverAddress)) return;
     internetConnectionListener?.cancel();
+    if (isNullOrEmpty(serverAddress)) return;
     socket.dispose();
     state.value = SocketState.disconnected;
   }
