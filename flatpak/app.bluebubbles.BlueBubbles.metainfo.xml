@@ -66,13 +66,14 @@
   </screenshots>
 
   <releases>
-    <release date="2025-11-20" version="1.15.5.0">
+    <release date="2026-04-01" version="1.15.5.0">
       <url type="details">https://github.com/BlueBubblesApp/bluebubbles-app/releases/tag/v1.15.5%2B74-desktop</url>
       <description>
         <p>Enhancements</p>
         <ul>
           <li>Adds ability to copy attachments to the clipboard</li>
           <li>Better handling of picked attachments and pasting</li>
+          <li>iOS Emoji font now applies to the message compose box</li>
         </ul>
         <p>Fixes</p>
         <ul>
@@ -81,6 +82,8 @@
           <li>Fixes Linux attachment paste</li>
           <li>Fixes focus traversal during manual entry setup</li>
           <li>Autofocuses tenor search bar when picking a GIF</li>
+          <li>Fixes socket connection issues</li>
+          <li>Fix text detection notification settings</li>
         </ul>
       </description>
     </release>
