@@ -52,10 +52,10 @@ class _ReplyHolderState extends OptimizedState<ReplyHolder> {
                     if (iOS && reply != null)
                       const TextSpan(text: "Replying to "),
                     if (reply != null)
-                      TextSpan(
-                        text: message!.handle?.displayName ?? 'You',
-                        style: context.textTheme.bodyMedium!.copyWith(fontWeight: iOS ? FontWeight.bold : FontWeight.w400),
-                      ),
+                      TextSpan(children: MessageHelper.buildEmojiText(
+                        message!.handle?.displayName ?? 'You',
+                        context.textTheme.bodyMedium!.copyWith(fontWeight: iOS ? FontWeight.bold : FontWeight.w400),
+                      )),
                     if (date != null)
                       TextSpan(
                         text: "Scheduling for ${buildFullDate(date)}",
@@ -64,14 +64,14 @@ class _ReplyHolderState extends OptimizedState<ReplyHolder> {
                     if (!iOS)
                       const TextSpan(text: "\n"),
                     if (reply != null)
-                      TextSpan(
-                        text: "${iOS ? " - " : ""}${MessageHelper.getNotificationText(reply is MessagePart ? Message(
+                      TextSpan(children: MessageHelper.buildEmojiText(
+                        "${iOS ? " - " : ""}${MessageHelper.getNotificationText(reply is MessagePart ? Message(
                           text: reply.text,
                           subject: reply.subject,
                           attachments: reply.attachments,
                         ).mergeWith(message!) : message!)}",
-                        style: context.textTheme.bodyMedium!.copyWith(fontStyle: iOS ? FontStyle.italic : null).apply(fontSizeFactor: iOS ? 1 : 1.15),
-                      ),
+                        context.textTheme.bodyMedium!.copyWith(fontStyle: iOS ? FontStyle.italic : null).apply(fontSizeFactor: iOS ? 1 : 1.15),
+                      )),
                   ]),
                   style: context.textTheme.labelLarge!.copyWith(color: context.theme.colorScheme.properOnSurface),
                   maxLines: iOS ? 1 : 2,
