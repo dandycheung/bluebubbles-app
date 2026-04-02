@@ -21,5 +21,5 @@ chmod 644 "$tmp"
 jq '.version = "1.15.5.0"' build/linux/$folder/release/bundle/data/flutter_assets/version.json > "$tmp" && mv "$tmp" build/linux/$folder/release/bundle/data/flutter_assets/version.json
 chmod +x build/linux/$folder/release/bundle/bluebubbles
 
-tar cvf bluebubbles-linux-"$arch".tar -C build/linux/$folder/release/bundle .
-sha256sum bluebubbles-linux-"$arch".tar
+tar czvf bluebubbles-linux-"$arch".tar.gz -C build/linux/$folder/release/bundle .
+sha256sum bluebubbles-linux-"$arch".tar.gz
