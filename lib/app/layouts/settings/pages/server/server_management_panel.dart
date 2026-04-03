@@ -15,6 +15,7 @@ class ServerManagementPanelController extends StatefulController {
   final RxnDouble timeSync = RxnDouble();
   final RxMap<String, dynamic> stats = RxMap({});
   final RxBool hasAccountInfo = RxBool(false);
+  final RxBool statsLoadError = RxBool(false);
 
   // Restart trackers
   int? lastRestart;
@@ -40,6 +41,7 @@ class ServerManagementPanelController extends StatefulController {
 
   void getServerStats() async {
     hasCheckedStats.value = false;
+    statsLoadError.value = false;
     int now = DateTime.now().toUtc().millisecondsSinceEpoch;
     await HttpSvc.ping();
     int later = DateTime.now().toUtc().millisecondsSinceEpoch;
@@ -74,6 +76,7 @@ class ServerManagementPanelController extends StatefulController {
           });
         }
       }).catchError((_) {
+        statsLoadError.value = true;
         showSnackbar("Error", "Failed to load server statistics!");
       }));
 

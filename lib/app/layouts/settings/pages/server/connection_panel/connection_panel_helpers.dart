@@ -289,43 +289,118 @@ mixin ConnectionPanelHelpersMixin {
     );
   }
 
-  /// The "View Stats" tile — always present inside a SettingsSection.
+  /// The "View Stats" tile — always shows something regardless of connection/load state.
   Widget buildViewStatsSection(
     BuildContext context,
     ServerManagementPanelController controller,
     Color tileColor,
   ) {
-    return Obx(() => AnimatedSizeAndFade.showHide(
-          show: controller.serverDetails.value.supportsPrivateApiStatus && controller.stats.isNotEmpty,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              SettingsTile(
-                title: "iMessage Statistics",
-                subtitle: "Get an overview of your iMessage usage and statstics",
-                backgroundColor: tileColor,
-                leading: const SettingsLeadingIcon(
-                  iosIcon: CupertinoIcons.chart_bar_square,
-                  materialIcon: Icons.stacked_bar_chart,
-                  containerColor: Colors.green,
-                ),
-                trailing: Obx(() => Icon(
-                      SettingsSvc.settings.skin.value != Skins.Material
-                          ? CupertinoIcons.chevron_right
-                          : Icons.chevron_right,
-                      color: context.theme.colorScheme.outline.withValues(alpha: 0.5),
-                      size: 18,
-                    )),
-                onTap: () {
-                  NavigationSvc.pushSettings(
-                    context,
-                    IMessageStatsPage(parentController: controller),
-                  );
-                },
-              ),
-            ],
+    return Obx(() {
+      final hasChecked = controller.hasCheckedStats.value;
+      final supportsStats = controller.serverDetails.value.supportsPrivateApiStatus;
+      final hasStats = controller.stats.isNotEmpty;
+      final statsError = controller.statsLoadError.value;
+
+      // Stats API returned an error after server info loaded successfully.
+      if (hasChecked == true && supportsStats && statsError) {
+        return SettingsTile(
+          title: "Statistics Failed to Load",
+          subtitle: "Could not retrieve statistics from your server",
+          backgroundColor: tileColor,
+          leading: const SettingsLeadingIcon(
+            iosIcon: CupertinoIcons.exclamationmark_triangle,
+            materialIcon: Icons.warning_amber_rounded,
+            containerColor: Colors.red,
           ),
-        ));
+        );
+      }
+
+      // Loading: server info not yet fetched, or server info loaded but stats still pending.
+      if (hasChecked == false || (hasChecked == true && supportsStats && !hasStats)) {
+        return SettingsTile(
+          title: "Loading Statistics...",
+          subtitle: "Fetching statistics from your server",
+          backgroundColor: tileColor,
+          leading: const SettingsLeadingIcon(
+            iosIcon: CupertinoIcons.chart_bar_square,
+            materialIcon: Icons.stacked_bar_chart,
+            containerColor: Colors.grey,
+          ),
+          trailing: Obx(() {
+            final skin = SettingsSvc.settings.skin.value;
+            if (skin == Skins.iOS) {
+              return const CupertinoActivityIndicator();
+            }
+            return SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(
+                strokeWidth: 1.5,
+                valueColor: AlwaysStoppedAnimation<Color>(context.theme.colorScheme.primary),
+              ),
+            );
+          }),
+        );
+      }
+
+      // No connection / error loading server info.
+      if (hasChecked == null) {
+        return SettingsTile(
+          title: "Statistics Unavailable",
+          subtitle: "Could not connect to your BlueBubbles server",
+          backgroundColor: tileColor,
+          leading: const SettingsLeadingIcon(
+            iosIcon: CupertinoIcons.exclamationmark_circle,
+            materialIcon: Icons.cloud_off,
+            containerColor: Colors.red,
+          ),
+        );
+      }
+
+      // Server version does not support statistics.
+      if (!supportsStats) {
+        return SettingsTile(
+          title: "Statistics Not Supported",
+          subtitle: "Update your BlueBubbles server to view statistics",
+          backgroundColor: tileColor,
+          leading: const SettingsLeadingIcon(
+            iosIcon: CupertinoIcons.info_circle,
+            materialIcon: Icons.info_outline,
+            containerColor: Colors.orange,
+          ),
+        );
+      }
+
+      // Stats loaded and supported — show the navigation tile.
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SettingsTile(
+            title: "iMessage Statistics",
+            subtitle: "Get an overview of your iMessage usage and statistics",
+            backgroundColor: tileColor,
+            leading: const SettingsLeadingIcon(
+              iosIcon: CupertinoIcons.chart_bar_square,
+              materialIcon: Icons.stacked_bar_chart,
+              containerColor: Colors.green,
+            ),
+            trailing: Obx(() => Icon(
+                  SettingsSvc.settings.skin.value != Skins.Material
+                      ? CupertinoIcons.chevron_right
+                      : Icons.chevron_right,
+                  color: context.theme.colorScheme.outline.withValues(alpha: 0.5),
+                  size: 18,
+                )),
+            onTap: () {
+              NavigationSvc.pushSettings(
+                context,
+                IMessageStatsPage(parentController: controller),
+              );
+            },
+          ),
+        ],
+      );
+    });
   }
 
   /// Connection & Sync section (lifted verbatim from original ServerManagementPanel).
