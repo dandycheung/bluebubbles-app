@@ -109,7 +109,7 @@ dependencies:
       ref: 1483ded842d728f438310ab38765dcda6b9926e7
   maps_launcher: ^3.0.0+1
   logger: ^2.6.1
-  material_color_utilities: ^0.11.1  # Pinned because of flutter SDK
+  material_color_utilities: ^0.13.0  # Pinned because of flutter SDK
   media_kit: ^1.2.2 # Primary package.
   media_kit_video: ^2.0.0 # For video rendering.
   media_kit_libs_video: ^1.0.7 # Native video dependencies.
@@ -309,7 +309,7 @@ msix_config:
   display_name: BlueBubbles
   publisher_display_name: BlueBubbles
   identity_name: 23344BlueBubbles.BlueBubbles
-  msix_version: 1.15.5.0
+  msix_version: 1.15.6.0
   publisher: CN=BEC9154D-191E-4375-BF30-698BD4C141C4
   vs_generated_images_folder_path: windows/icons
   logo_path: assets/icon/icon.ico
