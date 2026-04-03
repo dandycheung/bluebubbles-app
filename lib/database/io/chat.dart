@@ -724,7 +724,8 @@ class Chat {
 
     return (await ChatInterface.bulkSyncChats(
       chatsData: chats.map((e) => e.toMap()).toList(),
-    )).chats;
+    ))
+        .chats;
   }
 
   static Future<List<Message>> bulkSyncMessages(Chat chat, List<Message> messages) async {

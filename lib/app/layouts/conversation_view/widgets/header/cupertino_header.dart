@@ -269,7 +269,7 @@ class _ChatIconAndTitleState extends CustomState<_ChatIconAndTitle, void, Conver
       final _title = chatState.title.value ?? controller.chat.getTitle();
 
       final children = [
-        IgnorePointer(
+        const IgnorePointer(
           ignoring: true,
           child: ContactAvatarGroupWidget(
             size: 54,

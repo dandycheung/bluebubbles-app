@@ -5,7 +5,6 @@ import 'package:bluebubbles/app/state/handle_state.dart';
 import 'package:bluebubbles/app/wrappers/stateful_boilerplate.dart';
 import 'package:bluebubbles/database/models.dart';
 import 'package:bluebubbles/services/services.dart';
-import 'package:bluebubbles/utils/logger/logger.dart';
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
@@ -128,9 +127,7 @@ class MessageState extends StatefulController {
   /// even for outgoing group-event messages).
   String get senderDisplayName {
     if (isFromMe.value || sender == null) return 'You';
-    return sender?.displayName.value
-        ?? message.handleRelation.target?.displayName
-        ?? 'Unknown';
+    return sender?.displayName.value ?? message.handleRelation.target?.displayName ?? 'Unknown';
   }
 
   /// Adjacent messages for layout context (set by MessageHolder in initState)

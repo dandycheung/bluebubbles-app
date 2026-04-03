@@ -485,20 +485,18 @@ class IncomingMessageHandler {
   Future<({Chat chat, List<int> affectedHandleIds})> _hydrateChat(Chat partial, Message m) async {
     // Group events always need fresh server data.
     if (m.isGroupEvent) {
-      Logger.debug(
-        'Message ${m.guid} is a group event, forcing chat hydration via server fetch', tag: _tag);
+      Logger.debug('Message ${m.guid} is a group event, forcing chat hydration via server fetch', tag: _tag);
       partial = (await ChatsSvc.fetchChat(partial.guid)) ?? partial;
     } else {
       // If we have a local copy and the local copy has participants, use it — no need to fetch.
       final local = Chat.findOne(guid: partial.guid);
       if (local != null && local.handles.isNotEmpty) {
         return (chat: local, affectedHandleIds: <int>[]);
-      // Cases to fetch from the server:
-      // * Local chat exists but has no participants (incomplete data).
-      // * Local chat doesn't exist at all (new chat).
+        // Cases to fetch from the server:
+        // * Local chat exists but has no participants (incomplete data).
+        // * Local chat doesn't exist at all (new chat).
       } else if ((local != null && local.handles.isEmpty) || local == null) {
-        Logger.debug(
-          'Chat ${partial.guid} is missing participant data, forcing hydration via server fetch', tag: _tag);
+        Logger.debug('Chat ${partial.guid} is missing participant data, forcing hydration via server fetch', tag: _tag);
         partial = (await ChatsSvc.fetchChat(partial.guid)) ?? partial;
       }
     }

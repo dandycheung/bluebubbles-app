@@ -164,7 +164,7 @@ class _ChatTitleAndAvatarState extends State<ChatTitleAndAvatar> with ChatTitleM
 
   Widget _buildCupertinoLayout(ChatState? chatState) {
     final children = [
-      IgnorePointer(
+      const IgnorePointer(
         ignoring: true,
         child: ContactAvatarGroupWidget(
           size: 54,

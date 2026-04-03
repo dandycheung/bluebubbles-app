@@ -816,9 +816,7 @@ class ChatsService {
     }
 
     // Collect handle IDs before deleting the chat (handles are lazy-loaded via ToMany)
-    final handleIds = deleteHandles
-        ? chat.handles.map((e) => e.id).whereType<int>().toList()
-        : <int>[];
+    final handleIds = deleteHandles ? chat.handles.map((e) => e.id).whereType<int>().toList() : <int>[];
 
     // Perform the actual DB deletion
     List<Message> messages = Chat.getMessages(chat);

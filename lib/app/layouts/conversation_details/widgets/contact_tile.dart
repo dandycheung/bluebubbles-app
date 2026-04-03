@@ -189,9 +189,7 @@ class ContactTile extends StatelessWidget {
 
                       HttpSvc.chatParticipant("remove", chat.guid, handle.address).then((response) async {
                         navigator.pop();
-                        if (response.statusCode == 200 &&
-                            response.data != null &&
-                            response.data['data'] != null) {
+                        if (response.statusCode == 200 && response.data != null && response.data['data'] != null) {
                           final result = await ChatInterface.bulkSyncChats(
                             chatsData: [response.data['data'] as Map<String, dynamic>],
                           );

@@ -38,9 +38,21 @@ class ContactAvatarGroupWidget extends StatelessWidget {
   final bool editable;
 
   static final _materialGeneration = <int, List<dynamic>>{
-    2: [24.5 / 40, 10.5 / 40, <Alignment>[Alignment.topRight, Alignment.bottomLeft]],
-    3: [21.5 / 40, 9 / 40, <Alignment>[Alignment.bottomRight, Alignment.bottomLeft, Alignment.topCenter]],
-    4: [1 / 2, 8.7 / 40, <Alignment>[Alignment.bottomRight, Alignment.bottomLeft, Alignment.topLeft, Alignment.topRight]],
+    2: [
+      24.5 / 40,
+      10.5 / 40,
+      <Alignment>[Alignment.topRight, Alignment.bottomLeft]
+    ],
+    3: [
+      21.5 / 40,
+      9 / 40,
+      <Alignment>[Alignment.bottomRight, Alignment.bottomLeft, Alignment.topCenter]
+    ],
+    4: [
+      1 / 2,
+      8.7 / 40,
+      <Alignment>[Alignment.bottomRight, Alignment.bottomLeft, Alignment.topLeft, Alignment.topRight]
+    ],
   };
 
   List<Handle> _sortedHandles(List<Handle> handles) {
