@@ -29,6 +29,11 @@ IntentsService get IntentsSvc => GetIt.I<IntentsService>();
 class IntentsService {
   late final StreamSubscription sub;
 
+  /// When a notification tap triggers navigation to a specific chat, this is
+  /// set synchronously (before any async gap) so that [onAppResume] can skip
+  /// marking the previously-active chat as read while the redirect is pending.
+  String? pendingOpenChatGuid;
+
   Future<void> init() async {
     if (kIsWeb || kIsDesktop) return;
 
@@ -218,14 +223,21 @@ class IntentsService {
       }
 
       if (!chatIsOpen) {
+        // Mark the navigation as pending BEFORE any await so that onAppResume,
+        // which fires while we are suspended at waitForUI / Future.delayed, can
+        // see that we are about to switch chats and must not mark the current
+        // active chat as read prematurely.
+        pendingOpenChatGuid = guid;
         Logger.debug("Navigating to conversation view...", tag: "IntentsService");
         await StartupTasks.waitForUI();
-        await Future.delayed(const Duration(seconds: 1));
         await NavigationSvc.pushAndRemoveUntil(
           Get.context!,
           ConversationView(
             chat: chat,
-            onInit: () => setPickedAttachments(),
+            onInit: () {
+              pendingOpenChatGuid = null;
+              setPickedAttachments();
+            },
           ),
           (route) => route.isFirst,
         );

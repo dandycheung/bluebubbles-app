@@ -523,7 +523,18 @@ class StartupTasks {
 
     final activeChat = ChatsSvc.activeChat;
     if (activeChat != null) {
-      ChatsSvc.setChatHasUnread(activeChat.chat, false);
+      // Skip marking the active chat as read when we know a notification-tap
+      // is about to redirect us to a *different* chat.  pendingOpenChatGuid is
+      // set synchronously in IntentsService.openChat before the first await, so
+      // it is always visible here even though we are inside an async callback.
+      final pendingGuid = (!kIsWeb && !kIsDesktop && GetIt.I.isRegistered<IntentsService>())
+          ? GetIt.I<IntentsService>().pendingOpenChatGuid
+          : null;
+      final redirectingAway = pendingGuid != null && pendingGuid != activeChat.chat.guid;
+      if (!redirectingAway) {
+        ChatsSvc.setChatHasUnread(activeChat.chat, false);
+      }
+
       // On desktop, always restore focus when the app is resumed (window regains focus).
       // On mobile, only refocus if the user has auto-open keyboard enabled AND the
       // conversation view is the active route (not obscured by ConversationDetails etc.).
