@@ -64,7 +64,7 @@ Future<DateTime?> showTimeframePicker(String title, BuildContext context,
         onTap: () {
           finalDate = tmpDate;
           if (ns.isTabletMode(context)){
-            Get.close(1);
+            Navigator.of(context, rootNavigator: true).pop();
           } else {
             Navigator.of(context).pop();
           }
