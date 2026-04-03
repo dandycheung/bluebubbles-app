@@ -377,6 +377,16 @@ class IncomingMessageHandler {
 
       // 10. Refresh chat-list ordering and subtitle.
       c.dbLatestMessage;
+
+      // Guard: addMessage() may have set hasUnreadMessage = true in the DB even
+      // when this chat is the one currently open.  Clear it on the in-memory
+      // object before propagating to the UI so the badge never increments for
+      // the active chat, then persist the read state asynchronously.
+      if (ChatsSvc.isChatActive(c.guid)) {
+        c.hasUnreadMessage = false;
+        unawaited(ChatsSvc.setChatHasUnread(c, false, force: true));
+      }
+
       ChatsSvc.updateChat(c, override: true);
       ChatsSvc.updateChatLatestMessage(c.guid, saved);
     }

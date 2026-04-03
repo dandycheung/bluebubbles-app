@@ -260,6 +260,11 @@ class ChatsService {
     loadedAllChats.complete();
     Logger.info("Finished fetching chats (${chatStates.length}).", tag: "ChatBloc");
 
+    // Calculate initial unread count now that all chat states are populated.
+    // The listener only fires on changes, so we need an explicit call here to
+    // seed the badge with the correct value before any message is received.
+    _recalculateUnreadCount();
+
     // Initialize watchers AFTER loading all chats to avoid duplicates
     initDbWatchers();
 
