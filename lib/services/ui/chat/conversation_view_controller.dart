@@ -6,7 +6,6 @@ import 'package:bluebubbles/app/wrappers/stateful_boilerplate.dart';
 import 'package:bluebubbles/database/models.dart';
 import 'package:bluebubbles/services/backend/interfaces/prefs_interface.dart';
 import 'package:bluebubbles/services/services.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_keyboard_visibility/flutter_keyboard_visibility.dart';
 import 'package:get/get.dart';
@@ -42,7 +41,6 @@ class ConversationViewController extends StatefulController with GetSingleTicker
   }
 
   // caching items
-  final Map<String, Map<String, Uint8List>> stickerData = {};
   final Map<String, Metadata> legacyUrlPreviews = {};
   final Map<String, VideoController> videoPlayers = {};
   final Map<String, PlayerController> audioPlayers = {};

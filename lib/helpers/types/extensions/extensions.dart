@@ -330,6 +330,7 @@ extension MessageNotificationExtension on Message {
 
       // If there are attachments, return the number of attachments
       if (realAttachments.isNotEmpty) {
+        if (isSticker) return "${sender}1 Sticker";
         return "$sender${_getAttachmentText(realAttachments)}";
       } else if (!isNullOrEmpty(associatedMessageGuid)) {
         // It's a reaction message, get the sender

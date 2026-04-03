@@ -1,9 +1,7 @@
-import 'dart:async';
-
 import 'package:bluebubbles/database/models.dart';
 import 'package:bluebubbles/services/services.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:universal_io/io.dart';
 
 class StickerHolder extends StatefulWidget {
@@ -15,11 +13,12 @@ class StickerHolder extends StatefulWidget {
   State<StickerHolder> createState() => _StickerHolderState();
 }
 
-class _StickerHolderState extends State<StickerHolder> with AutomaticKeepAliveClientMixin {
+class _StickerHolderState extends State<StickerHolder> {
   Iterable<Message> get messages => widget.stickerMessages;
-  ConversationViewController get controller => widget.controller;
 
   bool _visible = true;
+  bool _dismissed = false;
+  final Map<String, Attachment> _stickerPaths = {};
 
   @override
   void initState() {
@@ -30,83 +29,63 @@ class _StickerHolderState extends State<StickerHolder> with AutomaticKeepAliveCl
   Future<void> loadStickers() async {
     for (Message msg in messages) {
       for (Attachment attachment in msg.dbAttachments) {
-        // If we've already loaded it, don't try again
-        if (controller.stickerData.keys.contains(attachment.guid)) continue;
-
         final pathName = attachment.path;
+        if (_stickerPaths.containsKey(pathName)) continue;
+
         if (await FileSystemEntity.type(pathName) == FileSystemEntityType.notFound) {
-          AttachmentDownloader.startDownload(attachment, onComplete: (_) async {
-            await checkImage(msg, attachment);
+          AttachmentDownloader.startDownload(attachment, onComplete: (_) {
+            if (mounted) setState(() => _stickerPaths[pathName] = attachment);
           });
         } else {
-          await checkImage(msg, attachment);
+          if (mounted) setState(() => _stickerPaths[pathName] = attachment);
         }
       }
     }
   }
 
-  Future<void> checkImage(Message message, Attachment attachment) async {
-    final pathName = attachment.path;
-    // Check via the image package to make sure this is a valid, render-able image
-    final image = await compute(
-      decodeIsolate,
-      PlatformFile(
-        path: pathName,
-        name: attachment.transferName!,
-        bytes: attachment.bytes,
-        size: attachment.totalBytes ?? 0,
-      ),
-    );
-    if (image != null) {
-      final bytes = await File(pathName).readAsBytes();
-      controller.stickerData[message.guid!] = {attachment.guid!: bytes};
-      setState(() {});
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    super.build(context);
-    final guids = messages.map((e) => e.guid!);
-    final stickers = controller.stickerData.entries.where((element) => guids.contains(element.key)).map((e) => e.value);
-    if (stickers.isEmpty) return const SizedBox.shrink();
+    if (_stickerPaths.isEmpty || _dismissed) return const SizedBox.shrink();
 
-    final data = stickers.map((e) => e.values).expand((element) => element);
     return GestureDetector(
-      onTap: () {
-        setState(() {
-          _visible = !_visible;
-        });
+      onTap: () => setState(() => _visible = !_visible),
+      onLongPress: () {
+        HapticFeedback.mediumImpact();
+        setState(() => _dismissed = true);
       },
       child: AnimatedOpacity(
         duration: const Duration(milliseconds: 150),
         opacity: _visible ? 1.0 : 0.25,
         child: ConstrainedBox(
-          constraints: BoxConstraints(
-            maxWidth: NavigationSvc.width(context) * 0.6,
-            maxHeight: 100,
-          ),
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            physics: ThemeSvc.scrollPhysics,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              mainAxisSize: MainAxisSize.min,
-              children: data
-                  .map((e) => Image.memory(
-                        e,
-                        gaplessPlayback: true,
-                        cacheHeight: 200,
-                        filterQuality: FilterQuality.none,
-                      ))
+          constraints: BoxConstraints(maxWidth: NavigationSvc.width(context) * 0.6),
+          child: Wrap(
+            spacing: 4,
+            runSpacing: 4,
+            children: _stickerPaths.values
+                  .map(
+                    (attachment) => ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 100, maxHeight: 100),
+                      child: Image.file(
+                      File(attachment.path),
+                      gaplessPlayback: true,
+                      filterQuality: FilterQuality.none,
+                      frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+                        if (wasSynchronouslyLoaded) return child;
+                        return AnimatedOpacity(
+                          opacity: frame == null ? 0.0 : 1.0,
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeOut,
+                          child: child,
+                        );
+                      },
+                    ),
+                    ),
+                  )
                   .toList(),
-            ),
           ),
         ),
       ),
     );
   }
 
-  @override
-  bool get wantKeepAlive => true;
 }

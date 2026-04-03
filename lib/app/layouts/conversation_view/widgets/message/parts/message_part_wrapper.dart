@@ -128,9 +128,14 @@ class MessagePartWrapper extends StatelessWidget {
         ),
         // show stickers on top
         if (stickers.isNotEmpty)
-          StickerHolder(
-            stickerMessages: stickers,
-            controller: cvController,
+          Positioned(
+            top: 0,
+            left: message.isFromMe! ? null : 0,
+            right: message.isFromMe! ? 0 : null,
+            child: StickerHolder(
+              stickerMessages: stickers,
+              controller: cvController,
+            ),
           ),
         // show reactions on top
         if (message.isFromMe!)

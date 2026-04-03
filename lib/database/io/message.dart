@@ -138,6 +138,9 @@ class Message {
   @Transient()
   bool get isSending => isFromMe == true && guid != null && guid!.startsWith("temp");
 
+  @Transient()
+  bool get isSticker => associatedMessageType == "sticker" && associatedMessageGuid != null;
+
   Message({
     this.id,
     this.originalROWID,
