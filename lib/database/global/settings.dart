@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:async_task/async_task_extension.dart';
 import 'package:bluebubbles/app/layouts/conversation_view/widgets/message/popup/details_menu_action.dart';
 import 'package:bluebubbles/env.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
@@ -19,7 +20,7 @@ class Settings {
   final RxString iCloudAccount = "".obs;
   final RxString guidAuthKey = "".obs;
   final RxString serverAddress = "".obs;
-  final RxMap<String, String> customHeaders = <String, String>{}.obs;
+  final Rx<Map<String, String>> customHeaders = Rx<Map<String, String>>(<String, String>{});
   final RxBool finishedSetup = false.obs;
   final RxBool reachedConversationList = false.obs;
   final RxBool autoDownload = true.obs;
@@ -331,8 +332,8 @@ class Settings {
       'spellcheckLanguage': spellcheckLanguage.value,
       'minimizeToTray': minimizeToTray.value,
       'showReplyField': showReplyField.value,
-      'selectedActionIndices': selectedActionIndices,
-      'actionList': actionList,
+      'selectedActionIndices': List<int>.from(selectedActionIndices),
+      'actionList': List<String>.from(actionList),
       'detailsMenuActions': detailsMenuActions.map((action) => action.name).toList(),
       'askWhereToSave': askWhereToSave.value,
       'statusIndicatorsOnChats': statusIndicatorsOnChats.value,
@@ -398,12 +399,13 @@ class Settings {
       'lastReviewRequestTimestamp': lastReviewRequestTimestamp.value,
       'serverPrivateAPI': serverPrivateAPI.value,
     };
+
     if (includeAll) {
       map.addAll({
         'iCloudAccount': iCloudAccount.value,
         'guidAuthKey': guidAuthKey.value,
         'serverAddress': serverAddress.value,
-        'customHeaders': customHeaders,
+        'customHeaders': Map<String, String>.from(customHeaders.value),
         'finishedSetup': finishedSetup.value,
         'reachedConversationList': reachedConversationList.value,
         'colorsFromMedia': colorsFromMedia.value,
@@ -415,6 +417,7 @@ class Settings {
         'desktopNotificationSoundPath': desktopNotificationSoundPath.value,
       });
     }
+
     return map;
   }
 
@@ -422,6 +425,7 @@ class Settings {
     SettingsSvc.settings.iCloudAccount.value = map['iCloudAccount'] ?? SettingsSvc.settings.iCloudAccount.value;
     SettingsSvc.settings.serverAddress.value = map['serverAddress'] ?? SettingsSvc.settings.serverAddress.value;
     SettingsSvc.settings.guidAuthKey.value = map['guidAuthKey'] ?? SettingsSvc.settings.guidAuthKey.value;
+    debugPrint('Updating custom headers from map: ${map['customHeaders']}');
     SettingsSvc.settings.customHeaders.value = _processCustomHeaders(map['customHeaders']);
     SettingsSvc.settings.finishedSetup.value = map['finishedSetup'] ?? SettingsSvc.settings.finishedSetup.value;
     SettingsSvc.settings.reachedConversationList.value =
@@ -617,7 +621,7 @@ class Settings {
     SettingsSvc.settings.selectedActionIndices.value =
         _processSelectedActionIndices(map['selectedActionIndices'], SettingsSvc.settings.showReplyField.value);
     SettingsSvc.settings.actionList.value =
-        _processActionList(map['actionList'] ?? jsonEncode(SettingsSvc.settings.actionList));
+        _processActionList(map['actionList'] ?? jsonEncode(List<String>.from(SettingsSvc.settings.actionList)));
     SettingsSvc.settings._detailsMenuActions.value =
         _processDetailsMenuActions(map['detailsMenuActions'], SettingsSvc.settings.detailsMenuActions);
 
@@ -659,6 +663,7 @@ class Settings {
     s.iCloudAccount.value = map['iCloudAccount'] ?? "";
     s.guidAuthKey.value = map['guidAuthKey'] ?? "";
     s.serverAddress.value = map['serverAddress'] ?? "";
+    debugPrint('Loading Custom Headers from map: ${map['customHeaders']}');
     s.customHeaders.value = _processCustomHeaders(map['customHeaders']);
     s.finishedSetup.value = map['finishedSetup'] ?? false;
     s.reachedConversationList.value = map['reachedConversationList'] ?? false;
@@ -820,7 +825,7 @@ Map<String, String> _processCustomHeaders(dynamic rawJson) {
     return (rawJson is Map ? rawJson : jsonDecode(rawJson) as Map).cast<String, String>();
   } catch (e) {
     debugPrint("Using default customHeaders");
-    return {};
+    return <String, String>{};
   }
 }
 

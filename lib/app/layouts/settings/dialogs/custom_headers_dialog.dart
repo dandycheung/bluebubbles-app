@@ -7,11 +7,11 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 Future<bool> showCustomHeadersDialog(BuildContext context) async {
-  RxInt headers = SettingsSvc.settings.customHeaders.length.clamp(0, 100).obs;
+  RxInt headers = SettingsSvc.settings.customHeaders.value.length.clamp(0, 100).obs;
   List<TextEditingController> keyControllers = [];
   List<TextEditingController> valueControllers = [];
-  if (SettingsSvc.settings.customHeaders.isNotEmpty) {
-    SettingsSvc.settings.customHeaders.forEach((key, value) {
+  if (SettingsSvc.settings.customHeaders.value.isNotEmpty) {
+    SettingsSvc.settings.customHeaders.value.forEach((key, value) {
       keyControllers.add(TextEditingController(text: key));
       valueControllers.add(TextEditingController(text: value));
     });
@@ -41,7 +41,7 @@ Future<bool> showCustomHeadersDialog(BuildContext context) async {
                           shrinkWrap: true,
                           itemCount: headers.value,
                           findChildIndexCallback: (key) => findChildIndexByKey(
-                              SettingsSvc.settings.customHeaders.keys.toList(), key, (item) => item),
+                              SettingsSvc.settings.customHeaders.value.keys.toList(), key, (item) => item),
                           itemBuilder: (context, index) {
                             return Row(key: ValueKey(index), children: [
                               Flexible(
