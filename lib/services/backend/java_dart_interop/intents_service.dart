@@ -230,15 +230,15 @@ class IntentsService {
         pendingOpenChatGuid = guid;
         Logger.debug("Navigating to conversation view...", tag: "IntentsService");
         await StartupTasks.waitForUI();
+
+        // Pre-populate text/attachments on the controller before navigating so
+        // the ConversationView text field is pre-filled on first build.
+        setPickedAttachments();
+        pendingOpenChatGuid = null;
+
         await NavigationSvc.pushAndRemoveUntil(
           Get.context!,
-          ConversationView(
-            chat: chat,
-            onInit: () {
-              pendingOpenChatGuid = null;
-              setPickedAttachments();
-            },
-          ),
+          ConversationView(chat: chat),
           (route) => route.isFirst,
         );
       } else {

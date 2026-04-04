@@ -871,6 +871,7 @@ class TextFieldComponent extends StatefulWidget {
     this.focusNode,
     this.initialAttachments = const [],
     this.alwaysShowSend = false,
+    this.hideMediaPicker = false,
   });
 
   final SpellCheckTextEditingController? subjectTextController;
@@ -886,12 +887,16 @@ class TextFieldComponent extends StatefulWidget {
   /// Used by the chat creator when an existing chat has been resolved.
   final bool alwaysShowSend;
 
+  /// When true, the camera, attachment picker, and GIF icons are hidden.
+  /// Used by the chat creator when no existing chat has been matched yet.
+  final bool hideMediaPicker;
+
   @override
   State<StatefulWidget> createState() => TextFieldComponentState();
 }
 
 class TextFieldComponentState extends State<TextFieldComponent> {
-  late final ConversationViewController? controller;
+  late ConversationViewController? controller;
   late final FocusNode? focusNode;
   late final RecorderController? recorderController;
   late final List<PlatformFile> initialAttachments;
@@ -933,7 +938,17 @@ class TextFieldComponentState extends State<TextFieldComponent> {
     super.dispose();
   }
 
+  @override
+  void didUpdateWidget(TextFieldComponent old) {
+    super.didUpdateWidget(old);
+    if (widget.controller != old.controller) {
+      controller = widget.controller;
+    }
+ }
+
   bool get iOS => SettingsSvc.settings.skin.value == Skins.iOS;
+
+  bool get material => SettingsSvc.settings.skin.value == Skins.Material;
 
   bool get samsung => SettingsSvc.settings.skin.value == Skins.Samsung;
 
@@ -941,11 +956,52 @@ class TextFieldComponentState extends State<TextFieldComponent> {
 
   bool get isChatCreator => focusNode != null;
 
+  bool _showAttachmentPickerLocal = false;
+
+  Future<void> _openCamera({String type = 'camera'}) async {
+    bool granted = (await Permission.camera.request()).isGranted;
+    if (!granted) {
+      showSnackbar("Error", "Camera access was denied!");
+      return;
+    }
+
+    if (type == 'video') {
+      final micGranted = (await Permission.microphone.request()).isGranted;
+      if (!micGranted) {
+        showSnackbar("Error", "Microphone access was denied!");
+        return;
+      }
+    }
+
+    final XFile? file;
+    if (Platform.isAndroid && !kIsWeb) {
+      file = await Navigator.of(context).push<XFile?>(
+        MaterialPageRoute(
+          builder: (_) => CameraScreen(initialMode: type == 'video' ? 'video' : 'photo'),
+        ),
+      );
+    } else if (type == 'camera') {
+      file = await ImagePicker().pickImage(source: ImageSource.camera);
+    } else {
+      file = await ImagePicker().pickVideo(source: ImageSource.camera);
+    }
+
+    if (file != null) {
+      controller!.pickedAttachments.add(PlatformFile(
+        path: file.path,
+        name: file.path.split('/').last,
+        size: await file.length(),
+        bytes: await file.readAsBytes(),
+      ));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final txtController = controller?.textController ?? textController;
     final subjController = controller?.subjectTextController ?? subjectTextController;
-    return Focus(
+    final showIcons = isChatCreator && !widget.hideMediaPicker && controller != null;
+    Widget textInput = Focus(
       onKeyEvent: (_, ev) => handleKey(_, ev, context, isChatCreator),
       child: Padding(
         padding: const EdgeInsets.only(right: 5.0),
@@ -1201,6 +1257,62 @@ class TextFieldComponentState extends State<TextFieldComponent> {
               );
             }),
       ),
+    );
+    if (!showIcons) return textInput;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+          if (!kIsWeb && iOS && Platform.isAndroid)
+            GestureDetector(
+              onLongPress: () { _openCamera(type: 'video'); },
+              child: IconButton(
+                padding: const EdgeInsets.only(left: 10),
+                icon: Icon(CupertinoIcons.camera_fill, color: context.theme.colorScheme.outline, size: 28),
+                visualDensity: VisualDensity.compact,
+                onPressed: () { _openCamera(); },
+              ),
+            ),
+          IconButton(
+            icon: Icon(
+              iOS ? CupertinoIcons.add_circled_solid : material ? Icons.add_circle_outline : Icons.add,
+              color: context.theme.colorScheme.outline,
+              size: 28,
+            ),
+            visualDensity: Platform.isAndroid ? VisualDensity.compact : null,
+            onPressed: () async {
+              if (kIsDesktop) {
+                final res = await FilePicker.platform.pickFiles(withReadStream: true, allowMultiple: true);
+                if (res == null || res.files.isEmpty || res.files.first.readStream == null) return;
+                for (pf.PlatformFile e in res.files) {
+                  if (e.size / 1024000 > 1000) {
+                    showSnackbar("Error", "This file is over 1 GB! Please compress it before sending.");
+                    continue;
+                  }
+                  controller!.pickedAttachments.add(PlatformFile(
+                    path: e.path,
+                    name: e.name,
+                    size: e.size,
+                    bytes: await readByteStream(e.readStream!),
+                  ));
+                }
+              } else {
+                if (!_showAttachmentPickerLocal) FocusScope.of(context).unfocus();
+                setState(() => _showAttachmentPickerLocal = !_showAttachmentPickerLocal);
+              }
+            },
+          ),
+          Expanded(child: textInput),
+        ]),
+        AnimatedSize(
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeIn,
+          alignment: Alignment.bottomCenter,
+          child: _showAttachmentPickerLocal
+              ? AttachmentPicker(controller: controller!)
+              : SizedBox(width: NavigationSvc.width(context)),
+        ),
+      ],
     );
   }
 

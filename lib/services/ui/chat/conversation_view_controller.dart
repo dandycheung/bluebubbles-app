@@ -103,6 +103,11 @@ class ConversationViewController extends StatefulController with GetSingleTicker
   Timer? _scrollDownDebounce;
   Future<void> Function(SendData)? sendFunc;
 
+  /// When set, [_SendAnimationState] will auto-fire this send as soon as it
+  /// registers [sendFunc] (i.e. immediately after the widget is built).
+  /// Used by ChatCreator to pre-queue a send before navigating to ConversationView.
+  SendData? pendingSend;
+
   @override
   void onInit() {
     super.onInit();

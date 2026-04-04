@@ -23,14 +23,12 @@ class ConversationView extends StatefulWidget {
     this.customService,
     this.initialScrollToGuid,
     this.fromChatCreator = false,
-    this.onInit,
   });
 
   final Chat chat;
   final MessagesService? customService;
   final String? initialScrollToGuid;
   final bool fromChatCreator;
-  final void Function()? onInit;
 
   @override
   ConversationViewState createState() => ConversationViewState();
@@ -54,10 +52,6 @@ class ConversationViewState extends State<ConversationView> with ThemeHelpers<Co
     ChatsSvc.setActiveChatSync(chat);
     ChatsSvc.activeChat!.controller = controller;
     Logger.debug("Conversation View initialized for ${chat.guid}");
-
-    if (widget.onInit != null) {
-      Future.delayed(Duration.zero, widget.onInit!);
-    }
 
     controller.loadReplyToMessageState(); // P224b
 

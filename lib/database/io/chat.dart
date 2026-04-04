@@ -758,11 +758,14 @@ class Chat {
     );
   }
 
-  bool get isTextForwarding => guid.startsWith("SMS");
+  /// The messaging service this chat belongs to, derived from the GUID prefix.
+  ChatServiceType get service => ChatServiceType.fromGuid(guid);
 
-  bool get isSMS => false;
+  bool get isTextForwarding => service == ChatServiceType.sms;
 
-  bool get isIMessage => !isTextForwarding && !isSMS;
+  bool get isSMS => service == ChatServiceType.sms;
+
+  bool get isIMessage => service == ChatServiceType.iMessage;
 
   bool get isGroup => handles.length > 1 || style == 43;
 

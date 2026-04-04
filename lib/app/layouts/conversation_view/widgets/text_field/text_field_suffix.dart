@@ -81,6 +81,23 @@ class _TextFieldSuffixState extends State<TextFieldSuffix> with ThemeHelpers {
         // Only show the send button when there is actually content to send;
         // otherwise the button is hidden entirely to avoid a no-op tap.
         if (isChatCreator) {
+          // When a controller is present (existing chat resolved), use Obx to
+          // reactively watch pickedAttachments and respect alwaysShowSend.
+          if (widget.controller != null) {
+            return Obx(() {
+              final hasAttachments = widget.controller!.pickedAttachments.isNotEmpty;
+              final canSend = alwaysShowSend || hasText || hasAttachments || widget.hasInitialAttachments;
+              if (!canSend) return const SizedBox.shrink();
+              return Padding(
+                padding: const EdgeInsets.all(3.0),
+                child: SendButton(
+                  sendMessage: widget.sendMessage,
+                  onLongPress: () {},
+                ),
+              );
+            });
+          }
+          // No controller — check static values only.
           final canSendInCreator = hasText || widget.hasInitialAttachments;
           if (!canSendInCreator) return const SizedBox.shrink();
           return Padding(

@@ -61,7 +61,7 @@ class ChatListSection extends StatelessWidget {
                         .map((e) => SelectedContact(
                               displayName: e.displayName,
                               address: e.address,
-                              isIMessage: chat.isIMessage,
+                              serviceType: chat.service,
                             ))
                         .toList());
                   },

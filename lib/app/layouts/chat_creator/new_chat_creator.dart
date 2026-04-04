@@ -258,11 +258,12 @@ class _TextFieldArea extends StatelessWidget {
               return KeyEventResult.ignored;
             },
             child: activeCVC != null
-                // Existing chat: isChatCreator = false → full attachments + reply enabled.
+                // Existing chat: pass focusNode so isChatCreator=true → media picker icons show.
                 // alwaysShowSend: true so the send button is visible even with no content,
                 // allowing the user to open the conversation without typing first.
                 ? TextFieldComponent(
                     key: ValueKey(activeCVC.chat.guid),
+                    focusNode: controller.messageNode,
                     textController: activeCVC.textController,
                     subjectTextController: activeCVC.subjectTextController,
                     controller: activeCVC,

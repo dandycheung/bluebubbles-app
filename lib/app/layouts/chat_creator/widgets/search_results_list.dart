@@ -160,7 +160,7 @@ class SearchResultsList extends StatelessWidget {
                               (h) => SelectedContact(
                                 displayName: h.displayName,
                                 address: h.address,
-                                isIMessage: chat.isIMessage,
+                                serviceType: chat.service,
                               ),
                             )
                             .toList();

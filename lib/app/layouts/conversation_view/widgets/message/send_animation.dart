@@ -37,6 +37,24 @@ class _SendAnimationState extends CustomState<SendAnimation, SendData, Conversat
   void initState() {
     super.initState();
     controller.sendFunc = send;
+
+    // If ChatCreator pre-queued a send before navigating here, fire it now.
+    // sendFunc is already set above, and addPostFrameCallback ensures MessagesView
+    // has completed initState (and wired up its handlers) before the send runs.
+    if (controller.pendingSend != null) {
+      final pendingData = controller.pendingSend!;
+      controller.pendingSend = null;
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        await send(pendingData);
+        // Clear the text field and attachments now that the send has been queued,
+        // mirroring what ConversationTextField.sendMessage() does for normal sends.
+        controller.pickedAttachments.clear();
+        controller.textController.clear();
+        controller.subjectTextController.clear();
+        controller.replyToMessage = null;
+      });
+    }
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final box = controller.textFieldKey.currentContext?.findRenderObject() as RenderBox?;
       textFieldSize = box?.size.height ?? 0;

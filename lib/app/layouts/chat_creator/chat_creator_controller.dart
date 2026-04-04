@@ -66,7 +66,7 @@ class ChatCreatorController extends StatefulController {
 
     // Auto-select service based on pre-selected contacts' known iMessage status.
     // If any initial contact is explicitly non-iMessage, start on SMS.
-    if (initialSelected.any((c) => c.iMessage.value == false)) {
+    if (initialSelected.any((c) => c.serviceType.value == ChatServiceType.sms)) {
       selectedService.value = ChatServiceType.sms;
     }
 
@@ -235,7 +235,8 @@ class ChatCreatorController extends StatefulController {
   Future<void> _fetchIMessageState(SelectedContact contact) async {
     try {
       final response = await HttpSvc.handleiMessageState(contact.address);
-      contact.iMessage.value = response.data['data']['available'] as bool?;
+      final available = response.data['data']['available'] as bool?;
+      contact.serviceType.value = available == true ? ChatServiceType.iMessage : available == false ? ChatServiceType.sms : null;
     } catch (_) {}
   }
 
@@ -304,7 +305,7 @@ class ChatCreatorController extends StatefulController {
     }
 
     // Auto-update service type based on selected contact iMessage status
-    final hasSmsContact = selectedContacts.firstWhereOrNull((c) => c.iMessage.value == false) != null;
+    final hasSmsContact = selectedContacts.firstWhereOrNull((c) => c.serviceType.value == ChatServiceType.sms) != null;
     if (hasSmsContact) {
       selectedService.value = ChatServiceType.sms;
     } else {
@@ -568,29 +569,26 @@ class ChatCreatorController extends StatefulController {
     // text/attachments (i.e. "open conversation" intent), skip the send step.
     final hasContent = activeCVC.textController.text.isNotEmpty || activeCVC.pickedAttachments.isNotEmpty;
 
-    Future<void> doSend() async {
-      await activeCVC.send(
-        SendData(
-          attachments: activeCVC.pickedAttachments.toList(),
-          text: activeCVC.textController.text,
-          subject: '',
-          replyGuid: activeCVC.replyToMessage?.message.threadOriginatorGuid ?? activeCVC.replyToMessage?.message.guid,
-          replyPart: activeCVC.replyToMessage?.partIndex,
-          effectId: effectId,
-        ),
+    // Pre-queue the send so _SendAnimationState fires it as soon as it wires up
+    // sendFunc — after the ConversationView frame builds and MessagesView has
+    // initialized its handlers. Only set when there is actual content to send.
+    if (hasContent) {
+      activeCVC.pendingSend = SendData(
+        attachments: activeCVC.pickedAttachments.toList(),
+        text: activeCVC.textController.text,
+        subject: '',
+        replyGuid: activeCVC.replyToMessage?.message.threadOriginatorGuid ?? activeCVC.replyToMessage?.message.guid,
+        replyPart: activeCVC.replyToMessage?.partIndex,
+        effectId: effectId,
       );
       activeCVC.replyToMessage = null;
-      activeCVC.pickedAttachments.clear();
-      activeCVC.textController.clear();
-      activeCVC.subjectTextController.clear();
     }
 
     isHeaderVisible.value = false;
 
     NavigationSvc.pushAndRemoveUntil(
       Get.context!,
-      ConversationView(
-          chat: chat, customService: messagesService, fromChatCreator: true, onInit: hasContent ? doSend : null),
+      ConversationView(chat: chat, customService: messagesService, fromChatCreator: true),
       (route) => route.isFirst,
       closeActiveChat: false,
       customRoute: PageRouteBuilder(
@@ -599,14 +597,11 @@ class ChatCreatorController extends StatefulController {
             chat: chat,
             customService: messagesService,
             fromChatCreator: true,
-            onInit: hasContent ? doSend : null,
           ),
         ),
         transitionDuration: Duration.zero,
       ),
     );
-
-    await Future.delayed(const Duration(milliseconds: 500));
   }
 
   // ---------------------------------------------------------------------------
