@@ -767,7 +767,8 @@ class Chat {
 
   bool get isIMessage => service == ChatServiceType.iMessage;
 
-  bool get isGroup => handles.length > 1 || style == 43;
+  // Check style first so handles isn't required to be evaluated, which will incur a DB lookup.
+  bool get isGroup => style == 43 || handles.length > 1;
 
   Chat merge(Chat other) {
     id ??= other.id;
