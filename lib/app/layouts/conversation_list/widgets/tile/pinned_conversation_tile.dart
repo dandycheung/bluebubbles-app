@@ -292,7 +292,7 @@ class _ChatTitleState extends CustomState<ChatTitle, void, ConversationTileContr
         return SizedBox(
           height: style.height! * style.fontSize!,
           child: OverflowBox(
-            maxWidth: widget.width + 16,
+            maxWidth: widget.width + 35,
             alignment: Alignment.topCenter,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
