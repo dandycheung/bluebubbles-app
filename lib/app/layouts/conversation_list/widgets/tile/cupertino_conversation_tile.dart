@@ -232,7 +232,7 @@ class _UnreadIconState extends CustomState<UnreadIcon, void, ConversationTileCon
   @override
   Widget build(BuildContext context) {
     return Padding(
-        padding: const EdgeInsets.only(left: 5.0, right: 5.0),
+        padding: const EdgeInsets.only(left: 8.0, right: 6.0),
         child: Obx(
           () => (ChatsSvc.getChatState(controller.chat.guid)?.hasUnreadMessage.value ?? false)
               ? Container(
@@ -240,10 +240,10 @@ class _UnreadIconState extends CustomState<UnreadIcon, void, ConversationTileCon
                     borderRadius: BorderRadius.circular(35),
                     color: context.theme.colorScheme.primary,
                   ),
-                  width: 10,
-                  height: 10,
+                  width: 12,
+                  height: 12,
                 )
-              : const SizedBox(width: 10),
+              : const SizedBox(width: 12),
         ));
   }
 }

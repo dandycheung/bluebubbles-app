@@ -126,7 +126,6 @@ class _PinnedConversationTileState extends CustomState<PinnedConversationTile, v
                               size: widget.avatarSize,
                               editable: false,
                             ),
-                            UnreadIcon(width: widget.avatarSize, parentController: controller),
                             MuteIcon(width: widget.avatarSize, parentController: controller),
                             PinnedIndicators(width: widget.avatarSize, controller: controller),
                           ],
@@ -283,23 +282,50 @@ class _ChatTitleState extends CustomState<ChatTitle, void, ConversationTileContr
         // Get title from ChatState - it handles all title logic including redacted mode
         final chatState = ChatsSvc.getChatState(controller.chat.guid);
         final _title = chatState?.title.value ?? controller.chat.getTitle();
+        final unread = chatState?.hasUnreadMessage.value ?? false;
+
+        // Reserve equal horizontal space on both sides so the text stays
+        // visually centered while the dot floats to its left.
+        const double dotSize = 10.0;
+        const double dotHSpace = dotSize + 4.0;
 
         return SizedBox(
           height: style.height! * style.fontSize!,
           child: OverflowBox(
             maxWidth: widget.width + 16,
             alignment: Alignment.topCenter,
-            child: RichText(
-              text: TextSpan(
-                children: MessageHelper.buildEmojiText(
-                  _title,
-                  style,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                SizedBox(
+                  width: dotHSpace,
+                  child: unread
+                      ? Center(
+                          child: Container(
+                            width: dotSize,
+                            height: dotSize,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: context.theme.colorScheme.primary,
+                            ),
+                          ),
+                        )
+                      : null,
                 ),
-                style: style,
-              ),
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-              maxLines: 1,
+                Flexible(
+                  child: RichText(
+                    text: TextSpan(
+                      children: MessageHelper.buildEmojiText(_title, style),
+                      style: style,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                  ),
+                ),
+                // Mirror slot keeps text optically centered
+                const SizedBox(width: dotHSpace),
+              ],
             ),
           ),
         );

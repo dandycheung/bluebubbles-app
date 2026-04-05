@@ -306,7 +306,7 @@ class CupertinoConversationListState extends State<CupertinoConversationList> wi
                               final separator = Obx(() => !SettingsSvc.settings.hideDividers.value
                                   ? Padding(
                                       padding:
-                                          EdgeInsets.only(left: SettingsSvc.settings.denseChatTiles.value ? 65 : 78),
+                                          EdgeInsets.only(left: SettingsSvc.settings.denseChatTiles.value ? 69 : 82),
                                       child: Divider(
                                         color: context.theme.colorScheme.outline.withValues(alpha: 0.4),
                                         thickness: 0.5,
@@ -319,7 +319,7 @@ class CupertinoConversationListState extends State<CupertinoConversationList> wi
                                   ? Obx(() => !SettingsSvc.settings.hideDividers.value
                                       ? Padding(
                                           padding: EdgeInsets.only(
-                                              left: SettingsSvc.settings.denseChatTiles.value ? 65 : 78),
+                                              left: SettingsSvc.settings.denseChatTiles.value ? 69 : 82),
                                           child: Divider(
                                             color: context.theme.colorScheme.outline.withValues(alpha: 0.4),
                                             thickness: 0.5,
