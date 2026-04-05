@@ -21,6 +21,7 @@ class ReactionWidget extends StatefulWidget {
     required this.reaction,
     this.reactions,
     this.chatGuid,
+    this.tailDirection,
   });
 
   final Message reaction;
@@ -30,6 +31,12 @@ class ReactionWidget extends StatefulWidget {
   /// Allows [ReactionWidgetState] to resolve MessageState from the correct
   /// MessagesService rather than falling back to [ChatsSvc.activeChat].
   final String? chatGuid;
+
+  /// When set, overrides the computed tail direction for the reaction clippers.
+  /// Useful in contexts with no [MessageStateScope] (e.g. pinned tiles) where
+  /// the fallback would produce the wrong arc orientation.
+  /// Bubble coloring is always driven by the reaction's own [isFromMe] field.
+  final ReactionTailDirection? tailDirection;
 
   @override
   ReactionWidgetState createState() => ReactionWidgetState();
@@ -68,6 +75,12 @@ class ReactionWidgetState extends State<ReactionWidget> with ThemeHelpers {
   /// Guard against isFromMe being null on partially-hydrated messages.
   bool get reactionIsFromMe => reaction.isFromMe ?? false;
   bool get messageIsFromMe => _parentMessage?.isFromMe ?? true;
+
+  /// Effective tail direction for the clippers.
+  /// Matches the [messageIsFromMe] semantics: sent (right) vs received (left).
+  /// Can be overridden via [widget.tailDirection] (e.g. pinned tile context).
+  ReactionTailDirection get _effectiveTailDirection =>
+      widget.tailDirection ?? (messageIsFromMe ? ReactionTailDirection.left : ReactionTailDirection.right);
 
   /// Guard against associatedMessageType being null.
   /// An empty string produces no SVG match, which is handled in build().
@@ -190,7 +203,7 @@ class ReactionWidgetState extends State<ReactionWidget> with ThemeHelpers {
             left: messageIsFromMe ? 0 : -1,
             right: !messageIsFromMe ? 0 : -1,
             child: ClipPath(
-              clipper: ReactionBorderClipper(isFromMe: messageIsFromMe),
+              clipper: ReactionBorderClipper(tailDirection: _effectiveTailDirection),
               child: Container(
                 width: iosSize + 2,
                 height: iosSize + 2,
@@ -199,7 +212,7 @@ class ReactionWidgetState extends State<ReactionWidget> with ThemeHelpers {
             ),
           ),
           ClipPath(
-              clipper: ReactionClipper(isFromMe: messageIsFromMe),
+              clipper: ReactionClipper(tailDirection: _effectiveTailDirection),
               child: Obx(() {
                 // reactionController is null when no MessageState exists for the reaction (typical).
                 // Fall back to checking the GUID prefix so temp reactions always show as pending.
@@ -291,6 +304,8 @@ class ReactionWidgetState extends State<ReactionWidget> with ThemeHelpers {
   Widget _buildStatic(BuildContext context, Message reaction) {
     final rType = reaction.associatedMessageType ?? '';
     final isFromMe = reaction.isFromMe ?? false;
+    final tailDirection = widget.tailDirection ?? (isFromMe ? ReactionTailDirection.left : ReactionTailDirection.right);
+    final tailIsRight = tailDirection == ReactionTailDirection.right;
 
     if (rType.isEmpty) return const SizedBox.shrink();
 
@@ -302,6 +317,14 @@ class ReactionWidgetState extends State<ReactionWidget> with ThemeHelpers {
           color: isFromMe ? context.theme.colorScheme.primary : context.theme.colorScheme.properSurface,
           border: Border.all(color: context.theme.colorScheme.background),
           shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.15),
+              blurRadius: 8,
+              spreadRadius: 2,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Center(
           child: Builder(builder: (ctx) {
@@ -325,17 +348,30 @@ class ReactionWidgetState extends State<ReactionWidget> with ThemeHelpers {
 
     // iOS skin — the pinned tile only shows reactions received (isFromMe==false).
     // Use isFromMe to orient the clipper correctly.
-    return Stack(
-      alignment: isFromMe ? Alignment.centerRight : Alignment.centerLeft,
-      fit: StackFit.passthrough,
-      clipBehavior: Clip.none,
+    // Shadow wraps outside the ClipPath so it is not clipped.
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 8,
+            spreadRadius: 0,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Stack(
+        alignment: !tailIsRight ? Alignment.centerRight : Alignment.centerLeft,
+        fit: StackFit.passthrough,
+        clipBehavior: Clip.none,
       children: [
         Positioned(
           top: -1,
-          left: isFromMe ? 0 : -1,
-          right: !isFromMe ? 0 : -1,
+          left: !tailIsRight ? 0 : -1,
+          right: tailIsRight ? 0 : -1,
           child: ClipPath(
-            clipper: ReactionBorderClipper(isFromMe: isFromMe),
+            clipper: ReactionBorderClipper(tailDirection: tailDirection),
             child: Container(
               width: iosSize + 2,
               height: iosSize + 2,
@@ -344,12 +380,12 @@ class ReactionWidgetState extends State<ReactionWidget> with ThemeHelpers {
           ),
         ),
         ClipPath(
-          clipper: ReactionClipper(isFromMe: isFromMe),
+          clipper: ReactionClipper(tailDirection: tailDirection),
           child: Container(
             width: iosSize,
             height: iosSize,
             color: isFromMe ? context.theme.colorScheme.primary : context.theme.colorScheme.properSurface,
-            alignment: isFromMe ? Alignment.topRight : Alignment.topLeft,
+            alignment: !tailIsRight ? Alignment.topRight : Alignment.topLeft,
             child: SizedBox(
               width: iosSize * 0.8,
               height: iosSize * 0.8,
@@ -373,6 +409,7 @@ class ReactionWidgetState extends State<ReactionWidget> with ThemeHelpers {
           ),
         ),
       ],
+      ),
     );
   }
 }
