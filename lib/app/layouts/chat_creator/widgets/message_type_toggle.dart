@@ -23,7 +23,8 @@ class MessageTypeToggle extends StatelessWidget {
       child: ToggleButtons(
         constraints: BoxConstraints(minWidth: (NavigationSvc.width(context) - 35) / 2),
         fillColor: context.theme.colorScheme.bubble(context, selectedService.isIMessageService).withValues(alpha: 0.2),
-        splashColor: context.theme.colorScheme.bubble(context, selectedService.isIMessageService).withValues(alpha: 0.2),
+        splashColor:
+            context.theme.colorScheme.bubble(context, selectedService.isIMessageService).withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(20),
         selectedBorderColor: context.theme.colorScheme.bubble(context, selectedService.isIMessageService),
         selectedColor: context.theme.colorScheme.bubble(context, selectedService.isIMessageService),

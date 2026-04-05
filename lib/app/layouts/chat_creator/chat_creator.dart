@@ -545,7 +545,8 @@ class ChatCreatorState extends State<ChatCreator> with ThemeHelpers {
                           hideMediaPicker: fakeController.value == null,
                           sendMessage: ({String? effect}) async {
                             addressOnSubmitted();
-                            Chat? chat = fakeController.value?.chat ?? await findExistingChat(checkDeleted: true, update: false);
+                            Chat? chat =
+                                fakeController.value?.chat ?? await findExistingChat(checkDeleted: true, update: false);
 
                             // If no local chat and we have a single contact, try fetching from the
                             // server using the guessed GUID pattern before falling back to creation.

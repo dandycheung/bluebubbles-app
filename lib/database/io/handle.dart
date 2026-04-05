@@ -87,10 +87,10 @@ class Handle {
 
     // Split by space/dash/underscore and take first alpha of first + last word
     final parts = displayName.trim().split(RegExp(r'[ \-_]'));
-    if (parts.length == 1) return parts[0].firstAlpha;
+    if (parts.length == 1) return parts[0].firstAlpha?.toUpperCase();
 
-    final firstPart = parts.first.firstAlpha ?? '';
-    final lastPart = parts.last.firstAlpha ?? '';
+    final firstPart = (parts.first.firstAlpha ?? '').toUpperCase();
+    final lastPart = (parts.last.firstAlpha ?? '').toUpperCase();
 
     return (firstPart + lastPart).isEmpty ? null : firstPart + lastPart;
   }

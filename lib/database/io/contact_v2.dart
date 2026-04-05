@@ -166,7 +166,7 @@ class ContactV2 {
     final last = lastName.firstAlpha;
 
     if (first != null || last != null) {
-      return (first ?? '') + (last ?? '');
+      return ((first ?? '') + (last ?? '')).toUpperCase();
     }
 
     // Fall back to display name
@@ -174,13 +174,13 @@ class ContactV2 {
     if (parts.isEmpty || displayName.isEmpty) return null;
 
     if (parts.length == 1) {
-      return parts[0].firstAlpha;
+      return parts[0].firstAlpha?.toUpperCase();
     }
 
     final firstPart = parts.first.firstAlpha ?? '';
     final lastPart = parts.last.firstAlpha ?? '';
 
-    return (firstPart + lastPart).isEmpty ? null : firstPart + lastPart;
+    return (firstPart + lastPart).isEmpty ? null : (firstPart + lastPart).toUpperCase();
   }
 
   /// Normalize a phone number by removing all non-digit characters

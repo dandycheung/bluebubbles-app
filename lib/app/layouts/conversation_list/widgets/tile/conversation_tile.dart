@@ -243,19 +243,25 @@ class _ChatSubtitleState extends CustomState<ChatSubtitle, void, ConversationTil
       // (ChatState.redactContactInfo / updateChatLatestMessage ensure this).
       final String _subtitle = chatState?.subtitle.value ?? '';
 
-      return RichText(
-        text: TextSpan(
-          children: MessageHelper.buildEmojiText(
-            "${!iOS && isFromMe ? "You: " : ""}$_subtitle",
-            widget.style.copyWith(fontStyle: !iOS && !isDelivered ? FontStyle.italic : null),
+      final maxLines = SettingsSvc.settings.denseChatTiles.value
+          ? 1
+          : material
+              ? 3
+              : 2;
+      final lineHeight = (widget.style.fontSize ?? 14) * (widget.style.height ?? 1.5);
+
+      return ConstrainedBox(
+        constraints: BoxConstraints(minHeight: lineHeight * maxLines),
+        child: RichText(
+          text: TextSpan(
+            children: MessageHelper.buildEmojiText(
+              "${!iOS && isFromMe ? "You: " : ""}$_subtitle",
+              widget.style.copyWith(fontStyle: !iOS && !isDelivered ? FontStyle.italic : null),
+            ),
           ),
+          overflow: TextOverflow.ellipsis,
+          maxLines: maxLines,
         ),
-        overflow: TextOverflow.ellipsis,
-        maxLines: SettingsSvc.settings.denseChatTiles.value
-            ? 1
-            : material
-                ? 3
-                : 2,
       );
     });
   }
@@ -304,7 +310,7 @@ class ChatLeadingState extends State<ChatLeading> with ThemeHelpers {
                       )
                     : ContactAvatarGroupWidget(
                         chat: widget.controller.chat,
-                        size: 40,
+                        size: SettingsSvc.settings.denseChatTiles.value ? 36 : 45,
                         editable: false,
                       ),
               ),

@@ -65,9 +65,7 @@ class StickerObserver extends StatelessWidget {
   Widget build(BuildContext context) {
     final state = MessageStateScope.of(context);
     return Obx(() {
-      final allStickers = state.associatedMessages
-          .where((e) => e.associatedMessageType == "sticker")
-          .toList();
+      final allStickers = state.associatedMessages.where((e) => e.associatedMessageType == "sticker").toList();
       final stickersForPart = messageParts.length == 1
           ? allStickers
           : allStickers.where((s) => (s.associatedMessagePart ?? 0) == part.part).toList();

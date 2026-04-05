@@ -62,10 +62,10 @@ class _StickerHolderState extends State<StickerHolder> {
             spacing: 4,
             runSpacing: 4,
             children: _stickerPaths.values
-                  .map(
-                    (attachment) => ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 100, maxHeight: 100),
-                      child: Image.file(
+                .map(
+                  (attachment) => ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 100, maxHeight: 100),
+                    child: Image.file(
                       File(attachment.path),
                       gaplessPlayback: true,
                       filterQuality: FilterQuality.none,
@@ -79,13 +79,12 @@ class _StickerHolderState extends State<StickerHolder> {
                         );
                       },
                     ),
-                    ),
-                  )
-                  .toList(),
+                  ),
+                )
+                .toList(),
           ),
         ),
       ),
     );
   }
-
 }

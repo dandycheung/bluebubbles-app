@@ -112,9 +112,9 @@ class HandleState {
     }
     final name = _computeDisplayName(h);
     final parts = name.trim().split(RegExp(r'[ \-_]'));
-    if (parts.length == 1) return parts[0].isEmpty ? null : parts[0].substring(0, 1);
-    final first = parts.first.isEmpty ? '' : parts.first.substring(0, 1);
-    final last = parts.last.isEmpty ? '' : parts.last.substring(0, 1);
+    if (parts.length == 1) return parts[0].isEmpty ? null : parts[0].substring(0, 1).toUpperCase();
+    final first = parts.first.isEmpty ? '' : parts.first.substring(0, 1).toUpperCase();
+    final last = parts.last.isEmpty ? '' : parts.last.substring(0, 1).toUpperCase();
     return (first + last).isEmpty ? null : first + last;
   }
 

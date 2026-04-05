@@ -482,12 +482,14 @@ class ChatsService {
     if (state != null) {
       final currentLatestMessage = state.latestMessage.value;
       final currentPinIndex = state.pinIndex.value;
+      final currentIsPinned = state.isPinned.value;
 
       // Check if sort-order-relevant fields have changed
       final latestMessageChanged = updated.latestMessage.guid != currentLatestMessage?.guid ||
           updated.latestMessage.dateCreated != currentLatestMessage?.dateCreated;
       final pinIndexChanged = updated.pinIndex != currentPinIndex;
-      final sortOrderChanged = latestMessageChanged || pinIndexChanged;
+      final isPinnedChanged = (updated.isPinned ?? false) != currentIsPinned;
+      final sortOrderChanged = latestMessageChanged || pinIndexChanged || isPinnedChanged;
 
       if (updated != state.chat || override) {
         state.updateFromChat(updated);
@@ -862,6 +864,10 @@ class ChatsService {
 
     // Update service state
     updateChat(chat);
+
+    // Pin status changes the filtered list (pinned vs non-pinned), so we must
+    // explicitly trigger a list version update so all conversation list views re-filter.
+    _scheduleListVersionUpdate(immediate: true);
 
     return chat;
   }

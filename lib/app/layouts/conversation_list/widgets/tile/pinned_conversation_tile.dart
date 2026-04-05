@@ -16,10 +16,13 @@ import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 
 class PinnedConversationTile extends CustomStateful<ConversationTileController> {
+  final double avatarSize;
+
   PinnedConversationTile({
     super.key,
     required Chat chat,
     required ConversationListController controller,
+    required this.avatarSize,
   }) : super(
             parentController: Get.isRegistered<ConversationTileController>(tag: chat.guid)
                 ? Get.find<ConversationTileController>(tag: chat.guid)
@@ -65,7 +68,7 @@ class _PinnedConversationTileState extends CustomState<PinnedConversationTile, v
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(left: 4, right: 4, top: 1, bottom: 3),
+      margin: const EdgeInsets.only(left: 4, right: 4, top: 1),
       child: MouseRegion(
         onEnter: (event) => controller.hoverHighlight.value = true,
         onExit: (event) => controller.hoverHighlight.value = false,
@@ -107,56 +110,42 @@ class _PinnedConversationTileState extends CustomState<PinnedConversationTile, v
                     ? 8
                     : 0),
               ),
-              child: LayoutBuilder(
-                builder: (BuildContext context, BoxConstraints constraints) {
-                  // Great math right here
-                  final availableWidth = constraints.maxWidth;
-                  final colCount = kIsDesktop
-                      ? SettingsSvc.settings.pinColumnsLandscape.value
-                      : SettingsSvc.settings.pinColumnsPortrait.value;
-                  final spaceBetween = (colCount - 1) * 30;
-                  final maxWidth = max(((availableWidth - spaceBetween) / colCount).floorToDouble(), 0).toDouble();
-
-                  return ConstrainedBox(
-                    constraints: BoxConstraints(
-                      maxWidth: maxWidth,
-                    ),
-                    child: Stack(
-                      clipBehavior: Clip.none,
-                      alignment: Alignment.center,
-                      children: <Widget>[
-                        Column(
-                          children: [
-                            Stack(
-                              clipBehavior: Clip.none,
-                              children: <Widget>[
-                                ContactAvatarGroupWidget(
-                                  chat: controller.chat,
-                                  size: maxWidth,
-                                  editable: false,
-                                ),
-                                UnreadIcon(width: maxWidth, parentController: controller),
-                                MuteIcon(width: maxWidth, parentController: controller),
-                                PinnedIndicators(width: maxWidth, controller: controller),
-                              ],
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: widget.avatarSize),
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  alignment: Alignment.center,
+                  children: <Widget>[
+                    Column(
+                      children: [
+                        Stack(
+                          clipBehavior: Clip.none,
+                          children: <Widget>[
+                            ContactAvatarGroupWidget(
+                              chat: controller.chat,
+                              size: widget.avatarSize,
+                              editable: false,
                             ),
-                            ChatTitle(width: maxWidth, parentController: controller),
+                            UnreadIcon(width: widget.avatarSize, parentController: controller),
+                            MuteIcon(width: widget.avatarSize, parentController: controller),
+                            PinnedIndicators(width: widget.avatarSize, controller: controller),
                           ],
                         ),
-                        ReactionIcon(width: maxWidth, parentController: controller),
-                        Positioned(
-                          bottom: context.textTheme.bodyMedium!.fontSize! * 3,
-                          width: maxWidth,
-                          child: PinnedTileTextBubble(
-                            chat: controller.chat,
-                            size: maxWidth,
-                            parentController: controller,
-                          ),
-                        ),
+                        ChatTitle(width: widget.avatarSize, parentController: controller),
                       ],
                     ),
-                  );
-                },
+                    ReactionIcon(width: widget.avatarSize, parentController: controller),
+                    Positioned(
+                      bottom: context.textTheme.bodyMedium!.fontSize! * 3,
+                      width: widget.avatarSize,
+                      child: PinnedTileTextBubble(
+                        chat: controller.chat,
+                        size: widget.avatarSize,
+                        parentController: controller,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             );
           }),
@@ -281,9 +270,7 @@ class _ChatTitleState extends CustomState<ChatTitle, void, ConversationTileContr
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.symmetric(
-        vertical: widget.width * 0.075,
-      ),
+      padding: const EdgeInsets.only(top: 6, bottom: 4),
       child: Obx(() {
         final isPinned = controller.chatState?.isPinned.value ?? controller.chat.isPinned ?? false;
         final style = context.theme.textTheme.bodyMedium!.apply(
@@ -298,23 +285,21 @@ class _ChatTitleState extends CustomState<ChatTitle, void, ConversationTileContr
         final _title = chatState?.title.value ?? controller.chat.getTitle();
 
         return SizedBox(
-          height: style.height! * style.fontSize! * 2,
+          height: style.height! * style.fontSize!,
           child: OverflowBox(
             maxWidth: widget.width + 16,
-            child: Align(
-              alignment: Alignment.center,
-              child: RichText(
-                text: TextSpan(
-                  children: MessageHelper.buildEmojiText(
-                    _title,
-                    style,
-                  ),
-                  style: style,
+            alignment: Alignment.topCenter,
+            child: RichText(
+              text: TextSpan(
+                children: MessageHelper.buildEmojiText(
+                  _title,
+                  style,
                 ),
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                maxLines: 2,
+                style: style,
               ),
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              maxLines: 1,
             ),
           ),
         );

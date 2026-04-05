@@ -236,7 +236,11 @@ class ChatCreatorController extends StatefulController {
     try {
       final response = await HttpSvc.handleiMessageState(contact.address);
       final available = response.data['data']['available'] as bool?;
-      contact.serviceType.value = available == true ? ChatServiceType.iMessage : available == false ? ChatServiceType.sms : null;
+      contact.serviceType.value = available == true
+          ? ChatServiceType.iMessage
+          : available == false
+              ? ChatServiceType.sms
+              : null;
     } catch (_) {}
   }
 

@@ -944,7 +944,7 @@ class TextFieldComponentState extends State<TextFieldComponent> {
     if (widget.controller != old.controller) {
       controller = widget.controller;
     }
- }
+  }
 
   bool get iOS => SettingsSvc.settings.skin.value == Skins.iOS;
 
@@ -1265,17 +1265,25 @@ class TextFieldComponentState extends State<TextFieldComponent> {
         Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
           if (!kIsWeb && iOS && Platform.isAndroid)
             GestureDetector(
-              onLongPress: () { _openCamera(type: 'video'); },
+              onLongPress: () {
+                _openCamera(type: 'video');
+              },
               child: IconButton(
                 padding: const EdgeInsets.only(left: 10),
                 icon: Icon(CupertinoIcons.camera_fill, color: context.theme.colorScheme.outline, size: 28),
                 visualDensity: VisualDensity.compact,
-                onPressed: () { _openCamera(); },
+                onPressed: () {
+                  _openCamera();
+                },
               ),
             ),
           IconButton(
             icon: Icon(
-              iOS ? CupertinoIcons.add_circled_solid : material ? Icons.add_circle_outline : Icons.add,
+              iOS
+                  ? CupertinoIcons.add_circled_solid
+                  : material
+                      ? Icons.add_circle_outline
+                      : Icons.add,
               color: context.theme.colorScheme.outline,
               size: 28,
             ),
