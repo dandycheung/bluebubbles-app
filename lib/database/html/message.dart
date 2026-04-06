@@ -383,7 +383,7 @@ class Message {
       attachments.where((e) => e != null && e.mimeType == null).cast<Attachment>().toList();
 
   List<Message> get reactions => associatedMessages
-      .where((item) => ReactionTypes.toList().contains(item.associatedMessageType?.replaceAll("-", "")))
+      .where((item) => ReactionTypes.isValidReaction(item.associatedMessageType))
       .toList();
 
   MessageStatusIndicator get indicatorToShow {

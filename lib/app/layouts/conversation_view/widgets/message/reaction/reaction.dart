@@ -176,7 +176,7 @@ class ReactionWidgetState extends State<ReactionWidget> with ThemeHelpers {
               child: Center(
                 child: Builder(builder: (context) {
                   final text = Text(
-                    ReactionTypes.reactionToEmoji[reactionType] ?? "X",
+                    ReactionTypes.getReactionEmoji(reactionType),
                     style: const TextStyle(fontSize: 15, fontFamily: 'Apple Color Emoji'),
                     textAlign: TextAlign.center,
                   );
@@ -232,16 +232,22 @@ class ReactionWidgetState extends State<ReactionWidget> with ThemeHelpers {
                           child: Padding(
                         padding:
                             const EdgeInsets.all(6.5).add(EdgeInsets.only(right: reactionType == "emphasize" ? 1 : 0)),
-                        child: SvgPicture.asset(
-                          'assets/reactions/$reactionType-black.svg',
-                          colorFilter: ColorFilter.mode(
-                              reactionType == "love"
-                                  ? Colors.pink
-                                  : (reactionIsFromMe
-                                      ? context.theme.colorScheme.onPrimary
-                                      : context.theme.colorScheme.properOnSurface),
-                              BlendMode.srcIn),
-                        ),
+                        child: ReactionTypes.isEmojiReaction(reactionType)
+                            ? Text(
+                                reactionType,
+                                style: const TextStyle(fontSize: 15, fontFamily: 'Apple Color Emoji'),
+                                textAlign: TextAlign.center,
+                              )
+                            : SvgPicture.asset(
+                                'assets/reactions/$reactionType-black.svg',
+                                colorFilter: ColorFilter.mode(
+                                    reactionType == "love"
+                                        ? Colors.pink
+                                        : (reactionIsFromMe
+                                            ? context.theme.colorScheme.onPrimary
+                                            : context.theme.colorScheme.properOnSurface),
+                                    BlendMode.srcIn),
+                              ),
                       )),
                     ));
               })),
@@ -329,7 +335,7 @@ class ReactionWidgetState extends State<ReactionWidget> with ThemeHelpers {
         child: Center(
           child: Builder(builder: (ctx) {
             final text = Text(
-              ReactionTypes.reactionToEmoji[rType] ?? "X",
+              ReactionTypes.getReactionEmoji(rType),
               style: const TextStyle(fontSize: 15, fontFamily: 'Apple Color Emoji'),
               textAlign: TextAlign.center,
             );
@@ -392,17 +398,23 @@ class ReactionWidgetState extends State<ReactionWidget> with ThemeHelpers {
               child: Center(
                 child: Padding(
                   padding: const EdgeInsets.all(6.5).add(EdgeInsets.only(right: rType == "emphasize" ? 1 : 0)),
-                  child: SvgPicture.asset(
-                    'assets/reactions/$rType-black.svg',
-                    colorFilter: ColorFilter.mode(
-                      rType == "love"
-                          ? Colors.pink
-                          : (isFromMe
-                              ? context.theme.colorScheme.onPrimary
-                              : context.theme.colorScheme.properOnSurface),
-                      BlendMode.srcIn,
-                    ),
-                  ),
+                  child: ReactionTypes.isEmojiReaction(rType)
+                      ? Text(
+                          rType,
+                          style: const TextStyle(fontSize: 15, fontFamily: 'Apple Color Emoji'),
+                          textAlign: TextAlign.center,
+                        )
+                      : SvgPicture.asset(
+                          'assets/reactions/$rType-black.svg',
+                          colorFilter: ColorFilter.mode(
+                            rType == "love"
+                                ? Colors.pink
+                                : (isFromMe
+                                    ? context.theme.colorScheme.onPrimary
+                                    : context.theme.colorScheme.properOnSurface),
+                            BlendMode.srcIn,
+                          ),
+                        ),
                 ),
               ),
             ),
