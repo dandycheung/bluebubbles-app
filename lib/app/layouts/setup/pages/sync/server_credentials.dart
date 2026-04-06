@@ -29,7 +29,7 @@ class _ServerCredentialsState extends OptimizedState<ServerCredentials> {
   final TextEditingController urlController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   final controller = Get.find<SetupViewController>();
-  final FocusScopeNode focusScopeNode = FocusScopeNode(traversalEdgeBehavior: TraversalEdgeBehavior.stop);
+  final FocusScopeNode focusScopeNode = FocusScopeNode(/*traversalEdgeBehavior: TraversalEdgeBehavior.stop*/); //TODO Add this back when upgrading flutter
 
   bool showLoginButtons = true;
   bool obscureText = true;
