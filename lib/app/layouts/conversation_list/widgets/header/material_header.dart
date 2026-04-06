@@ -47,7 +47,7 @@ class _MaterialHeaderState extends CustomState<MaterialHeader, void, Conversatio
                             : Colors.transparent,
                       ),
                       child: Padding(
-                        padding: const EdgeInsets.only(left: 5.0, top: 5.0, bottom: 5.0),
+                        padding: const EdgeInsets.only(left: 5.0, top: 6.0, bottom: 6.0),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.start,
                           children: [
@@ -60,7 +60,7 @@ class _MaterialHeaderState extends CustomState<MaterialHeader, void, Conversatio
                               ),
                             if (!NavigationSvc.isAvatarOnly(context))
                               Padding(
-                                padding: const EdgeInsets.only(left: 18, right: 20),
+                                padding: const EdgeInsets.only(left: 18, right: 10),
                                 child: (!showArchived && !showUnknown)
                                     ? SvgPicture.asset('assets/icon/bb-icon.svg',
                                         width: 26,
@@ -78,7 +78,7 @@ class _MaterialHeaderState extends CustomState<MaterialHeader, void, Conversatio
                                         ),
                                       ),
                               ),
-                            if (!NavigationSvc.isAvatarOnly(context)) HeaderText(controller: controller, fontSize: 20),
+                            if (!NavigationSvc.isAvatarOnly(context)) HeaderText(controller: controller, fontSize: 18),
                             if (!NavigationSvc.isAvatarOnly(context) && !showArchived && !showUnknown)
                               Expanded(
                                 child: Row(

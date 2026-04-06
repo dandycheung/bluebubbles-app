@@ -280,22 +280,60 @@ class _MaterialComposeFAB extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isMonet = SettingsSvc.settings.monetTheming.value != Monet.none;
+    final bgColor = isMonet
+        ? context.theme.colorScheme.primaryContainer
+        : context.theme.colorScheme.primary;
+    final fgColor = isMonet
+        ? context.theme.colorScheme.onPrimaryContainer
+        : context.theme.colorScheme.onPrimary;
+
     return InkWell(
       onLongPress:
           SettingsSvc.settings.cameraFAB.value && !kIsWeb && !kIsDesktop ? () => controller.openCamera(context) : null,
-      child: Container(
-        height: 65,
+      child: Padding(
         padding: const EdgeInsets.only(right: 4.5, bottom: 9),
-        child: FloatingActionButton(
-          backgroundColor: context.theme.colorScheme.primaryContainer,
-          shape: const CircleBorder(),
-          onPressed: () => controller.openNewChatCreator(context),
-          child: Padding(
-            padding: const EdgeInsets.only(left: 5.0, right: 5.0, top: 2),
-            child: Icon(
-              CupertinoIcons.bubble_left,
-              color: context.theme.colorScheme.onPrimaryContainer,
-              size: 24,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeInOut,
+          height: 56,
+          decoration: BoxDecoration(
+            color: bgColor,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Material(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(16),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: () => controller.openNewChatCreator(context),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(CupertinoIcons.bubble_left, color: fgColor, size: 24),
+                    ClipRect(
+                      child: AnimatedAlign(
+                        duration: const Duration(milliseconds: 250),
+                        curve: Curves.easeInOut,
+                        alignment: Alignment.centerLeft,
+                        widthFactor: controller.showMaterialFABText ? 1.0 : 0.0,
+                        child: Padding(
+                          padding: const EdgeInsets.only(left: 10),
+                          child: Text(
+                            'Start chat',
+                            style: context.theme.textTheme.labelLarge!.copyWith(
+                              color: fgColor,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
         ),

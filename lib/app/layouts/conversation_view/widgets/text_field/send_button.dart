@@ -30,7 +30,9 @@ class SendButtonState extends State<SendButton> with SingleTickerProviderStateMi
   late final Color _materialBaseColor = context.theme.colorScheme.properSurface;
   late final Color _errorColor = context.theme.colorScheme.error;
   late final Color _iosOnPrimary = context.theme.colorScheme.onPrimary;
-  late final Color _materialSecondary = context.theme.colorScheme.secondary;
+  late final Color _materialIconColor = SettingsSvc.settings.monetTheming.value != Monet.none
+      ? context.theme.colorScheme.onPrimary
+      : context.theme.colorScheme.secondary;
   late final Color _onError = context.theme.colorScheme.onError;
 
   Color get baseColor => iOS ? _iosBaseColor : _materialBaseColor;
@@ -73,7 +75,7 @@ class SendButtonState extends State<SendButton> with SingleTickerProviderStateMi
               baseColor: baseColor,
               errorColor: _errorColor,
               iosOnPrimary: _iosOnPrimary,
-              materialSecondary: _materialSecondary,
+              materialSecondary: _materialIconColor,
               onError: _onError,
             );
           },

@@ -64,13 +64,22 @@ class _MaterialConversationListState extends State<MaterialConversationList> {
             preferredSize: const Size.fromHeight(60),
             child: MaterialHeader(parentController: controller),
           ),
-          backgroundColor: backgroundColor,
-          extendBodyBehindAppBar: true,
+          backgroundColor: SettingsSvc.settings.windowEffect.value == WindowEffect.disabled
+              ? context.theme.colorScheme.properSurface
+              : Colors.transparent,
+          extendBodyBehindAppBar: false,
           floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
           floatingActionButton: !showArchived && !showUnknown
               ? ConversationListFAB(parentController: controller)
               : const SizedBox.shrink(),
-          body: Obx(() {
+          body: ClipRRect(
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(34),
+              topRight: Radius.circular(34),
+            ),
+            child: Container(
+              color: backgroundColor,
+              child: Obx(() {
             // Force reactivity by accessing observable values first
             final loaded = ChatsSvc.loadedFirstChatBatch.value;
             // Observe chat list version to trigger rebuild when order changes
@@ -121,6 +130,7 @@ class _MaterialConversationListState extends State<MaterialConversationList> {
                 child: Obx(() => ListView.builder(
                       controller: controller.materialScrollController,
                       physics: ThemeSwitcher.getScrollPhysics(),
+                      padding: const EdgeInsets.only(top: 8),
                       findChildIndexCallback: (key) => findChildIndexByKey(_chats, key, (item) => item.guid),
                       itemBuilder: (context, index) {
                         final chat = _chats[index];
@@ -138,6 +148,8 @@ class _MaterialConversationListState extends State<MaterialConversationList> {
               ),
             );
           }),
+            ),
+          ),
         ),
       ),
     );

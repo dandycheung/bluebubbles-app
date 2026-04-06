@@ -236,7 +236,7 @@ class _ChatSubtitleState extends CustomState<ChatSubtitle, void, ConversationTil
       final isFromMe = latestMessage?.isFromMe ?? false;
       final isDelivered = controller.chat.isGroup ||
           !isFromMe ||
-          latestMessage?.dateDelivered != null ||
+          latestMessage?.isDelivered == true ||
           latestMessage?.dateRead != null;
 
       // subtitle.value is already contact-info-free when redacted mode is on
@@ -245,23 +245,47 @@ class _ChatSubtitleState extends CustomState<ChatSubtitle, void, ConversationTil
 
       final maxLines = SettingsSvc.settings.denseChatTiles.value
           ? 1
-          : material
-              ? 3
-              : 2;
+          : 2;
       final lineHeight = (widget.style.fontSize ?? 14) * (widget.style.height ?? 1.5);
 
-      return ConstrainedBox(
-        constraints: BoxConstraints(minHeight: lineHeight * maxLines),
-        child: RichText(
-          text: TextSpan(
-            children: MessageHelper.buildEmojiText(
-              "${!iOS && isFromMe ? "You: " : ""}$_subtitle",
-              widget.style.copyWith(fontStyle: !iOS && !isDelivered ? FontStyle.italic : null),
-            ),
+      // For material DMs with a message from me, show a delivery check icon
+      // instead of italic styling — mirrors the Google Messages visual pattern.
+      final showDeliveryIcon = material && isFromMe && !controller.chat.isGroup;
+      final isMonet = SettingsSvc.settings.monetTheming.value != Monet.none;
+      final iconColor = isMonet ? context.theme.colorScheme.primary : context.theme.colorScheme.outline;
+
+      final richText = RichText(
+        text: TextSpan(
+          children: MessageHelper.buildEmojiText(
+            "${!iOS && isFromMe ? "You: " : ""}$_subtitle",
+            widget.style.copyWith(fontStyle: !iOS && !material && !isDelivered ? FontStyle.italic : null),
           ),
-          overflow: TextOverflow.ellipsis,
-          maxLines: maxLines,
         ),
+        overflow: TextOverflow.ellipsis,
+        maxLines: maxLines,
+      );
+
+      return ConstrainedBox(
+        constraints: BoxConstraints(minHeight: lineHeight * (material ? 1 : maxLines)),
+        child: showDeliveryIcon
+            ? Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: EdgeInsets.only(right: 4, top: ((widget.style.fontSize ?? 14) * (widget.style.height ?? 1.5) - 14) / 2),
+                    child: Opacity(
+                      opacity: isDelivered ? 1.0 : 0.35,
+                      child: Icon(
+                        Icons.check_circle_outline,
+                        size: 14,
+                        color: iconColor,
+                      ),
+                    ),
+                  ),
+                  Expanded(child: richText),
+                ],
+              )
+            : richText,
       );
     });
   }
@@ -310,7 +334,7 @@ class ChatLeadingState extends State<ChatLeading> with ThemeHelpers {
                       )
                     : ContactAvatarGroupWidget(
                         chat: widget.controller.chat,
-                        size: SettingsSvc.settings.denseChatTiles.value ? 36 : 45,
+                        size: SettingsSvc.settings.denseChatTiles.value ? 36 : (material ? 50 : 45),
                         editable: false,
                       ),
               ),

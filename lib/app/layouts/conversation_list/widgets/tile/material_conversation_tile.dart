@@ -58,24 +58,32 @@ class _MaterialConversationTileState extends CustomState<MaterialConversationTil
                 style: context.theme.textTheme.bodyLarge!
                     .copyWith(
                       fontWeight: controller.shouldHighlight.value
-                          ? FontWeight.w600
+                          ? FontWeight.w500
                           : (ChatsSvc.getChatState(controller.chat.guid)?.hasUnreadMessage.value ?? false)
                               ? FontWeight.bold
                               : null,
+                      color: SettingsSvc.settings.monetTheming.value != Monet.none
+                          ? context.theme.colorScheme.onSurface
+                          : null,
                     )
                     .apply(fontSizeFactor: 1.1),
               )),
           subtitle: controller.subtitle ??
               Obx(() {
                 final unread = ChatsSvc.getChatState(controller.chat.guid)?.hasUnreadMessage.value ?? false;
+                final isMonet = SettingsSvc.settings.monetTheming.value != Monet.none;
                 return ChatSubtitle(
                   parentController: controller,
                   style: context.theme.textTheme.bodyMedium!
                       .copyWith(
-                        fontWeight: unread ? FontWeight.bold : null,
+                        fontWeight: unread ? FontWeight.w500 : null,
                         color: controller.shouldHighlight.value || unread
-                            ? context.textTheme.bodyMedium!.color
-                            : context.theme.colorScheme.outline,
+                            ? isMonet
+                                ? context.theme.colorScheme.onSurface
+                                : context.textTheme.bodyMedium!.color
+                            : isMonet
+                                ? context.theme.colorScheme.onSurfaceVariant
+                                : context.theme.colorScheme.outline,
                         height: 1.5,
                       )
                       .apply(fontSizeFactor: 1.05),
@@ -108,7 +116,9 @@ class _MaterialConversationTileState extends CustomState<MaterialConversationTil
                         ? context.theme.colorScheme.primaryContainer
                         : hoverHighlight
                             ? context.theme.colorScheme.properSurface.withValues(alpha: 0.5)
-                            : null,
+                            : SettingsSvc.settings.monetTheming.value == Monet.full
+                                ? context.theme.colorScheme.surface
+                                : null,
           ),
           duration: const Duration(milliseconds: 100),
           child: NavigationSvc.isAvatarOnly(context)
@@ -183,18 +193,6 @@ class _MaterialTrailingState extends CustomState<MaterialTrailing, void, Convers
                       .apply(fontSizeFactor: 1.1),
                   overflow: TextOverflow.clip,
                 ),
-                if (muteType != "mute" && unread)
-                  Padding(
-                    padding: const EdgeInsets.only(left: 8.0),
-                    child: Container(
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: context.theme.colorScheme.primary,
-                      ),
-                    ),
-                  )
               ],
             ),
             const SizedBox(height: 5),
@@ -204,7 +202,18 @@ class _MaterialTrailingState extends CustomState<MaterialTrailing, void, Convers
               mainAxisSize: MainAxisSize.min,
               children: [
                 if (chatState.isPinned.value)
-                  Icon(Icons.push_pin_outlined, size: 15, color: context.theme.colorScheme.outline),
+                  Icon(Icons.push_pin_outlined, size: 18, color: context.theme.colorScheme.outline),
+                if (muteType != "mute" && unread) ...[
+                  if (chatState.isPinned.value) const SizedBox(width: 5),
+                  Container(
+                    width: 13,
+                    height: 13,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: context.theme.colorScheme.primary,
+                    ),
+                  ),
+                ],
                 if (muteType == "mute") const SizedBox(width: 5),
                 if (muteType == "mute")
                   Icon(
@@ -212,7 +221,7 @@ class _MaterialTrailingState extends CustomState<MaterialTrailing, void, Convers
                     color: controller.shouldHighlight.value || unread
                         ? context.theme.colorScheme.primary
                         : context.theme.colorScheme.outline,
-                    size: 15,
+                    size: 18,
                   ),
               ],
             ),

@@ -136,7 +136,9 @@ class _ContactAvatarWidgetState extends State<ContactAvatarWidget> with ThemeHel
       final hideContactInfo = SettingsSvc.settings.redactedMode.value && SettingsSvc.settings.hideContactInfo.value;
       final genAvatars = SettingsSvc.settings.redactedMode.value && SettingsSvc.settings.generateFakeAvatars.value;
       final iOS = SettingsSvc.settings.skin.value == Skins.iOS;
-      final colorfulAvatars = SettingsSvc.settings.colorfulAvatars.value;
+      final colorfulAvatars = SettingsSvc.settings.colorfulAvatars.value ||
+          (SettingsSvc.settings.skin.value == Skins.Material &&
+              SettingsSvc.settings.monetTheming.value != Monet.none);
       final userAvatarPath = SettingsSvc.settings.userAvatarPath.value;
 
       return MouseRegion(
@@ -212,7 +214,8 @@ class _ContactAvatarWidgetState extends State<ContactAvatarWidget> with ThemeHel
                           initials!,
                           key: Key("$keyPrefix-avatar-text"),
                           style: TextStyle(
-                            fontSize: (widget.fontSize ?? 18).roundToDouble() * (material ? 1.25 : 1),
+                            fontSize: size * 0.5,
+                            height: 1.0,
                             color: material ? context.theme.colorScheme.background : Colors.white,
                           ),
                           textAlign: TextAlign.center,
@@ -234,7 +237,8 @@ class _ContactAvatarWidgetState extends State<ContactAvatarWidget> with ThemeHel
                     initials!,
                     key: Key("$keyPrefix-avatar-text"),
                     style: TextStyle(
-                      fontSize: (widget.fontSize ?? 18).roundToDouble() * (material ? 1.25 : 1),
+                      fontSize: size * 0.5,
+                      height: 1.0,
                       color: material ? context.theme.colorScheme.background : Colors.white,
                     ),
                     textAlign: TextAlign.center,

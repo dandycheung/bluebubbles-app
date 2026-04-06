@@ -38,7 +38,7 @@ class HeaderText extends StatelessWidget {
                 : "Messages",
         style: context.textTheme.headlineLarge!.copyWith(
           color: context.theme.colorScheme.onBackground,
-          fontWeight: FontWeight.w600,
+          fontWeight: FontWeight.w400,
           fontSize: fontSize,
         ),
         maxLines: 1,
