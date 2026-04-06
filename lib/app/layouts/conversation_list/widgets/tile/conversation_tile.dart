@@ -265,7 +265,9 @@ class _ChatSubtitleState extends CustomState<ChatSubtitle, void, ConversationTil
         maxLines: maxLines,
       );
 
-      return ConstrainedBox(
+      return Padding(
+        padding: const EdgeInsets.only(right: 10),
+        child: ConstrainedBox(
         constraints: BoxConstraints(minHeight: lineHeight * (material ? 1 : maxLines)),
         child: showDeliveryIcon
             ? Row(
@@ -286,6 +288,7 @@ class _ChatSubtitleState extends CustomState<ChatSubtitle, void, ConversationTil
                 ],
               )
             : richText,
+        ),
       );
     });
   }
