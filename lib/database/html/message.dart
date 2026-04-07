@@ -353,19 +353,21 @@ class Message {
     }
 
     if (itemType == 1 && groupActionType == 1) {
-      text = "$name removed $other from the conversation";
+      text = "$name removed $other from the conversation.";
     } else if (itemType == 1 && groupActionType == 0) {
-      text = "$name added $other to the conversation";
+      text = "$name added $other to the conversation.";
     } else if (itemType == 3 && (groupActionType ?? 0) > 0) {
-      text = "$name changed the group photo";
+      text = "$name changed the group photo.";
     } else if (itemType == 3) {
-      text = "$name left the conversation";
+      text = "$name left the conversation.";
     } else if (itemType == 2 && groupTitle != null) {
-      text = "$name named the conversation \"$groupTitle\"";
+      text = "$name named the conversation \"$groupTitle\".";
+    } else if (itemType == 2 && groupTitle == null) {
+      text = "$name removed the name from the conversation.";
     } else if (itemType == 6) {
-      text = "$name started a FaceTime call";
+      text = "$name started a FaceTime call.";
     } else if (itemType == 4 && groupActionType == 0) {
-      text = "$name shared ${name == "You" ? "your" : "their"} location";
+      text = "$name shared ${name == "You" ? "your" : "their"} location.";
     }
 
     return text;

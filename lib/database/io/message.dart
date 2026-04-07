@@ -141,6 +141,9 @@ class Message {
   @Transient()
   bool get isSticker => associatedMessageType == "sticker" && associatedMessageGuid != null;
 
+  @Transient()
+  bool get isNameChange => itemType == 2;
+
   Message({
     this.id,
     this.originalROWID,
@@ -638,30 +641,30 @@ class Message {
 
     if (itemType == 1) {
       if (groupActionType == 0) {
-        text = "$name added $other to the conversation";
+        text = "$name added $other to the conversation.";
       } else if (groupActionType == 1) {
-        text = "$name removed $other from the conversation";
+        text = "$name removed $other from the conversation.";
       }
     } else if (itemType == 2) {
       if (groupTitle != null) {
-        text = "$name named the conversation \"$groupTitle\"";
+        text = "$name named the conversation \"$groupTitle\".";
       } else {
-        text = "$name removed the name from the conversation";
+        text = "$name removed the name from the conversation.";
       }
     } else if (itemType == 3) {
       if (groupActionType == null || groupActionType == 0) {
-        text = "$name left the conversation";
+        text = "$name left the conversation.";
       } else if (groupActionType == 1) {
-        text = "$name changed the group photo";
+        text = "$name changed the group photo.";
       } else if (groupActionType == 2) {
-        text = "$name removed the group photo";
+        text = "$name removed the group photo.";
       }
     } else if (itemType == 4 && groupActionType == 0) {
-      text = "$name shared ${name == "You" ? "your" : "their"} location";
+      text = "$name shared ${name == "You" ? "your" : "their"} location.";
     } else if (itemType == 5) {
-      text = "$name kept an audio message";
+      text = "$name kept an audio message.";
     } else if (itemType == 6) {
-      text = "$name started a FaceTime call";
+      text = "$name started a FaceTime call.";
     }
 
     return text;

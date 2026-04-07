@@ -244,6 +244,12 @@ class IncrementalSyncManager extends SyncManager {
     // Enumerate the chats into cache
     Map<String, Chat> chatCache = {};
     Map<String, List<Message>> messagesToSync = {};
+
+    // Tracks the latest group-name-change per chat, keyed by chat GUID.
+    // We keep only the latest (highest dateCreated) so that if multiple name
+    // changes arrive in the same batch the most-recent one wins.
+    final Map<String, ({DateTime? dateCreated, String? groupTitle})> latestNameChangePerChat = {};
+
     for (var msgData in messages) {
       for (var chat in msgData['chats']) {
         if (!chatCache.containsKey(chat['guid'])) {
@@ -267,6 +273,17 @@ class IncrementalSyncManager extends SyncManager {
         if (msg.dateCreated != null && lastSyncedTimestamp == null ||
             msg.dateCreated!.millisecondsSinceEpoch > lastSyncedTimestamp!) {
           lastSyncedTimestamp = msg.dateCreated!.millisecondsSinceEpoch;
+        }
+
+        // Track the latest group-name-change message per chat.
+        if (msg.isNameChange) {
+          final chatGuid = chat['guid'] as String;
+          final existing = latestNameChangePerChat[chatGuid];
+          final msgDate = msg.dateCreated;
+          if (existing == null ||
+              (msgDate != null && existing.dateCreated != null && msgDate.isAfter(existing.dateCreated!))) {
+            latestNameChangePerChat[chatGuid] = (dateCreated: msgDate, groupTitle: msg.groupTitle);
+          }
         }
       }
     }
@@ -296,6 +313,19 @@ class IncrementalSyncManager extends SyncManager {
         } catch (ex) {
           Logger.warn("Failed to fetch participants for chat $chatGuid", error: ex, tag: tag);
         }
+      }
+    }
+
+    // Apply the authoritative group name from group-name-change messages.
+    // groupTitle on the message IS the name the chat was changed to, so it is
+    // more reliable than whatever displayName happened to be embedded in the
+    // first message's chat object.  We apply it here (after any participant
+    // fetches that may have replaced chatCache entries) so that bulkSyncChats
+    // receives the correct displayName and writes it to the DB.
+    for (final entry in latestNameChangePerChat.entries) {
+      final chat = chatCache[entry.key];
+      if (chat != null) {
+        chat.displayName = entry.value.groupTitle;
       }
     }
 
