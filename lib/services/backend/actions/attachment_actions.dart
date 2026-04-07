@@ -14,7 +14,7 @@ class AttachmentActions {
     return result;
   }
 
-  static Future<int> saveAttachmentAsync(Map<String, dynamic> data) async {
+  static Future<int> saveAttachmentAsync(dynamic data) async {
     final attachmentData = data['attachmentData'] as Map<String, dynamic>;
     final messageData = data['messageData'] as Map<String, dynamic>?;
 
@@ -49,7 +49,7 @@ class AttachmentActions {
     });
   }
 
-  static Future<void> bulkSaveAttachmentsAsync(Map<String, dynamic> data) async {
+  static Future<void> bulkSaveAttachmentsAsync(dynamic data) async {
     final mapData = data['mapData'] as Map<Map<String, dynamic>, List<Map<String, dynamic>>>;
 
     // Convert the map from serialized data back to Message/Attachment objects
@@ -103,7 +103,7 @@ class AttachmentActions {
     });
   }
 
-  static Future<int> replaceAttachmentAsync(Map<String, dynamic> data) async {
+  static Future<int> replaceAttachmentAsync(dynamic data) async {
     final oldGuid = data['oldGuid'] as String;
     final newAttachmentData = data['newAttachmentData'] as Map<String, dynamic>;
 
@@ -146,7 +146,7 @@ class AttachmentActions {
     });
   }
 
-  static Future<int?> findOneAttachmentAsync(Map<String, dynamic> data) async {
+  static Future<int?> findOneAttachmentAsync(dynamic data) async {
     final guid = data['guid'] as String;
 
     return Database.runInTransaction(TxMode.read, () {
@@ -164,7 +164,7 @@ class AttachmentActions {
     });
   }
 
-  static Future<List<int>> findAttachmentsAsync(Map<String, dynamic> data) async {
+  static Future<List<int>> findAttachmentsAsync(dynamic data) async {
     final queryDescriptorMap = data['queryDescriptor'] as Map<String, dynamic>?;
 
     return Database.runInTransaction(TxMode.read, () {
@@ -185,7 +185,7 @@ class AttachmentActions {
     });
   }
 
-  static Future<void> deleteAttachmentAsync(Map<String, dynamic> data) async {
+  static Future<void> deleteAttachmentAsync(dynamic data) async {
     final guid = data['guid'] as String;
 
     return Database.runInTransaction(TxMode.write, () {

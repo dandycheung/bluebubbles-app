@@ -19,7 +19,7 @@ class MessageActions {
     return null;
   }
 
-  static Future<List<int>> bulkSaveNewMessages(Map<String, dynamic> data) async {
+  static Future<List<int>> bulkSaveNewMessages(dynamic data) async {
     final chatData = data['chatData'] as Map<String, dynamic>;
     final messagesData = (data['messagesData'] as List).cast<Map<String, dynamic>>();
 
@@ -208,7 +208,7 @@ class MessageActions {
     });
   }
 
-  static Future<int> replaceMessage(Map<String, dynamic> data) async {
+  static Future<int> replaceMessage(dynamic data) async {
     final oldGuid = data['oldGuid'] as String?;
     final newMessageData = data['newMessageData'] as Map<String, dynamic>;
 
@@ -263,7 +263,7 @@ class MessageActions {
     });
   }
 
-  static Future<List<Map<String, dynamic>>> fetchAttachmentsAsync(Map<String, dynamic> data) async {
+  static Future<List<Map<String, dynamic>>> fetchAttachmentsAsync(dynamic data) async {
     final messageId = data['messageId'] as int;
 
     return Database.runInTransaction(TxMode.read, () {
@@ -275,7 +275,7 @@ class MessageActions {
     });
   }
 
-  static Future<Map<String, dynamic>?> getChatAsync(Map<String, dynamic> data) async {
+  static Future<Map<String, dynamic>?> getChatAsync(dynamic data) async {
     final messageId = data['messageId'] as int;
 
     return Database.runInTransaction(TxMode.read, () {
@@ -286,7 +286,7 @@ class MessageActions {
     });
   }
 
-  static Future<void> deleteMessage(Map<String, dynamic> data) async {
+  static Future<void> deleteMessage(dynamic data) async {
     final guid = data['guid'] as String;
 
     Database.runInTransaction(TxMode.write, () {
@@ -301,7 +301,7 @@ class MessageActions {
     });
   }
 
-  static Future<void> softDeleteMessage(Map<String, dynamic> data) async {
+  static Future<void> softDeleteMessage(dynamic data) async {
     final guid = data['guid'] as String;
 
     Database.runInTransaction(TxMode.write, () {
@@ -319,7 +319,7 @@ class MessageActions {
     });
   }
 
-  static Future<Map<String, dynamic>> fetchAssociatedMessagesAsync(Map<String, dynamic> data) async {
+  static Future<Map<String, dynamic>> fetchAssociatedMessagesAsync(dynamic data) async {
     final messageGuid = data['messageGuid'] as String;
     final threadOriginatorGuid = data['threadOriginatorGuid'] as String?;
 
@@ -353,7 +353,7 @@ class MessageActions {
     });
   }
 
-  static Future<int> saveMessageAsync(Map<String, dynamic> data) async {
+  static Future<int> saveMessageAsync(dynamic data) async {
     final messageData = data['messageData'] as Map<String, dynamic>;
     final chatData = data['chatData'] as Map<String, dynamic>?;
     final updateIsBookmarked = data['updateIsBookmarked'] as bool;
@@ -437,7 +437,7 @@ class MessageActions {
     });
   }
 
-  static Future<int?> findOneAsync(Map<String, dynamic> data) async {
+  static Future<int?> findOneAsync(dynamic data) async {
     final guid = data['guid'] as String?;
     final associatedMessageGuid = data['associatedMessageGuid'] as String?;
 
@@ -463,7 +463,7 @@ class MessageActions {
     });
   }
 
-  static Future<List<int>> findAsync(Map<String, dynamic> data) async {
+  static Future<List<int>> findAsync(dynamic data) async {
     // For now, we'll support finding all messages
     // A more sophisticated implementation would deserialize the condition JSON
     return Database.runInTransaction(TxMode.read, () {
@@ -480,7 +480,7 @@ class MessageActions {
 
   /// Bulk add messages with progress reporting
   /// This is the heavy-lifting version that runs in the isolate
-  static Future<List<int>> bulkAddMessages(Map<String, dynamic> data) async {
+  static Future<List<int>> bulkAddMessages(dynamic data) async {
     final chatData = data['chatData'] as Map<String, dynamic>?;
     final messagesData = (data['messagesData'] as List).cast<Map<String, dynamic>>();
     final checkForLatestMessageText = data['checkForLatestMessageText'] as bool? ?? true;
