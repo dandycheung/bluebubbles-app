@@ -108,6 +108,31 @@ class ConversationViewController extends StatefulController with GetSingleTicker
   /// Used by ChatCreator to pre-queue a send before navigating to ConversationView.
   SendData? pendingSend;
 
+  /// Completer that resolves once [MessagesView] has finished setting up its
+  /// handlers AND its list key (both sync and async loadChunk paths).
+  ///
+  /// [SendAnimation] waits on this before firing a [pendingSend] so that
+  /// [handleNewMessage] → [_listKey.currentState?.insertItem] is guaranteed
+  /// to find a mounted [SliverAnimatedList], preventing the silent no-op race.
+  Completer<void> _messagesViewReady = Completer<void>();
+
+  /// Called by [MessagesView] once its handlers and list key are fully set up.
+  void markMessagesViewReady() {
+    if (!_messagesViewReady.isCompleted) {
+      _messagesViewReady.complete();
+    }
+  }
+
+  /// Called by [MessagesView.dispose] so that the next visit starts fresh.
+  void resetMessagesViewReady() {
+    if (_messagesViewReady.isCompleted) {
+      _messagesViewReady = Completer<void>();
+    }
+  }
+
+  /// Future that resolves once [MessagesView] has fully initialized.
+  Future<void> get messagesViewReady => _messagesViewReady.future;
+
   @override
   void onInit() {
     super.onInit();

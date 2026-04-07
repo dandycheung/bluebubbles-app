@@ -39,19 +39,29 @@ class _SendAnimationState extends CustomState<SendAnimation, SendData, Conversat
     controller.sendFunc = send;
 
     // If ChatCreator pre-queued a send before navigating here, fire it now.
-    // sendFunc is already set above, and addPostFrameCallback ensures MessagesView
-    // has completed initState (and wired up its handlers) before the send runs.
+    //
+    // We wait on messagesViewReady instead of a bare addPostFrameCallback so
+    // that the send only fires after MessagesView has *fully* initialised —
+    // handlers registered AND _listKey recreated (async loadChunk path).
+    // Without this wait the sendAnimation's addPostFrameCallback can fire
+    // between the _listKey recreation and the following setState flush, so
+    // handleNewMessage's insertItem call finds a null currentState and silently
+    // no-ops, causing the sent message to never appear in the list.
     if (controller.pendingSend != null) {
       final pendingData = controller.pendingSend!;
       controller.pendingSend = null;
-      WidgetsBinding.instance.addPostFrameCallback((_) async {
-        await send(pendingData);
-        // Clear the text field and attachments now that the send has been queued,
-        // mirroring what ConversationTextField.sendMessage() does for normal sends.
-        controller.pickedAttachments.clear();
-        controller.textController.clear();
-        controller.subjectTextController.clear();
-        controller.replyToMessage = null;
+      controller.messagesViewReady.then((_) {
+        if (!mounted) return;
+        WidgetsBinding.instance.addPostFrameCallback((_) async {
+          if (!mounted) return;
+          await send(pendingData);
+          // Clear the text field and attachments now that the send has been queued,
+          // mirroring what ConversationTextField.sendMessage() does for normal sends.
+          controller.pickedAttachments.clear();
+          controller.textController.clear();
+          controller.subjectTextController.clear();
+          controller.replyToMessage = null;
+        });
       });
     }
 

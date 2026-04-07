@@ -97,6 +97,10 @@ class MessagesViewState extends State<MessagesView> with MessagesServiceMixin, T
       _messages.sort(Message.sort);
       handlersInitialized = true;
 
+      // Notify SendAnimation that handlers + list key are ready so pendingSend
+      // fires after this frame rather than racing against loadChunk.
+      controller.markMessagesViewReady();
+
       // Trigger a rebuild to display the messages
       setState(() {});
     }
@@ -171,6 +175,10 @@ class MessagesViewState extends State<MessagesView> with MessagesServiceMixin, T
         _listKey = GlobalKey<SliverAnimatedListState>();
         handlersInitialized = true;
         setState(() {});
+
+        // Notify SendAnimation that handlers + list key are fully ready so that
+        // any pending send fires after the rebuilt SliverAnimatedList is mounted.
+        controller.markMessagesViewReady();
       }
 
       // If this is a search result, load surrounding context and scroll/highlight it
@@ -203,6 +211,9 @@ class MessagesViewState extends State<MessagesView> with MessagesServiceMixin, T
       chat.lastReadMessageGuid = _messages.first.guid;
       chat.saveAsync(updateLastReadMessageGuid: true);
     }
+
+    // Reset the ready-signal so a future pendingSend on the same CVC starts fresh.
+    controller.resetMessagesViewReady();
 
     // Don't force-delete customService (it may be reused), only force-delete regular singleton
     disposeMessagesService(force: widget.customService == null);
