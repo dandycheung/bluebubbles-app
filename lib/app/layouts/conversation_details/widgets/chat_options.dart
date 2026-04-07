@@ -214,7 +214,7 @@ class _ChatOptionsState extends State<ChatOptions> with ThemeHelpers {
                     ),
                     onTap: () async {
                       final updatedChat = await ChatsSvc.fetchChat(chat.guid);
-                      if (updatedChat != null) {
+                      if (updatedChat != null && chat.isGroup) {
                         await Chat.getIcon(updatedChat, force: true);
                         ChatsSvc.updateChat(updatedChat, override: true);
                       }
