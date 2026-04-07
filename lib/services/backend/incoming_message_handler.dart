@@ -391,6 +391,26 @@ class IncomingMessageHandler {
       ChatsSvc.updateChatLatestMessage(c.guid, saved);
     }
 
+    // 10.5. Group photo changes — fetch/clear icon from server now that the
+    //       message is safely in the DB.  This runs regardless of isolate mode
+    //       because Chat.getIcon persists to DB; the state update is guarded.
+    if (saved.isGroupPhotoEvent) {
+      if (saved.isGroupPhotoRemoved) {
+        // Photo explicitly removed.
+        if (!isIsolate) {
+          unawaited(ChatsSvc.setChatCustomAvatarPath(c, null));
+        } else {
+          c.customAvatarPath = null;
+          unawaited(c.saveAsync(updateCustomAvatarPath: true));
+        }
+      } else {
+        // Photo added or changed — pull from server.
+        unawaited(Chat.getIcon(c, force: true).then((_) {
+          if (!isIsolate) ChatsSvc.updateChat(c, override: true);
+        }));
+      }
+    }
+
     // 11. Flush any out-of-order updated-message that arrived before us.
     if (saved.guid != null) _flushPendingUpdate(saved.guid!, c);
   }

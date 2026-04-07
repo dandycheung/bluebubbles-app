@@ -213,7 +213,11 @@ class _ChatOptionsState extends State<ChatOptions> with ThemeHelpers {
                       child: Icon(iOS ? CupertinoIcons.chat_bubble : Icons.sms),
                     ),
                     onTap: () async {
-                      await ChatsSvc.fetchChat(chat.guid);
+                      final updatedChat = await ChatsSvc.fetchChat(chat.guid);
+                      if (updatedChat != null) {
+                        await Chat.getIcon(updatedChat, force: true);
+                        ChatsSvc.updateChat(updatedChat, override: true);
+                      }
                       showSnackbar("Notice", "Fetched details!");
                     }),
                 SettingsTile(

@@ -839,14 +839,8 @@ class Chat {
       }
     } else {
       Logger.debug("Got chat icon for chat ${c.getTitle()}");
-      File file = File(
-          "${FilesystemSvc.avatarsPath}/${FilesystemService.sanitizeGuid(c.guid)}/avatar-${response.data.length}.jpg");
-      if (!(await file.exists())) {
-        await file.create(recursive: true);
-      }
-      if (c.customAvatarPath != null) {
-        await file.delete();
-      }
+      final file = File(FilesystemSvc.chatAvatarPath(c.guid));
+      await file.create(recursive: true);
       await file.writeAsBytes(response.data);
       c.customAvatarPath = file.path;
       await c.saveAsync(updateCustomAvatarPath: true);

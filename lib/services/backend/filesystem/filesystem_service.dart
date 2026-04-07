@@ -74,6 +74,10 @@ class FilesystemService {
   /// a filesystem path component (matches the pattern used by AvatarCrop, etc.).
   static String sanitizeGuid(String guid) => guid.characters.where((c) => c.isAlphabetOnly || c.isNumericOnly).join();
 
+  /// Returns the canonical path where a chat's group avatar is stored.
+  /// The file does not necessarily exist yet; callers must create it if needed.
+  String chatAvatarPath(String chatGuid) => join(avatarsPath, sanitizeGuid(chatGuid), 'avatar.jpg');
+
   /// Strips the Android internal storage prefix from [path] for display.
   /// Returns [path] unchanged on non-Android platforms.
   String toDisplayPath(String path) {

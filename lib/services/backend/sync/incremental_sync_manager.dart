@@ -44,6 +44,13 @@ class IncrementalSyncManager extends SyncManager {
   // can hydrate Message objects and update ChatState subtitles.
   Map<String, int> latestMessageIdPerChat = {};
 
+  // Tracks the latest group-photo-change message per chat across all sync pages.
+  // isGroupPhotoChanged (groupActionType == 1) → photo changed.
+  // isGroupPhotoRemoved (groupActionType == 2) → photo removed.
+  // We keep only the latest (highest dateCreated) so that if multiple photo
+  // changes arrive in the same sync the most-recent action wins.
+  Map<String, ({DateTime? dateCreated, int groupActionType})> latestPhotoChangePerChat = {};
+
   // A flag telling the "complete" function to save the timestamp/row ID markers.
   bool saveMarker;
 
@@ -285,6 +292,17 @@ class IncrementalSyncManager extends SyncManager {
             latestNameChangePerChat[chatGuid] = (dateCreated: msgDate, groupTitle: msg.groupTitle);
           }
         }
+
+        // Track the latest group-photo-change message per chat.
+        if (msg.isGroupPhotoEvent) {
+          final chatGuid = chat['guid'] as String;
+          final existing = latestPhotoChangePerChat[chatGuid];
+          final msgDate = msg.dateCreated;
+          if (existing == null ||
+              (msgDate != null && existing.dateCreated != null && msgDate.isAfter(existing.dateCreated!))) {
+            latestPhotoChangePerChat[chatGuid] = (dateCreated: msgDate, groupActionType: msg.groupActionType ?? 0);
+          }
+        }
       }
     }
 
@@ -407,6 +425,22 @@ class IncrementalSyncManager extends SyncManager {
     for (var chat in syncedChats.values) {
       chat.dbLatestMessage;
       ChatsSvc.updateChat(chat, override: true);
+    }
+
+    // Apply group photo changes detected during the sync.
+    // Each entry holds the most-recent photo-event action for that chat; we
+    // re-fetch the icon from the server for changes, or clear it for removals.
+    for (final entry in latestPhotoChangePerChat.entries) {
+      final chat = syncedChats[entry.key];
+      if (chat == null) continue;
+      if (entry.value.groupActionType == 2) {
+        // Photo explicitly removed — clear without an HTTP round-trip.
+        await ChatsSvc.setChatCustomAvatarPath(chat, null);
+      } else {
+        // Photo added/changed — pull latest icon from server, then refresh state.
+        await Chat.getIcon(chat, force: true);
+        ChatsSvc.updateChat(chat, override: true);
+      }
     }
 
     // Call this first so listeners can react before any

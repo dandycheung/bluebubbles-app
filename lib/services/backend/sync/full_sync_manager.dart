@@ -126,6 +126,11 @@ class FullSyncManager extends SyncManager {
               List<Message> insertedMessages = await Message.bulkSaveNewMessages(chat, newMessages);
               messagesSynced += insertedMessages.length;
 
+              // Fetch group chat icon if available.
+              if (chat.isGroup) {
+                await Chat.getIcon(chat).catchError((_) {});
+              }
+
               // Increment how many chats we've synced, then set the progress
               completedChats += 1;
               int adjustedTotal = (totalChats ?? newChats.length) - filteredChatsCount - deletedChats;

@@ -144,6 +144,15 @@ class Message {
   @Transient()
   bool get isNameChange => itemType == 2;
 
+  @Transient()
+  bool get isGroupPhotoEvent => itemType == 3 && (groupActionType ?? 0) > 0;
+
+  @Transient()
+  bool get isGroupPhotoChanged => itemType == 3 && groupActionType == 1;
+
+  @Transient()
+  bool get isGroupPhotoRemoved => itemType == 3 && groupActionType == 2;
+
   Message({
     this.id,
     this.originalROWID,
