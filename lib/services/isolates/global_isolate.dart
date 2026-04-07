@@ -74,6 +74,18 @@ class GlobalIsolate {
       return _startCompleter.future;
     }
 
+    // Reset the completer if a previous startup attempt completed (successfully or with an
+    // error).  Without this, any concurrent caller that arrives while this new attempt is
+    // in-flight would receive the stale completed completer and immediately see the old
+    // error rather than waiting for the new startup to finish.
+    if (_startCompleter.isCompleted) {
+      _startCompleter = Completer<void>();
+    }
+
+    // Clear any stale SendPort left over from a previous failed/timed-out attempt so
+    // that _waitForSendPort does not complete prematurely on a dead port.
+    _sendPort = null;
+
     _isStarting = true;
 
     try {
@@ -158,6 +170,7 @@ class GlobalIsolate {
       // Clean up the isolate if we failed to get the SendPort
       _isolate?.kill(priority: Isolate.immediate);
       _isolate = null;
+      _sendPort = null;
       _isRunning = false;
       rethrow;
     }
@@ -457,14 +470,18 @@ class GlobalIsolate {
     final RootIsolateToken? rootIsolateToken = args.length > 1 ? args[1] : null;
     final Map<IsolateRequestType, dynamic> actionMap = args.length > 2 ? args[2] : defaultActionMap;
 
-    await initServices(rootIsolateToken);
-
-    // Store the send port for event emission
+    // Store the send port for event emission (before initServices so events can fire during init)
     IsolateEventEmitter.setSendPort(sendPort);
 
-    // Create a receiver for the isolate
+    // Create a receiver for the isolate and send the SendPort back to the main isolate
+    // immediately, BEFORE initServices runs.  Any messages the main isolate sends while
+    // services are still initialising are buffered by ReceivePort and delivered once
+    // receivePort.listen() is called below.  This prevents the startupTimeout from firing
+    // when initServices is legitimately slow (e.g. JIT compilation in debug mode).
     final receivePort = ReceivePort();
     sendPort.send(receivePort.sendPort);
+
+    await initServices(rootIsolateToken);
 
     receivePort.listen((message) async {
       if (message is! Map<String, dynamic>) return;
