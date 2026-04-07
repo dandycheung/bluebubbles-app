@@ -547,8 +547,18 @@ class ChatActions {
       for (final inputChat in inputChats) {
         final existing = existingChatsMap[inputChat.guid];
 
-        // Don't sync specific fields because they
+        // Use existing DB record as the base so that user-local fields
+        // (pin, archive, mute, custom avatar, etc.) are preserved.
         Chat chatToSave = existing ?? inputChat;
+
+        // Apply server-controlled fields onto the existing record so that
+        // changes originating on the server (e.g. a group name change) are
+        // persisted.  User-preference fields are intentionally left alone.
+        if (existing != null) {
+          if (!chatToSave.lockChatName) {
+            chatToSave.displayName = inputChat.displayName;
+          }
+        }
 
         // Prepare handles to link (collect them for later)
         final handlesToLink = <Handle>[];

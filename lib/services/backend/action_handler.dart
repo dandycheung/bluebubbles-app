@@ -20,7 +20,12 @@ class ActionHandler extends GetxService {
   final List<String> outOfOrderTempGuids = [];
 
   Future<Chat> handleNewOrUpdatedChat(Chat partialData) async {
-    return await ChatsSvc.fetchChat(partialData.guid) ?? partialData;
+    final chat = await ChatsSvc.fetchChat(partialData.guid) ?? partialData;
+
+    // Push the updated chat into reactive state so the UI refreshes without
+    // requiring an app restart.
+    ChatsSvc.updateChat(chat);
+    return chat;
   }
 
   Future<void> handleFaceTimeStatusChange(Map<String, dynamic> data) async {
