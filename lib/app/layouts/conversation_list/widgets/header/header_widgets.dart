@@ -314,7 +314,14 @@ class _MaterialAvatarMenuState extends State<MaterialAvatarMenu> with SingleTick
           child: Container(
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              border: Border.all(color: Colors.white, width: 2),
+              border: Border.all(
+                color: SettingsSvc.settings.monetTheming.value != Monet.none
+                    ? context.theme.colorScheme.primary
+                    : ThemeSvc.inDarkMode(context)
+                        ? Colors.white
+                        : Colors.black,
+                width: 2,
+              ),
             ),
             padding: const EdgeInsets.all(2),
             child: const ContactAvatarWidget(
