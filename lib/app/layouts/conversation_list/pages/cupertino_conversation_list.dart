@@ -113,7 +113,7 @@ class CupertinoConversationListState extends State<CupertinoConversationList> wi
                         sliver: SliverToBoxAdapter(
                           child: LayoutBuilder(builder: (BuildContext context, BoxConstraints constraints) {
                             // Horizontal overhead per tile: margins (4+4) + padding (11+11) + extra gap
-                            const double tileHOverhead = 46.0;
+                            const double tileHOverhead = 42.0;
                             // Vertical overhead per tile: AnimatedContainer margins (top:1) + padding (4+2)
                             //   + ChatTitle fixed padding (top:6 + bottom:4)
                             const double tileVOverhead = 17.0;

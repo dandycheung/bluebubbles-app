@@ -140,7 +140,7 @@ class _PinnedConversationTileState extends CustomState<PinnedConversationTile, v
                               Positioned(
                                 bottom: widget.avatarSize * 0.575,
                                 left: widget.avatarSize * 0.05,
-                                right: 0,
+                                width: widget.avatarSize * 1.15,
                                 child: PinnedTileTextBubble(
                                   chat: controller.chat,
                                   size: widget.avatarSize,
@@ -152,11 +152,11 @@ class _PinnedConversationTileState extends CustomState<PinnedConversationTile, v
                         ChatTitle(width: widget.avatarSize, parentController: controller),
                       ],
                     ),
-                    // DM bubble: spans the full avatar width, anchored to the top.
+                    // DM bubble: wider than the avatar so the bubble has room to grow.
                     if (!controller.chat.isGroup)
                       Positioned(
                         top: 0,
-                        width: widget.avatarSize,
+                        width: widget.avatarSize * 1.35,
                         child: PinnedTileTextBubble(
                           chat: controller.chat,
                           size: widget.avatarSize,
