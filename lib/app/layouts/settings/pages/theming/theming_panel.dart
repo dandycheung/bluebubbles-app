@@ -5,7 +5,7 @@ import 'package:bluebubbles/utils/window_effects.dart';
 import 'package:bluebubbles/app/layouts/settings/pages/theming/avatar/custom_avatar_color_panel.dart';
 import 'package:bluebubbles/app/layouts/settings/pages/theming/avatar/custom_avatar_panel.dart';
 import 'package:bluebubbles/app/layouts/settings/widgets/settings_widgets.dart';
-import 'package:bluebubbles/app/layouts/settings/pages/theming/advanced/advanced_theming_panel.dart';
+import 'package:bluebubbles/app/layouts/settings/pages/theming/theme_studio/theme_studio_panel.dart';
 import 'package:bluebubbles/app/wrappers/stateful_boilerplate.dart';
 import 'package:bluebubbles/database/models.dart';
 import 'package:bluebubbles/services/services.dart';
@@ -49,6 +49,7 @@ class ThemingPanel extends CustomStateful<ThemingPanelController> {
 class _ThemingPanelState extends CustomState<ThemingPanel, void, ThemingPanelController> {
   @override
   Widget build(BuildContext context) {
+    print("REBUILDING");
     return Obx(
       () => SettingsScaffold(
         title: "Theming & Styles",
@@ -88,7 +89,7 @@ class _ThemingPanelState extends CustomState<ThemingPanel, void, ThemingPanelCon
                         onTap: () async {
                           Navigator.of(context).push(
                             CupertinoPageRoute(
-                              builder: (context) => const AdvancedThemingPanel(),
+                              builder: (context) => ThemeStudioPanel(),
                             ),
                           );
                         },
