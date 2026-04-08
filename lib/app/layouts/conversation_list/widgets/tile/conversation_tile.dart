@@ -325,13 +325,13 @@ class ChatLeadingState extends State<ChatLeading> with ThemeHelpers {
                           borderRadius: BorderRadius.circular(30),
                           color: context.theme.colorScheme.primary,
                         ),
-                        width: 40,
-                        height: 40,
+                        width: SettingsSvc.settings.denseChatTiles.value ? 36 : (material ? 50 : 45),
+                        height: SettingsSvc.settings.denseChatTiles.value ? 36 : (material ? 50 : 45),
                         child: Center(
                           child: Icon(
                             Icons.check,
                             color: context.theme.colorScheme.onPrimary,
-                            size: 20,
+                            size: 26,
                           ),
                         ),
                       )
