@@ -202,9 +202,9 @@ class _ChatInfoState extends State<ChatInfo> with ThemeHelpers {
           ),
         if (iOS)
           Padding(
-            padding: const EdgeInsets.only(top: 12.0),
+            padding: const EdgeInsets.only(top: 12.0, left: 20.0, right: 20.0),
             child: Center(
-              child: RichText(
+              child: Obx(() => RichText(
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
@@ -221,7 +221,7 @@ class _ChatInfoState extends State<ChatInfo> with ThemeHelpers {
                     ),
                   ),
                 ),
-              ),
+              )),
             ),
           ),
         if (chat.isGroup && !iOS)
@@ -249,7 +249,7 @@ class _ChatInfoState extends State<ChatInfo> with ThemeHelpers {
                     showChangeName(chat, "private-api", context);
                   }
                 },
-                title: RichText(
+                title: Obx(() => RichText(
                   text: TextSpan(
                     style: context.theme.textTheme.bodyLarge,
                     children: MessageHelper.buildEmojiText(
@@ -257,7 +257,7 @@ class _ChatInfoState extends State<ChatInfo> with ThemeHelpers {
                       context.theme.textTheme.bodyLarge!,
                     ),
                   ),
-                ),
+                )),
                 trailing: Icon(Icons.edit_outlined, color: context.theme.colorScheme.onBackground),
               ),
             ),

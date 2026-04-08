@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/database/models.dart';
 import 'package:bluebubbles/services/services.dart';
@@ -43,7 +44,7 @@ void showChangeName(Chat chat, String method, BuildContext context) {
                   if (response.statusCode == 200) {
                     Navigator.of(context, rootNavigator: true).pop();
                     Navigator.of(context, rootNavigator: true).pop();
-                    chat.changeNameAsync(controller.text);
+                    unawaited(ChatsSvc.setChatDisplayName(chat, controller.text));
                     showSnackbar("Notice", "Updated name successfully!");
                   } else {
                     Navigator.of(context, rootNavigator: true).pop();
@@ -51,7 +52,7 @@ void showChangeName(Chat chat, String method, BuildContext context) {
                   }
                 } else {
                   Navigator.of(context, rootNavigator: true).pop();
-                  chat.changeNameAsync(controller.text);
+                  unawaited(ChatsSvc.setChatDisplayName(chat, controller.text));
                 }
               },
             ),

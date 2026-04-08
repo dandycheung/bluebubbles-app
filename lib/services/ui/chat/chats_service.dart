@@ -1104,10 +1104,11 @@ class ChatsService {
     // Update Chat model (use state.chat if available, otherwise use passed in chat)
     final chatToUpdate = state?.chat ?? chat;
     chatToUpdate.displayName = value;
-    await chatToUpdate.saveAsync(updateDisplayName: true);
 
-    // Update state if available
+    // Update state eagerly so the UI reflects the change immediately
     state?.updateDisplayNameInternal(value);
+
+    await chatToUpdate.saveAsync(updateDisplayName: true);
   }
 
   /// Set chat custom avatar path

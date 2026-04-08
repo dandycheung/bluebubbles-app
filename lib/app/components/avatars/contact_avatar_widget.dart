@@ -169,8 +169,12 @@ class _ContactAvatarWidgetState extends State<ContactAvatarWidget> with ThemeHel
                 begin: AlignmentDirectional.topStart,
                 end: AlignmentDirectional.bottomEnd,
                 colors: [
-                  !colorfulAvatars ? HexColor("B8B4B4") : (iOS ? colors[1] : colors[0]),
-                  !colorfulAvatars ? HexColor("928E8E") : colors[0]
+                  !colorfulAvatars
+                      ? (ThemeSvc.inDarkMode(context) ? HexColor("8A8686") : HexColor("B8B4B4"))
+                      : (iOS ? colors[1] : colors[0]),
+                  !colorfulAvatars
+                      ? (ThemeSvc.inDarkMode(context) ? HexColor("6B6868") : HexColor("928E8E"))
+                      : colors[0],
                 ],
                 stops: [0.3, 0.9],
               ),
