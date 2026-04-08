@@ -11,7 +11,6 @@ import 'package:bluebubbles/app/layouts/setup/setup_view.dart';
 import 'package:bluebubbles/app/wrappers/theme_switcher.dart';
 import 'package:bluebubbles/app/wrappers/titlebar_wrapper.dart';
 import 'package:bluebubbles/database/models.dart';
-import 'package:bluebubbles/services/backend/interfaces/message_interface.dart';
 import 'package:bluebubbles/services/services.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
@@ -75,13 +74,13 @@ class OverflowMenu extends StatelessWidget {
         return CupertinoOverflowMenu(extraItems: extraItems, controller: controller);
       }
 
-      return MaterialOverflowMenu(controller: controller, extraItems: extraItems);
+      return MaterialAvatarMenu(controller: controller, extraItems: extraItems);
     });
   }
 }
 
-class MaterialOverflowMenu extends StatelessWidget {
-  const MaterialOverflowMenu({
+class MaterialAvatarMenu extends StatefulWidget {
+  const MaterialAvatarMenu({
     super.key,
     required this.controller,
     required this.extraItems,
@@ -91,155 +90,285 @@ class MaterialOverflowMenu extends StatelessWidget {
   final bool extraItems;
 
   @override
-  Widget build(BuildContext context) {
-    final skin = SettingsSvc.settings.skin.value;
-    final windowEffect = SettingsSvc.settings.windowEffect.value;
+  State<MaterialAvatarMenu> createState() => _MaterialAvatarMenuState();
+}
 
-    return PopupMenuButton<int>(
-      color: context.theme.colorScheme.properSurface
-          .lightenOrDarken(skin == Skins.Samsung ? 20 : 0)
-          .withValues(alpha: windowEffect != WindowEffect.disabled ? 0.9 : 1),
-      shape: skin != Skins.Material
-          ? const RoundedRectangleBorder(
-              borderRadius: BorderRadius.all(
-                Radius.circular(20.0),
+class _MaterialAvatarMenuState extends State<MaterialAvatarMenu> with SingleTickerProviderStateMixin {
+  final LayerLink _layerLink = LayerLink();
+  late AnimationController _animationController;
+  late Animation<double> _scaleAnimation;
+  late Animation<double> _fadeAnimation;
+  OverlayEntry? _overlayEntry;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+      reverseDuration: const Duration(milliseconds: 250),
+    );
+    _scaleAnimation = CurvedAnimation(parent: _animationController, curve: Curves.easeOutBack);
+    _fadeAnimation = CurvedAnimation(parent: _animationController, curve: Curves.easeOut);
+  }
+
+  @override
+  void dispose() {
+    _overlayEntry?.remove();
+    _overlayEntry = null;
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  void _showMenu() {
+    if (_overlayEntry != null) {
+      _hideMenu();
+      return;
+    }
+    final navContext = context;
+    _overlayEntry = _buildOverlayEntry(navContext);
+    Overlay.of(navContext).insert(_overlayEntry!);
+    _animationController.forward();
+  }
+
+  Future<void> _hideMenu() async {
+    await _animationController.reverse();
+    _overlayEntry?.remove();
+    _overlayEntry = null;
+  }
+
+  OverlayEntry _buildOverlayEntry(BuildContext navContext) {
+    return OverlayEntry(
+      builder: (overlayContext) {
+        final windowEffect = SettingsSvc.settings.windowEffect.value;
+        final cardColor = overlayContext.theme.colorScheme.properSurface
+            .withValues(alpha: windowEffect != WindowEffect.disabled ? 0.95 : 1.0);
+        final filterUnknownSenders = SettingsSvc.settings.filterUnknownSenders.value;
+        final moveChatCreatorToHeader = SettingsSvc.settings.moveChatCreatorToHeader.value;
+        final userName = SettingsSvc.settings.userName.value;
+        final iCloudAccount = SettingsSvc.settings.iCloudAccount.value;
+
+        return Stack(
+          children: [
+            Positioned.fill(
+              child: GestureDetector(
+                behavior: HitTestBehavior.translucent,
+                onTap: _hideMenu,
+                child: const SizedBox.expand(),
               ),
-            )
-          : null,
-      onSelected: (int value) async {
-        if (value == 0) {
-          ChatsSvc.markAllAsRead();
-        } else if (value == 1) {
-          goToArchived(context);
-        } else if (value == 2) {
-          await goToSettings(context);
-        } else if (value == 3) {
-          goToUnknownSenders(context);
-        } else if (value == 4) {
-          logout(context);
-        } else if (value == 5) {
-          await goToFindMy(context);
-        } else if (value == 6) {
-          await goToSearch(context);
-        } else if (value == 7) {
-          controller?.openNewChatCreator(context);
-        } else if (value == 8) {
-          // Test Messages Isolate
-          final messages = await MessageInterface.getMessages();
-          if (context.mounted) {
-            showDialog(
-              context: context,
-              builder: (context) => AlertDialog(
-                title: const Text('Message Isolate Test'),
-                content: Text(messages.length > 0
-                    ? 'Successfully fetched messages from isolate!\nCount: ${messages.length}'
-                    : 'No messages found or error occurred'),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('OK'),
+            ),
+            CompositedTransformFollower(
+              link: _layerLink,
+              targetAnchor: Alignment.bottomRight,
+              followerAnchor: Alignment.topRight,
+              offset: const Offset(0, 8),
+              child: ScaleTransition(
+                scale: _scaleAnimation,
+                alignment: Alignment.topRight,
+                child: FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: Material(
+                    elevation: 8,
+                    borderRadius: BorderRadius.circular(16),
+                    color: cardColor,
+                    child: SizedBox(
+                      width: 240,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Profile header
+                            InkWell(
+                              borderRadius: const BorderRadius.only(
+                                topLeft: Radius.circular(16),
+                                topRight: Radius.circular(16),
+                              ),
+                              onTap: () => _hideMenu().then((_) => goToProfile(navContext)),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                child: Row(
+                                  children: [
+                                    const ContactAvatarWidget(
+                                      size: 50,
+                                      preferHighResAvatar: true,
+                                      borderThickness: 0.1,
+                                      editable: false,
+                                      fontSize: 16,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(
+                                            userName.isNotEmpty ? userName : 'My Account',
+                                            style: overlayContext.theme.textTheme.titleSmall?.copyWith(
+                                              color: overlayContext.theme.colorScheme.properOnSurface,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            iCloudAccount.isNotEmpty ? iCloudAccount : 'Tap to open profile',
+                                            style: overlayContext.theme.textTheme.bodySmall?.copyWith(
+                                              color: overlayContext.theme.colorScheme.properOnSurface
+                                                  .withValues(alpha: 0.6),
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Icon(
+                                      Icons.chevron_right,
+                                      color: overlayContext.theme.colorScheme.properOnSurface.withValues(alpha: 0.4),
+                                      size: 20,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            Divider(
+                              height: 1,
+                              thickness: 1,
+                              indent: 16,
+                              endIndent: 16,
+                              color: overlayContext.theme.colorScheme.properOnSurface.withValues(alpha: 0.1),
+                            ),
+                            // Menu items
+                            _MenuItemRow(
+                              icon: Icons.done_all_outlined,
+                              label: 'Mark All As Read',
+                              onTap: () => _hideMenu().then((_) => ChatsSvc.markAllAsRead()),
+                            ),
+                            _MenuItemRow(
+                              icon: Icons.archive_outlined,
+                              label: 'Archived',
+                              onTap: () => _hideMenu().then((_) => goToArchived(navContext)),
+                            ),
+                            if (filterUnknownSenders)
+                              _MenuItemRow(
+                                icon: Icons.person_off_outlined,
+                                label: 'Unknown Senders',
+                                onTap: () => _hideMenu().then((_) => goToUnknownSenders(navContext)),
+                              ),
+                            if (SettingsSvc.serverDetails.isMinCatalina)
+                              _MenuItemRow(
+                                icon: Icons.location_on_outlined,
+                                label: 'Find My',
+                                onTap: () => _hideMenu().then((_) => goToFindMy(navContext)),
+                              ),
+                            if (widget.extraItems)
+                              _MenuItemRow(
+                                icon: Icons.search,
+                                label: 'Search',
+                                onTap: () => _hideMenu().then((_) => goToSearch(navContext)),
+                              ),
+                            if (widget.extraItems && moveChatCreatorToHeader)
+                              _MenuItemRow(
+                                icon: Icons.edit_outlined,
+                                label: 'New Chat',
+                                onTap: () =>
+                                    _hideMenu().then((_) => widget.controller?.openNewChatCreator(navContext)),
+                              ),
+                            _MenuItemRow(
+                              icon: Icons.settings_outlined,
+                              label: 'Settings',
+                              onTap: () => _hideMenu().then((_) => goToSettings(navContext)),
+                            ),
+                            if (kIsWeb)
+                              _MenuItemRow(
+                                icon: Icons.logout,
+                                label: 'Logout',
+                                onTap: () => _hideMenu().then((_) => logout(navContext)),
+                              ),
+                            const SizedBox(height: 4),
+                          ],
+                        ),
+                      ),
+                    ),
                   ),
-                ],
-              ),
-            );
-          }
-        }
-      },
-      itemBuilder: (context) {
-        return <PopupMenuItem<int>>[
-          PopupMenuItem(
-            value: 0,
-            child: Text(
-              'Mark All As Read',
-              style: context.textTheme.bodyLarge!.apply(color: context.theme.colorScheme.properOnSurface),
-            ),
-          ),
-          PopupMenuItem(
-            value: 1,
-            child: Text(
-              'Archived',
-              style: context.textTheme.bodyLarge!.apply(color: context.theme.colorScheme.properOnSurface),
-            ),
-          ),
-          if (SettingsSvc.settings.filterUnknownSenders.value)
-            PopupMenuItem(
-              value: 3,
-              child: Text(
-                'Unknown Senders',
-                style: context.textTheme.bodyLarge!.apply(color: context.theme.colorScheme.properOnSurface),
-              ),
-            ),
-          if (SettingsSvc.serverDetails.isMinCatalina)
-            PopupMenuItem(
-              value: 5,
-              child: Text(
-                'FindMy',
-                style: context.textTheme.bodyLarge!.apply(color: context.theme.colorScheme.properOnSurface),
-              ),
-            ),
-          PopupMenuItem(
-            value: 2,
-            child: Text(
-              'Settings',
-              style: context.textTheme.bodyLarge!.apply(color: context.theme.colorScheme.properOnSurface),
-            ),
-          ),
-          if (kIsWeb)
-            PopupMenuItem(
-              value: 4,
-              child: Text(
-                'Logout',
-                style: context.textTheme.bodyLarge!.apply(color: context.theme.colorScheme.properOnSurface),
-              ),
-            ),
-          if (extraItems)
-            PopupMenuItem(
-              value: 6,
-              child: Text(
-                'Search',
-                style: context.textTheme.bodyLarge!.apply(color: context.theme.colorScheme.properOnSurface),
-              ),
-            ),
-          if (extraItems && SettingsSvc.settings.moveChatCreatorToHeader.value)
-            PopupMenuItem(
-              value: 7,
-              child: Text(
-                'New Chat',
-                style: context.textTheme.bodyLarge!.apply(color: context.theme.colorScheme.properOnSurface),
-              ),
-            ),
-        ];
-      },
-      icon: skin == Skins.Material
-          ? Icon(
-              Icons.more_vert,
-              color: context.theme.colorScheme.properOnSurface,
-              size: 25,
-            )
-          : null,
-      child: skin == Skins.Material
-          ? null
-          : ThemeSwitcher(
-              iOSSkin: Container(
-                width: 30,
-                height: 30,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(40),
-                  color: context.theme.colorScheme.properSurface,
                 ),
-                child: Icon(
-                  Icons.more_horiz,
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return CompositedTransformTarget(
+      link: _layerLink,
+      child: Padding(
+        padding: const EdgeInsets.only(left: 6, right: 10),
+        child: GestureDetector(
+          onTap: _showMenu,
+          child: Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 2),
+            ),
+            padding: const EdgeInsets.all(2),
+            child: const ContactAvatarWidget(
+              size: 32,
+              preferHighResAvatar: true,
+              borderThickness: 0.1,
+              editable: false,
+              fontSize: 12,
+              scaleSize: false,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MenuItemRow extends StatelessWidget {
+  const _MenuItemRow({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        child: SizedBox(
+          height: 44,
+          child: Row(
+            children: [
+              Icon(
+                icon,
+                size: 20,
+                color: context.theme.colorScheme.properOnSurface.withValues(alpha: 0.85),
+              ),
+              const SizedBox(width: 16),
+              Text(
+                label,
+                style: context.theme.textTheme.bodyLarge?.copyWith(
                   color: context.theme.colorScheme.properOnSurface,
-                  size: 20,
                 ),
               ),
-              materialSkin: const SizedBox.shrink(),
-              samsungSkin: Icon(
-                Icons.more_vert,
-                color: context.theme.colorScheme.properOnSurface,
-                size: 25,
-              ),
-            ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -280,22 +409,17 @@ class CupertinoOverflowMenu extends StatelessWidget {
           leadingBuilder: (context, constraints) {
             return Container(
                 constraints: constraints,
-                child: ContactAvatarWidget(
+                child: const ContactAvatarWidget(
                   size: 50,
                   preferHighResAvatar: true,
                   borderThickness: 0.1,
                   editable: false,
-                  fontSize: 16,
-                  contact: ContactV2(
-                    nativeContactId: 'you',
-                    displayName: userName,
-                  ),
+                  fontSize: 16
                 ));
           },
           subtitle: "Tap to open profile",
           onTap: () => goToProfile(context),
         ),
-        PullDownMenuDivider.large(color: context.theme.colorScheme.background.withValues(alpha: 0.5)),
         PullDownMenuItem(
           itemTheme: itemTheme,
           title: 'Mark All As Read',
