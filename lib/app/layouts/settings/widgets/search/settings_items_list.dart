@@ -200,7 +200,7 @@ List<Widget> buildSettingItemList({
         searchTags: [
           "Dark Mode",
           "Light Mode",
-          "Advanced Theming",
+          "Theme Studio",
           "Tablet Mode",
           "Immersive Mode",
           "Material You",

@@ -81,7 +81,7 @@ class _ThemingPanelState extends CustomState<ThemingPanel, void, ThemingPanelCon
                     if (!kIsWeb) const SettingsDivider(padding: EdgeInsets.only(left: 16.0)),
                     if (!kIsWeb)
                       SettingsTile(
-                        title: "Advanced Theming",
+                        title: "Theme Studio",
                         subtitle:
                             "Customize app colors and font sizes with custom themes\n${ThemeStruct.getLightTheme().name}   |   ${ThemeStruct.getDarkTheme().name}",
                         trailing: const NextButton(),

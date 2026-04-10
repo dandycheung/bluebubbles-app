@@ -1066,7 +1066,7 @@ class _MessagePopupState extends State<MessagePopup> with SingleTickerProviderSt
     List<DetailsMenuActionWidget> allActions = _allActions;
 
     return ClipRRect(
-      borderRadius: BorderRadius.circular(10.0),
+      borderRadius: BorderRadius.circular(20),
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
         child: Container(

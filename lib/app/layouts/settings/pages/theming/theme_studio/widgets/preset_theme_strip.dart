@@ -17,7 +17,6 @@ class ThemeSelectorSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final all = controller.allThemes;
-    final active = controller.activeTheme;
 
     // Partition by brightness
     final lightAll = all.where((t) => t.data.colorScheme.brightness == Brightness.light).toList();
@@ -28,6 +27,8 @@ class ThemeSelectorSection extends StatelessWidget {
     final oledDark = darkAll.firstWhereOrNull((t) => t.name == "OLED Dark");
     final lightOther = lightAll.where((t) => t.name != "Bright White").toList();
     final darkOther = darkAll.where((t) => t.name != "OLED Dark").toList();
+
+    final pendingChanges = controller.pendingChanges.value;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -40,7 +41,9 @@ class ThemeSelectorSection extends StatelessWidget {
             defaultTheme: brightWhite,
             otherThemes: lightOther,
             isForDark: false,
-            activeTheme: active,
+            activeTheme: controller.lightTheme,
+            appliedThemeName: controller.appliedLightName,
+            pendingChanges: pendingChanges,
           ),
           const SizedBox(height: 24),
           _ModeGroup(
@@ -49,7 +52,9 @@ class ThemeSelectorSection extends StatelessWidget {
             defaultTheme: oledDark,
             otherThemes: darkOther,
             isForDark: true,
-            activeTheme: active,
+            activeTheme: controller.darkTheme,
+            appliedThemeName: controller.appliedDarkName,
+            pendingChanges: pendingChanges,
           ),
         ],
       ),
@@ -67,6 +72,8 @@ class _ModeGroup extends StatelessWidget {
     required this.otherThemes,
     required this.isForDark,
     required this.activeTheme,
+    required this.appliedThemeName,
+    required this.pendingChanges,
   });
 
   final ThemeStudioController controller;
@@ -75,6 +82,11 @@ class _ModeGroup extends StatelessWidget {
   final List<ThemeStruct> otherThemes;
   final bool isForDark;
   final ThemeStruct activeTheme;
+  final String appliedThemeName;
+  final bool pendingChanges;
+
+  /// Whether a different theme is staged (pending) for this mode.
+  bool get _selectionIsPending => pendingChanges && activeTheme.name != appliedThemeName;
 
   @override
   Widget build(BuildContext context) {
@@ -130,6 +142,8 @@ class _ModeGroup extends StatelessWidget {
           _DefaultCard(
             struct: defaultTheme!,
             isActive: activeTheme.name == defaultTheme!.name,
+            isApplied: appliedThemeName == defaultTheme!.name,
+            selectionIsPending: _selectionIsPending,
             onTap: () => controller.applyTheme(context, defaultTheme!),
           ),
           const SizedBox(height: 14),
@@ -151,6 +165,8 @@ class _ModeGroup extends StatelessWidget {
                   child: _ThemeCard(
                     struct: t,
                     isActive: activeTheme.name == t.name,
+                    isApplied: appliedThemeName == t.name,
+                    selectionIsPending: _selectionIsPending,
                     onTap: () => controller.applyTheme(context, t),
                   ),
                 );
@@ -176,6 +192,8 @@ class _ModeGroup extends StatelessWidget {
                   child: _ThemeCard(
                     struct: t,
                     isActive: activeTheme.name == t.name,
+                    isApplied: appliedThemeName == t.name,
+                    selectionIsPending: _selectionIsPending,
                     onTap: () => controller.applyTheme(context, t),
                   ),
                 );
@@ -268,16 +286,34 @@ class _DefaultCard extends StatelessWidget {
   const _DefaultCard({
     required this.struct,
     required this.isActive,
+    required this.isApplied,
+    required this.selectionIsPending,
     required this.onTap,
   });
 
   final ThemeStruct struct;
   final bool isActive;
+  final bool isApplied;
+  final bool selectionIsPending;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final cs = struct.data.colorScheme;
+    // isPending: staged for this slot but not yet applied
+    final isPending = isActive && selectionIsPending;
+    // wasApplied: this is the current live theme but something else is staged
+    final wasApplied = isApplied && !isActive;
+
+    final borderColor = isPending
+        ? context.theme.colorScheme.tertiary
+        : isActive
+            ? context.theme.colorScheme.primary
+            : wasApplied
+                ? context.theme.colorScheme.secondary.withValues(alpha: 0.5)
+                : context.theme.colorScheme.outline.withValues(alpha: 0.3);
+    final borderWidth = (isActive || wasApplied) ? 2.0 : 1.0;
+
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
@@ -285,11 +321,7 @@ class _DefaultCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: context.tileColor,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color:
-                isActive ? context.theme.colorScheme.primary : context.theme.colorScheme.outline.withValues(alpha: 0.3),
-            width: isActive ? 2.0 : 1.0,
-          ),
+          border: Border.all(color: borderColor, width: borderWidth),
         ),
         child: Row(
           children: [
@@ -330,10 +362,12 @@ class _DefaultCard extends StatelessWidget {
             // Selection indicator
             Padding(
               padding: const EdgeInsets.only(right: 14),
-              child: isActive
-                  ? Icon(Icons.check_circle_rounded, color: context.theme.colorScheme.primary, size: 20)
-                  : Icon(Icons.radio_button_unchecked,
-                      color: context.theme.colorScheme.outline.withValues(alpha: 0.5), size: 20),
+              child: _SelectionIcon(
+                isActive: isActive,
+                isPending: isPending,
+                wasApplied: wasApplied,
+                size: 20,
+              ),
             ),
           ],
         ),
@@ -358,16 +392,32 @@ class _ThemeCard extends StatelessWidget {
   const _ThemeCard({
     required this.struct,
     required this.isActive,
+    required this.isApplied,
+    required this.selectionIsPending,
     required this.onTap,
   });
 
   final ThemeStruct struct;
   final bool isActive;
+  final bool isApplied;
+  final bool selectionIsPending;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final cs = struct.data.colorScheme;
+    final isPending = isActive && selectionIsPending;
+    final wasApplied = isApplied && !isActive;
+
+    final borderColor = isPending
+        ? context.theme.colorScheme.tertiary
+        : isActive
+            ? context.theme.colorScheme.primary
+            : wasApplied
+                ? context.theme.colorScheme.secondary.withValues(alpha: 0.5)
+                : context.theme.colorScheme.outline.withValues(alpha: 0.3);
+    final borderWidth = (isActive || wasApplied) ? 2.0 : 1.0;
+
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
@@ -376,11 +426,7 @@ class _ThemeCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: context.theme.colorScheme.surfaceVariant.withValues(alpha: 0.4),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color:
-                isActive ? context.theme.colorScheme.primary : context.theme.colorScheme.outline.withValues(alpha: 0.3),
-            width: isActive ? 2.0 : 1.0,
-          ),
+          border: Border.all(color: borderColor, width: borderWidth),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -411,21 +457,15 @@ class _ThemeCard extends StatelessWidget {
                         ),
                       ],
                     ),
-                    if (isActive)
+                    if (isActive || wasApplied)
                       Positioned(
                         right: 4,
                         bottom: 4,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: context.theme.colorScheme.primary,
-                            shape: BoxShape.circle,
-                          ),
-                          padding: const EdgeInsets.all(2),
-                          child: Icon(
-                            Icons.check,
-                            size: 10,
-                            color: context.theme.colorScheme.onPrimary,
-                          ),
+                        child: _SelectionIcon(
+                          isActive: isActive,
+                          isPending: isPending,
+                          wasApplied: wasApplied,
+                          size: 14,
                         ),
                       ),
                   ],
@@ -462,6 +502,48 @@ class _Swatch extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Expanded(child: SizedBox(height: 30, child: ColoredBox(color: color)));
+  }
+}
+
+// ─── Selection icon (applied / pending / was-applied) ─────────────────────────
+
+class _SelectionIcon extends StatelessWidget {
+  const _SelectionIcon({
+    required this.isActive,
+    required this.isPending,
+    required this.wasApplied,
+    required this.size,
+  });
+
+  final bool isActive;
+  final bool isPending;
+  final bool wasApplied;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = context.theme.colorScheme;
+    if (isPending) {
+      // Staged but not yet applied — shown with tertiary ring color + clock icon
+      return Container(
+        decoration: BoxDecoration(color: cs.tertiary, shape: BoxShape.circle),
+        padding: const EdgeInsets.all(2),
+        child: Icon(Icons.schedule_rounded, size: size - 4, color: cs.onTertiary),
+      );
+    }
+    if (isActive) {
+      // Staged == applied; confirmed live selection
+      return Container(
+        decoration: BoxDecoration(color: cs.primary, shape: BoxShape.circle),
+        padding: const EdgeInsets.all(2),
+        child: Icon(Icons.check, size: size - 4, color: cs.onPrimary),
+      );
+    }
+    if (wasApplied) {
+      // Currently live but being replaced by pending selection
+      return Icon(Icons.check_circle_outline_rounded, size: size, color: cs.secondary.withValues(alpha: 0.55));
+    }
+    return Icon(Icons.radio_button_unchecked, size: size, color: cs.outline.withValues(alpha: 0.5));
   }
 }
 

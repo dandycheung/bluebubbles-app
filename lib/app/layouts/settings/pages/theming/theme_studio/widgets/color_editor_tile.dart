@@ -114,7 +114,7 @@ class ColorEditorTile extends StatelessWidget {
   Future<void> _editColor(BuildContext context, String key, Color current) async {
     final picked = await showColorPickerDialog(context, current);
     if (picked != null) {
-      await controller.updateColorKey(context, key, picked);
+      controller.updateColorKey(context, key, picked);
     }
   }
 }

@@ -20,19 +20,37 @@ import 'package:get/get.dart';
 class ThemeStudioController extends StatefulController {
   late ThemeStruct lightTheme;
   late ThemeStruct darkTheme;
+
+  /// The names of what's actually live in the running app (saved to prefs).
+  String appliedLightName = '';
+  String appliedDarkName = '';
+
   final RxBool isDark = false.obs;
+
+  /// Controls which theme variant the preview shows — independent of the
+  /// actively-selected editing theme.
+  final RxBool previewDark = false.obs;
+
   final RxList<ThemeStruct> allThemes = <ThemeStruct>[].obs;
 
   /// Bumped whenever state changes so that Obx() widgets rebuild.
   final RxInt version = 0.obs;
 
+  /// True when changes have been staged but not yet applied to the running UI.
+  final RxBool pendingChanges = false.obs;
+
   ThemeStruct get activeTheme => isDark.value ? darkTheme : lightTheme;
+
+  ThemeStruct get previewTheme => previewDark.value ? darkTheme : lightTheme;
 
   bool get isEditable => !activeTheme.isPreset && SettingsSvc.settings.monetTheming.value == Monet.none;
 
   void init(bool isDarkMode) {
     isDark.value = isDarkMode;
+    previewDark.value = isDarkMode;
     _reload();
+    appliedLightName = lightTheme.name;
+    appliedDarkName = darkTheme.name;
   }
 
   void _reload() {
@@ -42,60 +60,69 @@ class ThemeStudioController extends StatefulController {
     version.value++;
   }
 
+  /// Refreshes only the list of all themes without resetting the staged
+  /// light/dark selections.
+  void _reloadThemesList() {
+    allThemes.value = ThemeStruct.getThemes();
+    version.value++;
+  }
+
   void bump() => version.value++;
 
   // ── Theme selection ────────────────────────────────────────────────────────
 
-  Future<void> applyTheme(BuildContext context, ThemeStruct struct) async {
+  /// Stages a theme selection for preview. Call [applyChanges] to make it live.
+  void applyTheme(BuildContext context, ThemeStruct struct) {
     final isThemeDark = struct.data.colorScheme.brightness == Brightness.dark;
     isDark.value = isThemeDark;
-    struct.save();
+    previewDark.value = isThemeDark;
     if (isThemeDark) {
       darkTheme = struct;
-      await ThemeSvc.changeTheme(context, dark: struct);
     } else {
       lightTheme = struct;
-      await ThemeSvc.changeTheme(context, light: struct);
     }
-    _reload();
+    version.value++;
+    pendingChanges.value = true;
+  }
+
+  // ── Apply staged changes to the running app ────────────────────────────────
+
+  Future<void> applyChanges(BuildContext context) async {
+    lightTheme.save();
+    darkTheme.save();
+    appliedLightName = lightTheme.name;
+    appliedDarkName = darkTheme.name;
+    await ThemeSvc.changeTheme(context, light: lightTheme);
+    await ThemeSvc.changeTheme(context, dark: darkTheme);
+    pendingChanges.value = false;
     EventDispatcherSvc.emit('theme-update', null);
   }
 
   // ── Color editing ──────────────────────────────────────────────────────────
 
-  Future<void> updateColorKey(BuildContext context, String colorKey, Color newColor) async {
+  void updateColorKey(BuildContext context, String colorKey, Color newColor) {
     if (!isEditable) return;
     final map = activeTheme.toMap();
     map["data"]["colorScheme"][colorKey] = newColor.toARGB32();
     activeTheme.data = ThemeStruct.fromMap(map).data;
     activeTheme.save();
-    if (isDark.value) {
-      await ThemeSvc.changeTheme(context, dark: activeTheme);
-    } else {
-      await ThemeSvc.changeTheme(context, light: activeTheme);
-    }
     version.value++;
-    EventDispatcherSvc.emit('theme-update', null);
+    pendingChanges.value = true;
   }
 
   // ── Typography ─────────────────────────────────────────────────────────────
 
-  Future<void> updateFont(BuildContext context, String fontName) async {
+  void updateFont(BuildContext context, String fontName) {
     final map = activeTheme.toMap();
     map["data"]["textTheme"]["font"] = fontName;
     activeTheme.googleFont = fontName;
     activeTheme.data = ThemeStruct.fromMap(map).data;
     activeTheme.save();
-    if (isDark.value) {
-      await ThemeSvc.changeTheme(context, dark: activeTheme);
-    } else {
-      await ThemeSvc.changeTheme(context, light: activeTheme);
-    }
     version.value++;
-    EventDispatcherSvc.emit('theme-update', null);
+    pendingChanges.value = true;
   }
 
-  Future<void> updateTextSize(BuildContext context, String key, double multiplier, {bool save = false}) async {
+  void updateTextSize(BuildContext context, String key, double multiplier, {bool save = false}) {
     final map = activeTheme.toMap();
     final keys = key == 'master' ? activeTheme.textSizes.keys.toList() : [key];
     for (final k in keys) {
@@ -104,34 +131,28 @@ class ThemeStudioController extends StatefulController {
     activeTheme.data = ThemeStruct.fromMap(map).data;
     if (save) {
       activeTheme.save();
-      if (isDark.value) {
-        await ThemeSvc.changeTheme(context, dark: activeTheme);
-      } else {
-        await ThemeSvc.changeTheme(context, light: activeTheme);
-      }
       version.value++;
-      EventDispatcherSvc.emit('theme-update', null);
+      pendingChanges.value = true;
     }
   }
 
   // ── Theme management ───────────────────────────────────────────────────────
 
-  Future<ThemeStruct> createTheme(BuildContext context, String name, {bool? forDark}) async {
+  ThemeStruct createTheme(BuildContext context, String name, {bool? forDark}) {
     final darkMode = forDark ?? isDark.value;
     isDark.value = darkMode;
+    previewDark.value = darkMode;
     final tuple = ThemeSvc.getStructsFromData(activeTheme.data, activeTheme.data);
     final newData = darkMode ? tuple.dark : tuple.light;
     final newTheme = ThemeStruct(name: name, themeData: newData);
     newTheme.save();
     if (darkMode) {
       darkTheme = newTheme;
-      await ThemeSvc.changeTheme(context, dark: newTheme);
     } else {
       lightTheme = newTheme;
-      await ThemeSvc.changeTheme(context, light: newTheme);
     }
-    _reload();
-    EventDispatcherSvc.emit('theme-update', null);
+    _reloadThemesList();
+    pendingChanges.value = true;
     return newTheme;
   }
 
@@ -147,24 +168,21 @@ class ThemeStudioController extends StatefulController {
     if (PrefsSvc.i.getString("selected-dark") == oldName) {
       await PrefsSvc.i.setString("selected-dark", newName);
     }
-    _reload();
-    EventDispatcherSvc.emit('theme-update', null);
+    // Keep applied name tracking in sync if the applied theme was renamed.
+    if (appliedLightName == oldName) appliedLightName = newName;
+    if (appliedDarkName == oldName) appliedDarkName = newName;
+    _reloadThemesList();
     return true;
   }
 
-  Future<void> generateFromSeed(BuildContext context, Color seed) async {
+  void generateFromSeed(BuildContext context, Color seed) {
     if (!isEditable) return;
     final brightness = isDark.value ? Brightness.dark : Brightness.light;
     final swatch = ColorScheme.fromSeed(seedColor: seed, brightness: brightness);
     activeTheme.data = activeTheme.data.copyWith(colorScheme: swatch);
     activeTheme.save();
-    if (isDark.value) {
-      await ThemeSvc.changeTheme(context, dark: activeTheme);
-    } else {
-      await ThemeSvc.changeTheme(context, light: activeTheme);
-    }
     version.value++;
-    EventDispatcherSvc.emit('theme-update', null);
+    pendingChanges.value = true;
   }
 
   Future<void> generateFromImage(BuildContext context) async {
@@ -177,29 +195,19 @@ class ThemeStudioController extends StatefulController {
         provider: image, brightness: isDark.value ? Brightness.dark : Brightness.light);
     activeTheme.data = activeTheme.data.copyWith(colorScheme: swatch);
     activeTheme.save();
-    if (isDark.value) {
-      await ThemeSvc.changeTheme(context, dark: activeTheme);
-    } else {
-      await ThemeSvc.changeTheme(context, light: activeTheme);
-    }
     version.value++;
-    EventDispatcherSvc.emit('theme-update', null);
+    pendingChanges.value = true;
   }
 
-  Future<void> resetToDefault(BuildContext context) async {
+  void resetToDefault(BuildContext context) {
     if (activeTheme.isPreset) return;
     final defaultTheme = isDark.value
         ? ThemesService.defaultThemes.firstWhere((e) => e.name == "OLED Dark")
         : ThemesService.defaultThemes.firstWhere((e) => e.name == "Bright White");
     activeTheme.data = defaultTheme.data;
     activeTheme.save();
-    if (isDark.value) {
-      await ThemeSvc.changeTheme(context, dark: activeTheme);
-    } else {
-      await ThemeSvc.changeTheme(context, light: activeTheme);
-    }
     version.value++;
-    EventDispatcherSvc.emit('theme-update', null);
+    pendingChanges.value = true;
   }
 
   Future<void> deleteTheme(BuildContext context) async {
@@ -276,20 +284,63 @@ class _ThemeStudioPanelState extends CustomState<ThemeStudioPanel, void, ThemeSt
 
   @override
   Widget build(BuildContext context) {
-    return SettingsScaffold(
-      title: "Theme Studio",
-      initialHeader: null,
-      iosSubtitle: iosSubtitle,
-      materialSubtitle: materialSubtitle,
-      tileColor: tileColor,
-      headerColor: headerColor,
-      bodySlivers: [
-        // Live preview
+    return Obx(() {
+      final hasPending = controller.pendingChanges.value;
+      return SettingsScaffold(
+        title: "Theme Studio",
+        initialHeader: null,
+        iosSubtitle: iosSubtitle,
+        materialSubtitle: materialSubtitle,
+        tileColor: tileColor,
+        headerColor: headerColor,
+        actions: hasPending
+            ? [
+                TextButton(
+                  onPressed: () => controller.applyChanges(context),
+                  child: const Text("Apply"),
+                ),
+              ]
+            : [],
+        fab: hasPending
+            ? FloatingActionButton.extended(
+                onPressed: () => controller.applyChanges(context),
+                icon: const Icon(Icons.check_rounded),
+                label: const Text("Apply"),
+              )
+            : null,
+        bodySlivers: [
+        // Light/dark preview toggle
         SliverToBoxAdapter(
           child: Obx(() {
             controller.version.value;
             return Padding(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
+              child: Row(
+                children: [
+                  Text(
+                    "Preview",
+                    style: context.theme.textTheme.titleSmall?.copyWith(
+                      color: context.theme.colorScheme.onSurface,
+                    ),
+                  ),
+                  const Spacer(),
+                  _PreviewToggle(controller: controller),
+                ],
+              ),
+            );
+          }),
+        ),
+
+        // Live preview
+        SliverToBoxAdapter(
+          child: Obx(() {
+            controller.version.value;
+            controller.previewDark.value;
+            // Also subscribe to skin so the preview rebuilds when the user
+            // switches between iOS / Material / Samsung themes.
+            SettingsSvc.settings.skin.value;
+            return Padding(
+              padding: EdgeInsets.fromLTRB(16, 0, 16, 0),
               child: DecoratedBox(
                 position: DecorationPosition.foreground,
                 decoration: BoxDecoration(
@@ -299,7 +350,7 @@ class _ThemeStudioPanelState extends CustomState<ThemeStudioPanel, void, ThemeSt
                     width: 1.5,
                   ),
                 ),
-                child: ThemePreviewCard(struct: controller.activeTheme),
+                child: ThemePreviewCard(struct: controller.previewTheme),
               ),
             );
           }),
@@ -310,6 +361,7 @@ class _ThemeStudioPanelState extends CustomState<ThemeStudioPanel, void, ThemeSt
         SliverToBoxAdapter(
           child: Obx(() {
             controller.version.value;
+            controller.pendingChanges.value;
             return ThemeSelectorSection(controller: controller);
           }),
         ),
@@ -368,7 +420,8 @@ class _ThemeStudioPanelState extends CustomState<ThemeStudioPanel, void, ThemeSt
 
         const SliverToBoxAdapter(child: SizedBox(height: 48)),
       ],
-    );
+      );
+    });
   }
 
   Widget _sectionHeader(BuildContext context, String text) {
@@ -380,6 +433,68 @@ class _ThemeStudioPanelState extends CustomState<ThemeStudioPanel, void, ThemeSt
           color: context.theme.colorScheme.outline,
           letterSpacing: 0.8,
           fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Preview light/dark toggle ────────────────────────────────────────────────
+
+class _PreviewToggle extends StatelessWidget {
+  const _PreviewToggle({required this.controller});
+  final ThemeStudioController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      final isDark = controller.previewDark.value;
+      return Container(
+        height: 28,
+        decoration: BoxDecoration(
+          color: context.theme.colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _tab(context, label: "Light", icon: Icons.light_mode_outlined, selected: !isDark, onTap: () {
+              controller.previewDark.value = false;
+            }),
+            _tab(context, label: "Dark", icon: Icons.dark_mode_outlined, selected: isDark, onTap: () {
+              controller.previewDark.value = true;
+            }),
+          ],
+        ),
+      );
+    });
+  }
+
+  Widget _tab(BuildContext context, {required String label, required IconData icon, required bool selected, required VoidCallback onTap}) {
+    final cs = context.theme.colorScheme;
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeInOut,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          color: selected ? cs.primary : Colors.transparent,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 13, color: selected ? cs.onPrimary : cs.onSurfaceVariant),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: context.theme.textTheme.labelSmall?.copyWith(
+                color: selected ? cs.onPrimary : cs.onSurfaceVariant,
+                fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+              ),
+            ),
+          ],
         ),
       ),
     );

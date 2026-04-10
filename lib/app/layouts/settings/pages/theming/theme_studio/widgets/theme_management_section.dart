@@ -235,7 +235,7 @@ class ThemeManagementSection extends StatelessWidget {
   Future<void> _generateFromSeed(BuildContext context) async {
     final picked = await showColorPickerDialog(context, context.theme.colorScheme.primary);
     if (picked != null) {
-      await controller.generateFromSeed(context, picked);
+      controller.generateFromSeed(context, picked);
     }
   }
 

@@ -738,7 +738,7 @@ class ConversationTextFieldState extends CustomState<ConversationTextField, void
                   ),
                 ),
             ]),
-            AnimatedSize(
+            Obx(() => AnimatedSize(
               duration: const Duration(milliseconds: 250),
               curve: Curves.easeIn,
               alignment: Alignment.bottomCenter,
@@ -747,7 +747,7 @@ class ConversationTextFieldState extends CustomState<ConversationTextField, void
                   : AttachmentPicker(
                       controller: controller,
                     ),
-            ),
+            )),
             AnimatedSize(
               duration: const Duration(milliseconds: 250),
               curve: Curves.easeIn,
