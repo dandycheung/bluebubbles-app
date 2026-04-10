@@ -31,12 +31,7 @@ class _SamsungHeaderState extends CustomState<SamsungHeader, void, ConversationL
             padding: const EdgeInsets.all(10.0).add(const EdgeInsets.only(top: 30)),
             child: Material(
               color: Colors.transparent,
-              shape: const CircleBorder(),
-              clipBehavior: Clip.antiAlias,
-              child: SizedBox(
-                width: 40,
-                child: OverflowMenu(extraItems: true, controller: controller),
-              ),
+              child: OverflowMenu(extraItems: true, controller: controller),
             ),
           ),
         );
@@ -143,12 +138,7 @@ class _SamsungHeaderState extends CustomState<SamsungHeader, void, ConversationL
                                   padding: EdgeInsets.only(right: 8.0),
                                   child: Material(
                                     color: Colors.transparent,
-                                    shape: CircleBorder(),
-                                    clipBehavior: Clip.antiAlias,
-                                    child: SizedBox(
-                                      width: 40,
-                                      child: OverflowMenu(),
-                                    ),
+                                    child: OverflowMenu(),
                                   ),
                                 ),
                             ],
