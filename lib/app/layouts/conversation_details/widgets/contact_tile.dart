@@ -102,7 +102,7 @@ class ContactTile extends StatelessWidget {
                             child: Icon(
                                 SettingsSvc.settings.skin.value == Skins.iOS ? CupertinoIcons.mail : Icons.email,
                                 color: SettingsSvc.settings.skin.value != Skins.iOS
-                                    ? context.theme.colorScheme.onBackground
+                                    ? context.theme.colorScheme.onSurface
                                     : context.theme.colorScheme.onSecondary,
                                 size: SettingsSvc.settings.skin.value != Skins.iOS ? 25 : 20),
                           ),
@@ -122,7 +122,7 @@ class ContactTile extends StatelessWidget {
                             child: Icon(
                                 SettingsSvc.settings.skin.value == Skins.iOS ? CupertinoIcons.phone : Icons.call,
                                 color: SettingsSvc.settings.skin.value != Skins.iOS
-                                    ? context.theme.colorScheme.onBackground
+                                    ? context.theme.colorScheme.onSurface
                                     : context.theme.colorScheme.onSecondary,
                                 size: SettingsSvc.settings.skin.value != Skins.iOS ? 25 : 20),
                           ),
@@ -145,7 +145,7 @@ class ContactTile extends StatelessWidget {
                                     ? CupertinoIcons.video_camera
                                     : Icons.video_call_outlined,
                                 color: SettingsSvc.settings.skin.value != Skins.iOS
-                                    ? context.theme.colorScheme.onBackground
+                                    ? context.theme.colorScheme.onSurface
                                     : context.theme.colorScheme.onSecondary,
                                 size: SettingsSvc.settings.skin.value != Skins.iOS ? 25 : 20),
                           ),
@@ -175,7 +175,7 @@ class ContactTile extends StatelessWidget {
                           context: context,
                           builder: (BuildContext context) {
                             return AlertDialog(
-                              backgroundColor: context.theme.colorScheme.properSurface,
+                              backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
                               title: Text(
                                 "Removing participant...",
                                 style: context.theme.textTheme.titleLarge,

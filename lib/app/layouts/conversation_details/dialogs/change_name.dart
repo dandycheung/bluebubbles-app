@@ -12,7 +12,7 @@ void showChangeName(Chat chat, String method, BuildContext context) {
       context: context,
       builder: (_) {
         return AlertDialog(
-          backgroundColor: context.theme.colorScheme.properSurface,
+          backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
           actions: [
             TextButton(
               child: Text("OK",
@@ -24,7 +24,7 @@ void showChangeName(Chat chat, String method, BuildContext context) {
                       context: context,
                       builder: (BuildContext context) {
                         return AlertDialog(
-                          backgroundColor: context.theme.colorScheme.properSurface,
+                          backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
                           title: Text(
                             controller.text.isEmpty ? "Removing name..." : "Changing name to ${controller.text}...",
                             style: context.theme.textTheme.titleLarge,
@@ -33,7 +33,7 @@ void showChangeName(Chat chat, String method, BuildContext context) {
                             height: 70,
                             child: Center(
                               child: CircularProgressIndicator(
-                                backgroundColor: context.theme.colorScheme.properSurface,
+                                backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
                                 valueColor: AlwaysStoppedAnimation<Color>(context.theme.colorScheme.primary),
                               ),
                             ),

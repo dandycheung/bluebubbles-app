@@ -42,7 +42,8 @@ class _ReplyBubbleState extends State<ReplyBubble> with ThemeHelpers {
   }
 
   Color getBubbleColor() {
-    Color bubbleColor = context.theme.colorScheme.properSurface;
+    Color bubbleColor = (context.theme.extensions[BubbleColors] as BubbleColors?)?.receivedBubbleColor ??
+        context.theme.colorScheme.surfaceContainerHighest;
     if (SettingsSvc.settings.colorfulBubbles.value && !message.isFromMe!) {
       final colorStr = controller.sender?.color.value;
       final address = controller.sender?.handle.address;
@@ -88,7 +89,7 @@ class _ReplyBubbleState extends State<ReplyBubble> with ThemeHelpers {
                     style: context.textTheme.bodyMedium!.apply(fontSizeFactor: 1.15),
                   ),
                 ]),
-                style: context.textTheme.labelLarge!.copyWith(color: context.theme.colorScheme.onBackground),
+                style: context.textTheme.labelLarge!.copyWith(color: context.theme.colorScheme.onSurface),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),

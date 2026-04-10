@@ -330,7 +330,7 @@ class ChatCreatorState extends State<ChatCreator> with ThemeHelpers {
                           content: Text(
                               "Creating group chats from BlueBubbles is not possible on macOS 11 (Big Sur) and later due to limitations from Apple. You must setup the Private API to gain this feature.",
                               style: context.theme.textTheme.bodyLarge),
-                          backgroundColor: context.theme.colorScheme.properSurface,
+                          backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
                           actions: <Widget>[
                             TextButton(
                               child: Text("Close",
@@ -617,7 +617,7 @@ class ChatCreatorState extends State<ChatCreator> with ThemeHelpers {
                                   context: context,
                                   builder: (BuildContext context) {
                                     return AlertDialog(
-                                      backgroundColor: context.theme.colorScheme.properSurface,
+                                      backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
                                       title: Text(
                                         "Cannot Forward Attachment",
                                         style: context.theme.textTheme.titleLarge,
@@ -656,7 +656,7 @@ class ChatCreatorState extends State<ChatCreator> with ThemeHelpers {
                                   context: context,
                                   builder: (BuildContext context) {
                                     return AlertDialog(
-                                      backgroundColor: context.theme.colorScheme.properSurface,
+                                      backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
                                       title: Text(
                                         "Creating a new $method chat...",
                                         style: context.theme.textTheme.titleLarge,
@@ -665,7 +665,7 @@ class ChatCreatorState extends State<ChatCreator> with ThemeHelpers {
                                         height: 70,
                                         child: Center(
                                           child: CircularProgressIndicator(
-                                            backgroundColor: context.theme.colorScheme.properSurface,
+                                            backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
                                             valueColor:
                                                 AlwaysStoppedAnimation<Color>(context.theme.colorScheme.primary),
                                           ),
@@ -733,7 +733,7 @@ class ChatCreatorState extends State<ChatCreator> with ThemeHelpers {
                                     context: context,
                                     builder: (BuildContext context) {
                                       return AlertDialog(
-                                        backgroundColor: context.theme.colorScheme.properSurface,
+                                        backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
                                         title: Text(
                                           "Failed to create chat!",
                                           style: context.theme.textTheme.titleLarge,

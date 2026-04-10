@@ -46,7 +46,7 @@ class SettingsTile extends StatelessWidget {
           child: ListTile(
             mouseCursor: MouseCursor.defer,
             enableFeedback: true,
-            minVerticalPadding: 10,
+            minVerticalPadding: 14,
             horizontalTitleGap: 10,
             dense: SettingsSvc.settings.skin.value == Skins.iOS ? true : false,
             leading: leading == null
@@ -79,7 +79,7 @@ class SettingsTile extends StatelessWidget {
                 ? Text(
                     subtitle!,
                     style: context.theme.textTheme.bodySmall!.copyWith(
-                        color: context.theme.colorScheme.properOnSurface.withValues(alpha: 0.75), height: 1.5),
+                        color: context.theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.75), height: 1.5),
                   )
                 : null,
             contentPadding: const EdgeInsets.symmetric(horizontal: 16.0),

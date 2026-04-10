@@ -302,7 +302,7 @@ class _ActionButton extends StatelessWidget {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(10),
         ),
-        backgroundColor: context.theme.colorScheme.properSurface,
+        backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
       ),
       onPressed: onPressed,
       child: Column(
@@ -310,12 +310,12 @@ class _ActionButton extends StatelessWidget {
         children: <Widget>[
           Icon(
             icon,
-            color: context.theme.colorScheme.properOnSurface,
+            color: context.theme.colorScheme.onSurfaceVariant,
           ),
           const SizedBox(height: 8.0),
           Text(
             label,
-            style: context.theme.textTheme.labelLarge!.copyWith(color: context.theme.colorScheme.properOnSurface),
+            style: context.theme.textTheme.labelLarge!.copyWith(color: context.theme.colorScheme.onSurfaceVariant),
           ),
         ],
       ),
@@ -525,7 +525,7 @@ class _FeatureButton extends StatelessWidget {
                 },
               ),
             ],
-            backgroundColor: context.theme.colorScheme.properSurface,
+            backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
           );
         },
       );
@@ -540,7 +540,7 @@ class _FeatureButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(10),
         ),
         padding: const EdgeInsets.symmetric(vertical: 5),
-        backgroundColor: context.theme.colorScheme.properSurface,
+        backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
       ),
       onPressed: () => handlePress(context),
       child: Column(
@@ -548,12 +548,12 @@ class _FeatureButton extends StatelessWidget {
         children: <Widget>[
           Icon(
             getIcon(),
-            color: context.theme.colorScheme.properOnSurface,
+            color: context.theme.colorScheme.onSurfaceVariant,
           ),
           const SizedBox(height: 8.0),
           Text(
             getText(),
-            style: context.theme.textTheme.labelLarge!.copyWith(color: context.theme.colorScheme.properOnSurface),
+            style: context.theme.textTheme.labelLarge!.copyWith(color: context.theme.colorScheme.onSurfaceVariant),
           ),
         ],
       ),

@@ -160,7 +160,7 @@ class _MediaGalleryCardState extends State<MediaGalleryCard> with AutomaticKeepA
             ),
             // Progress overlay
             Container(
-              color: context.theme.colorScheme.properSurface.withValues(alpha: 0.5),
+              color: context.theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
               child: Center(
                 child: Obx(() {
                   return Column(
@@ -181,7 +181,7 @@ class _MediaGalleryCardState extends State<MediaGalleryCard> with AutomaticKeepA
                             ? "${(progress.progress.value * 100).toStringAsFixed(0)}%"
                             : "Waiting for iMessage...",
                         style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                              color: context.theme.colorScheme.properOnSurface,
+                              color: context.theme.colorScheme.onSurfaceVariant,
                               fontWeight: FontWeight.bold,
                             ),
                         textAlign: TextAlign.center,
@@ -273,14 +273,14 @@ class _MediaGalleryCardState extends State<MediaGalleryCard> with AutomaticKeepA
                   Icon(
                     getAttachmentIcon(mimeType),
                     size: 52,
-                    color: context.theme.colorScheme.properOnSurface,
+                    color: context.theme.colorScheme.onSurfaceVariant,
                   ),
                   const SizedBox(height: 6),
                   if (friendlySize != null)
                     Text(
                       friendlySize,
                       style: context.theme.textTheme.bodySmall!.copyWith(
-                        color: context.theme.colorScheme.properOnSurface.withValues(alpha: 0.6),
+                        color: context.theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
                       ),
                     ),
                   const SizedBox(height: 6),
@@ -292,13 +292,13 @@ class _MediaGalleryCardState extends State<MediaGalleryCard> with AutomaticKeepA
                             ? CupertinoIcons.cloud_download
                             : Icons.cloud_download,
                         size: 13,
-                        color: context.theme.colorScheme.properOnSurface.withValues(alpha: 0.6),
+                        color: context.theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
                       ),
                       const SizedBox(width: 4),
                       Text(
                         'Tap to download',
                         style: context.theme.textTheme.bodySmall!.copyWith(
-                          color: context.theme.colorScheme.properOnSurface.withValues(alpha: 0.6),
+                          color: context.theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
                         ),
                       ),
                     ],
@@ -345,7 +345,7 @@ class _MediaGalleryCardState extends State<MediaGalleryCard> with AutomaticKeepA
         clipBehavior: Clip.antiAlias,
         child: Container(
           alignment: Alignment.center,
-          color: context.theme.colorScheme.properSurface,
+          color: context.theme.colorScheme.surfaceContainerHighest,
           padding: addPadding ? const EdgeInsets.all(10) : null,
           child: child,
         ),

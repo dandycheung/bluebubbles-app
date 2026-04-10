@@ -59,7 +59,7 @@ class _FindMyPageState extends State<FindMyPage> with SingleTickerProviderStateM
   Widget _buildTabletLayout(BuildContext context) {
     return Obx(
       () => Scaffold(
-        backgroundColor: context.theme.colorScheme.background.themeOpacity(context),
+        backgroundColor: context.theme.colorScheme.surface.themeOpacity(context),
         body: Stack(
           children: [
             Row(
@@ -318,7 +318,7 @@ class _FindMyPageState extends State<FindMyPage> with SingleTickerProviderStateM
                   height: 48,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Theme.of(context).colorScheme.properSurface.withValues(alpha: 0.9),
+                    color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.9),
                   ),
                   child: buildBackButton(context, padding: const EdgeInsets.only(right: 2)),
                 ),
@@ -399,7 +399,7 @@ class _FindMyPageState extends State<FindMyPage> with SingleTickerProviderStateM
           height: 48,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: Theme.of(context).colorScheme.properSurface.withValues(alpha: 0.9),
+            color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.9),
           ),
           child: SizedBox(
             width: 48,
@@ -408,7 +408,7 @@ class _FindMyPageState extends State<FindMyPage> with SingleTickerProviderStateM
                 : IconButton(
                     iconSize: 22,
                     icon: Icon(context.iOS ? CupertinoIcons.arrow_counterclockwise : Icons.refresh,
-                        color: context.theme.colorScheme.onBackground, size: 22),
+                        color: context.theme.colorScheme.onSurface, size: 22),
                     onPressed: () {
                       controller.refreshing.value = true;
                       controller.refreshing2.value = true;
@@ -433,7 +433,7 @@ class _FindMyPageState extends State<FindMyPage> with SingleTickerProviderStateM
               child: Container(
                   height: appWindow.titleBarHeight,
                   width: appWindow.titleBarButtonSize.width * 3,
-                  color: context.theme.colorScheme.properSurface.withValues(alpha: 0.5)),
+                  color: context.theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5)),
             ),
           ),
         ]),
@@ -469,7 +469,7 @@ class _FindMyPageState extends State<FindMyPage> with SingleTickerProviderStateM
                   child: Center(
                       child: Text(title,
                           style: context.theme.textTheme.displaySmall!
-                              .copyWith(color: context.theme.colorScheme.onBackground),
+                              .copyWith(color: context.theme.colorScheme.onSurface),
                           textAlign: TextAlign.center)),
                 ),
                 FadeTransition(
@@ -526,7 +526,7 @@ class _FindMyPageState extends State<FindMyPage> with SingleTickerProviderStateM
                                     : IconButton(
                                         iconSize: 22,
                                         icon: Icon(context.iOS ? CupertinoIcons.arrow_counterclockwise : Icons.refresh,
-                                            color: context.theme.colorScheme.onBackground, size: 22),
+                                            color: context.theme.colorScheme.onSurface, size: 22),
                                         onPressed: () {
                                           controller.refreshing.value = true;
                                           controller.refreshing2.value = true;

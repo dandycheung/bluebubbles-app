@@ -100,7 +100,7 @@ class _LocationsSectionState extends State<LocationsSection> {
                         return const Text("Failed to load location!");
                       }
                       return Material(
-                        color: context.theme.colorScheme.properSurface,
+                        color: context.theme.colorScheme.surfaceContainerHighest,
                         borderRadius: BorderRadius.circular(20),
                         clipBehavior: Clip.antiAlias,
                         child: InkWell(

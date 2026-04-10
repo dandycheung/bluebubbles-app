@@ -106,7 +106,7 @@ class _AudioPlayerState extends State<AudioPlayer> with AutomaticKeepAliveClient
                   icon: AnimatedIcons.play_pause,
                   progress: animController,
                 ),
-                color: context.theme.colorScheme.properOnSurface,
+                color: context.theme.colorScheme.onSurfaceVariant,
                 visualDensity: VisualDensity.compact,
               ),
               Obx(() => maxDuration.value == 0
@@ -116,8 +116,8 @@ class _AudioPlayerState extends State<AudioPlayer> with AutomaticKeepAliveClient
                       playerController: controller!,
                       padding: EdgeInsets.zero,
                       playerWaveStyle: PlayerWaveStyle(
-                          fixedWaveColor: context.theme.colorScheme.properSurface.oppositeLightenOrDarken(20),
-                          liveWaveColor: context.theme.colorScheme.properOnSurface,
+                          fixedWaveColor: context.theme.colorScheme.surfaceContainerHighest.oppositeLightenOrDarken(20),
+                          liveWaveColor: context.theme.colorScheme.onSurfaceVariant,
                           waveCap: StrokeCap.square,
                           waveThickness: 2,
                           seekLineThickness: 2,
@@ -227,7 +227,7 @@ class _DesktopAudioPlayerState extends State<AudioPlayer>
                 icon: AnimatedIcons.play_pause,
                 progress: animController,
               ),
-              color: context.theme.colorScheme.properOnSurface,
+              color: context.theme.colorScheme.onSurfaceVariant,
               visualDensity: VisualDensity.compact,
             ),
             if (controller != null)

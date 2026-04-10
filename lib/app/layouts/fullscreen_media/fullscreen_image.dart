@@ -281,7 +281,8 @@ class _FullscreenImageState extends State<FullscreenImage>
                     child: Container(
                       height: 60,
                       decoration: BoxDecoration(
-                        color: samsung ? Colors.black : context.theme.colorScheme.properSurface.withOpacity(0.9),
+                        color:
+                            samsung ? Colors.black : context.theme.colorScheme.surfaceContainerHighest.withOpacity(0.9),
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,

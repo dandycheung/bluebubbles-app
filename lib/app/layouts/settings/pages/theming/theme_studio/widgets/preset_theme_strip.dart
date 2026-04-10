@@ -94,9 +94,7 @@ class _ModeGroup extends StatelessWidget {
               title,
               style: context.theme.textTheme.titleSmall?.copyWith(
                 fontWeight: FontWeight.w700,
-                color: isCurrentMode
-                    ? context.theme.colorScheme.primary
-                    : context.theme.colorScheme.onSurface,
+                color: isCurrentMode ? context.theme.colorScheme.primary : context.theme.colorScheme.onSurface,
               ),
             ),
             const Spacer(),
@@ -127,7 +125,7 @@ class _ModeGroup extends StatelessWidget {
 
         // ─ Default card ───────────────────────────────────────────────────
         if (defaultTheme != null) ...[
-          _SubLabel("Default"),
+          const _SubLabel("Default"),
           const SizedBox(height: 6),
           _DefaultCard(
             struct: defaultTheme!,
@@ -139,7 +137,7 @@ class _ModeGroup extends StatelessWidget {
 
         // ─ Custom themes ──────────────────────────────────────────────────
         if (custom.isNotEmpty) ...[
-          _SubLabel("Custom"),
+          const _SubLabel("Custom"),
           const SizedBox(height: 6),
           SizedBox(
             height: 110,
@@ -164,7 +162,7 @@ class _ModeGroup extends StatelessWidget {
 
         // ─ Other presets ──────────────────────────────────────────────────
         if (presets.isNotEmpty) ...[
-          _SubLabel("More"),
+          const _SubLabel("More"),
           const SizedBox(height: 6),
           SizedBox(
             height: 110,
@@ -194,7 +192,7 @@ class _ModeGroup extends StatelessWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: context.theme.colorScheme.properSurface,
+        backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
         title: Text(
           "New ${isForDark ? 'Dark' : 'Light'} Theme",
           style: context.theme.textTheme.titleLarge,
@@ -205,10 +203,8 @@ class _ModeGroup extends StatelessWidget {
           decoration: InputDecoration(
             labelText: "Theme Name",
             hintText: "e.g. My Custom Theme",
-            enabledBorder: OutlineInputBorder(
-                borderSide: BorderSide(color: context.theme.colorScheme.outline)),
-            focusedBorder: OutlineInputBorder(
-                borderSide: BorderSide(color: context.theme.colorScheme.primary)),
+            enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: context.theme.colorScheme.outline)),
+            focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: context.theme.colorScheme.primary)),
           ),
           onSubmitted: (_) => _doCreate(ctx, context, textController.text),
         ),
@@ -290,9 +286,8 @@ class _DefaultCard extends StatelessWidget {
           color: context.tileColor,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isActive
-                ? context.theme.colorScheme.primary
-                : context.theme.colorScheme.outline.withValues(alpha: 0.3),
+            color:
+                isActive ? context.theme.colorScheme.primary : context.theme.colorScheme.outline.withValues(alpha: 0.3),
             width: isActive ? 2.0 : 1.0,
           ),
         ),
@@ -319,8 +314,7 @@ class _DefaultCard extends StatelessWidget {
                   children: [
                     Text(
                       struct.name,
-                      style: context.theme.textTheme.bodyMedium
-                          ?.copyWith(fontWeight: FontWeight.w600),
+                      style: context.theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
                     ),
                     const SizedBox(height: 2),
                     Text(
@@ -337,8 +331,7 @@ class _DefaultCard extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(right: 14),
               child: isActive
-                  ? Icon(Icons.check_circle_rounded,
-                      color: context.theme.colorScheme.primary, size: 20)
+                  ? Icon(Icons.check_circle_rounded, color: context.theme.colorScheme.primary, size: 20)
                   : Icon(Icons.radio_button_unchecked,
                       color: context.theme.colorScheme.outline.withValues(alpha: 0.5), size: 20),
             ),
@@ -384,9 +377,8 @@ class _ThemeCard extends StatelessWidget {
           color: context.theme.colorScheme.surfaceVariant.withValues(alpha: 0.4),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isActive
-                ? context.theme.colorScheme.primary
-                : context.theme.colorScheme.outline.withValues(alpha: 0.3),
+            color:
+                isActive ? context.theme.colorScheme.primary : context.theme.colorScheme.outline.withValues(alpha: 0.3),
             width: isActive ? 2.0 : 1.0,
           ),
         ),
@@ -530,7 +522,7 @@ class _ImportDialogState extends State<_ImportDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      backgroundColor: context.theme.colorScheme.properSurface,
+      backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
       title: Text("Import Theme", style: context.theme.textTheme.titleLarge),
       content: SizedBox(
         width: 320,
@@ -539,8 +531,7 @@ class _ImportDialogState extends State<_ImportDialog> {
           children: [
             Text(
               "Paste the exported theme JSON below, or pick a .json file.",
-              style: context.theme.textTheme.bodySmall
-                  ?.copyWith(color: context.theme.colorScheme.onSurfaceVariant),
+              style: context.theme.textTheme.bodySmall?.copyWith(color: context.theme.colorScheme.onSurfaceVariant),
             ),
             const SizedBox(height: 12),
             TextField(
@@ -548,10 +539,8 @@ class _ImportDialogState extends State<_ImportDialog> {
               maxLines: 6,
               decoration: InputDecoration(
                 hintText: '{ "name": "...", "data": { ... } }',
-                enabledBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: context.theme.colorScheme.outline)),
-                focusedBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: context.theme.colorScheme.primary)),
+                enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: context.theme.colorScheme.outline)),
+                focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: context.theme.colorScheme.primary)),
               ),
               style: context.theme.textTheme.bodySmall,
             ),
@@ -579,5 +568,3 @@ class _ImportDialogState extends State<_ImportDialog> {
     );
   }
 }
-
-

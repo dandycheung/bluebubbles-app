@@ -174,7 +174,7 @@ class _AttachmentPickerFileState extends State<AttachmentPickerFile> with ThemeH
 
   Widget _buildPlaceholderContent(BuildContext context) {
     return Container(
-      color: context.theme.colorScheme.properSurface,
+      color: context.theme.colorScheme.surfaceContainerHighest,
       alignment: Alignment.center,
       child: isLoading
           ? const CupertinoActivityIndicator()

@@ -32,7 +32,7 @@ class CupertinoConversationListState extends State<CupertinoConversationList> wi
   bool get showUnknown => widget.parentController.showUnknownSenders;
 
   Color get backgroundColor => SettingsSvc.settings.windowEffect.value == WindowEffect.disabled
-      ? context.theme.colorScheme.background
+      ? context.theme.colorScheme.surface
       : Colors.transparent;
 
   ConversationListController get controller => widget.parentController;
@@ -54,7 +54,7 @@ class CupertinoConversationListState extends State<CupertinoConversationList> wi
     return Scaffold(
       backgroundColor: SettingsSvc.settings.windowEffect.value != WindowEffect.disabled
           ? Colors.transparent
-          : context.theme.colorScheme.background,
+          : context.theme.colorScheme.surface,
       extendBodyBehindAppBar: !showArchived && !showUnknown,
       floatingActionButton: Obx(() =>
           !SettingsSvc.settings.moveChatCreatorToHeader.value && !showArchived && !showUnknown

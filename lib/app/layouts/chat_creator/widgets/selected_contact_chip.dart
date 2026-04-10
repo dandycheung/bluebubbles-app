@@ -1,5 +1,4 @@
 import 'package:bluebubbles/app/layouts/chat_creator/chat_creator.dart';
-import 'package:bluebubbles/app/layouts/chat_creator/chat_service_type.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/services/services.dart';
 import 'package:flutter/cupertino.dart';
@@ -26,7 +25,7 @@ class SelectedContactChip extends StatelessWidget {
                 ? context.theme.colorScheme.bubble(context, true).withValues(alpha: 0.2)
                 : contact.serviceType.value == ChatServiceType.sms
                     ? context.theme.colorScheme.bubble(context, false).withValues(alpha: 0.2)
-                    : context.theme.colorScheme.properSurface,
+                    : context.theme.colorScheme.surfaceContainerHighest,
             borderRadius: BorderRadius.circular(5),
             clipBehavior: Clip.antiAlias,
             child: InkWell(
@@ -43,7 +42,7 @@ class SelectedContactChip extends StatelessWidget {
                               ? context.theme.colorScheme.bubble(context, true)
                               : contact.serviceType.value == ChatServiceType.sms
                                   ? context.theme.colorScheme.bubble(context, false)
-                                  : context.theme.colorScheme.properOnSurface,
+                                  : context.theme.colorScheme.onSurfaceVariant,
                         )),
                     const SizedBox(width: 5.0),
                     Icon(

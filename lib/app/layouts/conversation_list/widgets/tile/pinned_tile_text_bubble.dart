@@ -43,8 +43,8 @@ class PinnedTileTextBubbleState extends CustomState<PinnedTileTextBubble, void, 
   List<Color> getBubbleColors(Message? lastMessage) {
     // Default to the received-bubble color (same as text_bubble.dart for incoming messages).
     List<Color> bubbleColors = [
-      context.theme.colorScheme.properSurface,
-      context.theme.colorScheme.properSurface,
+      context.theme.colorScheme.surfaceContainerHighest,
+      context.theme.colorScheme.surfaceContainerHighest,
     ];
     if (lastMessage == null) return bubbleColors;
     if (!SettingsSvc.settings.colorfulAvatars.value &&
@@ -80,9 +80,8 @@ class PinnedTileTextBubbleState extends CustomState<PinnedTileTextBubble, void, 
       return Align(
         // Groups: bubble grows up from its Positioned anchor → top-left align.
         // DMs: center the bubble on the appropriate side.
-        alignment: chat.isGroup
-            ? Alignment.topLeft
-            : (effectiveLeftSide ? Alignment.centerLeft : Alignment.centerRight),
+        alignment:
+            chat.isGroup ? Alignment.topLeft : (effectiveLeftSide ? Alignment.centerLeft : Alignment.centerRight),
         child: Padding(
           padding: EdgeInsets.only(
             left: effectiveLeftSide ? size * 0.06 : size * 0.02,
@@ -131,7 +130,7 @@ class PinnedTileTextBubbleState extends CustomState<PinnedTileTextBubble, void, 
                             ),
                             color: SettingsSvc.settings.colorfulBubbles.value
                                 ? getBubbleColors(lastMessage).first.oppositeLightenOrDarken(75)
-                                : context.theme.colorScheme.properOnSurface,
+                                : context.theme.colorScheme.onSurfaceVariant,
                           ),
                         ),
                       ),

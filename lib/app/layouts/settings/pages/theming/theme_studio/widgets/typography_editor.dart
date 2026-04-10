@@ -70,8 +70,7 @@ class _TypographyEditorState extends State<TypographyEditor> {
                         materialCustomWidgets: (font) {
                           if (font == 'Default') return null;
                           try {
-                            return Text(font,
-                                style: GoogleFonts.getFont(font, fontSize: 14));
+                            return Text(font, style: GoogleFonts.getFont(font, fontSize: 14));
                           } catch (_) {
                             return null;
                           }
@@ -146,13 +145,11 @@ class _TypographyEditorState extends State<TypographyEditor> {
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                         child: Row(
                           children: [
-                            Icon(Icons.format_size,
-                                size: 20, color: context.theme.colorScheme.primary),
+                            Icon(Icons.format_size, size: 20, color: context.theme.colorScheme.primary),
                             const SizedBox(width: 12),
                             Expanded(
                               child: Text("Individual Sizes",
-                                  style: context.theme.textTheme.bodyMedium
-                                      ?.copyWith(fontWeight: FontWeight.w600)),
+                                  style: context.theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
                             ),
                             TextButton.icon(
                               onPressed: () => _resetAllSizes(context),
@@ -167,8 +164,7 @@ class _TypographyEditorState extends State<TypographyEditor> {
                             AnimatedRotation(
                               turns: _sizesExpanded ? 0.5 : 0,
                               duration: const Duration(milliseconds: 200),
-                              child: Icon(Icons.expand_more,
-                                  color: context.theme.colorScheme.onSurfaceVariant),
+                              child: Icon(Icons.expand_more, color: context.theme.colorScheme.onSurfaceVariant),
                             ),
                           ],
                         ),
@@ -176,9 +172,7 @@ class _TypographyEditorState extends State<TypographyEditor> {
                     ),
                     AnimatedCrossFade(
                       duration: const Duration(milliseconds: 200),
-                      crossFadeState: _sizesExpanded
-                          ? CrossFadeState.showSecond
-                          : CrossFadeState.showFirst,
+                      crossFadeState: _sizesExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
                       firstChild: const SizedBox.shrink(),
                       secondChild: Column(
                         children: theme.textSizes.keys.map((key) {

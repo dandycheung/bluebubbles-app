@@ -23,7 +23,7 @@ List<InlineSpan> buildMessageSpans(BuildContext context, MessagePart part, Messa
   final textSpans = <InlineSpan>[];
   final textStyle = (context.theme.extensions[BubbleText] as BubbleText).bubbleText.apply(
         color: colorOverride ??
-            (message.isFromMe! ? context.theme.colorScheme.onPrimary : context.theme.colorScheme.properOnSurface),
+            (message.isFromMe! ? context.theme.colorScheme.onPrimary : context.theme.colorScheme.onSurfaceVariant),
         fontSizeFactor: message.isBigEmoji ? 3 : 1,
       );
 
@@ -81,7 +81,7 @@ Future<List<InlineSpan>> buildEnrichedMessageSpans(BuildContext context, Message
   final textSpans = <InlineSpan>[];
   final textStyle = (context.theme.extensions[BubbleText] as BubbleText).bubbleText.apply(
         color: colorOverride ??
-            (message.isFromMe! ? context.theme.colorScheme.onPrimary : context.theme.colorScheme.properOnSurface),
+            (message.isFromMe! ? context.theme.colorScheme.onPrimary : context.theme.colorScheme.onSurfaceVariant),
         fontSizeFactor: message.isBigEmoji ? 3 : 1,
       );
   // extract rich content

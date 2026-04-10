@@ -233,7 +233,7 @@ class _FullscreenVideoState extends State<FullscreenVideo> with AutomaticKeepAli
               child: Theme(
                 data: context.theme.copyWith(
                     platform: iOS ? TargetPlatform.iOS : TargetPlatform.android,
-                    dialogBackgroundColor: context.theme.colorScheme.properSurface,
+                    dialogBackgroundColor: context.theme.colorScheme.surfaceContainerHighest,
                     iconTheme: context.theme.iconTheme.copyWith(color: context.theme.textTheme.bodyMedium?.color)),
                 child: Stack(
                   alignment: Alignment.center,
@@ -292,7 +292,7 @@ class _FullscreenVideoState extends State<FullscreenVideo> with AutomaticKeepAli
                                     height: 75,
                                     width: 75,
                                     decoration: BoxDecoration(
-                                      color: context.theme.colorScheme.background.withValues(alpha: 0.5),
+                                      color: context.theme.colorScheme.surface.withValues(alpha: 0.5),
                                       borderRadius: BorderRadius.circular(40),
                                     ),
                                     clipBehavior: Clip.antiAlias,
@@ -384,8 +384,9 @@ class _FullscreenVideoState extends State<FullscreenVideo> with AutomaticKeepAli
                             child: Container(
                               height: 60,
                               decoration: BoxDecoration(
-                                color:
-                                    samsung ? Colors.black : context.theme.colorScheme.properSurface.withOpacity(0.9),
+                                color: samsung
+                                    ? Colors.black
+                                    : context.theme.colorScheme.surfaceContainerHighest.withOpacity(0.9),
                               ),
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,

@@ -336,7 +336,7 @@ class ConversationTextFieldState extends CustomState<ConversationTextField, void
         context: context,
         builder: (BuildContext context) {
           return AlertDialog(
-            backgroundColor: context.theme.colorScheme.properSurface,
+            backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
             title: Text(
               "Scheduling message...",
               style: context.theme.textTheme.titleLarge,
@@ -345,7 +345,7 @@ class ConversationTextFieldState extends CustomState<ConversationTextField, void
               height: 70,
               child: Center(
                 child: CircularProgressIndicator(
-                  backgroundColor: context.theme.colorScheme.properSurface,
+                  backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
                   valueColor: AlwaysStoppedAnimation<Color>(context.theme.colorScheme.primary),
                 ),
               ),
@@ -466,102 +466,91 @@ class ConversationTextFieldState extends CustomState<ConversationTextField, void
           mainAxisSize: MainAxisSize.min,
           children: [
             Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-              if (!kIsWeb && iOS && Platform.isAndroid)
-                GestureDetector(
-                  onLongPress: () {
-                    openFullCamera(type: 'video');
-                  },
+              Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
                   child: IconButton(
-                      padding: const EdgeInsets.only(left: 10),
-                      icon: Icon(
-                        CupertinoIcons.camera_fill,
-                        color: context.theme.colorScheme.outline,
-                        size: 28,
-                      ),
-                      visualDensity: VisualDensity.compact,
-                      onPressed: () {
-                        openFullCamera();
-                      }),
-                ),
-              IconButton(
-                icon: Icon(
-                  iOS
-                      ? CupertinoIcons.add_circled_solid
-                      : material
-                          ? Icons.add_circle_outline
-                          : Icons.add,
-                  color: context.theme.colorScheme.outline,
-                  size: 28,
-                ),
-                visualDensity: Platform.isAndroid ? VisualDensity.compact : null,
-                onPressed: () async {
-                  if (kIsDesktop) {
-                    final res = await FilePicker.platform.pickFiles(withReadStream: true, allowMultiple: true);
-                    if (res == null || res.files.isEmpty || res.files.first.readStream == null) return;
+                    style: IconButton.styleFrom(
+                      backgroundColor: context.theme.colorScheme.outline.withValues(alpha: 0.2),
+                      shape: const CircleBorder(),
+                      padding: EdgeInsets.zero,
+                      minimumSize: const Size(36, 36),
+                      fixedSize: const Size(36, 36),
+                    ),
+                    icon: Icon(
+                      Icons.add,
+                      color: context.theme.colorScheme.outline,
+                      size: 22,
+                    ),
+                    visualDensity: Platform.isAndroid ? VisualDensity.compact : null,
+                    onPressed: () async {
+                      if (kIsDesktop) {
+                        final res = await FilePicker.platform.pickFiles(withReadStream: true, allowMultiple: true);
+                        if (res == null || res.files.isEmpty || res.files.first.readStream == null) return;
 
-                    for (pf.PlatformFile e in res.files) {
-                      if (e.size / 1024000 > 1000) {
-                        showSnackbar("Error", "This file is over 1 GB! Please compress it before sending.");
-                        continue;
+                        for (pf.PlatformFile e in res.files) {
+                          if (e.size / 1024000 > 1000) {
+                            showSnackbar("Error", "This file is over 1 GB! Please compress it before sending.");
+                            continue;
+                          }
+                          controller.pickedAttachments.add(PlatformFile(
+                            path: e.path,
+                            name: e.name,
+                            size: e.size,
+                            bytes: await readByteStream(e.readStream!),
+                          ));
+                        }
+                      } else if (kIsWeb) {
+                        showDialog(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                                  title: Text("What would you like to do?", style: context.theme.textTheme.titleLarge),
+                                  content: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: <Widget>[
+                                        ListTile(
+                                          title: Text("Upload file", style: Theme.of(context).textTheme.bodyLarge),
+                                          onTap: () async {
+                                            final res = await FilePicker.platform
+                                                .pickFiles(withData: true, allowMultiple: true);
+                                            if (res == null || res.files.isEmpty || res.files.first.bytes == null)
+                                              return;
+
+                                            for (pf.PlatformFile e in res.files) {
+                                              if (e.size / 1024000 > 1000) {
+                                                showSnackbar("Error",
+                                                    "This file is over 1 GB! Please compress it before sending.");
+                                                continue;
+                                              }
+                                              controller.pickedAttachments.add(PlatformFile(
+                                                path: null,
+                                                name: e.name,
+                                                size: e.size,
+                                                bytes: e.bytes!,
+                                              ));
+                                            }
+                                            Get.back();
+                                          },
+                                        ),
+                                        ListTile(
+                                          title: Text("Send location", style: Theme.of(context).textTheme.bodyLarge),
+                                          onTap: () async {
+                                            Share.location(chat);
+                                            Get.back();
+                                          },
+                                        ),
+                                      ]),
+                                  backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
+                                ));
+                      } else {
+                        if (!showAttachmentPicker) {
+                          controller.focusNode.unfocus();
+                          controller.subjectFocusNode.unfocus();
+                        }
+                        localController.showAttachmentPickerLocal.value = !showAttachmentPicker;
                       }
-                      controller.pickedAttachments.add(PlatformFile(
-                        path: e.path,
-                        name: e.name,
-                        size: e.size,
-                        bytes: await readByteStream(e.readStream!),
-                      ));
-                    }
-                  } else if (kIsWeb) {
-                    showDialog(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                              title: Text("What would you like to do?", style: context.theme.textTheme.titleLarge),
-                              content: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: <Widget>[
-                                    ListTile(
-                                      title: Text("Upload file", style: Theme.of(context).textTheme.bodyLarge),
-                                      onTap: () async {
-                                        final res =
-                                            await FilePicker.platform.pickFiles(withData: true, allowMultiple: true);
-                                        if (res == null || res.files.isEmpty || res.files.first.bytes == null) return;
-
-                                        for (pf.PlatformFile e in res.files) {
-                                          if (e.size / 1024000 > 1000) {
-                                            showSnackbar(
-                                                "Error", "This file is over 1 GB! Please compress it before sending.");
-                                            continue;
-                                          }
-                                          controller.pickedAttachments.add(PlatformFile(
-                                            path: null,
-                                            name: e.name,
-                                            size: e.size,
-                                            bytes: e.bytes!,
-                                          ));
-                                        }
-                                        Get.back();
-                                      },
-                                    ),
-                                    ListTile(
-                                      title: Text("Send location", style: Theme.of(context).textTheme.bodyLarge),
-                                      onTap: () async {
-                                        Share.location(chat);
-                                        Get.back();
-                                      },
-                                    ),
-                                  ]),
-                              backgroundColor: context.theme.colorScheme.properSurface,
-                            ));
-                  } else {
-                    if (!showAttachmentPicker) {
-                      controller.focusNode.unfocus();
-                      controller.subjectFocusNode.unfocus();
-                    }
-                    localController.showAttachmentPickerLocal.value = !showAttachmentPicker;
-                  }
-                },
-              ),
+                    },
+                  )),
               if (!kIsWeb && !Platform.isAndroid)
                 IconButton(
                     icon: Icon(Icons.gif, color: context.theme.colorScheme.outline, size: 28),
@@ -616,11 +605,12 @@ class ConversationTextFieldState extends CustomState<ConversationTextField, void
                           ),
                         ),
                         style: TenorStyle(
-                          color: context.theme.colorScheme.properSurface,
+                          color: context.theme.colorScheme.surfaceContainerHighest,
                           attributionStyle: TenorAttributionStyle(brightnes: context.theme.brightness),
                           tabBarStyle: TenorTabBarStyle(
                             decoration: BoxDecoration(
-                                color: context.theme.colorScheme.properSurface, borderRadius: BorderRadius.circular(8)),
+                                color: context.theme.colorScheme.surfaceContainerHighest,
+                                borderRadius: BorderRadius.circular(8)),
                             indicator: BoxDecoration(
                               color: context.theme.colorScheme.primary,
                               borderRadius: BorderRadius.circular(8),
@@ -711,7 +701,7 @@ class ConversationTextFieldState extends CustomState<ConversationTextField, void
                                                         width: 1,
                                                       )),
                                                       borderRadius: BorderRadius.circular(20),
-                                                      color: context.theme.colorScheme.properSurface,
+                                                      color: context.theme.colorScheme.surfaceContainerHighest,
                                                     ),
                                                     child: Center(
                                                       child: AnimatedOpacity(
@@ -735,6 +725,7 @@ class ConversationTextFieldState extends CustomState<ConversationTextField, void
                   ],
                 ),
               ),
+              if (iOS) const SizedBox(width: 10),
               if (samsung)
                 Padding(
                   padding: const EdgeInsets.only(right: 5.0),
@@ -1014,13 +1005,13 @@ class TextFieldComponentState extends State<TextFieldComponent> {
                         border: Border.fromBorderSide(BorderSide(
                           color: (isRecording & iOS)
                               ? context.theme.colorScheme.primary.withValues(alpha: 1.0)
-                              : context.theme.colorScheme.properSurface,
-                          width: 1.5,
+                              : context.theme.colorScheme.outlineVariant.withValues(alpha: 0.25),
+                          width: 1,
                         )),
                         borderRadius: BorderRadius.circular(20),
                       )
                     : BoxDecoration(
-                        color: context.theme.colorScheme.properSurface,
+                        color: context.theme.colorScheme.surfaceContainerHighest,
                         borderRadius: BorderRadius.circular(20),
                       ),
                 clipBehavior: Clip.antiAlias,
@@ -1047,7 +1038,7 @@ class TextFieldComponentState extends State<TextFieldComponent> {
                             return Divider(
                               height: 1.5,
                               thickness: 1.5,
-                              color: context.theme.colorScheme.properSurface,
+                              color: context.theme.colorScheme.surfaceContainerHighest,
                             );
                           }
                           return const SizedBox.shrink();
@@ -1104,7 +1095,7 @@ class TextFieldComponentState extends State<TextFieldComponent> {
                           height: 1.5,
                           thickness: 1.5,
                           indent: 10,
-                          color: context.theme.colorScheme.properSurface,
+                          color: context.theme.colorScheme.surfaceContainerHighest,
                         ),
                       TextField(
                         textCapitalization: TextCapitalization.sentences,

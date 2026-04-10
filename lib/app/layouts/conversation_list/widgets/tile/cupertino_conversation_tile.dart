@@ -99,11 +99,11 @@ class _CupertinoConversationTileState extends CustomState<CupertinoConversationT
           duration: const Duration(milliseconds: 100),
           decoration: BoxDecoration(
             color: controller.shouldPartialHighlight.value
-                ? context.theme.colorScheme.properSurface.lightenOrDarken(10)
+                ? context.theme.colorScheme.surfaceContainerHighest.lightenOrDarken(10)
                 : controller.shouldHighlight.value
                     ? context.theme.colorScheme.bubble(context, controller.chat.isIMessage)
                     : controller.hoverHighlight.value
-                        ? context.theme.colorScheme.properSurface.withValues(alpha: 0.5)
+                        ? context.theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5)
                         : null,
             borderRadius: BorderRadius.circular(controller.shouldHighlight.value ||
                     controller.shouldPartialHighlight.value ||

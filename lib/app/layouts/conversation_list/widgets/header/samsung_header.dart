@@ -123,7 +123,7 @@ class _SamsungHeaderState extends CustomState<SamsungHeader, void, ConversationL
                                       },
                                       icon: Icon(
                                         Icons.camera_alt_outlined,
-                                        color: context.theme.colorScheme.properOnSurface,
+                                        color: context.theme.colorScheme.onSurfaceVariant,
                                       ),
                                     )),
                               if (!showArchived && !showUnknown)
@@ -136,7 +136,7 @@ class _SamsungHeaderState extends CustomState<SamsungHeader, void, ConversationL
                                     },
                                     icon: Icon(
                                       Icons.search,
-                                      color: context.theme.colorScheme.properOnSurface,
+                                      color: context.theme.colorScheme.onSurfaceVariant,
                                     )),
                               if (!showArchived && !showUnknown)
                                 const Padding(
@@ -189,7 +189,7 @@ class _ExpandedHeaderTextState extends CustomState<ExpandedHeaderText, void, Con
                     : unreadChats > 0
                         ? "$unreadChats unread message${unreadChats > 1 ? "s" : ""}"
                         : "Messages",
-        style: context.theme.textTheme.displaySmall!.copyWith(color: context.theme.colorScheme.onBackground),
+        style: context.theme.textTheme.displaySmall!.copyWith(color: context.theme.colorScheme.onSurface),
         textAlign: TextAlign.center,
       );
     });

@@ -159,7 +159,7 @@ class _FirebasePanelState extends State<FirebasePanel> with ThemeHelpers {
                             context: context,
                             builder: (BuildContext context) {
                               return AlertDialog(
-                                  backgroundColor: context.theme.colorScheme.properSurface,
+                                  backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
                                   title: Obx(() => Text(
                                       error.value != null
                                           ? "Error!"
@@ -367,7 +367,7 @@ class _FirebasePanelState extends State<FirebasePanel> with ThemeHelpers {
                               context: context,
                               builder: (BuildContext context) {
                                 return AlertDialog(
-                                    backgroundColor: context.theme.colorScheme.properSurface,
+                                    backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
                                     title: Text("Are You Sure?", style: context.theme.textTheme.titleLarge),
                                     content: Text(
                                       'This will remove all Firebase configurations from the app. You will no longer receive notifications or Server URL updates from Firebase and you will need to re-register your device if you want to use Firebase again. This will also close the app. Are you sure you want to continue?',

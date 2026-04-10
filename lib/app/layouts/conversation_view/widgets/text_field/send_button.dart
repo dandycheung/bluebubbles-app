@@ -27,7 +27,7 @@ class SendButtonState extends State<SendButton> with SingleTickerProviderStateMi
 
   // Cache colors to prevent repeated theme access
   late final Color _iosBaseColor = context.theme.colorScheme.primary;
-  late final Color _materialBaseColor = context.theme.colorScheme.properSurface;
+  late final Color _materialBaseColor = context.theme.colorScheme.surfaceContainerHighest;
   late final Color _errorColor = context.theme.colorScheme.error;
   late final Color _iosOnPrimary = context.theme.colorScheme.onPrimary;
   late final Color _materialIconColor = SettingsSvc.settings.monetTheming.value != Monet.none

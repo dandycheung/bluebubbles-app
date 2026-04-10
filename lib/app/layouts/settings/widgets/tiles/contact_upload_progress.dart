@@ -21,7 +21,7 @@ class ContactUploadProgress extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      backgroundColor: context.theme.colorScheme.properSurface,
+      backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
       title: Text("Uploading contacts...", style: context.theme.textTheme.titleLarge),
       content: Column(
         mainAxisAlignment: MainAxisAlignment.center,

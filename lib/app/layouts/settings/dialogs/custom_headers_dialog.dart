@@ -23,7 +23,7 @@ Future<bool> showCustomHeadersDialog(BuildContext context) async {
         context: context,
         builder: (context) => AlertDialog(
           title: Text("Custom Headers", style: context.theme.textTheme.titleLarge),
-          backgroundColor: context.theme.colorScheme.properSurface,
+          backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
           content: SingleChildScrollView(
             child: SizedBox(
               width: double.maxFinite,

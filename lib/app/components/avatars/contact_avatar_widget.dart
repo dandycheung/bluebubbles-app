@@ -119,8 +119,9 @@ class _ContactAvatarWidgetState extends State<ContactAvatarWidget> with ThemeHel
 
   @override
   Widget build(BuildContext context) {
-    final tileColor =
-        ThemeSvc.inDarkMode(context) ? context.theme.colorScheme.properSurface : context.theme.colorScheme.background;
+    final tileColor = ThemeSvc.inDarkMode(context)
+        ? context.theme.colorScheme.surfaceContainerHighest
+        : context.theme.colorScheme.surface;
 
     // Build once with all reactive values in outer Obx
     return Obx(() {
@@ -137,8 +138,7 @@ class _ContactAvatarWidgetState extends State<ContactAvatarWidget> with ThemeHel
       final genAvatars = SettingsSvc.settings.redactedMode.value && SettingsSvc.settings.generateFakeAvatars.value;
       final iOS = SettingsSvc.settings.skin.value == Skins.iOS;
       final colorfulAvatars = SettingsSvc.settings.colorfulAvatars.value ||
-          (SettingsSvc.settings.skin.value == Skins.Material &&
-              SettingsSvc.settings.monetTheming.value != Monet.none);
+          (SettingsSvc.settings.skin.value == Skins.Material && SettingsSvc.settings.monetTheming.value != Monet.none);
       final userAvatarPath = SettingsSvc.settings.userAvatarPath.value;
 
       return MouseRegion(
@@ -181,7 +181,7 @@ class _ContactAvatarWidgetState extends State<ContactAvatarWidget> with ThemeHel
               border: Border.all(
                   color: iOS || SettingsSvc.settings.skin.value == Skins.Samsung
                       ? tileColor
-                      : context.theme.colorScheme.background,
+                      : context.theme.colorScheme.surface,
                   width: widget.borderThickness,
                   strokeAlign: BorderSide.strokeAlignOutside),
               shape: BoxShape.circle,
@@ -220,14 +220,14 @@ class _ContactAvatarWidgetState extends State<ContactAvatarWidget> with ThemeHel
                           style: TextStyle(
                             fontSize: size * 0.5,
                             height: 1.0,
-                            color: material ? context.theme.colorScheme.background : Colors.white,
+                            color: material ? context.theme.colorScheme.surface : Colors.white,
                           ),
                           textAlign: TextAlign.center,
                         );
                       }
                       return Icon(
                         iOS ? CupertinoIcons.person_fill : Icons.person,
-                        color: material ? context.theme.colorScheme.background : Colors.white,
+                        color: material ? context.theme.colorScheme.surface : Colors.white,
                         size: size / 2 * (material ? 1.25 : 1),
                       );
                     },
@@ -243,7 +243,7 @@ class _ContactAvatarWidgetState extends State<ContactAvatarWidget> with ThemeHel
                     style: TextStyle(
                       fontSize: size * 0.5,
                       height: 1.0,
-                      color: material ? context.theme.colorScheme.background : Colors.white,
+                      color: material ? context.theme.colorScheme.surface : Colors.white,
                     ),
                     textAlign: TextAlign.center,
                   );
@@ -256,7 +256,7 @@ class _ContactAvatarWidgetState extends State<ContactAvatarWidget> with ThemeHel
                       padding: const EdgeInsets.only(left: 1),
                       child: Icon(
                         iOS ? CupertinoIcons.person_fill : Icons.person,
-                        color: material ? context.theme.colorScheme.background : Colors.white,
+                        color: material ? context.theme.colorScheme.surface : Colors.white,
                         key: Key("$keyPrefix-avatar-icon"),
                         size: size / 2 * (material ? 1.25 : 1),
                       ));

@@ -264,7 +264,7 @@ class _CupertinoScheduledMessagesPanelState extends State<CupertinoScheduledMess
               scheduled.clear();
               getExistingMessages();
             },
-            child: Icon(CupertinoIcons.arrow_counterclockwise, color: context.theme.colorScheme.onBackground),
+            child: Icon(CupertinoIcons.arrow_counterclockwise, color: context.theme.colorScheme.onSurface),
           ),
         ],
         bodySlivers: [

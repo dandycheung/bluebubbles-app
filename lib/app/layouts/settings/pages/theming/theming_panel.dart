@@ -209,7 +209,7 @@ class _ThemingPanelState extends CustomState<ThemingPanel, void, ThemingPanelCon
                                 WindowEffects.defaultOpacity(dark: true);
                           }
                           await PrefsSvc.i.setString('window-effect', effect.toString());
-                          await WindowEffects.setEffect(color: context.theme.colorScheme.background);
+                          await WindowEffects.setEffect(color: context.theme.colorScheme.surface);
                           await SettingsSvc.settings.saveManyAsync(
                               ['windowEffect', 'windowEffectCustomOpacityLight', 'windowEffectCustomOpacityDark']);
                         },
@@ -228,7 +228,7 @@ class _ThemingPanelState extends CustomState<ThemingPanel, void, ThemingPanelCon
                           )),
                     Obx(() {
                       if (WindowEffects.dependsOnColor() &&
-                          !WindowEffects.isDark(color: context.theme.colorScheme.background)) {
+                          !WindowEffects.isDark(color: context.theme.colorScheme.surface)) {
                         return SettingsTile(
                           title: "Background Opacity (Light)",
                           trailing: SettingsSvc.settings.windowEffectCustomOpacityLight.value !=
@@ -248,7 +248,7 @@ class _ThemingPanelState extends CustomState<ThemingPanel, void, ThemingPanelCon
                     }),
                     Obx(() {
                       if (WindowEffects.dependsOnColor() &&
-                          !WindowEffects.isDark(color: context.theme.colorScheme.background)) {
+                          !WindowEffects.isDark(color: context.theme.colorScheme.surface)) {
                         return SettingsSlider(
                           startingVal: SettingsSvc.settings.windowEffectCustomOpacityLight.value,
                           max: 1,
@@ -265,7 +265,7 @@ class _ThemingPanelState extends CustomState<ThemingPanel, void, ThemingPanelCon
                     }),
                     Obx(() {
                       if (WindowEffects.dependsOnColor() &&
-                          WindowEffects.isDark(color: context.theme.colorScheme.background)) {
+                          WindowEffects.isDark(color: context.theme.colorScheme.surface)) {
                         return SettingsTile(
                           title: "Background Opacity (Dark)",
                           trailing: SettingsSvc.settings.windowEffectCustomOpacityDark.value !=
@@ -285,7 +285,7 @@ class _ThemingPanelState extends CustomState<ThemingPanel, void, ThemingPanelCon
                     }),
                     Obx(() {
                       if (WindowEffects.dependsOnColor() &&
-                          WindowEffects.isDark(color: context.theme.colorScheme.background)) {
+                          WindowEffects.isDark(color: context.theme.colorScheme.surface)) {
                         return SettingsSlider(
                           startingVal: SettingsSvc.settings.windowEffectCustomOpacityDark.value,
                           max: 1,
@@ -538,7 +538,7 @@ class _ThemingPanelState extends CustomState<ThemingPanel, void, ThemingPanelCon
                             showDialog(
                               context: context,
                               builder: (context) => AlertDialog(
-                                backgroundColor: context.theme.colorScheme.properSurface,
+                                backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
                                 title: Text("Downloading font file...", style: context.theme.textTheme.titleLarge),
                                 content: Column(
                                     mainAxisAlignment: MainAxisAlignment.center,
@@ -643,7 +643,7 @@ class _ThemingPanelState extends CustomState<ThemingPanel, void, ThemingPanelCon
         context: context,
         builder: (context) => AlertDialog(
               title: Text("Monet Theming Info", style: context.theme.textTheme.titleLarge),
-              backgroundColor: context.theme.colorScheme.properSurface,
+              backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
               content: Text(
                 "Harmonize - Overwrites primary color and blends remainder of colors with the current theme colors\r\n"
                 "Full - Overwrites primary, background, and accent colors, along with other minor colors.\r\n",

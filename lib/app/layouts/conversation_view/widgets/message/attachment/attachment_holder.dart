@@ -268,7 +268,7 @@ class _AttachmentHolderState extends State<AttachmentHolder> with ThemeHelpers {
             child: InkWell(
               onTap: _buildOnTap(state),
               child: Ink(
-                color: context.theme.colorScheme.properSurface,
+                color: context.theme.colorScheme.surfaceContainerHighest,
                 child: ConstrainedBox(
                   constraints: BoxConstraints(
                     maxWidth: NavigationSvc.width(context) * 0.5,

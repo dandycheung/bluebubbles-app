@@ -100,11 +100,11 @@ class _PinnedConversationTileState extends CustomState<PinnedConversationTile, v
               ),
               decoration: BoxDecoration(
                 color: controller.shouldPartialHighlight.value
-                    ? context.theme.colorScheme.properSurface.lightenOrDarken(10)
+                    ? context.theme.colorScheme.surfaceContainerHighest.lightenOrDarken(10)
                     : controller.shouldHighlight.value
                         ? context.theme.colorScheme.bubble(context, controller.chat.isIMessage)
                         : controller.hoverHighlight.value
-                            ? context.theme.colorScheme.properSurface
+                            ? context.theme.colorScheme.surfaceContainerHighest
                             : null,
                 borderRadius: BorderRadius.circular(controller.shouldHighlight.value ||
                         controller.shouldPartialHighlight.value ||
@@ -391,7 +391,7 @@ class PinnedIndicators extends StatelessWidget {
             width: width * 0.27,
             height: width * 0.27,
             decoration: BoxDecoration(
-              border: Border.all(color: context.theme.colorScheme.background, width: 1),
+              border: Border.all(color: context.theme.colorScheme.surface, width: 1),
               borderRadius: BorderRadius.circular(30),
               color: context.theme.colorScheme.tertiaryContainer,
             ),
@@ -515,7 +515,7 @@ class _SenderIconState extends CustomState<SenderIcon, void, ConversationTileCon
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             border: Border.all(
-              color: context.theme.colorScheme.background,
+              color: context.theme.colorScheme.surface,
               width: 1.5,
             ),
           ),

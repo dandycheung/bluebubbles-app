@@ -286,7 +286,7 @@ class _SamsungScheduledMessagesPanelState extends State<SamsungScheduledMessages
         ),
         actions: [
           IconButton(
-            icon: Icon(Icons.refresh, color: context.theme.colorScheme.onBackground),
+            icon: Icon(Icons.refresh, color: context.theme.colorScheme.onSurface),
             onPressed: () {
               fetching.value = true;
               scheduled.clear();

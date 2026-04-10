@@ -135,7 +135,7 @@ class _RedactedModePanelState extends State<RedactedModePanel> with ThemeHelpers
                                         minWidth: 40,
                                       ),
                                       padding: const EdgeInsets.only(left: 10),
-                                      color: context.theme.colorScheme.properSurface,
+                                      color: context.theme.colorScheme.surfaceContainerHighest,
                                       child: Center(
                                         widthFactor: 1,
                                         heightFactor: 1,
@@ -169,7 +169,7 @@ class _RedactedModePanelState extends State<RedactedModePanel> with ThemeHelpers
                                       ),
                                       padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15)
                                           .add(const EdgeInsets.only(left: 10)),
-                                      color: context.theme.colorScheme.properSurface,
+                                      color: context.theme.colorScheme.surfaceContainerHighest,
                                       child: Center(
                                         widthFactor: 1,
                                         child: RichText(

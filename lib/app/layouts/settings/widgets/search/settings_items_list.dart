@@ -903,7 +903,7 @@ List<Widget> buildSettingItemList({
                         "This will remove all attachments from this app. Recent attachments will be automatically re-downloaded when you enter a chat. This will not delete attachments from your server.",
                         style: context.theme.textTheme.bodyLarge,
                       ),
-                      backgroundColor: context.theme.colorScheme.properSurface,
+                      backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
                       actions: <Widget>[
                         TextButton(
                           child: Text("No",
@@ -957,7 +957,7 @@ List<Widget> buildSettingItemList({
                         "This will delete all app data, including your settings, messages, attachments, and more. This action cannot be undone. It is recommended that you take a backup of your settings before proceeding. This will also close the app once the process is complete.",
                         style: context.theme.textTheme.bodyLarge,
                       ),
-                      backgroundColor: context.theme.colorScheme.properSurface,
+                      backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
                       actions: <Widget>[
                         TextButton(
                           child: Text("No",

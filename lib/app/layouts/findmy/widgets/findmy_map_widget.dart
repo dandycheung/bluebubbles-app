@@ -87,7 +87,7 @@ class FindMyMapWidget extends StatelessWidget {
           child: Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(10),
-              color: context.theme.colorScheme.properSurface.withValues(alpha: 0.8),
+              color: context.theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.8),
             ),
             padding: const EdgeInsets.all(10),
             child: Column(
@@ -113,7 +113,7 @@ class FindMyMapWidget extends StatelessWidget {
           child: Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(10),
-              color: context.theme.colorScheme.properSurface.withValues(alpha: 0.8),
+              color: context.theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.8),
             ),
             padding: const EdgeInsets.all(10),
             child: Column(

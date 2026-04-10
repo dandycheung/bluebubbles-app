@@ -41,14 +41,14 @@ class DownloadProgressContent extends StatelessWidget {
                 child: CircleProgressBar(
                   value: progressValue,
                   backgroundColor: context.theme.colorScheme.outline,
-                  foregroundColor: context.theme.colorScheme.properOnSurface,
+                  foregroundColor: context.theme.colorScheme.onSurfaceVariant,
                 ),
               ),
             ),
             const SizedBox(height: 10),
             Text(
               "${(attachment.totalBytes! * min(progressValue, 1.0)).toDouble().getFriendlySize(withSuffix: false)} / ${attachment.getFriendlySize()}",
-              style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.properOnSurface),
+              style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.onSurfaceVariant),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,

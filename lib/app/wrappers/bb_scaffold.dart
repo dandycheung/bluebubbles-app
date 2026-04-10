@@ -107,7 +107,7 @@ class BBScaffold extends StatelessWidget {
     final effectiveBackgroundColor = backgroundColor ??
         (SettingsSvc.settings.windowEffect.value != WindowEffect.disabled
             ? Colors.transparent
-            : Theme.of(context).colorScheme.background);
+            : Theme.of(context).colorScheme.surface);
 
     return BBAnnotatedRegion(
       statusBarIconBrightness: statusBarIconBrightness,

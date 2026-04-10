@@ -54,7 +54,7 @@ class SettingsSwitch extends StatelessWidget {
               ? Text(
                   subtitle!,
                   style: context.theme.textTheme.bodySmall!
-                      .copyWith(color: context.theme.colorScheme.properOnSurface.withValues(alpha: 0.75), height: 1.5),
+                      .copyWith(color: context.theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.75), height: 1.5),
                 )
               : null,
           contentPadding: const EdgeInsets.symmetric(horizontal: 16.0),

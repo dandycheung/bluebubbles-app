@@ -118,24 +118,26 @@ mixin ThemeHelpers<T extends StatefulWidget> on State<T> {
   TextStyle get iosSubtitle => context.theme.textTheme.labelLarge!.copyWith(
       color: ThemeSvc.inDarkMode(context)
           ? (SettingsSvc.settings.windowEffect.value != WindowEffect.disabled
-              ? context.theme.colorScheme.properOnSurface
-              : context.theme.colorScheme.onBackground)
+              ? context.theme.colorScheme.onSurfaceVariant
+              : context.theme.colorScheme.onSurface)
           : (SettingsSvc.settings.windowEffect.value != WindowEffect.disabled
-              ? context.theme.colorScheme.onBackground
-              : context.theme.colorScheme.properOnSurface),
+              ? context.theme.colorScheme.onSurface
+              : context.theme.colorScheme.onSurfaceVariant),
       fontWeight: FontWeight.w300);
 
   /// Material / Samsung skin [ListTile] subtitle [TextStyle]s
   TextStyle get materialSubtitle => context.theme.textTheme.labelLarge!
       .copyWith(color: context.theme.colorScheme.primary, fontWeight: FontWeight.bold);
 
-  Color get _headerColor =>
-      (ThemeSvc.inDarkMode(context) ? context.theme.colorScheme.background : context.theme.colorScheme.properSurface)
-          .withAlpha(SettingsSvc.settings.windowEffect.value != WindowEffect.disabled ? 20 : 255);
+  Color get _headerColor => (ThemeSvc.inDarkMode(context)
+          ? context.theme.colorScheme.surface
+          : context.theme.colorScheme.surfaceContainerHighest)
+      .withAlpha(SettingsSvc.settings.windowEffect.value != WindowEffect.disabled ? 20 : 255);
 
-  Color get _tileColor =>
-      (ThemeSvc.inDarkMode(context) ? context.theme.colorScheme.properSurface : context.theme.colorScheme.background)
-          .withAlpha(SettingsSvc.settings.windowEffect.value != WindowEffect.disabled ? 100 : 255);
+  Color get _tileColor => (ThemeSvc.inDarkMode(context)
+          ? context.theme.colorScheme.surfaceContainerHighest
+          : context.theme.colorScheme.surface)
+      .withAlpha(SettingsSvc.settings.windowEffect.value != WindowEffect.disabled ? 100 : 255);
 
   /// Header / background color on settings pages
   Color get headerColor => reverseMapping ? _tileColor : _headerColor;
@@ -173,11 +175,13 @@ extension BuildContextThemeHelpers on BuildContext {
 
   bool get samsung => SettingsSvc.settings.skin.value == Skins.Samsung;
 
-  Color get _headerColor => (ThemeSvc.inDarkMode(this) ? theme.colorScheme.background : theme.colorScheme.properSurface)
-      .withAlpha(SettingsSvc.settings.windowEffect.value != WindowEffect.disabled ? 20 : 255);
+  Color get _headerColor =>
+      (ThemeSvc.inDarkMode(this) ? theme.colorScheme.surface : theme.colorScheme.surfaceContainerHighest)
+          .withAlpha(SettingsSvc.settings.windowEffect.value != WindowEffect.disabled ? 20 : 255);
 
-  Color get _tileColor => (ThemeSvc.inDarkMode(this) ? theme.colorScheme.properSurface : theme.colorScheme.background)
-      .withAlpha(SettingsSvc.settings.windowEffect.value != WindowEffect.disabled ? 100 : 255);
+  Color get _tileColor =>
+      (ThemeSvc.inDarkMode(this) ? theme.colorScheme.surfaceContainerHighest : theme.colorScheme.surface)
+          .withAlpha(SettingsSvc.settings.windowEffect.value != WindowEffect.disabled ? 100 : 255);
 
   bool get _reverseMapping => SettingsSvc.settings.skin.value == Skins.Material && ThemeSvc.inDarkMode(this);
 
@@ -187,10 +191,6 @@ extension BuildContextThemeHelpers on BuildContext {
 }
 
 extension ColorSchemeHelpers on ColorScheme {
-  Color get properSurface => surface.computeDifference(background) < 8 ? surfaceVariant : surface;
-
-  Color get properOnSurface => surface.computeDifference(background) < 8 ? onSurfaceVariant : onSurface;
-
   Color get iMessageBubble =>
       HSLColor.fromColor(primary).colorfulness < HSLColor.fromColor(primaryContainer).colorfulness
           ? primary

@@ -95,7 +95,7 @@ class _TroubleshootPanelState extends State<TroubleshootPanel> with ThemeHelpers
                                         child: Container(
                                           decoration: BoxDecoration(
                                             borderRadius: BorderRadius.circular(25),
-                                            color: context.theme.colorScheme.background,
+                                            color: context.theme.colorScheme.surface,
                                           ),
                                           padding: const EdgeInsets.all(10),
                                           child: Obx(() => ListView.builder(
@@ -105,7 +105,7 @@ class _TroubleshootPanelState extends State<TroubleshootPanel> with ThemeHelpers
                                                   return Text(
                                                     log[index],
                                                     style: TextStyle(
-                                                      color: context.theme.colorScheme.onBackground,
+                                                      color: context.theme.colorScheme.onSurface,
                                                       fontSize: 10,
                                                     ),
                                                   );

@@ -79,7 +79,7 @@ class _CustomAvatarPanelState extends State<CustomAvatarPanel> with ThemeHelpers
                           context: context,
                           builder: (BuildContext context) {
                             return AlertDialog(
-                                backgroundColor: context.theme.colorScheme.properSurface,
+                                backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
                                 title: Text("Custom Avatar", style: context.theme.textTheme.titleLarge),
                                 content: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,

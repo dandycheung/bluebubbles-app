@@ -22,7 +22,7 @@ class SyncSettings extends StatelessWidget {
       customMiddle: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(25),
-          color: context.theme.colorScheme.properSurface,
+          color: context.theme.colorScheme.surfaceContainerHighest,
         ),
         child: Column(
           children: [
@@ -30,7 +30,7 @@ class SyncSettings extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 25, horizontal: 8),
               child: Text(
                 "Sync Options",
-                style: context.theme.textTheme.titleLarge!.copyWith(color: context.theme.colorScheme.properOnSurface),
+                style: context.theme.textTheme.titleLarge!.copyWith(color: context.theme.colorScheme.onSurfaceVariant),
                 textAlign: TextAlign.center,
               ),
             ),
@@ -47,7 +47,7 @@ class SyncSettings extends StatelessWidget {
                   Text(
                     "Skip empty chats",
                     style: context.theme.textTheme.bodyLarge!
-                        .copyWith(color: context.theme.colorScheme.properOnSurface)
+                        .copyWith(color: context.theme.colorScheme.onSurfaceVariant)
                         .copyWith(height: 1.5),
                     textAlign: TextAlign.center,
                   ),
@@ -71,7 +71,7 @@ class SyncSettings extends StatelessWidget {
                     Text(
                       "Save sync log to downloads",
                       style: context.theme.textTheme.bodyLarge!
-                          .copyWith(color: context.theme.colorScheme.properOnSurface)
+                          .copyWith(color: context.theme.colorScheme.onSurfaceVariant)
                           .copyWith(height: 1.5),
                       textAlign: TextAlign.center,
                     ),
@@ -216,7 +216,7 @@ class _NumberOfMessagesSliderState extends CustomState<NumberOfMessagesSlider, i
           child: Text(
             "Number of Messages to Sync Per Chat: $numberOfMessages",
             style: context.theme.textTheme.bodyLarge!
-                .copyWith(color: context.theme.colorScheme.properOnSurface)
+                .copyWith(color: context.theme.colorScheme.onSurfaceVariant)
                 .copyWith(height: 1.5),
             textAlign: TextAlign.center,
           ),
@@ -311,7 +311,7 @@ class _TimeFilterDropdownState extends CustomState<TimeFilterDropdown, int?, Set
             child: Text(
               "Sync Active Chats Within",
               style: context.theme.textTheme.bodyLarge!
-                  .copyWith(color: context.theme.colorScheme.properOnSurface)
+                  .copyWith(color: context.theme.colorScheme.onSurfaceVariant)
                   .copyWith(height: 1.5),
               textAlign: TextAlign.left,
             ),
@@ -319,13 +319,13 @@ class _TimeFilterDropdownState extends CustomState<TimeFilterDropdown, int?, Set
           const SizedBox(width: 10),
           DropdownButton<int?>(
             value: selectedValue,
-            dropdownColor: context.theme.colorScheme.properSurface,
+            dropdownColor: context.theme.colorScheme.surfaceContainerHighest,
             items: timeOptions.entries.map((entry) {
               return DropdownMenuItem<int?>(
                 value: entry.value,
                 child: Text(
                   entry.key,
-                  style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.properOnSurface),
+                  style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.onSurfaceVariant),
                 ),
               );
             }).toList(),

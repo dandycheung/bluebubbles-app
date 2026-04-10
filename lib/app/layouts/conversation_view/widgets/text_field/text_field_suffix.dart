@@ -220,15 +220,17 @@ class _RecordingButton extends StatelessWidget {
             : !isChatCreator && !showRecording
                 ? CupertinoIconWrapper(
                     icon: Icon(
-                      isIOS ? CupertinoIcons.waveform : Icons.mic_none,
-                      color: isIOS ? context.theme.colorScheme.outline : context.theme.colorScheme.properOnSurface,
-                      size: isIOS ? 24 : 20,
+                      isIOS ? CupertinoIcons.mic_fill : Icons.mic_none,
+                      color: isIOS
+                          ? context.theme.colorScheme.outline.withValues(alpha: 0.5)
+                          : context.theme.colorScheme.onSurfaceVariant,
+                      size: 20,
                     ),
                   )
                 : CupertinoIconWrapper(
                     icon: Icon(
                       isIOS ? CupertinoIcons.stop_fill : Icons.stop_circle,
-                      color: isIOS ? context.theme.colorScheme.primary : context.theme.colorScheme.properOnSurface,
+                      color: isIOS ? context.theme.colorScheme.primary : context.theme.colorScheme.onSurfaceVariant,
                       size: 15,
                     ),
                   ),
@@ -285,7 +287,7 @@ class _RecordingButton extends StatelessWidget {
               barrierDismissible: false,
               builder: (BuildContext context) {
                 return AlertDialog(
-                  backgroundColor: context.theme.colorScheme.properSurface,
+                  backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
                   title: Text("Send it?", style: context.theme.textTheme.titleLarge),
                   content: Column(
                     mainAxisSize: MainAxisSize.min,

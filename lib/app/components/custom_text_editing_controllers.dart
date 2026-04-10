@@ -302,7 +302,7 @@ class SpellCheckTextEditingController extends TextEditingController {
         child: Center(
           child: Container(
             decoration: BoxDecoration(
-              color: context.theme.colorScheme.properSurface,
+              color: context.theme.colorScheme.surfaceContainerHighest,
               borderRadius: BorderRadius.circular(8.0),
             ),
             padding: const EdgeInsets.all(8.0),

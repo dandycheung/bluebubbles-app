@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:bluebubbles/app/components/custom_text_editing_controllers.dart';
 import 'package:bluebubbles/app/layouts/chat_creator/chat_creator.dart' show SelectedContact;
-import 'package:bluebubbles/app/layouts/chat_creator/chat_service_type.dart';
 import 'package:bluebubbles/app/layouts/conversation_view/pages/conversation_view.dart';
 import 'package:bluebubbles/app/wrappers/stateful_boilerplate.dart';
 import 'package:bluebubbles/app/wrappers/titlebar_wrapper.dart';
@@ -472,7 +471,7 @@ class ChatCreatorController extends StatefulController {
         context: context,
         barrierDismissible: false,
         builder: (ctx) => AlertDialog(
-          backgroundColor: context.theme.colorScheme.properSurface,
+          backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
           title: Text(
             'Finding or creating chat...',
             style: context.theme.textTheme.titleLarge,
@@ -481,7 +480,7 @@ class ChatCreatorController extends StatefulController {
             height: 70,
             child: Center(
               child: CircularProgressIndicator(
-                backgroundColor: context.theme.colorScheme.properSurface,
+                backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
                 valueColor: AlwaysStoppedAnimation<Color>(context.theme.colorScheme.primary),
               ),
             ),
@@ -524,7 +523,7 @@ class ChatCreatorController extends StatefulController {
           barrierDismissible: false,
           context: context,
           builder: (ctx) => AlertDialog(
-            backgroundColor: context.theme.colorScheme.properSurface,
+            backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
             title: Text('Failed to create chat!', style: context.theme.textTheme.titleLarge),
             content: Text(
               error is Response

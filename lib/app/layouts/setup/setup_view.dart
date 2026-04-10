@@ -88,7 +88,7 @@ class _SetupViewState extends State<SetupView> {
       child: Scaffold(
         backgroundColor: SettingsSvc.settings.windowEffect.value != WindowEffect.disabled
             ? Colors.transparent
-            : context.theme.colorScheme.background,
+            : context.theme.colorScheme.surface,
         body: SafeArea(
           child: Column(
             children: <Widget>[

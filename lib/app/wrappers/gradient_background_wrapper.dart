@@ -78,7 +78,7 @@ class _GradientBackgroundState extends CustomState<GradientBackground, void, Con
                       stops: [anim.get("color1"), anim.get("color2")],
                       colors: [
                         context.theme.colorScheme.bubble(context, controller.chat.isIMessage).withValues(alpha: 0.5),
-                        context.theme.colorScheme.background,
+                        Colors.transparent,
                       ],
                     ),
                   ),

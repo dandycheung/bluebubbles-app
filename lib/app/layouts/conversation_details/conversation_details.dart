@@ -92,7 +92,7 @@ class _ConversationDetailsState extends State<ConversationDetails> with WidgetsB
                       if (selected.isNotEmpty) {
                         return IconButton(
                           icon: Icon(iOS ? CupertinoIcons.xmark : Icons.close,
-                              color: context.theme.colorScheme.onBackground),
+                              color: context.theme.colorScheme.onSurface),
                           onPressed: () {
                             selected.clear();
                           },
@@ -105,7 +105,7 @@ class _ConversationDetailsState extends State<ConversationDetails> with WidgetsB
                       if (selected.isNotEmpty) {
                         return IconButton(
                           icon: Icon(iOS ? CupertinoIcons.cloud_download : Icons.file_download,
-                              color: context.theme.colorScheme.onBackground),
+                              color: context.theme.colorScheme.onSurface),
                           onPressed: () {
                             final attachments = media.where((e) => selected.contains(e.guid!));
                             for (Attachment a in attachments) {
@@ -147,7 +147,7 @@ class _ConversationDetailsState extends State<ConversationDetails> with WidgetsB
                               width: 40 * SettingsSvc.settings.avatarScale.value,
                               height: 40 * SettingsSvc.settings.avatarScale.value,
                               decoration: BoxDecoration(
-                                  color: !iOS ? null : context.theme.colorScheme.properSurface,
+                                  color: !iOS ? null : context.theme.colorScheme.surfaceContainerHighest,
                                   shape: BoxShape.circle,
                                   border: iOS ? null : Border.all(color: context.theme.colorScheme.error, width: 3)),
                               child: Icon(Icons.error_outline, color: context.theme.colorScheme.error, size: 20),
@@ -157,7 +157,7 @@ class _ConversationDetailsState extends State<ConversationDetails> with WidgetsB
                                   context: context,
                                   builder: (BuildContext context) {
                                     return AlertDialog(
-                                      backgroundColor: context.theme.colorScheme.properSurface,
+                                      backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
                                       title: Text(
                                         "Leaving chat...",
                                         style: context.theme.textTheme.titleLarge,
@@ -166,7 +166,7 @@ class _ConversationDetailsState extends State<ConversationDetails> with WidgetsB
                                         height: 70,
                                         child: Center(
                                           child: CircularProgressIndicator(
-                                            backgroundColor: context.theme.colorScheme.properSurface,
+                                            backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
                                             valueColor:
                                                 AlwaysStoppedAnimation<Color>(context.theme.colorScheme.primary),
                                           ),

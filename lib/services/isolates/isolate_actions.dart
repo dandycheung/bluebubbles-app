@@ -18,8 +18,12 @@ class IsolateActons {
     // because IsolateAction = Future<dynamic> Function(dynamic).
     // Async Future<void>/Future<T> functions can be referenced directly.
     IsolateRequestType.testReturnInput: (data) async => TestActions.executeTestReturnInput(data as String),
-    IsolateRequestType.testPrintInput: (data) async { TestActions.executeTestPrintInput(data as String); },
-    IsolateRequestType.testThrowError: (data) async { TestActions.executeTestThrowError(data as String); },
+    IsolateRequestType.testPrintInput: (data) async {
+      TestActions.executeTestPrintInput(data as String);
+    },
+    IsolateRequestType.testThrowError: (data) async {
+      TestActions.executeTestThrowError(data as String);
+    },
 
     // App — no-arg, wrap to accept and ignore the data param
     IsolateRequestType.checkForUpdate: (_) => AppActions.checkForUpdate(),

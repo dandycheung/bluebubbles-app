@@ -1,4 +1,3 @@
-import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/services/services.dart';
 import 'package:bluebubbles/utils/logger/logger.dart';
 import 'package:desktop_webview_auth/desktop_webview_auth.dart';
@@ -28,7 +27,7 @@ Future<String?> googleOAuth(BuildContext context) async {
         barrierDismissible: false,
         builder: (BuildContext context) {
           return AlertDialog(
-            backgroundColor: context.theme.colorScheme.properSurface,
+            backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
             title: Text("Important Notice", style: context.theme.textTheme.titleLarge),
             content: Text(
               'Please make sure to allow BlueBubbles to see, edit, configure, and delete your Google Cloud data after signing in. BlueBubbles will only use this ability to find your server URL.',
@@ -203,7 +202,7 @@ Future<void> requestPassword(
             },
           ),
           title: Text("Enter Server Password", style: context.theme.textTheme.titleLarge),
-          backgroundColor: context.theme.colorScheme.properSurface,
+          backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
         ),
       );
     },

@@ -1,7 +1,8 @@
 import 'dart:convert';
 
 import 'package:bluebubbles/app/layouts/settings/pages/theming/theme_studio/widgets/color_editor_section.dart';
-import 'package:bluebubbles/app/layouts/settings/pages/theming/theme_studio/widgets/preset_theme_strip.dart' show ThemeSelectorSection;
+import 'package:bluebubbles/app/layouts/settings/pages/theming/theme_studio/widgets/preset_theme_strip.dart'
+    show ThemeSelectorSection;
 import 'package:bluebubbles/app/layouts/settings/pages/theming/theme_studio/widgets/theme_management_section.dart';
 import 'package:bluebubbles/app/layouts/settings/pages/theming/theme_studio/widgets/theme_preview_card.dart';
 import 'package:bluebubbles/app/layouts/settings/pages/theming/theme_studio/widgets/typography_editor.dart';
@@ -27,8 +28,7 @@ class ThemeStudioController extends StatefulController {
 
   ThemeStruct get activeTheme => isDark.value ? darkTheme : lightTheme;
 
-  bool get isEditable =>
-      !activeTheme.isPreset && SettingsSvc.settings.monetTheming.value == Monet.none;
+  bool get isEditable => !activeTheme.isPreset && SettingsSvc.settings.monetTheming.value == Monet.none;
 
   void init(bool isDarkMode) {
     isDark.value = isDarkMode;
@@ -95,8 +95,7 @@ class ThemeStudioController extends StatefulController {
     EventDispatcherSvc.emit('theme-update', null);
   }
 
-  Future<void> updateTextSize(BuildContext context, String key, double multiplier,
-      {bool save = false}) async {
+  Future<void> updateTextSize(BuildContext context, String key, double multiplier, {bool save = false}) async {
     final map = activeTheme.toMap();
     final keys = key == 'master' ? activeTheme.textSizes.keys.toList() : [key];
     for (final k in keys) {
@@ -325,9 +324,7 @@ class _ThemeStudioPanelState extends CustomState<ThemeStudioPanel, void, ThemeSt
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
                 child: Row(
                   children: [
-                    Icon(Icons.info_outline,
-                        size: 14,
-                        color: context.theme.colorScheme.onSurfaceVariant),
+                    Icon(Icons.info_outline, size: 14, color: context.theme.colorScheme.onSurfaceVariant),
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(

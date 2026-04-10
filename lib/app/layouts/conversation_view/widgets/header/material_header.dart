@@ -22,17 +22,19 @@ class MaterialHeader extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     final Rx<Color> _backgroundColor = (SettingsSvc.settings.monetTheming.value != Monet.none
-            ? context.theme.colorScheme.properSurface
-            : context.theme.colorScheme.background)
+            ? context.theme.colorScheme.surfaceContainerHighest
+            : context.theme.colorScheme.surface)
         .withValues(alpha: (kIsDesktop && SettingsSvc.settings.windowEffect.value != WindowEffect.disabled) ? 0.4 : 1)
         .obs;
     final Color _foregroundColor = SettingsSvc.settings.monetTheming.value != Monet.none
-        ? context.theme.colorScheme.properOnSurface
-        : context.theme.colorScheme.onBackground;
+        ? context.theme.colorScheme.onSurfaceVariant
+        : context.theme.colorScheme.onSurface;
 
     return Stack(children: [
       Obx(() => AppBar(
             backgroundColor: _backgroundColor.value,
+            surfaceTintColor: Colors.transparent,
+            scrolledUnderElevation: 0,
             systemOverlayStyle: context.theme.colorScheme.brightness == Brightness.dark
                 ? SystemUiOverlayStyle.light
                 : SystemUiOverlayStyle.dark,
@@ -114,7 +116,7 @@ class MaterialHeader extends StatelessWidget implements PreferredSizeWidget {
               Padding(
                 padding: EdgeInsets.only(top: kIsDesktop ? 20 : 0),
                 child: PopupMenuButton<int>(
-                  color: context.theme.colorScheme.properSurface,
+                  color: context.theme.colorScheme.surfaceContainerHighest,
                   shape: SettingsSvc.settings.skin.value != Skins.Material
                       ? const RoundedRectangleBorder(
                           borderRadius: BorderRadius.all(
@@ -149,7 +151,7 @@ class MaterialHeader extends StatelessWidget implements PreferredSizeWidget {
                             ),
                             content: Text("This chat will be deleted from this device only",
                                 style: context.theme.textTheme.bodyLarge),
-                            backgroundColor: context.theme.colorScheme.properSurface,
+                            backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
                             actions: <Widget>[
                               TextButton(
                                 child: Text("No",
@@ -189,7 +191,7 @@ class MaterialHeader extends StatelessWidget implements PreferredSizeWidget {
                         value: 0,
                         child: Text(
                           'Details',
-                          style: context.textTheme.bodyLarge!.apply(color: context.theme.colorScheme.properOnSurface),
+                          style: context.textTheme.bodyLarge!.apply(color: context.theme.colorScheme.onSurfaceVariant),
                         ),
                       ),
                       if (!LifecycleSvc.isBubble)
@@ -197,7 +199,8 @@ class MaterialHeader extends StatelessWidget implements PreferredSizeWidget {
                           value: 1,
                           child: Text(
                             controller.chat.isArchived! ? 'Unarchive' : 'Archive',
-                            style: context.textTheme.bodyLarge!.apply(color: context.theme.colorScheme.properOnSurface),
+                            style:
+                                context.textTheme.bodyLarge!.apply(color: context.theme.colorScheme.onSurfaceVariant),
                           ),
                         ),
                       if (!LifecycleSvc.isBubble)
@@ -205,14 +208,15 @@ class MaterialHeader extends StatelessWidget implements PreferredSizeWidget {
                           value: 2,
                           child: Text(
                             'Delete',
-                            style: context.textTheme.bodyLarge!.apply(color: context.theme.colorScheme.properOnSurface),
+                            style:
+                                context.textTheme.bodyLarge!.apply(color: context.theme.colorScheme.onSurfaceVariant),
                           ),
                         ),
                       PopupMenuItem(
                         value: 3,
                         child: Text(
                           'Bookmarks',
-                          style: context.textTheme.bodyLarge!.apply(color: context.theme.colorScheme.properOnSurface),
+                          style: context.textTheme.bodyLarge!.apply(color: context.theme.colorScheme.onSurfaceVariant),
                         ),
                       ),
                     ];
@@ -283,7 +287,7 @@ class _ChatIconAndTitleState extends CustomState<_ChatIconAndTitle, void, Conver
                 return Text(
                   _title,
                   style: context.theme.textTheme.titleLarge!
-                      .apply(color: context.theme.colorScheme.properOnSurface, fontSizeFactor: 0.85),
+                      .apply(color: context.theme.colorScheme.onSurfaceVariant, fontSizeFactor: 0.85),
                   maxLines: 1,
                   overflow: TextOverflow.fade,
                 );

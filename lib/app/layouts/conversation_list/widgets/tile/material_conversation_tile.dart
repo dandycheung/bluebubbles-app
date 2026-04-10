@@ -111,11 +111,11 @@ class _MaterialConversationTileState extends CustomState<MaterialConversationTil
             color: controller.isSelected
                 ? context.theme.colorScheme.primaryContainer.withValues(alpha: 0.5)
                 : shouldPartialHighlight
-                    ? context.theme.colorScheme.properSurface
+                    ? context.theme.colorScheme.surfaceContainerHighest
                     : shouldHighlight
                         ? context.theme.colorScheme.primaryContainer
                         : hoverHighlight
-                            ? context.theme.colorScheme.properSurface.withValues(alpha: 0.5)
+                            ? context.theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5)
                             : SettingsSvc.settings.monetTheming.value == Monet.full
                                 ? context.theme.colorScheme.surface
                                 : null,
@@ -182,7 +182,7 @@ class _MaterialTrailingState extends CustomState<MaterialTrailing, void, Convers
                         color: hasError
                             ? context.theme.colorScheme.error
                             : controller.shouldHighlight.value || unread
-                                ? context.theme.colorScheme.onBackground
+                                ? context.theme.colorScheme.onSurface
                                 : context.theme.colorScheme.outline,
                         fontWeight: unread
                             ? FontWeight.w600

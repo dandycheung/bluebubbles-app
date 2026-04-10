@@ -1,4 +1,3 @@
-import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -16,7 +15,7 @@ class FailedToConnectDialog extends StatelessWidget {
         Navigator.of(context).pop();
       },
       child: AlertDialog(
-        backgroundColor: context.theme.colorScheme.properSurface,
+        backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
         title: Text(
           "Failed To Connect!",
           style: context.theme.textTheme.titleLarge,

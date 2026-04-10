@@ -166,7 +166,7 @@ class CustomDetailsMenuActionWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     bool isDisabled = shouldDisable ?? false;
-    Color color = isDisabled ? Colors.grey : context.theme.colorScheme.properOnSurface;
+    Color color = isDisabled ? Colors.grey : context.theme.colorScheme.onSurfaceVariant;
     return Material(
       color: Colors.transparent,
       child: InkWell(

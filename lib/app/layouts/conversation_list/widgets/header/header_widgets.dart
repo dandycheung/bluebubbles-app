@@ -36,7 +36,7 @@ class HeaderText extends StatelessWidget {
                 ? "Unknown Senders"
                 : "Messages",
         style: context.textTheme.headlineLarge!.copyWith(
-          color: context.theme.colorScheme.onBackground,
+          color: context.theme.colorScheme.onSurface,
           fontWeight: FontWeight.w400,
           fontSize: fontSize,
         ),
@@ -141,7 +141,7 @@ class _MaterialAvatarMenuState extends State<MaterialAvatarMenu> with SingleTick
     return OverlayEntry(
       builder: (overlayContext) {
         final windowEffect = SettingsSvc.settings.windowEffect.value;
-        final cardColor = overlayContext.theme.colorScheme.properSurface
+        final cardColor = overlayContext.theme.colorScheme.surfaceContainerHighest
             .withValues(alpha: windowEffect != WindowEffect.disabled ? 0.95 : 1.0);
         final filterUnknownSenders = SettingsSvc.settings.filterUnknownSenders.value;
         final moveChatCreatorToHeader = SettingsSvc.settings.moveChatCreatorToHeader.value;
@@ -205,7 +205,7 @@ class _MaterialAvatarMenuState extends State<MaterialAvatarMenu> with SingleTick
                                           Text(
                                             userName.isNotEmpty ? userName : 'My Account',
                                             style: overlayContext.theme.textTheme.titleSmall?.copyWith(
-                                              color: overlayContext.theme.colorScheme.properOnSurface,
+                                              color: overlayContext.theme.colorScheme.onSurfaceVariant,
                                               fontWeight: FontWeight.w600,
                                             ),
                                             maxLines: 1,
@@ -215,7 +215,7 @@ class _MaterialAvatarMenuState extends State<MaterialAvatarMenu> with SingleTick
                                           Text(
                                             iCloudAccount.isNotEmpty ? iCloudAccount : 'Tap to open profile',
                                             style: overlayContext.theme.textTheme.bodySmall?.copyWith(
-                                              color: overlayContext.theme.colorScheme.properOnSurface
+                                              color: overlayContext.theme.colorScheme.onSurfaceVariant
                                                   .withValues(alpha: 0.6),
                                             ),
                                             maxLines: 1,
@@ -227,7 +227,7 @@ class _MaterialAvatarMenuState extends State<MaterialAvatarMenu> with SingleTick
                                     const SizedBox(width: 8),
                                     Icon(
                                       Icons.chevron_right,
-                                      color: overlayContext.theme.colorScheme.properOnSurface.withValues(alpha: 0.4),
+                                      color: overlayContext.theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
                                       size: 20,
                                     ),
                                   ],
@@ -239,7 +239,7 @@ class _MaterialAvatarMenuState extends State<MaterialAvatarMenu> with SingleTick
                               thickness: 1,
                               indent: 16,
                               endIndent: 16,
-                              color: overlayContext.theme.colorScheme.properOnSurface.withValues(alpha: 0.1),
+                              color: overlayContext.theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.1),
                             ),
                             // Menu items
                             _MenuItemRow(
@@ -274,8 +274,7 @@ class _MaterialAvatarMenuState extends State<MaterialAvatarMenu> with SingleTick
                               _MenuItemRow(
                                 icon: Icons.edit_outlined,
                                 label: 'New Chat',
-                                onTap: () =>
-                                    _hideMenu().then((_) => widget.controller?.openNewChatCreator(navContext)),
+                                onTap: () => _hideMenu().then((_) => widget.controller?.openNewChatCreator(navContext)),
                               ),
                             _MenuItemRow(
                               icon: Icons.settings_outlined,
@@ -363,13 +362,13 @@ class _MenuItemRow extends StatelessWidget {
               Icon(
                 icon,
                 size: 20,
-                color: context.theme.colorScheme.properOnSurface.withValues(alpha: 0.85),
+                color: context.theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.85),
               ),
               const SizedBox(width: 16),
               Text(
                 label,
                 style: context.theme.textTheme.bodyLarge?.copyWith(
-                  color: context.theme.colorScheme.properOnSurface,
+                  color: context.theme.colorScheme.onSurfaceVariant,
                 ),
               ),
             ],
@@ -406,8 +405,8 @@ class CupertinoOverflowMenu extends StatelessWidget {
     );
 
     return PullDownButton(
-      routeTheme:
-          PullDownMenuRouteTheme(backgroundColor: context.theme.colorScheme.properSurface.withValues(alpha: 0.9)),
+      routeTheme: PullDownMenuRouteTheme(
+          backgroundColor: context.theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.9)),
       itemBuilder: (context) => [
         PullDownMenuHeader(
           itemTheme: itemTheme,
@@ -417,12 +416,7 @@ class CupertinoOverflowMenu extends StatelessWidget {
             return Container(
                 constraints: constraints,
                 child: const ContactAvatarWidget(
-                  size: 50,
-                  preferHighResAvatar: true,
-                  borderThickness: 0.1,
-                  editable: false,
-                  fontSize: 16
-                ));
+                    size: 50, preferHighResAvatar: true, borderThickness: 0.1, editable: false, fontSize: 16));
           },
           subtitle: "Tap to open profile",
           onTap: () => goToProfile(context),
@@ -480,24 +474,26 @@ class CupertinoOverflowMenu extends StatelessWidget {
             onTap: () => logout(context),
           ),
       ],
-      buttonBuilder: (context, showMenu) => GestureDetector(
-          onTap: showMenu,
-          child: ThemeSwitcher(
-              iOSSkin: Container(
+      buttonBuilder: (context, showMenu) => ThemeSwitcher(
+          iOSSkin: ClipOval(
+            child: Material(
+              color: context.theme.colorScheme.surfaceContainerHighest,
+              child: SizedBox(
                 width: 30,
                 height: 30,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(40),
-                  color: context.theme.colorScheme.properSurface,
-                ),
-                child: Icon(
-                  Icons.more_horiz,
-                  color: context.theme.colorScheme.properOnSurface,
-                  size: 20,
+                child: InkWell(
+                  onTap: showMenu,
+                  child: Icon(
+                    Icons.more_horiz,
+                    color: context.theme.colorScheme.onSurfaceVariant,
+                    size: 20,
+                  ),
                 ),
               ),
-              materialSkin: const SizedBox.shrink(),
-              samsungSkin: const SizedBox.shrink())),
+            ),
+          ),
+          materialSkin: const SizedBox.shrink(),
+          samsungSkin: const SizedBox.shrink()),
     );
   }
 }
@@ -546,7 +542,7 @@ void logout(BuildContext context) {
           "Are you sure?",
           style: context.theme.textTheme.titleLarge,
         ),
-        backgroundColor: context.theme.colorScheme.properSurface,
+        backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
         actions: <Widget>[
           TextButton(
             child: Text("No",

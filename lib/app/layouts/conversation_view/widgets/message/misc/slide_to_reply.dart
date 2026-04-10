@@ -29,7 +29,7 @@ class SlideToReply extends StatelessWidget {
               min(replyThreshold, width) * 0.4,
             ),
           ),
-          color: context.theme.colorScheme.properSurface,
+          color: context.theme.colorScheme.surfaceContainerHighest,
         ),
         child: AnimatedSize(
           duration: Duration(milliseconds: width == 0 ? 150 : 0),
@@ -38,7 +38,7 @@ class SlideToReply extends StatelessWidget {
             child: Icon(
               SettingsSvc.settings.skin.value == Skins.iOS ? CupertinoIcons.reply : Icons.reply,
               size: min(replyThreshold, width) * (width >= replyThreshold ? 0.5 : 0.4),
-              color: context.theme.colorScheme.properOnSurface,
+              color: context.theme.colorScheme.onSurfaceVariant,
             ),
           ),
         ),

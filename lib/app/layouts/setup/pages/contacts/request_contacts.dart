@@ -1,4 +1,3 @@
-import 'package:bluebubbles/helpers/ui/theme_helpers.dart';
 import 'package:bluebubbles/app/layouts/setup/pages/page_template.dart';
 import 'package:bluebubbles/services/services.dart';
 import 'package:flutter/material.dart';
@@ -49,7 +48,7 @@ class RequestContacts extends StatelessWidget {
                   "Notice",
                   style: context.theme.textTheme.titleLarge,
                 ),
-                backgroundColor: context.theme.colorScheme.properSurface,
+                backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
                 content: Padding(
                   padding: const EdgeInsets.all(8.0),
                   child: Text(

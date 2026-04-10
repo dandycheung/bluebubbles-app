@@ -52,11 +52,7 @@ class _ColorEditorSectionState extends State<ColorEditorSection> {
   Widget build(BuildContext context) {
     final cs = context.theme.colorScheme;
     // Collect preview swatches for collapsed header
-    final swatchColors = widget.group.pairs
-        .map((p) => _colorFor(p.main))
-        .whereType<Color>()
-        .take(4)
-        .toList();
+    final swatchColors = widget.group.pairs.map((p) => _colorFor(p.main)).whereType<Color>().take(4).toList();
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(12),
@@ -77,8 +73,7 @@ class _ColorEditorSectionState extends State<ColorEditorSection> {
                     Expanded(
                       child: Text(
                         widget.group.title,
-                        style: context.theme.textTheme.bodyMedium
-                            ?.copyWith(fontWeight: FontWeight.w600),
+                        style: context.theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
                       ),
                     ),
                     // Mini swatch preview
@@ -105,17 +100,12 @@ class _ColorEditorSectionState extends State<ColorEditorSection> {
             // Expanded color tiles
             AnimatedCrossFade(
               duration: const Duration(milliseconds: 200),
-              crossFadeState:
-                  _expanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+              crossFadeState: _expanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
               firstChild: const SizedBox.shrink(),
               secondChild: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Divider(
-                      height: 1,
-                      color: cs.outline.withValues(alpha: 0.15),
-                      indent: 16,
-                      endIndent: 16),
+                  Divider(height: 1, color: cs.outline.withValues(alpha: 0.15), indent: 16, endIndent: 16),
                   ...widget.group.pairs.asMap().entries.map((entry) {
                     final pair = entry.value;
                     final mainColor = _colorFor(pair.main);
@@ -124,11 +114,7 @@ class _ColorEditorSectionState extends State<ColorEditorSection> {
                     return Column(
                       children: [
                         if (entry.key > 0)
-                          Divider(
-                              height: 1,
-                              color: cs.outline.withValues(alpha: 0.1),
-                              indent: 16,
-                              endIndent: 16),
+                          Divider(height: 1, color: cs.outline.withValues(alpha: 0.1), indent: 16, endIndent: 16),
                         ColorEditorTile(
                           mainKey: pair.main,
                           onKey: pair.on,

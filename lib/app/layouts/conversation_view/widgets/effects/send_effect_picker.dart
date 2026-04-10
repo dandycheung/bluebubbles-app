@@ -139,7 +139,7 @@ void sendEffectAction(
             child: BBAnnotatedRegion(
               child: Scaffold(
                 backgroundColor: kIsDesktop && SettingsSvc.settings.windowEffect.value != WindowEffect.disabled
-                    ? context.theme.colorScheme.properSurface.withValues(alpha: 0.9)
+                    ? context.theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.9)
                     : Colors.transparent,
                 body: Stack(
                   fit: StackFit.expand,
@@ -151,7 +151,7 @@ void sendEffectAction(
                           sigmaY:
                               kIsDesktop && SettingsSvc.settings.windowEffect.value != WindowEffect.disabled ? 0 : 30),
                       child: Container(
-                        color: context.theme.colorScheme.properSurface.withValues(alpha: 0.3),
+                        color: context.theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
                       ),
                     ),
                     StatefulBuilder(builder: (BuildContext context, void Function(void Function()) setState) {

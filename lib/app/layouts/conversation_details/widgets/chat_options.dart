@@ -77,7 +77,7 @@ class _ChatOptionsState extends State<ChatOptions> with ThemeHelpers {
                           context: context,
                           builder: (BuildContext context) {
                             return AlertDialog(
-                                backgroundColor: context.theme.colorScheme.properSurface,
+                                backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
                                 title: Text("Custom Avatar", style: context.theme.textTheme.titleLarge),
                                 content: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
@@ -141,7 +141,7 @@ class _ChatOptionsState extends State<ChatOptions> with ThemeHelpers {
                           context: context,
                           builder: (BuildContext context) {
                             return AlertDialog(
-                              backgroundColor: context.theme.colorScheme.properSurface,
+                              backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
                               title: Text("Custom Background", style: context.theme.textTheme.titleLarge),
                               content: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
@@ -438,7 +438,7 @@ class _ChatOptionsState extends State<ChatOptions> with ThemeHelpers {
                         context: context,
                         builder: (BuildContext context) {
                           return AlertDialog(
-                              backgroundColor: context.theme.colorScheme.properSurface,
+                              backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
                               title: Text("Are You Sure?", style: context.theme.textTheme.titleLarge),
                               content: Text(
                                 'Clearing the transcript will permanently delete all messages in this chat. It will also prevent any previous messages from being loaded by the app, until you perform a full reset.',
@@ -497,7 +497,7 @@ class _ChatOptionsState extends State<ChatOptions> with ThemeHelpers {
                               buildProgressIndicator(context),
                             ],
                           ),
-                          backgroundColor: context.theme.colorScheme.properSurface,
+                          backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
                         ),
                         barrierDismissible: false,
                       );
@@ -545,7 +545,7 @@ class _ChatOptionsState extends State<ChatOptions> with ThemeHelpers {
                                 ),
                                 buildProgressIndicator(context),
                               ]),
-                          backgroundColor: context.theme.colorScheme.properSurface,
+                          backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
                         ),
                         barrierDismissible: false,
                       );

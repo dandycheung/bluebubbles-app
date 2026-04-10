@@ -125,7 +125,7 @@ class IntentsService {
           context: Get.context!,
           builder: (BuildContext context) {
             return AlertDialog(
-              backgroundColor: context.theme.colorScheme.properSurface,
+              backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
               title: Text(
                 "Generating link for call...",
                 style: context.theme.textTheme.titleLarge,
@@ -134,7 +134,7 @@ class IntentsService {
                 height: 70,
                 child: Center(
                   child: CircularProgressIndicator(
-                    backgroundColor: context.theme.colorScheme.properSurface,
+                    backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
                     valueColor: AlwaysStoppedAnimation<Color>(context.theme.colorScheme.primary),
                   ),
                 ),

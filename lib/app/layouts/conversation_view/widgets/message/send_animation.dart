@@ -282,7 +282,7 @@ class _SendAnimationState extends CustomState<SendAnimation, SendData, Conversat
                             text: TextSpan(
                               children: buildMessageSpans(context,
                                   MessagePart(part: 0, text: message!.text, subject: message!.subject), message!,
-                                  colorOverride: Color.lerp(context.theme.colorScheme.properOnSurface,
+                                  colorOverride: Color.lerp(context.theme.colorScheme.onSurfaceVariant,
                                       context.theme.colorScheme.onPrimary, 1 - value)),
                             ),
                           ),

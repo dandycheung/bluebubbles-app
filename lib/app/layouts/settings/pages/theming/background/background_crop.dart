@@ -192,7 +192,7 @@ class _BackgroundCropState extends State<BackgroundCrop> with ThemeHelpers {
           height: 70,
           child: Center(child: buildProgressIndicator(context)),
         ),
-        backgroundColor: context.theme.colorScheme.properSurface,
+        backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
       ),
       barrierDismissible: false,
     );

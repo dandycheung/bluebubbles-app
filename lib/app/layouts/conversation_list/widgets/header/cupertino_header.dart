@@ -62,13 +62,13 @@ class CupertinoHeader extends StatelessWidget {
                       const SizedBox(width: 10.0),
                       ClipOval(
                         child: Material(
-                          color: context.theme.colorScheme.properSurface, // button color
+                          color: context.theme.colorScheme.surfaceContainerHighest,
                           child: SizedBox(
                             width: 30,
                             height: 30,
                             child: InkWell(
                               child: Icon(CupertinoIcons.search,
-                                  color: context.theme.colorScheme.properOnSurface, size: 18),
+                                  color: context.theme.colorScheme.onSurfaceVariant, size: 18),
                               onTap: () {
                                 NavigationSvc.pushLeft(context, const SearchView());
                               },
@@ -80,14 +80,14 @@ class CupertinoHeader extends StatelessWidget {
                       if (SettingsSvc.settings.moveChatCreatorToHeader.value)
                         ClipOval(
                           child: Material(
-                            color: context.theme.colorScheme.properSurface, // button color
+                            color: context.theme.colorScheme.surfaceContainerHighest,
                             child: InkWell(
                               child: SizedBox(
                                 width: 30,
                                 height: 30,
                                 child: Icon(
                                   CupertinoIcons.pencil,
-                                  color: context.theme.colorScheme.properOnSurface,
+                                  color: context.theme.colorScheme.onSurfaceVariant,
                                   size: 20,
                                 ),
                               ),
@@ -106,13 +106,13 @@ class CupertinoHeader extends StatelessWidget {
                           !kIsDesktop)
                         ClipOval(
                           child: Material(
-                            color: context.theme.colorScheme.properSurface, // button color
+                            color: context.theme.colorScheme.surfaceContainerHighest,
                             child: InkWell(
                                 child: SizedBox(
                                   width: 30,
                                   height: 30,
                                   child: Icon(CupertinoIcons.camera,
-                                      color: context.theme.colorScheme.properOnSurface, size: 20),
+                                      color: context.theme.colorScheme.onSurfaceVariant, size: 20),
                                 ),
                                 onTap: () => controller.openCamera(context)),
                           ),
@@ -160,7 +160,7 @@ class CupertinoMiniHeader extends StatelessWidget {
                 return Container(
                   width: NavigationSvc.width(context),
                   height: (topMargin - 20).clamp(kIsDesktop ? 65 : 40, double.infinity),
-                  color: context.theme.colorScheme.properSurface.withValues(alpha: 0.5),
+                  color: context.theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
                   alignment: Alignment.bottomCenter,
                   child: Padding(
                     padding: EdgeInsets.only(bottom: kIsDesktop ? 10 : 5),
@@ -170,7 +170,7 @@ class CupertinoMiniHeader extends StatelessWidget {
                           : controller.showUnknownSenders
                               ? "Unknown Senders"
                               : "Messages",
-                      style: context.textTheme.titleMedium!.copyWith(color: context.theme.colorScheme.properOnSurface),
+                      style: context.textTheme.titleMedium!.copyWith(color: context.theme.colorScheme.onSurfaceVariant),
                     ),
                   ),
                 );

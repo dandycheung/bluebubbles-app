@@ -82,7 +82,7 @@ class _ServerCredentialsState extends State<ServerCredentials> with ThemeHelpers
                           const SizedBox(width: 10),
                           Text(googleName.value ?? "Unknown",
                               style: context.theme.textTheme.bodyLarge!
-                                  .apply(fontSizeFactor: 1.1, color: context.theme.colorScheme.onBackground)),
+                                  .apply(fontSizeFactor: 1.1, color: context.theme.colorScheme.onSurface)),
                         ],
                       ),
                     ),
@@ -221,8 +221,8 @@ class _ServerCredentialsState extends State<ServerCredentials> with ThemeHelpers
                           borderRadius: BorderRadius.circular(20.0),
                         ),
                       ),
-                      backgroundColor: WidgetStateProperty.all(context.theme.colorScheme.background),
-                      shadowColor: WidgetStateProperty.all(context.theme.colorScheme.background),
+                      backgroundColor: WidgetStateProperty.all(context.theme.colorScheme.surface),
+                      shadowColor: WidgetStateProperty.all(context.theme.colorScheme.surface),
                       maximumSize: WidgetStateProperty.all(buttonSize),
                       minimumSize: WidgetStateProperty.all(buttonSize),
                     ),
@@ -350,8 +350,8 @@ class _ServerCredentialsState extends State<ServerCredentials> with ThemeHelpers
                           borderRadius: BorderRadius.circular(20.0),
                         ),
                       ),
-                      backgroundColor: WidgetStateProperty.all(context.theme.colorScheme.background),
-                      shadowColor: WidgetStateProperty.all(context.theme.colorScheme.background),
+                      backgroundColor: WidgetStateProperty.all(context.theme.colorScheme.surface),
+                      shadowColor: WidgetStateProperty.all(context.theme.colorScheme.surface),
                       maximumSize: WidgetStateProperty.all(buttonSize),
                       minimumSize: WidgetStateProperty.all(buttonSize),
                     ),
@@ -361,11 +361,11 @@ class _ServerCredentialsState extends State<ServerCredentials> with ThemeHelpers
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(CupertinoIcons.text_cursor, color: context.theme.colorScheme.onBackground, size: 20),
+                        Icon(CupertinoIcons.text_cursor, color: context.theme.colorScheme.onSurface, size: 20),
                         const SizedBox(width: 10),
                         Text("Manual entry",
                             style: context.theme.textTheme.bodyLarge!
-                                .apply(fontSizeFactor: 1.1, color: context.theme.colorScheme.onBackground)),
+                                .apply(fontSizeFactor: 1.1, color: context.theme.colorScheme.onSurface)),
                       ],
                     ),
                   ),
@@ -468,9 +468,8 @@ class _ServerCredentialsState extends State<ServerCredentials> with ThemeHelpers
                                                 borderRadius: BorderRadius.circular(20.0),
                                               ),
                                             ),
-                                            backgroundColor:
-                                                WidgetStateProperty.all(context.theme.colorScheme.background),
-                                            shadowColor: WidgetStateProperty.all(context.theme.colorScheme.background),
+                                            backgroundColor: WidgetStateProperty.all(context.theme.colorScheme.surface),
+                                            shadowColor: WidgetStateProperty.all(context.theme.colorScheme.surface),
                                             maximumSize: WidgetStateProperty.all(const Size(200, 36)),
                                             minimumSize: WidgetStateProperty.all(const Size(30, 30)),
                                           ),
@@ -480,13 +479,11 @@ class _ServerCredentialsState extends State<ServerCredentials> with ThemeHelpers
                                           child: Row(
                                             mainAxisSize: MainAxisSize.min,
                                             children: [
-                                              Icon(Icons.close,
-                                                  color: context.theme.colorScheme.onBackground, size: 20),
+                                              Icon(Icons.close, color: context.theme.colorScheme.onSurface, size: 20),
                                               const SizedBox(width: 10),
                                               Text("Cancel",
                                                   style: context.theme.textTheme.bodyLarge!.apply(
-                                                      fontSizeFactor: 1.1,
-                                                      color: context.theme.colorScheme.onBackground)),
+                                                      fontSizeFactor: 1.1, color: context.theme.colorScheme.onSurface)),
                                             ],
                                           ),
                                         ),
@@ -661,7 +658,7 @@ class _ServerCredentialsState extends State<ServerCredentials> with ThemeHelpers
               "Fetching server info...",
               style: context.theme.textTheme.titleLarge,
             ),
-            backgroundColor: context.theme.colorScheme.properSurface,
+            backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
             content: LinearProgressIndicator(
               backgroundColor: context.theme.colorScheme.outline,
               valueColor: AlwaysStoppedAnimation<Color>(context.theme.colorScheme.primary),
@@ -726,7 +723,7 @@ class _ServerCredentialsState extends State<ServerCredentials> with ThemeHelpers
                   "We couldn't find a Firebase setup on your server. To receive notifications, please enable the background service option from Settings > Misc & Advanced.",
                   style: context.theme.textTheme.bodyLarge,
                 ),
-                backgroundColor: context.theme.colorScheme.properSurface,
+                backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
                 actions: <Widget>[
                   TextButton(
                     child: Text("Close",

@@ -56,10 +56,8 @@ class ColorEditorTile extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  mainKey +
-                      (onKey != null ? ' / $onKey' : ''),
-                  style: context.theme.textTheme.bodyMedium
-                      ?.copyWith(fontWeight: FontWeight.w500),
+                  mainKey + (onKey != null ? ' / $onKey' : ''),
+                  style: context.theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
                 ),
                 const SizedBox(height: 2),
                 GestureDetector(
@@ -68,8 +66,7 @@ class ColorEditorTile extends StatelessWidget {
                     showSnackbar("Copied", _hexOf(mainColor));
                   },
                   child: Text(
-                    _hexOf(mainColor) +
-                        (onColor != null ? '  ·  ${_hexOf(onColor!)}' : ''),
+                    _hexOf(mainColor) + (onColor != null ? '  ·  ${_hexOf(onColor!)}' : ''),
                     style: context.theme.textTheme.labelSmall?.copyWith(
                       color: context.theme.colorScheme.outline,
                       fontFeatures: const [FontFeature.tabularFigures()],
@@ -201,7 +198,7 @@ class _InfoButton extends StatelessWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: context.theme.colorScheme.properSurface,
+        backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
         title: Text(
           '$colorKey${onKey != null ? ' / $onKey' : ''}',
           style: context.theme.textTheme.titleMedium,
@@ -231,7 +228,7 @@ Future<Color?> showColorPickerDialog(BuildContext context, Color initial) async 
     context: context,
     builder: (_) => AlertDialog(
       scrollable: true,
-      backgroundColor: context.theme.colorScheme.properSurface,
+      backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
       content: ColorPicker(
         color: selected,
         onColorChanged: (c) => selected = c,

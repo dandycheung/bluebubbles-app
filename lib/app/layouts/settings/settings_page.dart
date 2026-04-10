@@ -9,6 +9,7 @@ import 'package:bluebubbles/app/wrappers/bb_annotated_region.dart';
 import 'package:bluebubbles/app/wrappers/tablet_mode_wrapper.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/services/services.dart';
+import 'package:flex_color_picker/flex_color_picker.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -78,6 +79,7 @@ class _SettingsPageState extends State<SettingsPage> with ThemeHelpers {
 
   @override
   Widget build(BuildContext context) {
+    print(context.theme.colorScheme.surfaceContainerHighest.hex);
     return GestureDetector(
       behavior: HitTestBehavior.translucent,
       onTap: () => FocusScope.of(context).unfocus(),
@@ -87,7 +89,7 @@ class _SettingsPageState extends State<SettingsPage> with ThemeHelpers {
               GoBackIntent: GoBackAction(context),
             },
             child: Obx(() => Container(
-                  color: context.theme.colorScheme.background.themeOpacity(context),
+                  color: context.theme.colorScheme.surface.themeOpacity(context),
                   child: TabletModeWrapper(
                     initialRatio: 0.4,
                     minRatio: kIsDesktop || kIsWeb ? 0.2 : 0.33,

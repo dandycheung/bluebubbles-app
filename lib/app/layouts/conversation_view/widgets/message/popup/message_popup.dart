@@ -200,12 +200,12 @@ class _MessagePopupState extends State<MessagePopup> with SingleTickerProviderSt
             child: Scaffold(
                 extendBodyBehindAppBar: true,
                 backgroundColor: kIsDesktop && iOS && SettingsSvc.settings.windowEffect.value != WindowEffect.disabled
-                    ? context.theme.colorScheme.properSurface.withValues(alpha: 0.6)
+                    ? context.theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.6)
                     : Colors.transparent,
                 appBar: iOS
                     ? null
                     : AppBar(
-                        backgroundColor: context.theme.colorScheme.background.oppositeLightenOrDarken(5),
+                        backgroundColor: context.theme.colorScheme.surface.oppositeLightenOrDarken(5),
                         systemOverlayStyle: context.theme.colorScheme.brightness == Brightness.dark
                             ? SystemUiOverlayStyle.light
                             : SystemUiOverlayStyle.dark,
@@ -215,7 +215,7 @@ class _MessagePopupState extends State<MessagePopup> with SingleTickerProviderSt
                         leading: Padding(
                           padding: EdgeInsets.only(top: kIsDesktop ? 20 : 0, left: 10.0),
                           child: BackButton(
-                            color: context.theme.colorScheme.onBackground,
+                            color: context.theme.colorScheme.onSurface,
                             onPressed: () {
                               popDetails();
                               return true;
@@ -231,7 +231,7 @@ class _MessagePopupState extends State<MessagePopup> with SingleTickerProviderSt
                       onTap: popDetails,
                       child: iOS
                           ? (SettingsSvc.settings.highPerfMode.value
-                              ? Container(color: context.theme.colorScheme.background.withValues(alpha: 0.8))
+                              ? Container(color: context.theme.colorScheme.surface.withValues(alpha: 0.8))
                               : BackdropFilter(
                                   filter: ImageFilter.blur(
                                       sigmaX:
@@ -243,7 +243,7 @@ class _MessagePopupState extends State<MessagePopup> with SingleTickerProviderSt
                                               ? 10
                                               : 30),
                                   child: Container(
-                                    color: context.theme.colorScheme.properSurface.withValues(alpha: 0.3),
+                                    color: context.theme.colorScheme.surface.withValues(alpha: 0.8).darkenAmount(0.2),
                                   ),
                                 ))
                           : null,
@@ -302,7 +302,7 @@ class _MessagePopupState extends State<MessagePopup> with SingleTickerProviderSt
                               : ClipShadowPath(
                                   shadow: iOS
                                       ? BoxShadow(
-                                          color: context.theme.colorScheme.properSurface
+                                          color: context.theme.colorScheme.surfaceContainerHighest
                                               .withAlpha(iOS ? 150 : 255)
                                               .lightenOrDarken(iOS ? 0 : 10))
                                       : BoxShadow(
@@ -317,7 +317,7 @@ class _MessagePopupState extends State<MessagePopup> with SingleTickerProviderSt
                                     filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
                                     child: Container(
                                       padding: const EdgeInsets.all(5).add(const EdgeInsets.only(bottom: 15)),
-                                      color: context.theme.colorScheme.properSurface
+                                      color: context.theme.colorScheme.surfaceContainerHighest
                                           .withAlpha(iOS ? 150 : 255)
                                           .lightenOrDarken(iOS ? 0 : 10),
                                       child: Column(
@@ -529,7 +529,7 @@ class _MessagePopupState extends State<MessagePopup> with SingleTickerProviderSt
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: context.theme.colorScheme.properSurface,
+        backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
         title: Text("Copy Selection", style: context.theme.textTheme.titleLarge),
         content: SelectableText(part.fullText, style: context.theme.extension<BubbleText>()!.bubbleText),
       ),
@@ -550,7 +550,7 @@ class _MessagePopupState extends State<MessagePopup> with SingleTickerProviderSt
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: context.theme.colorScheme.properSurface,
+        backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
         title: Text("Downloading attachment${length > 1 ? "s" : ""}...", style: context.theme.textTheme.titleLarge),
         content: Column(mainAxisAlignment: MainAxisAlignment.center, mainAxisSize: MainAxisSize.min, children: <Widget>[
           Obx(
@@ -632,7 +632,7 @@ class _MessagePopupState extends State<MessagePopup> with SingleTickerProviderSt
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: context.theme.colorScheme.properSurface,
+        backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
         title: Text("Downloading live photo${length > 1 ? "s" : ""}...", style: context.theme.textTheme.titleLarge),
         content: Column(mainAxisAlignment: MainAxisAlignment.center, mainAxisSize: MainAxisSize.min, children: <Widget>[
           Obx(
@@ -885,14 +885,14 @@ class _MessagePopupState extends State<MessagePopup> with SingleTickerProviderSt
           "Message Info",
           style: context.theme.textTheme.titleLarge,
         ),
-        backgroundColor: context.theme.colorScheme.properSurface,
+        backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
         content: SizedBox(
           width: NavigationSvc.width(widthContext) * 3 / 5,
           height: context.height * 1 / 4,
           child: Container(
             padding: const EdgeInsets.all(10.0),
             decoration: BoxDecoration(
-                color: context.theme.colorScheme.background, borderRadius: const BorderRadius.all(Radius.circular(10))),
+                color: context.theme.colorScheme.surface, borderRadius: const BorderRadius.all(Radius.circular(10))),
             child: SingleChildScrollView(
               child: SelectableText(
                 str,
@@ -1070,7 +1070,7 @@ class _MessagePopupState extends State<MessagePopup> with SingleTickerProviderSt
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
         child: Container(
-          color: context.theme.colorScheme.properSurface.withAlpha(150),
+          color: context.theme.colorScheme.surfaceContainerHighest.withAlpha(150),
           width: maxMenuWidth,
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -1087,11 +1087,11 @@ class _MessagePopupState extends State<MessagePopup> with SingleTickerProviderSt
                     Get.dialog(
                         SettingsSvc.settings.skin.value == Skins.iOS
                             ? CupertinoAlertDialog(
-                                backgroundColor: context.theme.colorScheme.properSurface,
+                                backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
                                 content: content,
                               )
                             : AlertDialog(
-                                backgroundColor: context.theme.colorScheme.properSurface,
+                                backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
                                 content: content,
                               ),
                         navigatorKey: NavigationSvc.key,
@@ -1119,8 +1119,8 @@ class _MessagePopupState extends State<MessagePopup> with SingleTickerProviderSt
         }
 
         Color color = isDisabled
-            ? context.theme.colorScheme.properOnSurface.withValues(alpha: 0.5)
-            : context.theme.colorScheme.properOnSurface;
+            ? context.theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5)
+            : context.theme.colorScheme.onSurfaceVariant;
         return Padding(
             padding: EdgeInsets.only(top: kIsDesktop ? 20 : 0),
             child: IconButton(
@@ -1132,7 +1132,7 @@ class _MessagePopupState extends State<MessagePopup> with SingleTickerProviderSt
       Padding(
           padding: EdgeInsets.only(top: kIsDesktop ? 20 : 0),
           child: PopupMenuButton<int>(
-              color: context.theme.colorScheme.properSurface,
+              color: context.theme.colorScheme.surfaceContainerHighest,
               shape: SettingsSvc.settings.skin.value != Skins.Material
                   ? const RoundedRectangleBorder(
                       borderRadius: BorderRadius.all(Radius.circular(20.0)),
@@ -1147,7 +1147,7 @@ class _MessagePopupState extends State<MessagePopup> with SingleTickerProviderSt
                     value: index,
                     child: Text(
                       action.title,
-                      style: context.textTheme.bodyLarge!.apply(color: context.theme.colorScheme.properOnSurface),
+                      style: context.textTheme.bodyLarge!.apply(color: context.theme.colorScheme.onSurfaceVariant),
                     ),
                   );
                 }).toList();
@@ -1175,7 +1175,7 @@ class ReactionDetails extends StatelessWidget {
             child: Container(
               alignment: Alignment.center,
               height: 120,
-              color: context.theme.colorScheme.properSurface
+              color: context.theme.colorScheme.surfaceContainerHighest
                   .withAlpha(SettingsSvc.settings.skin.value == Skins.iOS ? 150 : 255),
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 10.0),
@@ -1215,7 +1215,7 @@ class ReactionDetails extends StatelessWidget {
                             child: Text(
                               reactionName,
                               style: context.theme.textTheme.bodySmall!
-                                  .copyWith(color: context.theme.colorScheme.properOnSurface),
+                                  .copyWith(color: context.theme.colorScheme.onSurfaceVariant),
                             ),
                           )
                         else
@@ -1227,7 +1227,7 @@ class ReactionDetails extends StatelessWidget {
                             borderRadius: BorderRadius.circular(100),
                             color: message.isFromMe!
                                 ? context.theme.colorScheme.primary
-                                : context.theme.colorScheme.properSurface,
+                                : context.theme.colorScheme.surfaceContainerHighest,
                             boxShadow: [
                               BoxShadow(
                                 blurRadius: 1.0,
@@ -1248,7 +1248,7 @@ class ReactionDetails extends StatelessWidget {
                                             ? Colors.pink
                                             : message.isFromMe!
                                                 ? context.theme.colorScheme.onPrimary
-                                                : context.theme.colorScheme.properOnSurface,
+                                                : context.theme.colorScheme.onSurfaceVariant,
                                         BlendMode.srcIn),
                                   )
                                 : Center(

@@ -54,7 +54,7 @@ class ThemePreviewCard extends StatelessWidget {
   Widget _chatListPane(BuildContext context) {
     final cs = context.theme.colorScheme;
     return Container(
-      color: cs.background,
+      color: cs.surface,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -62,12 +62,12 @@ class ThemePreviewCard extends StatelessWidget {
           Expanded(
             child: Column(
               children: [
-                _fakeChatRow(context, "Alice", "Hey! Are you free later?", "9:41 AM",
-                    cs.primaryContainer, cs.onPrimaryContainer),
-                _fakeChatRow(context, "Bob & Emma", "See you tomorrow!", "Yesterday",
-                    cs.secondaryContainer, cs.onSecondaryContainer),
-                _fakeChatRow(context, "Work Chat", "Meeting at 3pm", "Mon",
-                    cs.tertiaryContainer, cs.onTertiaryContainer),
+                _fakeChatRow(context, "Alice", "Hey! Are you free later?", "9:41 AM", cs.primaryContainer,
+                    cs.onPrimaryContainer),
+                _fakeChatRow(context, "Bob & Emma", "See you tomorrow!", "Yesterday", cs.secondaryContainer,
+                    cs.onSecondaryContainer),
+                _fakeChatRow(
+                    context, "Work Chat", "Meeting at 3pm", "Mon", cs.tertiaryContainer, cs.onTertiaryContainer),
               ],
             ),
           ),
@@ -80,7 +80,7 @@ class ThemePreviewCard extends StatelessWidget {
     final cs = context.theme.colorScheme;
     return Container(
       height: 40,
-      color: cs.properSurface,
+      color: cs.surfaceContainerHighest,
       padding: const EdgeInsets.symmetric(horizontal: 12),
       alignment: Alignment.centerLeft,
       child: Text(
@@ -90,8 +90,7 @@ class ThemePreviewCard extends StatelessWidget {
     );
   }
 
-  Widget _fakeChatRow(BuildContext context, String name, String preview, String time,
-      Color avatarBg, Color avatarFg) {
+  Widget _fakeChatRow(BuildContext context, String name, String preview, String time, Color avatarBg, Color avatarFg) {
     final cs = context.theme.colorScheme;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -119,17 +118,15 @@ class ThemePreviewCard extends StatelessWidget {
                   children: [
                     Text(name,
                         style: context.theme.textTheme.bodySmall
-                            ?.copyWith(fontWeight: FontWeight.w600, color: cs.onBackground)),
-                    Text(time,
-                        style: context.theme.textTheme.labelSmall?.copyWith(color: cs.outline)),
+                            ?.copyWith(fontWeight: FontWeight.w600, color: cs.onSurface)),
+                    Text(time, style: context.theme.textTheme.labelSmall?.copyWith(color: cs.outline)),
                   ],
                 ),
                 const SizedBox(height: 2),
                 Text(preview,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style:
-                        context.theme.textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant)),
+                    style: context.theme.textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant)),
               ],
             ),
           ),
@@ -149,27 +146,24 @@ class ThemePreviewCard extends StatelessWidget {
     final onReceivedColor = bubbleColors?.onReceivedBubbleColor ?? cs.onSurfaceVariant;
 
     return Container(
-      color: cs.background,
+      color: cs.surface,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _miniAppBar(context, "Alice"),
           Expanded(
             child: Container(
-              color: cs.background,
+              color: cs.surface,
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  _fakeBubble(context, "Hey! How are you doing?", false, receivedColor,
-                      onReceivedColor),
+                  _fakeBubble(context, "Hey! How are you doing?", false, receivedColor, onReceivedColor),
                   const SizedBox(height: 6),
-                  _fakeBubble(context, "I'm great, thanks for asking!", true, sentColor,
-                      onSentColor),
+                  _fakeBubble(context, "I'm great, thanks for asking!", true, sentColor, onSentColor),
                   const SizedBox(height: 6),
-                  _fakeBubble(context, "Want to grab coffee?", false, receivedColor,
-                      onReceivedColor),
+                  _fakeBubble(context, "Want to grab coffee?", false, receivedColor, onReceivedColor),
                   const SizedBox(height: 6),
                   _fakeBubble(context, "Absolutely! ☕️", true, sentColor, onSentColor),
                 ],
@@ -182,8 +176,7 @@ class ThemePreviewCard extends StatelessWidget {
     );
   }
 
-  Widget _fakeBubble(
-      BuildContext context, String text, bool isMe, Color bg, Color fg) {
+  Widget _fakeBubble(BuildContext context, String text, bool isMe, Color bg, Color fg) {
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
@@ -210,7 +203,7 @@ class ThemePreviewCard extends StatelessWidget {
     final cs = context.theme.colorScheme;
     return Container(
       height: 40,
-      color: cs.properSurface,
+      color: cs.surfaceContainerHighest,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       child: Row(
         children: [

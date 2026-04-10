@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:audio_waveforms/audio_waveforms.dart';
-import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -50,7 +49,7 @@ class _VoiceMessageRecorderState extends State<VoiceMessageRecorder> {
                   vertical: 5,
                   horizontal: widget.iOS ? 10 : 15), // need extra spacing in case of iOS for recording duration
               waveStyle: WaveStyle(
-                waveColor: widget.iOS ? context.theme.colorScheme.primary : context.theme.colorScheme.properOnSurface,
+                waveColor: widget.iOS ? context.theme.colorScheme.primary : context.theme.colorScheme.onSurfaceVariant,
                 waveCap: StrokeCap.square,
                 spacing: 4.0,
                 showBottom: true,
@@ -63,7 +62,7 @@ class _VoiceMessageRecorderState extends State<VoiceMessageRecorder> {
                   width: 1,
                 )),
                 borderRadius: BorderRadius.circular(20),
-                color: widget.iOS ? Colors.transparent : context.theme.colorScheme.properSurface,
+                color: widget.iOS ? Colors.transparent : context.theme.colorScheme.surfaceContainerHighest,
               ),
             ),
             Visibility(

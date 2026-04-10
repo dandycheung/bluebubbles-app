@@ -260,7 +260,7 @@ mixin ConnectionPanelHelpersMixin {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: context.theme.colorScheme.properSurface,
+        backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
         content: AspectRatio(
           aspectRatio: 1,
           child: SizedBox(
@@ -271,9 +271,9 @@ mixin ConnectionPanelHelpersMixin {
               version: QrVersions.auto,
               size: 320,
               gapless: true,
-              backgroundColor: context.theme.colorScheme.properSurface,
-              eyeStyle: QrEyeStyle(color: context.theme.colorScheme.properOnSurface),
-              dataModuleStyle: QrDataModuleStyle(color: context.theme.colorScheme.properOnSurface),
+              backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
+              eyeStyle: QrEyeStyle(color: context.theme.colorScheme.onSurfaceVariant),
+              dataModuleStyle: QrDataModuleStyle(color: context.theme.colorScheme.onSurfaceVariant),
             ),
           ),
         ),
@@ -678,7 +678,7 @@ mixin ConnectionPanelHelpersMixin {
                               keyboardType: TextInputType.number,
                             ),
                             title: Text("Enter Server Port", style: context.theme.textTheme.titleLarge),
-                            backgroundColor: context.theme.colorScheme.properSurface,
+                            backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
                           ),
                         );
                       } else {

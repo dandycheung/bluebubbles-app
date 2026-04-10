@@ -234,18 +234,14 @@ class _ChatSubtitleState extends CustomState<ChatSubtitle, void, ConversationTil
       final chatState = ChatsSvc.getChatState(controller.chat.guid);
       final latestMessage = chatState?.latestMessage.value;
       final isFromMe = latestMessage?.isFromMe ?? false;
-      final isDelivered = controller.chat.isGroup ||
-          !isFromMe ||
-          latestMessage?.isDelivered == true ||
-          latestMessage?.dateRead != null;
+      final isDelivered =
+          controller.chat.isGroup || !isFromMe || latestMessage?.isDelivered == true || latestMessage?.dateRead != null;
 
       // subtitle.value is already contact-info-free when redacted mode is on
       // (ChatState.redactContactInfo / updateChatLatestMessage ensure this).
       final String _subtitle = chatState?.subtitle.value ?? '';
 
-      final maxLines = SettingsSvc.settings.denseChatTiles.value
-          ? 1
-          : 2;
+      final maxLines = SettingsSvc.settings.denseChatTiles.value ? 1 : 2;
       final lineHeight = (widget.style.fontSize ?? 14) * (widget.style.height ?? 1.5);
 
       // For material DMs with a message from me, show a delivery check icon
@@ -268,26 +264,27 @@ class _ChatSubtitleState extends CustomState<ChatSubtitle, void, ConversationTil
       return Padding(
         padding: const EdgeInsets.only(right: 10),
         child: ConstrainedBox(
-        constraints: BoxConstraints(minHeight: lineHeight * (material ? 1 : maxLines)),
-        child: showDeliveryIcon
-            ? Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: EdgeInsets.only(right: 4, top: ((widget.style.fontSize ?? 14) * (widget.style.height ?? 1.5) - 14) / 2),
-                    child: Opacity(
-                      opacity: isDelivered ? 1.0 : 0.35,
-                      child: Icon(
-                        Icons.check_circle_outline,
-                        size: 14,
-                        color: iconColor,
+          constraints: BoxConstraints(minHeight: lineHeight * (material ? 1 : maxLines)),
+          child: showDeliveryIcon
+              ? Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: EdgeInsets.only(
+                          right: 4, top: ((widget.style.fontSize ?? 14) * (widget.style.height ?? 1.5) - 14) / 2),
+                      child: Opacity(
+                        opacity: isDelivered ? 1.0 : 0.35,
+                        child: Icon(
+                          Icons.check_circle_outline,
+                          size: 14,
+                          color: iconColor,
+                        ),
                       ),
                     ),
-                  ),
-                  Expanded(child: richText),
-                ],
-              )
-            : richText,
+                    Expanded(child: richText),
+                  ],
+                )
+              : richText,
         ),
       );
     });

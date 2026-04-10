@@ -225,7 +225,7 @@ class _MessageHolderState extends State<MessageHolder> with ThemeHelpers {
                                         decoration: replyTo!.isFromMe == message.isFromMe
                                             ? ReplyLineDecoration(
                                                 isFromMe: message.isFromMe!,
-                                                color: context.theme.colorScheme.properSurface,
+                                                color: context.theme.colorScheme.surfaceContainerHighest,
                                                 connectUpper: false,
                                                 connectLower: true,
                                                 context: context,
@@ -256,7 +256,7 @@ class _MessageHolderState extends State<MessageHolder> with ThemeHelpers {
                                               width: double.infinity,
                                               child: CustomPaint(
                                                 painter: _ReplyLinePainter(
-                                                  color: context.theme.colorScheme.properSurface,
+                                                  color: context.theme.colorScheme.surfaceContainerHighest,
                                                   isFromMe: message.isFromMe!,
                                                 ),
                                                 child: MessageSender(olderMessage: olderMessage),
@@ -270,7 +270,7 @@ class _MessageHolderState extends State<MessageHolder> with ThemeHelpers {
                                           width: double.infinity,
                                           child: CustomPaint(
                                             painter: _ReplyLinePainter(
-                                              color: context.theme.colorScheme.properSurface,
+                                              color: context.theme.colorScheme.surfaceContainerHighest,
                                               isFromMe: message.isFromMe!,
                                             ),
                                             child: ReactionSpacing(
@@ -335,7 +335,7 @@ class _MessageHolderState extends State<MessageHolder> with ThemeHelpers {
                                                           newerMessage != null))
                                               ? ReplyLineDecoration(
                                                   isFromMe: message.isFromMe!,
-                                                  color: context.theme.colorScheme.properSurface,
+                                                  color: context.theme.colorScheme.surfaceContainerHighest,
                                                   connectUpper: message.connectToUpper(),
                                                   connectLower:
                                                       newerMessage != null && message.connectToLower(newerMessage!),

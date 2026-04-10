@@ -135,7 +135,7 @@ class _LinksSectionState extends State<LinksSection> with ThemeHelpers {
                         return const Text("Failed to load link!");
                       }
                       return Material(
-                        color: context.theme.colorScheme.properSurface,
+                        color: context.theme.colorScheme.surfaceContainerHighest,
                         borderRadius: BorderRadius.circular(20),
                         clipBehavior: Clip.antiAlias,
                         child: InkWell(

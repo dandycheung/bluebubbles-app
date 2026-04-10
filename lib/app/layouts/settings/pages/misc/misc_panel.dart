@@ -103,7 +103,7 @@ class _MiscPanelState extends State<MiscPanel> with ThemeHelpers {
                                         ]),
                                     ],
                                     style: context.theme.textTheme.bodySmall!
-                                        .copyWith(color: context.theme.colorScheme.properOnSurface),
+                                        .copyWith(color: context.theme.colorScheme.onSurfaceVariant),
                                   ),
                                 ),
                               ));
@@ -264,7 +264,7 @@ class _MiscPanelState extends State<MiscPanel> with ThemeHelpers {
                     child: Obx(() => Text(
                           "Note: Attachment uploads will timeout after ${SettingsSvc.settings.apiTimeout.value ~/ 1000 * 12} seconds",
                           style: context.theme.textTheme.bodySmall!
-                              .copyWith(color: context.theme.colorScheme.properOnSurface),
+                              .copyWith(color: context.theme.colorScheme.onSurfaceVariant),
                         )),
                   ),
                   const SettingsDivider(padding: EdgeInsets.zero),

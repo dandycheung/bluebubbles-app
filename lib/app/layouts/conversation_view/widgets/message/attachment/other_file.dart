@@ -51,7 +51,7 @@ class OtherFileRow extends StatelessWidget {
         children: <Widget>[
           Icon(
             getAttachmentIcon(attachment.mimeType ?? ""),
-            color: context.theme.colorScheme.properOnSurface,
+            color: context.theme.colorScheme.onSurfaceVariant,
             size: 35,
           ),
           const SizedBox(width: 10),

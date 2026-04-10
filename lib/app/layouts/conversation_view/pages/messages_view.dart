@@ -491,7 +491,7 @@ class MessagesViewState extends State<MessagesView> with MessagesServiceMixin, T
           border: Border.all(
             width: 2,
             style: BorderStyle.solid,
-            color: context.theme.colorScheme.properSurface,
+            color: context.theme.colorScheme.surfaceContainerHighest,
           ),
           borderRadius: BorderRadius.circular(19),
         ),

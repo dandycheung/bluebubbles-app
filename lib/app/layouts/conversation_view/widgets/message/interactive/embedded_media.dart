@@ -183,7 +183,7 @@ class _EmbeddedMediaState extends State<EmbeddedMedia> with AutomaticKeepAliveCl
                         child: Obx(() => CircleProgressBar(
                               value: content.value.total > 0 ? content.value.current / content.value.total : 0,
                               backgroundColor: context.theme.colorScheme.outline,
-                              foregroundColor: context.theme.colorScheme.properOnSurface,
+                              foregroundColor: context.theme.colorScheme.onSurfaceVariant,
                             )),
                       ),
                     ),

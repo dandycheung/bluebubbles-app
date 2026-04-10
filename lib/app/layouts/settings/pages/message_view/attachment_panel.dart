@@ -159,7 +159,7 @@ class _AttachmentPanelState extends State<AttachmentPanel> with ThemeHelpers {
                                         ],
                                       ),
                                       title: Text("Enter Relative Path", style: context.theme.textTheme.titleLarge),
-                                      backgroundColor: context.theme.colorScheme.properSurface,
+                                      backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
                                     );
                                   });
                             },

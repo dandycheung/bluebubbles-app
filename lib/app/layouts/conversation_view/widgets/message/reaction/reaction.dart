@@ -120,8 +120,11 @@ class ReactionWidgetState extends State<ReactionWidget> with ThemeHelpers {
             width: 30,
             height: 30,
             decoration: BoxDecoration(
-              color: reactionIsFromMe ? context.theme.colorScheme.primary : context.theme.colorScheme.properSurface,
-              border: Border.all(color: context.theme.colorScheme.background),
+              color: reactionIsFromMe
+                  ? context.theme.colorScheme.primary
+                  : ((context.theme.extensions[BubbleColors] as BubbleColors?)?.receivedBubbleColor ??
+                      context.theme.colorScheme.surfaceContainerHighest),
+              border: Border.all(color: context.theme.colorScheme.surface),
               shape: BoxShape.circle,
             ),
             child: GestureDetector(
@@ -207,7 +210,7 @@ class ReactionWidgetState extends State<ReactionWidget> with ThemeHelpers {
               child: Container(
                 width: iosSize + 2,
                 height: iosSize + 2,
-                color: context.theme.colorScheme.background,
+                color: context.theme.colorScheme.surface,
               ),
             ),
           ),
@@ -223,7 +226,8 @@ class ReactionWidgetState extends State<ReactionWidget> with ThemeHelpers {
                     height: iosSize,
                     color: reactionIsFromMe
                         ? context.theme.colorScheme.primary.darkenAmount(isSending ? 0.2 : 0)
-                        : context.theme.colorScheme.properSurface,
+                        : ((context.theme.extensions[BubbleColors] as BubbleColors?)?.receivedBubbleColor ??
+                            context.theme.colorScheme.surfaceContainerHighest),
                     alignment: messageIsFromMe ? Alignment.topRight : Alignment.topLeft,
                     child: SizedBox(
                       width: iosSize * 0.8,
@@ -239,7 +243,7 @@ class ReactionWidgetState extends State<ReactionWidget> with ThemeHelpers {
                                   ? Colors.pink
                                   : (reactionIsFromMe
                                       ? context.theme.colorScheme.onPrimary
-                                      : context.theme.colorScheme.properOnSurface),
+                                      : context.theme.colorScheme.onSurfaceVariant),
                               BlendMode.srcIn),
                         ),
                       )),
@@ -314,8 +318,11 @@ class ReactionWidgetState extends State<ReactionWidget> with ThemeHelpers {
         width: 30,
         height: 30,
         decoration: BoxDecoration(
-          color: isFromMe ? context.theme.colorScheme.primary : context.theme.colorScheme.properSurface,
-          border: Border.all(color: context.theme.colorScheme.background),
+          color: isFromMe
+              ? context.theme.colorScheme.primary
+              : ((context.theme.extensions[BubbleColors] as BubbleColors?)?.receivedBubbleColor ??
+                  context.theme.colorScheme.surfaceContainerHighest),
+          border: Border.all(color: context.theme.colorScheme.surface),
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
@@ -365,50 +372,53 @@ class ReactionWidgetState extends State<ReactionWidget> with ThemeHelpers {
         alignment: !tailIsRight ? Alignment.centerRight : Alignment.centerLeft,
         fit: StackFit.passthrough,
         clipBehavior: Clip.none,
-      children: [
-        Positioned(
-          top: -1,
-          left: !tailIsRight ? 0 : -1,
-          right: tailIsRight ? 0 : -1,
-          child: ClipPath(
-            clipper: ReactionBorderClipper(tailDirection: tailDirection),
-            child: Container(
-              width: iosSize + 2,
-              height: iosSize + 2,
-              color: context.theme.colorScheme.background,
+        children: [
+          Positioned(
+            top: -1,
+            left: !tailIsRight ? 0 : -1,
+            right: tailIsRight ? 0 : -1,
+            child: ClipPath(
+              clipper: ReactionBorderClipper(tailDirection: tailDirection),
+              child: Container(
+                width: iosSize + 2,
+                height: iosSize + 2,
+                color: context.theme.colorScheme.surface,
+              ),
             ),
           ),
-        ),
-        ClipPath(
-          clipper: ReactionClipper(tailDirection: tailDirection),
-          child: Container(
-            width: iosSize,
-            height: iosSize,
-            color: isFromMe ? context.theme.colorScheme.primary : context.theme.colorScheme.properSurface,
-            alignment: !tailIsRight ? Alignment.topRight : Alignment.topLeft,
-            child: SizedBox(
-              width: iosSize * 0.8,
-              height: iosSize * 0.8,
-              child: Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(6.5).add(EdgeInsets.only(right: rType == "emphasize" ? 1 : 0)),
-                  child: SvgPicture.asset(
-                    'assets/reactions/$rType-black.svg',
-                    colorFilter: ColorFilter.mode(
-                      rType == "love"
-                          ? Colors.pink
-                          : (isFromMe
-                              ? context.theme.colorScheme.onPrimary
-                              : context.theme.colorScheme.properOnSurface),
-                      BlendMode.srcIn,
+          ClipPath(
+            clipper: ReactionClipper(tailDirection: tailDirection),
+            child: Container(
+              width: iosSize,
+              height: iosSize,
+              color: isFromMe
+                  ? context.theme.colorScheme.primary
+                  : ((context.theme.extensions[BubbleColors] as BubbleColors?)?.receivedBubbleColor ??
+                      context.theme.colorScheme.surfaceContainerHighest),
+              alignment: !tailIsRight ? Alignment.topRight : Alignment.topLeft,
+              child: SizedBox(
+                width: iosSize * 0.8,
+                height: iosSize * 0.8,
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(6.5).add(EdgeInsets.only(right: rType == "emphasize" ? 1 : 0)),
+                    child: SvgPicture.asset(
+                      'assets/reactions/$rType-black.svg',
+                      colorFilter: ColorFilter.mode(
+                        rType == "love"
+                            ? Colors.pink
+                            : (isFromMe
+                                ? context.theme.colorScheme.onPrimary
+                                : context.theme.colorScheme.onSurfaceVariant),
+                        BlendMode.srcIn,
+                      ),
                     ),
                   ),
                 ),
               ),
             ),
           ),
-        ),
-      ],
+        ],
       ),
     );
   }

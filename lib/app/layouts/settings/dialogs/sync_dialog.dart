@@ -1,4 +1,3 @@
-import 'package:bluebubbles/helpers/ui/theme_helpers.dart';
 import 'package:bluebubbles/services/services.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -16,7 +15,7 @@ class _SyncDialogState extends State<SyncDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      backgroundColor: context.theme.colorScheme.properSurface,
+      backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
       title: Obx(() => Text(widget.manager.progress.value >= 1 ? "Done syncing!" : "Syncing messages....",
           style: context.theme.textTheme.titleLarge)),
       content: SizedBox(

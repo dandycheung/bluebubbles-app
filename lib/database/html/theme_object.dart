@@ -43,7 +43,7 @@ class ThemeObject {
         ThemeEntry.fromStyle(ThemeColors.Subtitle2, data!.textTheme.titleSmall!),
         ThemeEntry(name: ThemeColors.AccentColor, color: data!.colorScheme.secondary, isFont: false),
         ThemeEntry(name: ThemeColors.DividerColor, color: data!.dividerColor, isFont: false),
-        ThemeEntry(name: ThemeColors.BackgroundColor, color: data!.colorScheme.background, isFont: false),
+        ThemeEntry(name: ThemeColors.BackgroundColor, color: data!.colorScheme.surface, isFont: false),
         ThemeEntry(name: ThemeColors.PrimaryColor, color: data!.primaryColor, isFont: false),
       ];
 

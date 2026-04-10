@@ -1,4 +1,3 @@
-import 'package:bluebubbles/app/layouts/chat_creator/chat_service_type.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/services/services.dart';
 import 'package:flutter/cupertino.dart';

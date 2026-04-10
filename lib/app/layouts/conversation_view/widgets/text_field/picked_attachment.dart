@@ -117,7 +117,7 @@ class _PickedAttachmentState extends State<PickedAttachment> with AutomaticKeepA
             child: OpenContainer(
                 tappable: false,
                 openColor: Colors.black,
-                closedColor: context.theme.colorScheme.background,
+                closedColor: context.theme.colorScheme.surface,
                 openBuilder: (_, closeContainer) {
                   // Use the full file path as transferName so getContent can locate
                   // the file on disk when bytes are not pre-loaded (e.g. gallery picker).
@@ -145,7 +145,7 @@ class _PickedAttachmentState extends State<PickedAttachment> with AutomaticKeepA
                         if (isEmpty)
                           Positioned.fill(
                             child: Container(
-                              color: context.theme.colorScheme.properSurface,
+                              color: context.theme.colorScheme.surfaceContainerHighest,
                               alignment: Alignment.center,
                               child: Padding(
                                 padding: const EdgeInsets.all(8.0),
@@ -203,7 +203,7 @@ class _PickedAttachmentState extends State<PickedAttachment> with AutomaticKeepA
               child: TextButton(
                 style: TextButton.styleFrom(
                   backgroundColor: context.theme.colorScheme.secondary,
-                  shape: CircleBorder(side: BorderSide(color: context.theme.colorScheme.properSurface)),
+                  shape: CircleBorder(side: BorderSide(color: context.theme.colorScheme.surfaceContainerHighest)),
                   padding: const EdgeInsets.all(0),
                   maximumSize: const Size(25, 25),
                   minimumSize: const Size(25, 25),
@@ -211,7 +211,7 @@ class _PickedAttachmentState extends State<PickedAttachment> with AutomaticKeepA
                 ),
                 child: Icon(
                   Icons.close,
-                  color: context.theme.colorScheme.background,
+                  color: context.theme.colorScheme.surface,
                   size: 18,
                 ),
                 onPressed: () {

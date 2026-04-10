@@ -120,7 +120,7 @@ class SettingsScaffold extends StatelessWidget {
                                       child: Center(
                                           child: Text(title,
                                               style: context.theme.textTheme.displaySmall!
-                                                  .copyWith(color: context.theme.colorScheme.onBackground),
+                                                  .copyWith(color: context.theme.colorScheme.onSurface),
                                               textAlign: TextAlign.center)),
                                     ),
                                     FadeTransition(

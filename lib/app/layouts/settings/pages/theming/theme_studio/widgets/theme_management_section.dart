@@ -7,7 +7,6 @@ import 'package:bluebubbles/app/layouts/settings/widgets/settings_widgets.dart';
 import 'package:bluebubbles/database/models.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/services/services.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -92,9 +91,7 @@ class ThemeManagementSection extends StatelessWidget {
                       leading: SettingsLeadingIcon(
                         iosIcon: Icons.gradient_outlined,
                         materialIcon: Icons.gradient_outlined,
-                        containerColor: controller.activeTheme.gradientBg
-                            ? context.theme.colorScheme.primary
-                            : null,
+                        containerColor: controller.activeTheme.gradientBg ? context.theme.colorScheme.primary : null,
                       ),
                       trailing: Switch(
                         value: controller.activeTheme.gradientBg,
@@ -171,17 +168,15 @@ class ThemeManagementSection extends StatelessWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: context.theme.colorScheme.properSurface,
+        backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
         title: Text("Rename Theme", style: context.theme.textTheme.titleLarge),
         content: TextField(
           controller: textController,
           autofocus: true,
           decoration: InputDecoration(
             labelText: "New Name",
-            enabledBorder: OutlineInputBorder(
-                borderSide: BorderSide(color: context.theme.colorScheme.outline)),
-            focusedBorder: OutlineInputBorder(
-                borderSide: BorderSide(color: context.theme.colorScheme.primary)),
+            enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: context.theme.colorScheme.outline)),
+            focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: context.theme.colorScheme.primary)),
           ),
           onSubmitted: (v) => _doRename(ctx, context, v),
         ),
@@ -238,8 +233,7 @@ class ThemeManagementSection extends StatelessWidget {
   }
 
   Future<void> _generateFromSeed(BuildContext context) async {
-    final picked = await showColorPickerDialog(
-        context, context.theme.colorScheme.primary);
+    final picked = await showColorPickerDialog(context, context.theme.colorScheme.primary);
     if (picked != null) {
       await controller.generateFromSeed(context, picked);
     }
@@ -267,7 +261,7 @@ class ThemeManagementSection extends StatelessWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: context.theme.colorScheme.properSurface,
+        backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
         title: Text(title, style: context.theme.textTheme.titleLarge),
         content: Text(message, style: context.theme.textTheme.bodyMedium),
         actions: [
@@ -282,10 +276,8 @@ class ThemeManagementSection extends StatelessWidget {
             },
             child: Text(
               confirmLabel,
-              style: TextStyle(
-                  color: isDestructive
-                      ? context.theme.colorScheme.error
-                      : context.theme.colorScheme.primary),
+              style:
+                  TextStyle(color: isDestructive ? context.theme.colorScheme.error : context.theme.colorScheme.primary),
             ),
           ),
         ],
@@ -304,7 +296,7 @@ class _ExportDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      backgroundColor: context.theme.colorScheme.properSurface,
+      backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
       title: Text("Export — $themeName", style: context.theme.textTheme.titleLarge),
       content: SizedBox(
         width: 440,
@@ -314,8 +306,7 @@ class _ExportDialog extends StatelessWidget {
           children: [
             Text(
               "Copy the JSON below to share this theme. Import it on another device using the Import button in the Presets section.",
-              style: context.theme.textTheme.bodySmall
-                  ?.copyWith(color: context.theme.colorScheme.onSurfaceVariant),
+              style: context.theme.textTheme.bodySmall?.copyWith(color: context.theme.colorScheme.onSurfaceVariant),
             ),
             const SizedBox(height: 12),
             Container(
@@ -323,8 +314,7 @@ class _ExportDialog extends StatelessWidget {
               decoration: BoxDecoration(
                 color: context.theme.colorScheme.surfaceVariant.withValues(alpha: 0.5),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                    color: context.theme.colorScheme.outline.withValues(alpha: 0.3)),
+                border: Border.all(color: context.theme.colorScheme.outline.withValues(alpha: 0.3)),
               ),
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(12),

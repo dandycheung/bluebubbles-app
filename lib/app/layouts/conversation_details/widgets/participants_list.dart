@@ -79,7 +79,7 @@ class _ParticipantsListState extends State<ParticipantsList> with ThemeHelpers {
               width: 40 * SettingsSvc.settings.avatarScale.value,
               height: 40 * SettingsSvc.settings.avatarScale.value,
               decoration: BoxDecoration(
-                color: !iOS ? null : context.theme.colorScheme.properSurface,
+                color: !iOS ? null : context.theme.colorScheme.surfaceContainerHighest,
                 shape: BoxShape.circle,
                 border: iOS
                     ? null
@@ -129,7 +129,7 @@ class _ParticipantsListState extends State<ParticipantsList> with ThemeHelpers {
                   width: 40 * SettingsSvc.settings.avatarScale.value,
                   height: 40 * SettingsSvc.settings.avatarScale.value,
                   decoration: BoxDecoration(
-                    color: !iOS ? null : context.theme.colorScheme.properSurface,
+                    color: !iOS ? null : context.theme.colorScheme.surfaceContainerHighest,
                     shape: BoxShape.circle,
                     border: iOS
                         ? null
