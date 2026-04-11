@@ -403,10 +403,7 @@ class _ThemeStudioPanelState extends CustomState<ThemeStudioPanel, void, ThemeSt
         // Typography
         SliverToBoxAdapter(child: _sectionHeader(context, "Typography")),
         SliverToBoxAdapter(
-          child: Obx(() {
-            controller.version.value;
-            return TypographyEditor(controller: controller);
-          }),
+          child: TypographyEditor(controller: controller),
         ),
 
         // Manage

@@ -226,9 +226,9 @@ class _SendAnimationState extends CustomState<SendAnimation, SendData, Conversat
     return AnimatedPositioned(
       duration: Duration(milliseconds: message != null ? duration : 0),
       bottom: message != null
-          ? textFieldSize + focusInfoSize + 17.5 + (controller.showTypingIndicator.value ? 50 : 0) + (!iOS ? 15 : 0)
+          ? textFieldSize + focusInfoSize + 17.5 + (controller.showTypingIndicator.value ? 50 : 0) + (!iOS ? 18.5 : 0)
           : 0,
-      right: samsung ? -37.5 : 5,
+      right: samsung ? -38 : (iOS ? -5.0 : 5.0),
       curve: curve,
       onEnd: () async {
         if (message != null) {
@@ -265,10 +265,10 @@ class _SendAnimationState extends CustomState<SendAnimation, SendData, Conversat
                       constraints: BoxConstraints(
                         maxWidth: max(messageBoxSize * exp, typicalWidth),
                         minWidth: messageBoxSize * exp,
-                        minHeight: 40,
+                        minHeight: 36,
                       ),
                       color: !message!.isBigEmoji ? context.theme.colorScheme.primary.darkenAmount(0.2) : null,
-                      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15).add(EdgeInsets.only(
+                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 15).add(EdgeInsets.only(
                           left: message!.isFromMe! || message!.isBigEmoji ? 0 : 10,
                           right: message!.isFromMe! && !message!.isBigEmoji ? 10 : 0)),
                       child: Align(

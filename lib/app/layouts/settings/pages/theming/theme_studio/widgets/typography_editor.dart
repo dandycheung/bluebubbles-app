@@ -67,14 +67,6 @@ class _TypographyEditorState extends State<TypographyEditor> {
                         textProcessing: (s) => s,
                         secondaryColor: context.headerColor,
                         useCupertino: false,
-                        materialCustomWidgets: (font) {
-                          if (font == 'Default') return null;
-                          try {
-                            return Text(font, style: GoogleFonts.getFont(font, fontSize: 14));
-                          } catch (_) {
-                            return null;
-                          }
-                        },
                         onChanged: (value) {
                           if (!editable || value == null) return;
                           ctrl.updateFont(context, value);
@@ -211,7 +203,9 @@ class _FontPreviewBanner extends StatelessWidget {
       ),
       child: Text(
         "The quick brown fox jumps over the lazy dog. 0123456789",
-        style: activeTheme.data.textTheme.bodyMedium,
+        style: activeTheme.data.textTheme.bodyMedium?.copyWith(
+          color: context.theme.colorScheme.onSurface,
+        ),
       ),
     );
   }
