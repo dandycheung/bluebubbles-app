@@ -68,7 +68,7 @@ class _ProfilePanelState extends State<ProfilePanel> with WidgetsBindingObserver
               TextButton(
                 child: Text("Cancel",
                     style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.primary)),
-                onPressed: () => Get.back(),
+                onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
               ),
               TextButton(
                 child: Text("OK",

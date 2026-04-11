@@ -178,9 +178,11 @@ class _PickedAttachmentState extends State<PickedAttachment> with AutomaticKeepA
                               onPressed: () {
                                 if (widget.controller != null) {
                                   widget.controller!.pickedAttachments.removeAt(widget.pickedAttachmentIndex);
-                                  widget.controller!.chat.textFieldAttachments
-                                      .removeWhere((e) => e == widget.data.path);
-                                  widget.controller!.chat.saveAsync(updateTextFieldAttachments: true);
+                                  final remaining = widget.controller!.pickedAttachments
+                                      .where((e) => e.path != null)
+                                      .map((e) => e.path!)
+                                      .toList();
+                                  unawaited(ChatsSvc.setChatTextFieldAttachments(widget.controller!.chat, remaining));
                                   // Don't request focus if attachment picker is open
                                   if (!widget.controller!.showAttachmentPicker) {
                                     widget.controller!.lastFocusedNode.requestFocus();

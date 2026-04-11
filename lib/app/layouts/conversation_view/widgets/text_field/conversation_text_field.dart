@@ -163,10 +163,10 @@ class ConversationTextFieldState extends CustomState<ConversationTextField, void
 
   void textListener(bool subject) {
     // OPTIMIZATION: Debounce draft saving to avoid database writes on every keystroke
-    if (!subject && controller.textController.text.trim().isNotEmpty) {
+    if (!subject) {
       localController.debounceDraftSave?.cancel();
       localController.debounceDraftSave = Timer(const Duration(milliseconds: 500), () {
-        chat.textFieldText = controller.textController.text;
+        unawaited(ChatsSvc.setChatTextFieldText(chat, controller.textController.text));
       });
     }
 
@@ -302,13 +302,11 @@ class ConversationTextFieldState extends CustomState<ConversationTextField, void
 
   @override
   void dispose() {
-    if (controller.textController.text.trim().isNotEmpty) {
-      chat.textFieldText = controller.textController.text;
-    } else {
-      chat.textFieldText = "";
-    }
-    chat.textFieldAttachments = controller.pickedAttachments.where((e) => e.path != null).map((e) => e.path!).toList();
-    chat.saveAsync(updateTextFieldText: true, updateTextFieldAttachments: true);
+    final draftText = controller.textController.text.trim().isNotEmpty ? controller.textController.text : '';
+    final draftAttachments =
+        controller.pickedAttachments.where((e) => e.path != null).map((e) => e.path!).toList();
+    unawaited(ChatsSvc.setChatTextFieldText(chat, draftText));
+    unawaited(ChatsSvc.setChatTextFieldAttachments(chat, draftAttachments));
 
     controller.focusNode.dispose();
     controller.subjectFocusNode.dispose();
@@ -409,11 +407,9 @@ class ConversationTextFieldState extends CustomState<ConversationTextField, void
     controller.replyToMessage = null;
     controller.scheduledDate.value = null;
     localController.debounceTyping = null;
-    // Remove the saved text field draft
-    if ((chat.textFieldText ?? "").isNotEmpty) {
-      chat.textFieldText = "";
-      chat.saveAsync(updateTextFieldText: true);
-    }
+    // Clear the draft now that the message has been sent.
+    unawaited(ChatsSvc.setChatTextFieldText(chat, ''));
+    unawaited(ChatsSvc.setChatTextFieldAttachments(chat, []));
   }
 
   Future<void> openFullCamera({String type = 'camera'}) async {

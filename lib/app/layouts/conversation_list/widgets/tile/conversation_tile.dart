@@ -241,22 +241,46 @@ class _ChatSubtitleState extends CustomState<ChatSubtitle, void, ConversationTil
       // (ChatState.redactContactInfo / updateChatLatestMessage ensure this).
       final String _subtitle = chatState?.subtitle.value ?? '';
 
+      // Draft detection — show "Draft: ..." when there is staged text or attachments.
+      final draftText = chatState?.textFieldText.value ?? '';
+      final hasDraftText = draftText.isNotEmpty;
+      final hasDraftAttachments = chatState?.textFieldAttachments.isNotEmpty ?? false;
+      final hasDraft = hasDraftText || hasDraftAttachments;
+
       final maxLines = SettingsSvc.settings.denseChatTiles.value ? 1 : 2;
       final lineHeight = (widget.style.fontSize ?? 14) * (widget.style.height ?? 1.5);
 
       // For material DMs with a message from me, show a delivery check icon
       // instead of italic styling — mirrors the Google Messages visual pattern.
-      final showDeliveryIcon = material && isFromMe && !controller.chat.isGroup;
+      // Suppress when showing a draft so the layout stays clean.
+      final showDeliveryIcon = material && isFromMe && !controller.chat.isGroup && !hasDraft;
       final isMonet = SettingsSvc.settings.monetTheming.value != Monet.none;
       final iconColor = isMonet ? context.theme.colorScheme.primary : context.theme.colorScheme.outline;
 
-      final richText = RichText(
-        text: TextSpan(
+      final TextSpan subtitleSpan;
+      if (hasDraft) {
+        final draftBody = hasDraftText ? draftText : 'Attachment';
+        subtitleSpan = TextSpan(children: [
+          TextSpan(
+            text: 'Draft: ',
+            style: widget.style.copyWith(
+              color: context.theme.colorScheme.error,
+              fontStyle: FontStyle.normal,
+            ),
+          ),
+          ...MessageHelper.buildEmojiText(draftBody, widget.style),
+        ]);
+      } else {
+        subtitleSpan = TextSpan(
           children: MessageHelper.buildEmojiText(
             "${!iOS && isFromMe ? "You: " : ""}$_subtitle",
             widget.style.copyWith(fontStyle: !iOS && !material && !isDelivered ? FontStyle.italic : null),
           ),
-        ),
+        );
+      }
+
+      final richText = RichText(
+        text: subtitleSpan,
         overflow: TextOverflow.ellipsis,
         maxLines: maxLines,
       );

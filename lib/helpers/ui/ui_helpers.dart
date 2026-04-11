@@ -650,12 +650,12 @@ Future<void> paintAvatar(
   paint.isAntiAlias = true;
   paint.shader =
       ui.Gradient.linear(Offset(dx + size * 0.5, dy + size * 0.5), Offset(size.toDouble(), size.toDouble()), [
-    !SettingsSvc.settings.colorfulAvatars.value
+    !SettingsSvc.settings.colorfulAvatars.value && SettingsSvc.settings.skin.value == Skins.iOS
         ? HexColor("928E8E")
         : colors.isNotEmpty
             ? colors[1]
             : HexColor("928E8E"),
-    !SettingsSvc.settings.colorfulAvatars.value
+    !SettingsSvc.settings.colorfulAvatars.value && SettingsSvc.settings.skin.value == Skins.iOS
         ? HexColor("686868")
         : colors.isNotEmpty
             ? colors[0]

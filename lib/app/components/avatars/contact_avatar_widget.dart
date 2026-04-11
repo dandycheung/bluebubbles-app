@@ -57,7 +57,8 @@ class _ContactAvatarWidgetState extends State<ContactAvatarWidget> with ThemeHel
   }
 
   void onAvatarTap() async {
-    if (!SettingsSvc.settings.colorfulAvatars.value && !SettingsSvc.settings.colorfulBubbles.value) return;
+    final isIOS = SettingsSvc.settings.skin.value == Skins.iOS;
+    if (isIOS && !SettingsSvc.settings.colorfulAvatars.value && !SettingsSvc.settings.colorfulBubbles.value) return;
 
     bool didReset = false;
     final Color color = await showColorPickerDialog(
@@ -137,7 +138,8 @@ class _ContactAvatarWidgetState extends State<ContactAvatarWidget> with ThemeHel
       final hideContactInfo = SettingsSvc.settings.redactedMode.value && SettingsSvc.settings.hideContactInfo.value;
       final genAvatars = SettingsSvc.settings.redactedMode.value && SettingsSvc.settings.generateFakeAvatars.value;
       final iOS = SettingsSvc.settings.skin.value == Skins.iOS;
-      final colorfulAvatars = SettingsSvc.settings.colorfulAvatars.value ||
+      final colorfulAvatars = !iOS ||
+          SettingsSvc.settings.colorfulAvatars.value ||
           (SettingsSvc.settings.skin.value == Skins.Material && SettingsSvc.settings.monetTheming.value != Monet.none);
       final userAvatarPath = SettingsSvc.settings.userAvatarPath.value;
 
@@ -214,15 +216,23 @@ class _ContactAvatarWidgetState extends State<ContactAvatarWidget> with ThemeHel
                       // If file doesn't exist, show initials instead
                       String? initials = cachedInitials?.substring(0, iOS ? null : 1);
                       if (!isNullOrEmpty(initials)) {
-                        return Text(
-                          initials!,
-                          key: Key("$keyPrefix-avatar-text"),
-                          style: TextStyle(
-                            fontSize: size * 0.5,
-                            height: 1.0,
-                            color: material ? context.theme.colorScheme.surface : Colors.white,
+                        return SizedBox(
+                          width: size,
+                          child: Text(
+                            initials!,
+                            key: Key("$keyPrefix-avatar-text"),
+                            style: TextStyle(
+                              fontSize: size * 0.5,
+                              height: 1.0,
+                              leadingDistribution: TextLeadingDistribution.even,
+                              color: material ? context.theme.colorScheme.surface : Colors.white,
+                            ),
+                            textAlign: TextAlign.center,
+                            textHeightBehavior: const TextHeightBehavior(
+                              applyHeightToFirstAscent: false,
+                              applyHeightToLastDescent: false,
+                            ),
                           ),
-                          textAlign: TextAlign.center,
                         );
                       }
                       return Icon(
@@ -237,15 +247,23 @@ class _ContactAvatarWidgetState extends State<ContactAvatarWidget> with ThemeHel
                 // Use reactive initials from HandleState
                 String? initials = cachedInitials?.substring(0, iOS ? null : 1);
                 if (!isNullOrEmpty(initials) && !hideContactInfo && !genAvatars) {
-                  return Text(
-                    initials!,
-                    key: Key("$keyPrefix-avatar-text"),
-                    style: TextStyle(
-                      fontSize: size * 0.5,
-                      height: 1.0,
-                      color: material ? context.theme.colorScheme.surface : Colors.white,
+                  return SizedBox(
+                    width: size,
+                    child: Text(
+                      initials!,
+                      key: Key("$keyPrefix-avatar-text"),
+                      style: TextStyle(
+                        fontSize: size * 0.5,
+                        height: 1.0,
+                        leadingDistribution: TextLeadingDistribution.even,
+                        color: material ? context.theme.colorScheme.surface : Colors.white,
+                      ),
+                      textAlign: TextAlign.center,
+                      textHeightBehavior: const TextHeightBehavior(
+                        applyHeightToFirstAscent: false,
+                        applyHeightToLastDescent: false,
+                      ),
                     ),
-                    textAlign: TextAlign.center,
                   );
                 } else if (genAvatars && widget.handle?.fakeAvatar != null) {
                   return widget.handle!.fakeAvatar;
