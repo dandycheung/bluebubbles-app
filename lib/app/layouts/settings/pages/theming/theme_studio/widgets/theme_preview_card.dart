@@ -2,6 +2,7 @@ import 'package:bluebubbles/app/layouts/conversation_view/widgets/message/misc/t
 import 'package:bluebubbles/database/models.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/services/services.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -20,16 +21,14 @@ class ThemePreviewCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(16),
       child: Theme(
         data: struct.data,
-        child: IgnorePointer(
-          child: LayoutBuilder(
-            builder: (ctx, constraints) {
-              final wide = constraints.maxWidth > 460;
-              return SizedBox(
-                height: skin == Skins.iOS ? 265 : 240,
-                child: wide ? _wideLayout(ctx, skin) : _narrowLayout(ctx, skin),
-              );
-            },
-          ),
+        child: LayoutBuilder(
+          builder: (ctx, constraints) {
+            final wide = constraints.maxWidth > 460;
+            return SizedBox(
+              height: skin == Skins.iOS ? 295 : 240,
+              child: wide ? _wideLayout(ctx, skin) : _narrowLayout(ctx, skin),
+            );
+          },
         ),
       ),
     );
@@ -39,7 +38,7 @@ class ThemePreviewCard extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Expanded(child: _chatListPane(context, skin)),
+        Expanded(child: IgnorePointer(child: _chatListPane(context, skin))),
         VerticalDivider(width: 1, color: context.theme.colorScheme.outline.withValues(alpha: 0.3)),
         Expanded(child: _chatViewPane(context, skin)),
       ],
@@ -173,7 +172,7 @@ class ThemePreviewCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _chatHeader(context, skin),
+          IgnorePointer(child: _chatHeader(context, skin)),
           Expanded(
             child: Container(
               color: cs.surface,
@@ -183,7 +182,7 @@ class ThemePreviewCard extends StatelessWidget {
                   : _groupedMessageList(context, sentColor, onSentColor, receivedColor, onReceivedColor),
             ),
           ),
-          _textField(context, skin),
+          IgnorePointer(child: _textField(context, skin)),
         ],
       ),
     );
@@ -195,52 +194,66 @@ class ThemePreviewCard extends StatelessWidget {
     final cs = context.theme.colorScheme;
     if (skin == Skins.iOS) {
       return Container(
-        height: 62,
+        height: 100,
         decoration: BoxDecoration(
           color: cs.surfaceContainerHighest.withValues(alpha: 0.72),
           border: Border(bottom: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.25), width: 0.5)),
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
         child: Row(
           children: [
-            Icon(Icons.chevron_left_rounded, color: cs.primary, size: 24),
+            Padding(
+              padding: const EdgeInsets.only(left: 10),
+              child: Text(
+                String.fromCharCode(CupertinoIcons.back.codePoint),
+                style: TextStyle(
+                  fontFamily: CupertinoIcons.back.fontFamily,
+                  package: CupertinoIcons.back.fontPackage,
+                  fontSize: 36,
+                  color: cs.primary,
+                ),
+              ),
+            ),
             const Spacer(),
             Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 CircleAvatar(
-                    radius: 16,
+                    radius: 27,
                     backgroundColor: cs.primaryContainer,
-                    child: Text("A", style: TextStyle(fontSize: 12, color: cs.onPrimaryContainer))),
+                    child: Text("B", style: TextStyle(fontSize: 20, color: cs.onPrimaryContainer))),
                 const SizedBox(height: 2),
-                Text("Alice", style: context.theme.textTheme.labelSmall?.copyWith(color: cs.onSurface, fontSize: 9)),
+                Text("BlueBubbles", style: context.theme.textTheme.bodyMedium?.copyWith(color: cs.onSurface)),
               ],
             ),
             const Spacer(),
-            Icon(Icons.videocam_outlined, color: cs.primary, size: 20),
-            const SizedBox(width: 4),
+            // Offset left padding on the arrow
+            const SizedBox(width: 16),
           ],
         ),
       );
     } else {
       // Material / Samsung — standard AppBar style
       return Container(
-        height: 50,
+        height: 56,
         color: cs.surfaceContainerHighest,
-        padding: const EdgeInsets.symmetric(horizontal: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
         child: Row(
           children: [
             const SizedBox(width: 2),
-            Icon(Icons.arrow_back, size: 20, color: cs.onSurface),
+            Icon(Icons.arrow_back, size: 24, color: cs.onSurface),
             const SizedBox(width: 4),
             CircleAvatar(
-                radius: 14,
+                radius: 17.5,
                 backgroundColor: cs.primaryContainer,
-                child: Text("A", style: TextStyle(fontSize: 11, color: cs.onPrimaryContainer))),
+                child: Text("B", style: TextStyle(fontSize: 14, color: cs.onPrimaryContainer))),
             const SizedBox(width: 8),
             Expanded(
-              child: Text("Alice",
-                  style: context.theme.textTheme.bodySmall?.copyWith(color: cs.onSurface, fontWeight: FontWeight.w600)),
+              child: Text("BlueBubbles",
+                  style: context.theme.textTheme.titleLarge?.apply(color: cs.onSurface, fontSizeFactor: 0.85),
+                  maxLines: 1,
+                  overflow: TextOverflow.fade,
+                  softWrap: false),
             ),
             Icon(Icons.more_vert, size: 18, color: cs.onSurface),
             const SizedBox(width: 4),
@@ -254,18 +267,18 @@ class ThemePreviewCard extends StatelessWidget {
 
   Widget _iOSMessageList(
       BuildContext context, Color sentColor, Color onSentColor, Color receivedColor, Color onReceivedColor) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.end,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _iOSBubbleRow(context, "Hey! How are you?", false, receivedColor, onReceivedColor, showTail: true),
-        const SizedBox(height: 5),
-        _iOSBubbleRow(context, "I'm great, thanks!", true, sentColor, onSentColor, showTail: true),
-        const SizedBox(height: 5),
-        _iOSBubbleRow(context, "Coffee soon? ☕", false, receivedColor, onReceivedColor, showTail: true),
-        const SizedBox(height: 5),
-        _iOSBubbleRow(context, "Absolutely! 😄", true, sentColor, onSentColor, showTail: true),
-      ],
+    return SingleChildScrollView(
+      reverse: true,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _iOSBubbleRow(context, "Hey, whatsup!", false, receivedColor, onReceivedColor, showTail: true),
+          const SizedBox(height: 5),
+          _iOSBubbleRow(context, "Nothin much, you?", true, sentColor, onSentColor, showTail: true),
+          const SizedBox(height: 5),
+          _iOSBubbleRow(context, "Enjoying BlueBubbles!", false, receivedColor, onReceivedColor, showTail: true),
+        ],
+      ),
     );
   }
 
@@ -283,10 +296,10 @@ class ThemePreviewCard extends StatelessWidget {
       children: [
         showTail
             ? CircleAvatar(
-                radius: 11,
+                radius: 15,
                 backgroundColor: cs.primaryContainer,
-                child: Text("A", style: TextStyle(fontSize: 8, color: cs.onPrimaryContainer)))
-            : const SizedBox(width: 22),
+                child: Text("B", style: TextStyle(fontSize: 11, color: cs.onPrimaryContainer)))
+            : const SizedBox(width: 30),
         const SizedBox(width: 2),
         _bubble(context, text, false, bg, onBg, showTail: showTail),
       ],
@@ -297,37 +310,51 @@ class ThemePreviewCard extends StatelessWidget {
 
   Widget _groupedMessageList(
       BuildContext context, Color sentColor, Color onSentColor, Color receivedColor, Color onReceivedColor) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.end,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // Received group
-        Align(
-          alignment: Alignment.centerLeft,
-          child: _bubble(context, "Hey! How are you?", false, receivedColor, onReceivedColor,
-              showTail: false, connectLower: true, connectUpper: false),
-        ),
-        const SizedBox(height: 2),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: _bubble(context, "Miss you! 😊", false, receivedColor, onReceivedColor,
-              showTail: true, connectLower: false, connectUpper: true),
-        ),
-        const SizedBox(height: 6),
-        // Sent group
-        Align(
-          alignment: Alignment.centerRight,
-          child: _bubble(context, "Doing great!", true, sentColor, onSentColor,
-              showTail: false, connectLower: true, connectUpper: false),
-        ),
-        const SizedBox(height: 2),
-        Align(
-          alignment: Alignment.centerRight,
-          child: _bubble(context, "Coffee soon? ☕", true, sentColor, onSentColor,
-              showTail: true, connectLower: false, connectUpper: true),
-        ),
-      ],
+    return SingleChildScrollView(
+      reverse: true,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Received group
+          Align(
+            alignment: Alignment.centerLeft,
+            child: _bubble(context, "Hey! How are you?", false, receivedColor, onReceivedColor,
+                showTail: false, connectLower: true, connectUpper: false),
+          ),
+          const SizedBox(height: 2),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: _bubble(context, "Miss you! 😊", false, receivedColor, onReceivedColor,
+                showTail: true, connectLower: false, connectUpper: true),
+          ),
+          const SizedBox(height: 6),
+          // Sent group
+          Align(
+            alignment: Alignment.centerRight,
+            child: _bubble(context, "Doing great!", true, sentColor, onSentColor,
+                showTail: false, connectLower: true, connectUpper: false),
+          ),
+          const SizedBox(height: 2),
+          Align(
+            alignment: Alignment.centerRight,
+            child: _bubble(context, "Coffee soon? ☕", true, sentColor, onSentColor,
+                showTail: true, connectLower: false, connectUpper: true),
+          ),
+        ],
+      ),
     );
+  }
+
+  // ── Preview font size helpers ─────────────────────────────────────────────
+
+  /// Returns the theme's bubbleText font size for use directly in the preview.
+  double _previewBubbleFontSize(BuildContext context) {
+    return (context.theme.extensions[BubbleText] as BubbleText?)?.bubbleText.fontSize ?? 16.0;
+  }
+
+  /// Returns the theme's bodyMedium font size for use directly in the preview.
+  double _previewTextFieldFontSize(BuildContext context) {
+    return context.theme.textTheme.bodyMedium?.fontSize ?? 14.0;
   }
 
   // ── Shared bubble widget (shape via TailClipper) ────────────────────────────
@@ -342,11 +369,11 @@ class ThemePreviewCard extends StatelessWidget {
         connectUpper: connectUpper,
       ),
       child: Container(
-        constraints: const BoxConstraints(maxWidth: 155),
-        padding: EdgeInsets.symmetric(vertical: 6, horizontal: 10)
+        constraints: const BoxConstraints(maxWidth: 200),
+        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 10)
             .add(EdgeInsets.only(left: isMe ? 0 : 10, right: isMe ? 10 : 0)),
         color: bg,
-        child: Text(text, style: context.theme.textTheme.labelSmall?.copyWith(color: onBg, fontSize: 10)),
+        child: Text(text, style: context.theme.textTheme.labelSmall?.copyWith(color: onBg, fontSize: _previewBubbleFontSize(context))),
       ),
     );
   }
@@ -397,7 +424,7 @@ class ThemePreviewCard extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text("iMessage",
-                        style: context.theme.textTheme.labelSmall?.copyWith(color: cs.outline, fontSize: 10)),
+                        style: context.theme.textTheme.labelSmall?.copyWith(color: cs.outline, fontSize: _previewTextFieldFontSize(context))),
                   ),
                   Container(
                     width: 20,
@@ -444,7 +471,7 @@ class ThemePreviewCard extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text("Message",
-                        style: context.theme.textTheme.labelSmall?.copyWith(color: cs.outline, fontSize: 10)),
+                        style: context.theme.textTheme.labelSmall?.copyWith(color: cs.outline, fontSize: _previewTextFieldFontSize(context))),
                   ),
                   Icon(Icons.send_rounded, size: 16, color: cs.primary),
                 ],
@@ -483,7 +510,7 @@ class ThemePreviewCard extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 10),
               alignment: Alignment.centerLeft,
               child:
-                  Text("Message", style: context.theme.textTheme.labelSmall?.copyWith(color: cs.outline, fontSize: 10)),
+                  Text("Message", style: context.theme.textTheme.labelSmall?.copyWith(color: cs.outline, fontSize: _previewTextFieldFontSize(context))),
             ),
           ),
           const SizedBox(width: 6),

@@ -26,6 +26,7 @@ List<InlineSpan> buildMessageSpans(BuildContext context, MessagePart part, Messa
             (message.isFromMe! ? context.theme.colorScheme.onPrimary : context.theme.colorScheme.onSurfaceVariant),
         fontSizeFactor: message.isBigEmoji ? 3 : 1,
       );
+  print(textStyle.fontSize);
 
   if (!isNullOrEmpty(part.subject)) {
     textSpans.addAll(MessageHelper.buildEmojiText(
@@ -84,6 +85,7 @@ Future<List<InlineSpan>> buildEnrichedMessageSpans(BuildContext context, Message
             (message.isFromMe! ? context.theme.colorScheme.onPrimary : context.theme.colorScheme.onSurfaceVariant),
         fontSizeFactor: message.isBigEmoji ? 3 : 1,
       );
+
   // extract rich content
   final urlRegex = RegExp(
       r'((https?://)|(www\.))[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}([-a-zA-Z0-9/()@:%_.~#?&=*\[\]]*)\b');

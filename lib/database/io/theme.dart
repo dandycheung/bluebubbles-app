@@ -182,8 +182,12 @@ class ThemeStruct {
             "onInverseSurface": data.colorScheme.onInverseSurface.toARGB32(),
             "inversePrimary": data.colorScheme.inversePrimary.toARGB32(),
             "surfaceContainerHighest": data.colorScheme.surfaceContainerHighest.toARGB32(),
+            "iMessageBubble": (data.extensions[BubbleColors] as BubbleColors?)?.iMessageBubbleColor?.toARGB32(),
+            "oniMessageBubble": (data.extensions[BubbleColors] as BubbleColors?)?.oniMessageBubbleColor?.toARGB32(),
             "smsBubble": (data.extensions[BubbleColors] as BubbleColors?)?.smsBubbleColor?.toARGB32(),
             "onSmsBubble": (data.extensions[BubbleColors] as BubbleColors?)?.onSmsBubbleColor?.toARGB32(),
+            "receivedBubble": (data.extensions[BubbleColors] as BubbleColors?)?.receivedBubbleColor?.toARGB32(),
+            "onReceivedBubble": (data.extensions[BubbleColors] as BubbleColors?)?.onReceivedBubbleColor?.toARGB32(),
             "brightness": data.colorScheme.brightness.index,
           },
         },
@@ -322,28 +326,21 @@ class ThemeStruct {
         name: json["name"],
         gradientBg: json["gradientBg"] == 1,
         themeData: baseTheme.copyWith(splashFactory: InkSparkle.splashFactory, extensions: [
-          if (json["name"] == "OLED Dark" || json["name"] == "Bright White")
-            BubbleColors(
-              iMessageBubbleColor: HexColor("1982FC"),
-              oniMessageBubbleColor: Colors.white,
-              smsBubbleColor: HexColor("43CC47"),
-              onSmsBubbleColor: Colors.white,
-              receivedBubbleColor: HexColor(json["name"] == "OLED Dark" ? "323332" : "e9e9ea"),
-              onReceivedBubbleColor: json["name"] == "OLED Dark" ? Colors.white : Colors.black,
-            ),
-          if (json["name"] != "OLED Dark" && json["name"] != "Bright White")
-            BubbleColors(
-              smsBubbleColor: map["colorScheme"]["smsBubble"] == null ? null : Color(map["colorScheme"]["smsBubble"]),
-              onSmsBubbleColor:
-                  map["colorScheme"]["onSmsBubble"] == null ? null : Color(map["colorScheme"]["onSmsBubble"]),
-            ),
+          BubbleColors(
+            iMessageBubbleColor: map["colorScheme"]["iMessageBubble"] == null ? null : Color(map["colorScheme"]["iMessageBubble"]),
+            oniMessageBubbleColor: map["colorScheme"]["oniMessageBubble"] == null ? null : Color(map["colorScheme"]["oniMessageBubble"]),
+            smsBubbleColor: map["colorScheme"]["smsBubble"] == null ? null : Color(map["colorScheme"]["smsBubble"]),
+            onSmsBubbleColor: map["colorScheme"]["onSmsBubble"] == null ? null : Color(map["colorScheme"]["onSmsBubble"]),
+            receivedBubbleColor: map["colorScheme"]["receivedBubble"] == null ? null : Color(map["colorScheme"]["receivedBubble"]),
+            onReceivedBubbleColor: map["colorScheme"]["onReceivedBubble"] == null ? null : Color(map["colorScheme"]["onReceivedBubble"]),
+          ),
           BubbleText(
             bubbleText: font(
                 textStyle: typography.bodyMedium!
                     .copyWith(
                       color: Color(map["textTheme"]["bodyMedium"]["color"]),
                       fontWeight: FontWeight.values[map["textTheme"]["bodyMedium"]["fontWeight"]],
-                      fontSize: map["textTheme"]["bubbleText"]?["fontSize"]?.toDouble() ?? 15,
+                      fontSize: map["textTheme"]["bubbleText"]?["fontSize"]?.toDouble() ?? 16,
                       height: typography.bodyMedium!.height! * 0.85,
                     )
                     .apply(letterSpacingFactor: 0)),
@@ -440,13 +437,13 @@ class ThemeStruct {
 
   /// Returns the default text sizes
   static Map<String, double> get defaultTextSizes => {
-        "titleLarge": 22,
-        "bodyLarge": 16,
-        "bodyMedium": 14,
-        "bodySmall": 12,
-        "labelLarge": 14,
-        "labelSmall": 11,
-        "bubbleText": 15,
+        "titleLarge": 22,  // M3 default
+        "bodyLarge": 16,   // M3 default
+        "bodyMedium": 14,  // M3 default
+        "bodySmall": 12,   // M3 default
+        "labelLarge": 14,  // M3 default
+        "labelSmall": 11,  // M3 default
+        "bubbleText": 16,  // custom default
       };
 
   @override

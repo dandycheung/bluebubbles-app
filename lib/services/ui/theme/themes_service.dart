@@ -64,7 +64,7 @@ class ThemesService {
     ),
     BubbleText(
       bubbleText: Typography.englishLike2021.bodyMedium!.copyWith(
-        fontSize: 15,
+        fontSize: ThemeStruct.defaultTextSizes["bubbleText"],
         height: Typography.englishLike2021.bodyMedium!.height! * 0.85,
         color: Colors.white,
       ),
@@ -86,7 +86,7 @@ class ThemesService {
   ).toTheme.copyWith(splashFactory: InkSparkle.splashFactory, extensions: [
     BubbleText(
       bubbleText: Typography.englishLike2021.bodyMedium!.copyWith(
-        fontSize: 15,
+        fontSize: ThemeStruct.defaultTextSizes["bubbleText"],
         height: Typography.englishLike2021.bodyMedium!.height! * 0.85,
       ),
     ),
@@ -120,7 +120,7 @@ class ThemesService {
         ),
         BubbleText(
           bubbleText: Typography.englishLike2021.bodyMedium!.copyWith(
-            fontSize: 15,
+            fontSize: ThemeStruct.defaultTextSizes["bubbleText"],
             height: Typography.englishLike2021.bodyMedium!.height! * 0.85,
           ),
         ),
@@ -147,7 +147,7 @@ class ThemesService {
                             extensions: [
                           BubbleText(
                             bubbleText: Typography.englishLike2021.bodyMedium!.copyWith(
-                              fontSize: 15,
+                              fontSize: ThemeStruct.defaultTextSizes["bubbleText"],
                               height: Typography.englishLike2021.bodyMedium!.height! * 0.85,
                             ),
                           ),
@@ -163,7 +163,7 @@ class ThemesService {
                             extensions: [
                           BubbleText(
                             bubbleText: Typography.englishLike2021.bodyMedium!.copyWith(
-                              fontSize: 15,
+                              fontSize: ThemeStruct.defaultTextSizes["bubbleText"],
                               height: Typography.englishLike2021.bodyMedium!.height! * 0.85,
                             ),
                           ),

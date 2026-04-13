@@ -274,10 +274,10 @@ String _getAttachmentText(List<Attachment?> attachments) {
       key = "video";
     } else if (mime.contains("audio")) {
       key = "audio message";
-    } else if (mime.contains("image")) {
-      key = "photo";
     } else if (mime.contains("image/gif")) {
       key = "GIF";
+    } else if (mime.contains("image")) {
+      key = "photo";
     } else if (mime.contains("application/pdf")) {
       key = "PDF";
     } else {

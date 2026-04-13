@@ -106,7 +106,10 @@ class HandleState {
 
   static String? _computeInitials(Handle h) {
     if (h.address.startsWith("urn:biz")) return null;
-    if (!kIsWeb && h.contactsV2.isNotEmpty) {
+    if (!kIsWeb) {
+      // If there is no linked contact, don't derive initials from a phone
+      // number or raw address — leave the avatar initial empty instead.
+      if (h.contactsV2.isEmpty) return null;
       final v2Initials = h.contactsV2.first.initials;
       if (v2Initials != null) return v2Initials;
     }

@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/cupertino.dart';
 import 'package:bluebubbles/app/layouts/settings/pages/theming/theme_studio/widgets/color_editor_section.dart';
 import 'package:bluebubbles/app/layouts/settings/pages/theming/theme_studio/widgets/preset_theme_strip.dart'
     show ThemeSelectorSection;
@@ -98,6 +99,12 @@ class ThemeStudioController extends StatefulController {
     EventDispatcherSvc.emit('theme-update', null);
   }
 
+  /// Discards all staged edits by reloading themes from the DB.
+  void discardChanges() {
+    _reload();
+    pendingChanges.value = false;
+  }
+
   // ── Color editing ──────────────────────────────────────────────────────────
 
   void updateColorKey(BuildContext context, String colorKey, Color newColor) {
@@ -105,7 +112,6 @@ class ThemeStudioController extends StatefulController {
     final map = activeTheme.toMap();
     map["data"]["colorScheme"][colorKey] = newColor.toARGB32();
     activeTheme.data = ThemeStruct.fromMap(map).data;
-    activeTheme.save();
     version.value++;
     pendingChanges.value = true;
   }
@@ -117,23 +123,22 @@ class ThemeStudioController extends StatefulController {
     map["data"]["textTheme"]["font"] = fontName;
     activeTheme.googleFont = fontName;
     activeTheme.data = ThemeStruct.fromMap(map).data;
-    activeTheme.save();
+    // Do not save to DB here — font changes are staged in memory only and
+    // persisted when the user explicitly clicks Apply (applyChanges). This
+    // ensures re-entering the page always shows the currently applied font.
     version.value++;
     pendingChanges.value = true;
   }
 
-  void updateTextSize(BuildContext context, String key, double multiplier, {bool save = false}) {
+  void updateTextSize(BuildContext context, String key, double multiplier) {
     final map = activeTheme.toMap();
     final keys = key == 'master' ? activeTheme.textSizes.keys.toList() : [key];
     for (final k in keys) {
       map["data"]["textTheme"][k]['fontSize'] = ThemeStruct.defaultTextSizes[k]! * multiplier;
     }
     activeTheme.data = ThemeStruct.fromMap(map).data;
-    if (save) {
-      activeTheme.save();
-      version.value++;
-      pendingChanges.value = true;
-    }
+    version.value++;
+    pendingChanges.value = true;
   }
 
   // ── Theme management ───────────────────────────────────────────────────────
@@ -154,6 +159,29 @@ class ThemeStudioController extends StatefulController {
     _reloadThemesList();
     pendingChanges.value = true;
     return newTheme;
+  }
+
+  /// Clones [source] into a new theme with [name] and makes it the staged
+  /// active theme for its brightness mode.
+  ThemeStruct cloneTheme(String name, ThemeStruct source) {
+    final clone = ThemeStruct(
+      name: name,
+      themeData: source.data,
+      gradientBg: source.gradientBg,
+      googleFont: source.googleFont,
+    );
+    clone.save();
+    final isDarkClone = clone.data.colorScheme.brightness == Brightness.dark;
+    isDark.value = isDarkClone;
+    previewDark.value = isDarkClone;
+    if (isDarkClone) {
+      darkTheme = clone;
+    } else {
+      lightTheme = clone;
+    }
+    _reloadThemesList();
+    pendingChanges.value = true;
+    return clone;
   }
 
   Future<bool> renameTheme(BuildContext context, String newName) async {
@@ -180,7 +208,6 @@ class ThemeStudioController extends StatefulController {
     final brightness = isDark.value ? Brightness.dark : Brightness.light;
     final swatch = ColorScheme.fromSeed(seedColor: seed, brightness: brightness);
     activeTheme.data = activeTheme.data.copyWith(colorScheme: swatch);
-    activeTheme.save();
     version.value++;
     pendingChanges.value = true;
   }
@@ -194,7 +221,6 @@ class ThemeStudioController extends StatefulController {
     final swatch = await ColorScheme.fromImageProvider(
         provider: image, brightness: isDark.value ? Brightness.dark : Brightness.light);
     activeTheme.data = activeTheme.data.copyWith(colorScheme: swatch);
-    activeTheme.save();
     version.value++;
     pendingChanges.value = true;
   }
@@ -205,7 +231,6 @@ class ThemeStudioController extends StatefulController {
         ? ThemesService.defaultThemes.firstWhere((e) => e.name == "OLED Dark")
         : ThemesService.defaultThemes.firstWhere((e) => e.name == "Bright White");
     activeTheme.data = defaultTheme.data;
-    activeTheme.save();
     version.value++;
     pendingChanges.value = true;
   }
@@ -282,9 +307,55 @@ class _ThemeStudioPanelState extends CustomState<ThemeStudioPanel, void, ThemeSt
     }
   }
 
+  /// Shows a dialog asking the user what to do with unsaved changes.
+  /// Returns true if navigation should proceed (discard or apply+navigate).
+  Future<bool> _confirmDiscard(BuildContext context) async {
+    final result = await showDialog<_PendingAction>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Unsaved Changes"),
+        content: const Text("You have pending changes that haven't been applied. What would you like to do?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(_PendingAction.cancel),
+            child: const Text("Keep Editing"),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(_PendingAction.discard),
+            child: Text("Discard", style: TextStyle(color: context.theme.colorScheme.error)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(_PendingAction.apply),
+            child: const Text("Apply & Exit"),
+          ),
+        ],
+      ),
+    );
+    if (result == _PendingAction.apply) {
+      await controller.applyChanges(context);
+      return true;
+    }
+    if (result == _PendingAction.discard) {
+      controller.discardChanges();
+      return true;
+    }
+    return false;
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Obx(() {
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop) return;
+        if (!controller.pendingChanges.value) {
+          Navigator.of(context).pop();
+          return;
+        }
+        final shouldPop = await _confirmDiscard(context);
+        if (shouldPop && context.mounted) Navigator.of(context).pop();
+      },
+      child: Obx(() {
       final hasPending = controller.pendingChanges.value;
       return SettingsScaffold(
         title: "Theme Studio",
@@ -293,8 +364,17 @@ class _ThemeStudioPanelState extends CustomState<ThemeStudioPanel, void, ThemeSt
         materialSubtitle: materialSubtitle,
         tileColor: tileColor,
         headerColor: headerColor,
+        leading: hasPending
+            ? _PendingBackButton(onPressed: () => _confirmDiscard(context).then((ok) {
+                if (ok && context.mounted) Navigator.of(context).pop();
+              }))
+            : null,
         actions: hasPending
             ? [
+                TextButton(
+                  onPressed: () => controller.discardChanges(),
+                  child: Text("Discard", style: TextStyle(color: context.theme.colorScheme.error)),
+                ),
                 TextButton(
                   onPressed: () => controller.applyChanges(context),
                   child: const Text("Apply"),
@@ -403,7 +483,10 @@ class _ThemeStudioPanelState extends CustomState<ThemeStudioPanel, void, ThemeSt
         // Typography
         SliverToBoxAdapter(child: _sectionHeader(context, "Typography")),
         SliverToBoxAdapter(
-          child: TypographyEditor(controller: controller),
+          child: Obx(() {
+            controller.version.value;
+            return TypographyEditor(controller: controller);
+          }),
         ),
 
         // Manage
@@ -418,7 +501,8 @@ class _ThemeStudioPanelState extends CustomState<ThemeStudioPanel, void, ThemeSt
         const SliverToBoxAdapter(child: SizedBox(height: 48)),
       ],
       );
-    });
+    }),
+    );
   }
 
   Widget _sectionHeader(BuildContext context, String text) {
@@ -569,6 +653,35 @@ class _ColorEditorBody extends StatelessWidget {
                   ),
                 ))
             .toList(),
+      ),
+    );
+  }
+}
+
+// ─── Helpers for pending-changes UX ──────────────────────────────────────────
+
+enum _PendingAction { apply, discard, cancel }
+
+/// Custom back button shown when there are pending changes. It triggers the
+/// confirmation dialog rather than navigating directly.
+class _PendingBackButton extends StatelessWidget {
+  const _PendingBackButton({required this.onPressed});
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: SizedBox(
+        width: 48,
+        child: IconButton(
+          iconSize: SettingsSvc.settings.skin.value != Skins.Material ? 30 : 24,
+          icon: Obx(() => Icon(
+                SettingsSvc.settings.skin.value != Skins.Material ? CupertinoIcons.back : Icons.arrow_back,
+                color: context.theme.colorScheme.primary,
+              )),
+          onPressed: onPressed,
+        ),
       ),
     );
   }

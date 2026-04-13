@@ -133,6 +133,20 @@ class _ModeGroup extends StatelessWidget {
             ),
           ],
         ),
+        const SizedBox(height: 4),
+        Row(
+          children: [
+            Icon(Icons.info_outline_rounded, size: 11, color: context.theme.colorScheme.outline),
+            const SizedBox(width: 4),
+            Text(
+              "Tap and hold on a theme for more options",
+              style: context.theme.textTheme.labelSmall?.copyWith(
+                color: context.theme.colorScheme.outline,
+                fontSize: 11,
+              ),
+            ),
+          ],
+        ),
         const SizedBox(height: 10),
 
         // ─ Default card ───────────────────────────────────────────────────
@@ -145,6 +159,7 @@ class _ModeGroup extends StatelessWidget {
             isApplied: appliedThemeName == defaultTheme!.name,
             selectionIsPending: _selectionIsPending,
             onTap: () => controller.applyTheme(context, defaultTheme!),
+            onLongPress: () => _showContextMenu(context, defaultTheme!),
           ),
           const SizedBox(height: 14),
         ],
@@ -168,6 +183,7 @@ class _ModeGroup extends StatelessWidget {
                     isApplied: appliedThemeName == t.name,
                     selectionIsPending: _selectionIsPending,
                     onTap: () => controller.applyTheme(context, t),
+                    onLongPress: () => _showContextMenu(context, t),
                   ),
                 );
               },
@@ -195,6 +211,7 @@ class _ModeGroup extends StatelessWidget {
                     isApplied: appliedThemeName == t.name,
                     selectionIsPending: _selectionIsPending,
                     onTap: () => controller.applyTheme(context, t),
+                    onLongPress: () => _showContextMenu(context, t),
                   ),
                 );
               },
@@ -202,6 +219,175 @@ class _ModeGroup extends StatelessWidget {
           ),
         ],
       ],
+    );
+  }
+
+  void _showContextMenu(BuildContext context, ThemeStruct theme) {
+    final isCustom = !theme.isPreset;
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+                child: Row(
+                  children: [
+                    const Icon(Icons.palette_outlined, size: 18),
+                    const SizedBox(width: 8),
+                    Text(
+                      theme.name,
+                      style: context.theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 8),
+              ListTile(
+                leading: const Icon(Icons.copy_outlined),
+                title: const Text("Clone"),
+                subtitle: const Text("Create a copy of this theme"),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  _showCloneDialog(context, theme);
+                },
+              ),
+              if (isCustom) ...[
+                ListTile(
+                  leading: const Icon(Icons.edit_outlined),
+                  title: const Text("Rename"),
+                  onTap: () {
+                    Navigator.of(ctx).pop();
+                    _showRenameDialogForTheme(context, theme);
+                  },
+                ),
+                ListTile(
+                  leading: Icon(Icons.delete_outline, color: context.theme.colorScheme.error),
+                  title: Text("Delete", style: TextStyle(color: context.theme.colorScheme.error)),
+                  onTap: () {
+                    Navigator.of(ctx).pop();
+                    _confirmDelete(context, theme);
+                  },
+                ),
+              ],
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showCloneDialog(BuildContext context, ThemeStruct source) {
+    final textController = TextEditingController(text: "${source.name} Copy");
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
+        title: Text("Clone \"${source.name}\"", style: context.theme.textTheme.titleLarge),
+        content: TextField(
+          controller: textController,
+          autofocus: true,
+          decoration: InputDecoration(
+            labelText: "New Theme Name",
+            enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: context.theme.colorScheme.outline)),
+            focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: context.theme.colorScheme.primary)),
+          ),
+          onSubmitted: (_) => _doClone(ctx, context, source, textController.text),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text("Cancel", style: TextStyle(color: context.theme.colorScheme.primary)),
+          ),
+          TextButton(
+            onPressed: () => _doClone(ctx, context, source, textController.text),
+            child: Text("Clone", style: TextStyle(color: context.theme.colorScheme.primary)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _doClone(BuildContext dialogCtx, BuildContext pageCtx, ThemeStruct source, String name) {
+    if (name.trim().isEmpty) {
+      showSnackbar("Error", "Please enter a theme name");
+      return;
+    }
+    if (ThemeStruct.findOne(name.trim()) != null) {
+      showSnackbar("Error", "A theme with that name already exists");
+      return;
+    }
+    Navigator.of(dialogCtx).pop();
+    controller.cloneTheme(name.trim(), source);
+  }
+
+  void _showRenameDialogForTheme(BuildContext context, ThemeStruct theme) {
+    // Rename only works on the active theme via the controller, so select it first
+    controller.applyTheme(context, theme);
+    final textController = TextEditingController(text: theme.name);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
+        title: Text("Rename \"${theme.name}\"", style: context.theme.textTheme.titleLarge),
+        content: TextField(
+          controller: textController,
+          autofocus: true,
+          decoration: InputDecoration(
+            labelText: "New Name",
+            enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: context.theme.colorScheme.outline)),
+            focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: context.theme.colorScheme.primary)),
+          ),
+          onSubmitted: (_) => _doRename(ctx, context, textController.text),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text("Cancel", style: TextStyle(color: context.theme.colorScheme.primary)),
+          ),
+          TextButton(
+            onPressed: () => _doRename(ctx, context, textController.text),
+            child: Text("Rename", style: TextStyle(color: context.theme.colorScheme.primary)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _doRename(BuildContext dialogCtx, BuildContext pageCtx, String newName) async {
+    Navigator.of(dialogCtx).pop();
+    final ok = await controller.renameTheme(pageCtx, newName.trim());
+    if (!ok) showSnackbar("Error", "Could not rename — name is empty or already taken");
+  }
+
+  void _confirmDelete(BuildContext context, ThemeStruct theme) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Delete Theme"),
+        content: Text("Delete \"${theme.name}\"? This cannot be undone."),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text("Cancel", style: TextStyle(color: context.theme.colorScheme.primary)),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              // Select it so deleteTheme acts on the right one, then delete
+              controller.applyTheme(context, theme);
+              controller.deleteTheme(context);
+            },
+            child: Text("Delete", style: TextStyle(color: context.theme.colorScheme.error)),
+          ),
+        ],
+      ),
     );
   }
 
@@ -289,6 +475,7 @@ class _DefaultCard extends StatelessWidget {
     required this.isApplied,
     required this.selectionIsPending,
     required this.onTap,
+    this.onLongPress,
   });
 
   final ThemeStruct struct;
@@ -296,6 +483,7 @@ class _DefaultCard extends StatelessWidget {
   final bool isApplied;
   final bool selectionIsPending;
   final VoidCallback onTap;
+  final VoidCallback? onLongPress;
 
   @override
   Widget build(BuildContext context) {
@@ -316,6 +504,7 @@ class _DefaultCard extends StatelessWidget {
 
     return GestureDetector(
       onTap: onTap,
+      onLongPress: onLongPress,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         decoration: BoxDecoration(
@@ -395,6 +584,7 @@ class _ThemeCard extends StatelessWidget {
     required this.isApplied,
     required this.selectionIsPending,
     required this.onTap,
+    this.onLongPress,
   });
 
   final ThemeStruct struct;
@@ -402,6 +592,7 @@ class _ThemeCard extends StatelessWidget {
   final bool isApplied;
   final bool selectionIsPending;
   final VoidCallback onTap;
+  final VoidCallback? onLongPress;
 
   @override
   Widget build(BuildContext context) {
@@ -420,6 +611,7 @@ class _ThemeCard extends StatelessWidget {
 
     return GestureDetector(
       onTap: onTap,
+      onLongPress: onLongPress,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         width: 76,

@@ -996,7 +996,10 @@ class TextFieldComponentState extends State<TextFieldComponent> {
             valueListenable: isRecordingNotifier,
             builder: (context, isRecording, child) {
               return Container(
-                decoration: iOS
+                // Border is placed in the foregroundDecoration so it paints on top of
+                // child content (ReplyHolder, attachments, etc.) and remains visible
+                // at all corners instead of being covered by opaque children.
+                foregroundDecoration: iOS
                     ? BoxDecoration(
                         border: Border.fromBorderSide(BorderSide(
                           color: (isRecording & iOS)
@@ -1005,6 +1008,11 @@ class TextFieldComponentState extends State<TextFieldComponent> {
                           width: 1,
                         )),
                         borderRadius: BorderRadius.circular(20),
+                      )
+                    : null,
+                decoration: iOS
+                    ? const BoxDecoration(
+                        borderRadius: BorderRadius.all(Radius.circular(20)),
                       )
                     : BoxDecoration(
                         color: context.theme.colorScheme.surfaceContainerHighest,

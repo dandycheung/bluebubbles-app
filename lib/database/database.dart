@@ -15,6 +15,10 @@ import 'package:path/path.dart';
 class Database {
   static int version = 7;
 
+  /// Bump this whenever preset theme definitions change (colors, font sizes,
+  /// etc.) to force existing installs to re-seed preset themes on next launch.
+  static int themesVersion = 2;
+
   static late final Store store;
   static late final Box<Attachment> attachments;
   static late final Box<Chat> chats;
@@ -85,21 +89,13 @@ class Database {
     }
 
     try {
-      if (Database.themes.isEmpty()) {
-        await PrefsSvc.i.setString("selected-dark", "OLED Dark");
-        await PrefsSvc.i.setString("selected-light", "Bright White");
-        Database.themes.putMany(ThemesService.defaultThemes);
-      }
-    } catch (e, s) {
-      Logger.error("Failed to seed themes!", error: e, trace: s);
-    }
-
-    try {
       await _performDatabaseMigrations();
       await PrefsSvc.i.setInt('dbVersion', version);
     } catch (e, s) {
       Logger.error("Failed to perform database migrations!", error: e, trace: s);
     }
+
+    await seedThemes();
 
     initComplete.complete();
   }
@@ -259,6 +255,28 @@ class Database {
 
     s.stop();
     Logger.info("Completed database migration in ${s.elapsedMilliseconds}ms", tag: "DB-Migration");
+  }
+
+  static Future<void> seedThemes() async {
+    try {
+      final isFirstRun = Database.themes.isEmpty();
+      final storedThemesVersion = PrefsSvc.i.getInt('themesVersion') ?? 0;
+      final needsReseed = isFirstRun || storedThemesVersion < Database.themesVersion;
+      if (isFirstRun) {
+        await PrefsSvc.i.setString("selected-dark", "OLED Dark");
+        await PrefsSvc.i.setString("selected-light", "Bright White");
+      }
+      if (needsReseed) {
+        for (final preset in ThemesService.defaultThemes) {
+          final existing = ThemeStruct.findOne(preset.name);
+          if (existing != null) preset.id = existing.id;
+          Database.themes.put(preset);
+        }
+        await PrefsSvc.i.setInt('themesVersion', Database.themesVersion);
+      }
+    } catch (e, s) {
+      Logger.error("Failed to seed themes!", error: e, trace: s);
+    }
   }
 
   /// Wrapper for store.runInTransaction

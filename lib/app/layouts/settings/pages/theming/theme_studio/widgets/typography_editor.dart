@@ -18,22 +18,17 @@ class TypographyEditor extends StatefulWidget {
 
 class _TypographyEditorState extends State<TypographyEditor> {
   bool _sizesExpanded = false;
-  int _masterResetKey = 0;
-  int _styleResetKey = 0;
 
   ThemeStudioController get ctrl => widget.controller;
 
-  void _resetMaster(BuildContext context) {
-    ctrl.updateTextSize(context, 'master', 1.0, save: true);
-    setState(() => _masterResetKey++);
+  void _resetAllSizes(BuildContext context) {
+    ctrl.updateTextSize(context, 'master', 1.0);
   }
 
-  void _resetAllSizes(BuildContext context) {
-    ctrl.updateTextSize(context, 'master', 1.0, save: true);
-    setState(() {
-      _masterResetKey++;
-      _styleResetKey++;
-    });
+  double _multiplierFor(String key) {
+    final sizes = ctrl.activeTheme.textSizes;
+    final def = ThemeStruct.defaultTextSizes[key]!;
+    return (sizes[key] ?? def) / def;
   }
 
   @override
@@ -91,7 +86,7 @@ class _TypographyEditorState extends State<TypographyEditor> {
 
           const SizedBox(height: 8),
 
-          // ── Master scale slider ────────────────────────────────────────────
+          // ── Master + individual size presets ───────────────────────────────
           if (editable) ...[
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
@@ -100,19 +95,23 @@ class _TypographyEditorState extends State<TypographyEditor> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _MasterSlider(key: ValueKey(_masterResetKey), controller: ctrl),
+                    _SizePresetRow(
+                      label: 'master',
+                      currentMultiplier: _multiplierFor('bodyMedium'),
+                      onChanged: (v) => ctrl.updateTextSize(context, 'master', v),
+                    ),
                     Align(
                       alignment: Alignment.centerRight,
                       child: Padding(
                         padding: const EdgeInsets.only(right: 8, bottom: 4),
                         child: TextButton.icon(
-                          onPressed: () => _resetMaster(context),
+                          onPressed: () => _resetAllSizes(context),
                           style: TextButton.styleFrom(
                             visualDensity: VisualDensity.compact,
                             foregroundColor: context.theme.colorScheme.onSurfaceVariant,
                           ),
                           icon: const Icon(Icons.refresh, size: 14),
-                          label: const Text("Reset", style: TextStyle(fontSize: 12)),
+                          label: const Text("Reset All", style: TextStyle(fontSize: 12)),
                         ),
                       ),
                     ),
@@ -143,16 +142,6 @@ class _TypographyEditorState extends State<TypographyEditor> {
                               child: Text("Individual Sizes",
                                   style: context.theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
                             ),
-                            TextButton.icon(
-                              onPressed: () => _resetAllSizes(context),
-                              style: TextButton.styleFrom(
-                                visualDensity: VisualDensity.compact,
-                                foregroundColor: context.theme.colorScheme.onSurfaceVariant,
-                                padding: const EdgeInsets.symmetric(horizontal: 8),
-                              ),
-                              icon: const Icon(Icons.refresh, size: 14),
-                              label: const Text("Reset All", style: TextStyle(fontSize: 12)),
-                            ),
                             AnimatedRotation(
                               turns: _sizesExpanded ? 0.5 : 0,
                               duration: const Duration(milliseconds: 200),
@@ -168,10 +157,10 @@ class _TypographyEditorState extends State<TypographyEditor> {
                       firstChild: const SizedBox.shrink(),
                       secondChild: Column(
                         children: theme.textSizes.keys.map((key) {
-                          return _StyleSlider(
-                            key: ValueKey('$key-$_styleResetKey'),
-                            styleKey: key,
-                            controller: ctrl,
+                          return _SizePresetRow(
+                            label: key,
+                            currentMultiplier: _multiplierFor(key),
+                            onChanged: (v) => ctrl.updateTextSize(context, key, v),
                           );
                         }).toList(),
                       ),
@@ -211,97 +200,66 @@ class _FontPreviewBanner extends StatelessWidget {
   }
 }
 
-// ─── Master slider ─────────────────────────────────────────────────────────────
+// ─── Size preset row ──────────────────────────────────────────────────────────
 
-class _MasterSlider extends StatefulWidget {
-  const _MasterSlider({super.key, required this.controller});
-  final ThemeStudioController controller;
+class _SizePresetRow extends StatelessWidget {
+  const _SizePresetRow({
+    required this.label,
+    required this.currentMultiplier,
+    required this.onChanged,
+  });
 
-  @override
-  State<_MasterSlider> createState() => _MasterSliderState();
-}
+  final String label;
+  final double currentMultiplier;
+  final ValueChanged<double> onChanged;
 
-class _MasterSliderState extends State<_MasterSlider> {
-  late double _value;
+  static const Map<String, double> _presets = {
+    'Small': 0.85,
+    'Normal': 1.0,
+    'Large': 1.15,
+    'XL': 1.30,
+  };
 
-  @override
-  void initState() {
-    super.initState();
-    // Infer current master scale from the bodyMedium ratio
-    final sizes = widget.controller.activeTheme.textSizes;
-    final defaults = ThemeStruct.defaultTextSizes;
-    final def = defaults['bodyMedium']!;
-    _value = (sizes['bodyMedium'] ?? def) / def;
+  String get _selected {
+    for (final entry in _presets.entries) {
+      if ((currentMultiplier - entry.value).abs() < 0.02) return entry.key;
+    }
+    return 'Normal';
   }
 
   @override
   Widget build(BuildContext context) {
-    return SettingsSlider(
-      leading: const Text("master"),
-      leadingMinWidth: 80,
-      startingVal: _value,
-      min: 0.5,
-      max: 3.0,
-      divisions: 30,
-      backgroundColor: context.tileColor,
-      formatValue: (v) => '${v.toStringAsFixed(2)}×',
-      update: (v) {
-        setState(() => _value = v);
-        widget.controller.updateTextSize(context, 'master', v);
-      },
-      onChangeEnd: (v) {
-        setState(() => _value = v);
-        widget.controller.updateTextSize(context, 'master', v, save: true);
-      },
+    final selected = _selected;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 90,
+            child: Text(
+              label,
+              style: context.theme.textTheme.bodyMedium,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          Expanded(
+            child: SegmentedButton<String>(
+              segments: _presets.keys
+                  .map((k) => ButtonSegment<String>(value: k, label: Text(k)))
+                  .toList(),
+              selected: {selected},
+              onSelectionChanged: (s) => onChanged(_presets[s.first]!),
+              style: SegmentedButton.styleFrom(
+                visualDensity: VisualDensity.compact,
+                textStyle: const TextStyle(fontSize: 12),
+              ),
+              showSelectedIcon: false,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
 
-// ─── Per-style slider ──────────────────────────────────────────────────────────
-
-class _StyleSlider extends StatefulWidget {
-  const _StyleSlider({super.key, required this.styleKey, required this.controller});
-  final String styleKey;
-  final ThemeStudioController controller;
-
-  @override
-  State<_StyleSlider> createState() => _StyleSliderState();
-}
-
-class _StyleSliderState extends State<_StyleSlider> {
-  late double _value;
-
-  @override
-  void initState() {
-    super.initState();
-    _value = _currentMultiplier();
-  }
-
-  double _currentMultiplier() {
-    final current = widget.controller.activeTheme.textSizes[widget.styleKey] ?? 14;
-    final def = ThemeStruct.defaultTextSizes[widget.styleKey] ?? 14;
-    return current / def;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return SettingsSlider(
-      leading: Text(widget.styleKey),
-      leadingMinWidth: 80,
-      startingVal: _value,
-      min: 0.5,
-      max: 3.0,
-      divisions: 30,
-      backgroundColor: context.tileColor,
-      formatValue: (v) => '${v.toStringAsFixed(2)}×',
-      update: (v) {
-        setState(() => _value = v);
-        widget.controller.updateTextSize(context, widget.styleKey, v);
-      },
-      onChangeEnd: (v) {
-        setState(() => _value = v);
-        widget.controller.updateTextSize(context, widget.styleKey, v, save: true);
-      },
-    );
-  }
-}
+// (removed _StyleSlider — replaced by _SizePresetRow above)
