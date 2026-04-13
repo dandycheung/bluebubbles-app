@@ -124,6 +124,10 @@ class ConversationTextFieldState extends CustomState<ConversationTextField, void
   }
 
   void getTextDraft({String? text}) {
+    // Skip restoring a draft when navigating from the chat creator — the send path
+    // clears both the text controller and the persisted draft before navigating, so
+    // any non-empty value here would be a stale artifact on the CVC's chat object.
+    if (controller.fromChatCreator) return;
     // Only change the text if the incoming text is different.
     final incomingText = text ?? chat.textFieldText;
     if (incomingText != null && incomingText.isNotEmpty && incomingText != controller.textController.text) {
@@ -1420,7 +1424,7 @@ class TextFieldComponentState extends State<TextFieldComponent> {
     }
 
     if (isChatCreator) {
-      if (ev.logicalKey == LogicalKeyboardKey.enter && !HardwareKeyboard.instance.isShiftPressed) {
+      if ((kIsDesktop || kIsWeb) && ev.logicalKey == LogicalKeyboardKey.enter && !HardwareKeyboard.instance.isShiftPressed) {
         sendMessage();
         return KeyEventResult.handled;
       }

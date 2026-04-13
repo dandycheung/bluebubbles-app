@@ -53,8 +53,13 @@ class _SendAnimationState extends CustomState<SendAnimation, SendData, Conversat
       controller.messagesViewReady.then((_) {
         if (!mounted) return;
         WidgetsBinding.instance.addPostFrameCallback((_) async {
+          // Some extra time to ensure the list is fully ready and the insertItem
+          // call in handleNewMessage doesn't find a null currentState and no-op,
+          // causing the sent message to never appear in the list.
+          await Future.delayed(const Duration(milliseconds: 250));
           if (!mounted) return;
           await send(pendingData);
+
           // Clear the text field and attachments now that the send has been queued,
           // mirroring what ConversationTextField.sendMessage() does for normal sends.
           controller.pickedAttachments.clear();

@@ -376,7 +376,7 @@ class ChatCreatorController extends StatefulController {
     return existingChat;
   }
 
-  Future<void> _activateExistingChat(Chat chat) async {
+  Future<void> _activateExistingChat(Chat chat, {bool transferText = true}) async {
     await ChatsSvc.setActiveChat(chat, clearNotifications: false);
     ChatsSvc.activeChat!.controller = cvc(chat);
 
@@ -388,19 +388,24 @@ class ChatCreatorController extends StatefulController {
 
     final newCVC = ChatsSvc.activeChat!.controller!;
 
-    // Transfer text/attachments from the "new chat" text field to the resolved CVC
-    if (initialAttachments.isNotEmpty) {
-      newCVC.pickedAttachments.value = initialAttachments;
-    } else if (activeController.value != null && activeController.value!.pickedAttachments.isNotEmpty) {
-      newCVC.pickedAttachments.value = activeController.value!.pickedAttachments;
-    }
+    // Transfer text/attachments from the "new chat" text field to the resolved CVC.
+    // Skip this when transferText is false (send path) — the caller captures content
+    // directly into pendingSend so there is no need to populate the text controller,
+    // and doing so forces an extra clear that can race with Flutter rendering.
+    if (transferText) {
+      if (initialAttachments.isNotEmpty) {
+        newCVC.pickedAttachments.value = initialAttachments;
+      } else if (activeController.value != null && activeController.value!.pickedAttachments.isNotEmpty) {
+        newCVC.pickedAttachments.value = activeController.value!.pickedAttachments;
+      }
 
-    if (initialText != null && initialText!.isNotEmpty) {
-      newCVC.textController.text = initialText!;
-    } else if (activeController.value != null && activeController.value!.textController.text.isNotEmpty) {
-      newCVC.textController.text = activeController.value!.textController.text;
-    } else if (textController.text.isNotEmpty) {
-      newCVC.textController.text = textController.text;
+      if (initialText != null && initialText!.isNotEmpty) {
+        newCVC.textController.text = initialText!;
+      } else if (activeController.value != null && activeController.value!.textController.text.isNotEmpty) {
+        newCVC.textController.text = activeController.value!.textController.text;
+      } else if (textController.text.isNotEmpty) {
+        newCVC.textController.text = textController.text;
+      }
     }
 
     activeController.value = newCVC;
@@ -440,7 +445,7 @@ class ChatCreatorController extends StatefulController {
 
   /// Called from the text field's sendMessage callback.
   /// [context] is needed for showing dialogs and navigating.
-  Future<void> sendMessage(dynamic context, {String? effectId}) async {
+  Future<void> sendMessage(BuildContext context, {String? effectId}) async {
     // Auto-submit any typed address before proceeding.
     addressOnSubmitted();
 
@@ -451,6 +456,7 @@ class ChatCreatorController extends StatefulController {
 
     // Re-check for an existing chat in case the debounce hasn't fired yet.
     Chat? resolvedChat = activeController.value?.chat ?? await findExistingChat(checkDeleted: true, update: false);
+    bool messageSentWithChat = false;
 
     // ------------------------------------------------------------------
     // Step 1: If we have a local chat, use it directly — no server check.
@@ -471,17 +477,17 @@ class ChatCreatorController extends StatefulController {
         context: context,
         barrierDismissible: false,
         builder: (ctx) => AlertDialog(
-          backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
+          backgroundColor: ctx.theme.colorScheme.surfaceContainerHighest,
           title: Text(
             'Finding or creating chat...',
-            style: context.theme.textTheme.titleLarge,
+            style: ctx.theme.textTheme.titleLarge,
           ),
           content: SizedBox(
             height: 70,
             child: Center(
               child: CircularProgressIndicator(
-                backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
-                valueColor: AlwaysStoppedAnimation<Color>(context.theme.colorScheme.primary),
+                backgroundColor: ctx.theme.colorScheme.surfaceContainerHighest,
+                valueColor: AlwaysStoppedAnimation<Color>(ctx.theme.colorScheme.primary),
               ),
             ),
           ),
@@ -498,8 +504,10 @@ class ChatCreatorController extends StatefulController {
 
         if (serverChat == null) {
           // No existing chat on the server — create it and include the message text.
+          // The message is delivered as part of creation, so pendingSend must be skipped.
           final response = await HttpSvc.createChat(participants, textController.text, method);
           serverChat = Chat.fromMap(response.data['data'] as Map<String, dynamic>);
+          messageSentWithChat = true;
         }
 
         // Sync the chat + its participants into the local DB.
@@ -512,9 +520,9 @@ class ChatCreatorController extends StatefulController {
 
         _createCompleter?.complete();
         isSending.value = false;
-        Navigator.of(context).pop(); // dismiss loading dialog
+        Navigator.of(context, rootNavigator: true).pop(); // dismiss loading dialog
       } catch (error) {
-        Navigator.of(context).pop(); // dismiss loading dialog
+        Navigator.of(context, rootNavigator: true).pop(); // dismiss loading dialog
 
         _createCompleter?.completeError(error);
         isSending.value = false;
@@ -523,20 +531,20 @@ class ChatCreatorController extends StatefulController {
           barrierDismissible: false,
           context: context,
           builder: (ctx) => AlertDialog(
-            backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
-            title: Text('Failed to create chat!', style: context.theme.textTheme.titleLarge),
+            backgroundColor: ctx.theme.colorScheme.surfaceContainerHighest,
+            title: Text('Failed to create chat!', style: ctx.theme.textTheme.titleLarge),
             content: Text(
               error is Response
                   ? 'Reason: (${(error as dynamic).data["error"]["type"]}) -> ${(error as dynamic).data["error"]["message"]}'
                   : error.toString(),
-              style: context.theme.textTheme.bodyLarge,
+              style: ctx.theme.textTheme.bodyLarge,
             ),
             actions: [
               TextButton(
-                onPressed: () => Navigator.of(context).pop(),
+                onPressed: () => Navigator.of(ctx, rootNavigator: true).pop(),
                 child: Text(
                   'OK',
-                  style: context.theme.textTheme.bodyLarge!.copyWith(color: Get.context!.theme.colorScheme.primary),
+                  style: ctx.theme.textTheme.bodyLarge!.copyWith(color: ctx.theme.colorScheme.primary),
                 ),
               ),
             ],
@@ -550,17 +558,28 @@ class ChatCreatorController extends StatefulController {
     // Step 3: We have a chat (local or freshly synced). Set up its CVC
     // and navigate to the ConversationView, sending the message on init.
     // ------------------------------------------------------------------
+
+    // Capture content now, before _activateExistingChat runs.
+    // For existing chats the CVC already has the live text; for new chats the
+    // text is still only in the chat creator's own textController.
+    final capturedText = activeController.value?.textController.text.isNotEmpty == true
+        ? activeController.value!.textController.text
+        : textController.text;
+    final capturedAttachments = activeController.value?.pickedAttachments.isNotEmpty == true
+        ? activeController.value!.pickedAttachments.toList()
+        : List<PlatformFile>.from(initialAttachments);
+
     if (activeController.value == null || activeController.value!.chat.guid != resolvedChat.guid) {
-      await _activateExistingChat(resolvedChat);
+      // transferText: false — content is captured above and will go into pendingSend;
+      // writing it into the CVC's textController would leave stale text visible in
+      // the destination ConversationView if the clear races with Flutter rendering.
+      await _activateExistingChat(resolvedChat, transferText: false);
     }
 
-    // Ensure text/attachments are transferred to the active CVC.
+    // Ensure attachments are transferred to the active CVC (text is captured above).
     if (activeController.value != null) {
-      if (activeController.value!.textController.text.isEmpty && textController.text.isNotEmpty) {
-        activeController.value!.textController.text = textController.text;
-      }
-      if (activeController.value!.pickedAttachments.isEmpty && initialAttachments.isNotEmpty) {
-        activeController.value!.pickedAttachments.value = initialAttachments;
+      if (activeController.value!.pickedAttachments.isEmpty && capturedAttachments.isNotEmpty) {
+        activeController.value!.pickedAttachments.value = capturedAttachments;
       }
     }
 
@@ -570,15 +589,16 @@ class ChatCreatorController extends StatefulController {
     // Only send a message when there is actual content to send. When the user
     // taps the send button from the chat creator with an existing chat but no
     // text/attachments (i.e. "open conversation" intent), skip the send step.
-    final hasContent = activeCVC.textController.text.isNotEmpty || activeCVC.pickedAttachments.isNotEmpty;
+    final hasContent = capturedText.isNotEmpty || capturedAttachments.isNotEmpty;
 
     // Pre-queue the send so _SendAnimationState fires it as soon as it wires up
     // sendFunc — after the ConversationView frame builds and MessagesView has
-    // initialized its handlers. Only set when there is actual content to send.
-    if (hasContent) {
+    // initialized its handlers. Only set when there is actual content to send,
+    // and when the message was not already sent as part of new chat creation.
+    if (hasContent && !messageSentWithChat) {
       activeCVC.pendingSend = SendData(
-        attachments: activeCVC.pickedAttachments.toList(),
-        text: activeCVC.textController.text,
+        attachments: capturedAttachments,
+        text: capturedText,
         subject: '',
         replyGuid: activeCVC.replyToMessage?.message.threadOriginatorGuid ?? activeCVC.replyToMessage?.message.guid,
         replyPart: activeCVC.replyToMessage?.partIndex,
@@ -587,7 +607,25 @@ class ChatCreatorController extends StatefulController {
       activeCVC.replyToMessage = null;
     }
 
+    // Always clear text/attachments from the CVC and the persisted draft before navigating.
+    // - pendingSend path: data already captured above; dispose() must not re-save it as a draft.
+    // - messageSentWithChat path: message sent via createChat; nothing left to draft.
+    // Awaiting the DB clear ensures ConversationTextFieldState.getTextDraft() finds '' when
+    // the new ConversationView initialises, so the text field starts empty.
+    // Also clear activeCVC.chat.textFieldText directly: cvc() may return an already-registered
+    // CVC whose .chat is an older object instance than resolvedChat, so setChatTextFieldText
+    // would update state.chat but not the CVC's own .chat — getTextDraft() reads the latter.
+    activeCVC.chat.textFieldText = '';
+    activeCVC.textController.clear();
+    activeCVC.pickedAttachments.clear();
+    await ChatsSvc.setChatTextFieldText(chat, '');
+    await ChatsSvc.setChatTextFieldAttachments(chat, []);
+
     isHeaderVisible.value = false;
+    // Null the active controller so the inline MessagesView is removed from the
+    // tree before the new ConversationView mounts — prevents GlobalKey conflicts
+    // (the shared focusInfoKey on the CVC would otherwise appear in both trees).
+    activeController.value = null;
 
     NavigationSvc.pushAndRemoveUntil(
       Get.context!,

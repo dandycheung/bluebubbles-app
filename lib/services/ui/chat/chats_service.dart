@@ -817,8 +817,19 @@ class ChatsService {
       await Future.delayed(const Duration(milliseconds: 500));
     }
 
-    // Collect handle IDs before deleting the chat (handles are lazy-loaded via ToMany)
-    final handleIds = deleteHandles ? chat.handles.map((e) => e.id).whereType<int>().toList() : <int>[];
+    // Collect handle IDs before deleting the chat (handles are lazy-loaded via ToMany).
+    // Only include handles that are not shared with any other chat — if a handle
+    // participates in multiple chats, removing it would break those other chats.
+    List<int> handleIds = <int>[];
+    if (deleteHandles) {
+      final otherChats = allChats.where((c) => c.guid != chat.guid).toList();
+      final otherHandleIds = otherChats.expand((c) => c.handles).map((h) => h.id).whereType<int>().toSet();
+      handleIds = chat.handles
+          .map((e) => e.id)
+          .whereType<int>()
+          .where((id) => !otherHandleIds.contains(id))
+          .toList();
+    }
 
     // Perform the actual DB deletion
     List<Message> messages = Chat.getMessages(chat);
