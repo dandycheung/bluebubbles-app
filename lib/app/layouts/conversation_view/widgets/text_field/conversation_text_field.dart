@@ -992,6 +992,9 @@ class TextFieldComponentState extends State<TextFieldComponent> {
     final txtController = controller?.textController ?? textController;
     final subjController = controller?.subjectTextController ?? subjectTextController;
     final showIcons = isChatCreator && !widget.hideMediaPicker && controller != null;
+    // Captured here because contextMenuBuilder receives its own `context` that shadows this
+    // one and may not have the dark theme properly applied (it's a detached overlay context).
+    final outerTheme = Theme.of(context);
     Widget textInput = Focus(
       onKeyEvent: (_, ev) => handleKey(_, ev, context, isChatCreator),
       child: Padding(
@@ -1172,7 +1175,7 @@ class TextFieldComponentState extends State<TextFieldComponent> {
                           final selected = editableTextState.textEditingValue.text.substring(
                               (start - 1).clamp(0, text.length), (end + 1).clamp(min(1, text.length), text.length));
 
-                          return AdaptiveTextSelectionToolbar.editableText(
+                          final toolbar = AdaptiveTextSelectionToolbar.editableText(
                             editableTextState: editableTextState,
                           )..buttonItems?.addAllIf(
                               MentionTextEditingController.escapingRegex.allMatches(selected).length == 1,
@@ -1238,6 +1241,19 @@ class TextFieldComponentState extends State<TextFieldComponent> {
                                 ),
                               ],
                             );
+
+                          // Use outerTheme (captured from the real build context) because the
+                          // contextMenuBuilder's own `context` parameter shadows the build context
+                          // and may not have the dark theme applied (it's a detached overlay context).
+                          return Theme(
+                            data: outerTheme.copyWith(
+                              cardColor: outerTheme.colorScheme.surfaceContainerHighest,
+                              colorScheme: outerTheme.colorScheme.copyWith(
+                                surface: outerTheme.colorScheme.surfaceContainerHighest,
+                              ),
+                            ),
+                            child: toolbar,
+                          );
                         },
                         onTap: () {
                           HapticFeedback.selectionClick();
