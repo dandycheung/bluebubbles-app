@@ -349,7 +349,7 @@ class ThemePreviewCard extends StatelessWidget {
 
   /// Returns the theme's bubbleText font size for use directly in the preview.
   double _previewBubbleFontSize(BuildContext context) {
-    return (context.theme.extensions[BubbleText] as BubbleText?)?.bubbleText.fontSize ?? 16.0;
+    return (context.theme.extensions[BubbleText] as BubbleText?)?.bubbleText.fontSize ?? 15.0;
   }
 
   /// Returns the theme's bodyMedium font size for use directly in the preview.

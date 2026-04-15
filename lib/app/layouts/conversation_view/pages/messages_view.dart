@@ -151,15 +151,25 @@ class MessagesViewState extends State<MessagesView> with MessagesServiceMixin, T
           _messages,
         );
 
-        // Load messages if needed (check service flag to avoid redundant loads)
-        if (!service.messagesLoaded) {
-          await service.loadChunk(0, controller);
+        // Load messages if needed (check service flag to avoid redundant loads).
+        // Wrap in try-catch: if loadChunk throws (e.g. server HTTP error for a
+        // brand-new chat), we must still initialise handlers and mark the view
+        // ready so pendingSend can fire and handleNewMessage works correctly.
+        try {
+          if (!service.messagesLoaded) {
+            await service.loadChunk(0, controller);
+          }
+        } catch (e, s) {
+          Logger.error('MessagesView: loadChunk failed, continuing with empty state',
+              error: e, trace: s, tag: 'MessagesView');
         }
 
         _messages = service.struct.messages;
         _messages.sort(Message.sort);
 
-        // Initialize the mixin's service reference and create controllers
+        // Initialize the mixin's service reference and create controllers.
+        // This MUST always run so _messageService is non-null when
+        // handleNewMessage → createStateForMessage is later called.
         initializeMessagesService(
           chat,
           _messages,

@@ -153,6 +153,8 @@ class Chat {
       lockChatName: json["lockChatName"] ?? false,
       lockChatIcon: json["lockChatIcon"] ?? false,
       lastReadMessageGuid: json["lastReadMessageGuid"],
+      textFieldText: json["textFieldText"],
+      textFieldAttachments: (json["textFieldAttachments"] as List?)?.cast<String>() ?? const [],
     );
   }
 
@@ -870,6 +872,8 @@ class Chat {
       "lockChatName": lockChatName,
       "lockChatIcon": lockChatIcon,
       "lastReadMessageGuid": lastReadMessageGuid,
+      "textFieldText": textFieldText,
+      "textFieldAttachments": textFieldAttachments,
     };
   }
 }

@@ -518,6 +518,24 @@ class ChatCreatorController extends StatefulController {
         final updated = ChatsSvc.updateChat(resolvedChat);
         if (!updated) await ChatsSvc.addChat(resolvedChat);
 
+        // When the message was bundled in createChat, proactively sync it from
+        // the server so MessagesView.loadChunk can display it immediately rather
+        // than waiting for the socket echo (which has a built-in 500 ms delay for
+        // isFromMe / no-tempGuid messages).
+        if (messageSentWithChat) {
+          try {
+            final msgResponse = await HttpSvc.chatMessages(resolvedChat.guid, limit: 1);
+            final msgData = msgResponse.data['data'];
+            if (msgData is List && msgData.isNotEmpty) {
+              final messages =
+                  msgData.map((e) => Message.fromMap(e as Map<String, dynamic>)).toList();
+              await Chat.bulkSyncMessages(resolvedChat, messages);
+            }
+          } catch (_) {
+            // Non-fatal: the socket echo will still arrive and display the message
+          }
+        }
+
         _createCompleter?.complete();
         isSending.value = false;
         Navigator.of(context, rootNavigator: true).pop(); // dismiss loading dialog

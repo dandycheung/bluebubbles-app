@@ -263,7 +263,10 @@ class MethodChannelService {
             Chat? chat = Chat.findOne(guid: data["chatGuid"]);
             if (chat != null) {
               // Don't clear local notifications because tapping Mark as Read should clear the notification automatically
-              chat.toggleHasUnreadAsync(false, clearLocalNotifications: false);
+              await chat.toggleHasUnreadAsync(false, clearLocalNotifications: false);
+              // The save goes through the GlobalIsolate, so ChatsService is never notified.
+              // Explicitly update the ChatState so the UI reflects the change immediately.
+              ChatsSvc.getChatState(chat.guid)?.updateHasUnreadInternal(false);
               return Future.value(true);
             }
           }

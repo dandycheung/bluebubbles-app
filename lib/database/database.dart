@@ -17,7 +17,7 @@ class Database {
 
   /// Bump this whenever preset theme definitions change (colors, font sizes,
   /// etc.) to force existing installs to re-seed preset themes on next launch.
-  static int themesVersion = 2;
+  static int themesVersion = 3;
 
   static late final Store store;
   static late final Box<Attachment> attachments;

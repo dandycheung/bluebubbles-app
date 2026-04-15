@@ -340,7 +340,7 @@ class ThemeStruct {
                     .copyWith(
                       color: Color(map["textTheme"]["bodyMedium"]["color"]),
                       fontWeight: FontWeight.values[map["textTheme"]["bodyMedium"]["fontWeight"]],
-                      fontSize: map["textTheme"]["bubbleText"]?["fontSize"]?.toDouble() ?? 16,
+                      fontSize: map["textTheme"]["bubbleText"]?["fontSize"]?.toDouble() ?? 15,
                       height: typography.bodyMedium!.height! * 0.85,
                     )
                     .apply(letterSpacingFactor: 0)),
@@ -443,7 +443,7 @@ class ThemeStruct {
         "bodySmall": 12,   // M3 default
         "labelLarge": 14,  // M3 default
         "labelSmall": 11,  // M3 default
-        "bubbleText": 16,  // custom default
+        "bubbleText": 15,  // custom default
       };
 
   @override

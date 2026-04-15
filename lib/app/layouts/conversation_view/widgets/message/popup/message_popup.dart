@@ -231,7 +231,7 @@ class _MessagePopupState extends State<MessagePopup> with SingleTickerProviderSt
                       onTap: popDetails,
                       child: iOS
                           ? (SettingsSvc.settings.highPerfMode.value
-                              ? Container(color: context.theme.colorScheme.surface.withValues(alpha: 0.8))
+                              ? Container(color: context.theme.colorScheme.surface.withValues(alpha: 0.5))
                               : BackdropFilter(
                                   filter: ImageFilter.blur(
                                       sigmaX:
@@ -243,7 +243,7 @@ class _MessagePopupState extends State<MessagePopup> with SingleTickerProviderSt
                                               ? 10
                                               : 30),
                                   child: Container(
-                                    color: context.theme.colorScheme.surface.withValues(alpha: 0.8).darkenAmount(0.2),
+                                    color: context.theme.colorScheme.surface.withValues(alpha: 0.5).darkenAmount(0.2),
                                   ),
                                 ))
                           : null,

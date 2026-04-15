@@ -128,16 +128,21 @@ class ConversationTextFieldState extends CustomState<ConversationTextField, void
     // clears both the text controller and the persisted draft before navigating, so
     // any non-empty value here would be a stale artifact on the CVC's chat object.
     if (controller.fromChatCreator) return;
-    // Only change the text if the incoming text is different.
-    final incomingText = text ?? chat.textFieldText;
+    // Read from ChatState — it is the source of truth and is always up-to-date,
+    // even before the async DB write from a previous session has completed.
+    final incomingText = text ?? ChatsSvc.getChatState(chatGuid)?.textFieldText.value ?? chat.textFieldText;
     if (incomingText != null && incomingText.isNotEmpty && incomingText != controller.textController.text) {
       controller.textController.text = incomingText;
     }
   }
 
   Future<void> getAttachmentDrafts({List<String> attachments = const []}) async {
-    // Only change the attachments if the incoming attachments are different.
-    final incomingAttachments = attachments.isEmpty ? chat.textFieldAttachments : attachments;
+    // Read from ChatState — it is the source of truth and is always up-to-date.
+    // Fall back to chat.textFieldAttachments for the first load after a cold start
+    // (before ChatState has been updated by any setChatTextFieldAttachments call).
+    final incomingAttachments = attachments.isNotEmpty
+        ? attachments
+        : (ChatsSvc.getChatState(chatGuid)?.textFieldAttachments.toList() ?? chat.textFieldAttachments);
     final currentPicked = controller.pickedAttachments.map((element) => element.path).toList();
     if (incomingAttachments.any((element) => !currentPicked.contains(element))) {
       controller.pickedAttachments.clear();
@@ -309,6 +314,7 @@ class ConversationTextFieldState extends CustomState<ConversationTextField, void
     final draftText = controller.textController.text.trim().isNotEmpty ? controller.textController.text : '';
     final draftAttachments =
         controller.pickedAttachments.where((e) => e.path != null).map((e) => e.path!).toList();
+    // Update ChatState synchronously and fire DB save in the background.
     unawaited(ChatsSvc.setChatTextFieldText(chat, draftText));
     unawaited(ChatsSvc.setChatTextFieldAttachments(chat, draftAttachments));
 

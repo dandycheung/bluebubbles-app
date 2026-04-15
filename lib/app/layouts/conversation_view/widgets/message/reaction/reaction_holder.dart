@@ -148,11 +148,11 @@ class _ReactionHolderState extends State<ReactionHolder> {
                 top: 0,
                 left: !isFromMe ? null : -i * 2.0,
                 right: isFromMe ? null : -i * 2.0,
-                child: _ReactionAnimator(
-                  key: ValueKey(stableKey),
-                  stableKey: stableKey,
-                  shouldAnimate: shouldAnimate,
-                  child: DeferPointer(
+                child: DeferPointer(
+                  child: _ReactionAnimator(
+                    key: ValueKey(stableKey),
+                    stableKey: stableKey,
+                    shouldAnimate: shouldAnimate,
                     child: ReactionWidget(
                       reaction: e,
                       reactions: _cachedReactions,

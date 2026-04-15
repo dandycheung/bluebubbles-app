@@ -321,13 +321,13 @@ class ThemeStruct {
 
   /// Returns the default text sizes
   static Map<String, double> get defaultTextSizes => {
-        "titleLarge": 22,
-        "bodyLarge": 18,
-        "bodyMedium": 16,
-        "bodySmall": 14,
-        "labelLarge": 16,
-        "labelSmall": 12,
-        "bubbleText": 16,
+        "titleLarge": 22,  // M3 default
+        "bodyLarge": 16,   // M3 default
+        "bodyMedium": 14,  // M3 default
+        "bodySmall": 12,   // M3 default
+        "labelLarge": 14,  // M3 default
+        "labelSmall": 11,  // M3 default
+        "bubbleText": 15,  // custom default
       };
 
   @override

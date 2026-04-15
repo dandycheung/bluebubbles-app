@@ -1188,33 +1188,37 @@ class ChatsService {
   }
 
   /// Set chat text field text
+  /// ChatState is updated synchronously and is the source of truth for the UI.
+  /// The DB write is fire-and-forget so callers never need to await this.
   Future<void> setChatTextFieldText(Chat chat, String? value) async {
     final state = getChatState(chat.guid);
 
     if (state != null && state.textFieldText.value == value) return;
 
-    // Update Chat model (use state.chat if available, otherwise use passed in chat)
+    // Update ChatState first — this is the source of truth for the text field UI.
+    state?.updateTextFieldTextInternal(value);
+
+    // Persist to the chat model and DB asynchronously (fire-and-forget).
     final chatToUpdate = state?.chat ?? chat;
     chatToUpdate.textFieldText = value;
-    await chatToUpdate.saveAsync(updateTextFieldText: true);
-
-    // Update state if available
-    state?.updateTextFieldTextInternal(value);
+    unawaited(chatToUpdate.saveAsync(updateTextFieldText: true));
   }
 
   /// Set chat text field attachments
+  /// ChatState is updated synchronously and is the source of truth for the UI.
+  /// The DB write is fire-and-forget so callers never need to await this.
   Future<void> setChatTextFieldAttachments(Chat chat, List<String> value) async {
     final state = getChatState(chat.guid);
 
     if (state != null && listEquals(state.textFieldAttachments, value)) return;
 
-    // Update Chat model (use state.chat if available, otherwise use passed in chat)
+    // Update ChatState first — this is the source of truth for the text field UI.
+    state?.updateTextFieldAttachmentsInternal(value);
+
+    // Persist to the chat model and DB asynchronously (fire-and-forget).
     final chatToUpdate = state?.chat ?? chat;
     chatToUpdate.textFieldAttachments = value;
-    await chatToUpdate.saveAsync(updateTextFieldAttachments: true);
-
-    // Update state if available
-    state?.updateTextFieldAttachmentsInternal(value);
+    unawaited(chatToUpdate.saveAsync(updateTextFieldAttachments: true));
   }
 
   // ========== End Chat Property Setters ==========
