@@ -81,9 +81,13 @@ class SearchResultsList extends StatelessWidget {
               child: Material(
                 color: Colors.transparent,
                 child: InkWell(
-                  onTap: () => controller.addSelected(
-                    SelectedContact(displayName: query, address: query),
-                  ),
+                  onTap: () {
+                    final address =
+                        query.isEmail ? query : controller.normalizeToE164(query);
+                    controller.addSelected(
+                      SelectedContact(displayName: address, address: address),
+                    );
+                  },
                   child: ListTile(
                     leading: CircleAvatar(
                       backgroundColor: context.theme.colorScheme.primaryContainer,
@@ -94,7 +98,7 @@ class SearchResultsList extends StatelessWidget {
                       ),
                     ),
                     title: Text(
-                      'Send to "$query"',
+                      'Send to "${query.isEmail ? query : controller.normalizeToE164(query)}"',
                       style: context.theme.textTheme.bodyMedium,
                     ),
                     subtitle: Text(

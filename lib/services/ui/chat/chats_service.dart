@@ -624,10 +624,7 @@ class ChatsService {
     if (withLastMessage) withQuery.add("lastmessage");
 
     final response = await HttpSvc.singleChat(chatGuid, withQuery: withQuery.join(",")).catchError((err, stack) {
-      if (err is! Response) {
-        Logger.error("Failed to fetch chat metadata!", error: err, trace: stack, tag: "Fetch-Chat");
-        return err;
-      }
+      Logger.error("Failed to fetch chat metadata!", error: err, trace: stack, tag: "Fetch-Chat");
       return Response(requestOptions: RequestOptions(path: ''));
     });
 
@@ -654,10 +651,7 @@ class ChatsService {
     final response = await HttpSvc.chats(
             withQuery: withQuery, offset: offset, limit: limit, sort: withLastMessage ? "lastmessage" : null)
         .catchError((err, stack) {
-      if (err is! Response) {
-        Logger.error("Failed to fetch chat metadata!", error: err, trace: stack, tag: "Fetch-Chat");
-        return err;
-      }
+      Logger.error("Failed to fetch chats!", error: err, trace: stack, tag: "Fetch-Chat");
       return Response(requestOptions: RequestOptions(path: ''));
     });
 

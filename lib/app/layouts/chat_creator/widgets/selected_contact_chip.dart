@@ -36,7 +36,10 @@ class SelectedContactChip extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
-                    Text(contact.displayName,
+                    Text(
+                        contact.displayName.isPhoneNumber
+                            ? formatPhoneNumber(contact.displayName)
+                            : contact.displayName,
                         style: context.theme.textTheme.bodyMedium!.copyWith(
                           color: contact.serviceType.value == ChatServiceType.iMessage
                               ? context.theme.colorScheme.bubble(context, true)

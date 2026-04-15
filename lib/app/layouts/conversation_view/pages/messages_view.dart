@@ -353,10 +353,13 @@ class MessagesViewState extends State<MessagesView> with MessagesServiceMixin, T
       return true;
     }));
 
+    if (!mounted) return;
+
     if (noMoreMessages) {
       Logger.debug("loadNextChunk: No more messages available");
       fetching = false;
-      return setState(() {});
+      setState(() {});
+      return;
     }
 
     final oldLength = _messages.length;
@@ -380,7 +383,7 @@ class MessagesViewState extends State<MessagesView> with MessagesServiceMixin, T
 
     // Batch loading: recreate the list key to force rebuild without animation
     _listKey = GlobalKey<SliverAnimatedListState>();
-    setState(() {});
+    if (mounted) setState(() {});
   }
 
   void handleNewMessage(Message message) async {
@@ -399,6 +402,8 @@ class MessagesViewState extends State<MessagesView> with MessagesServiceMixin, T
       return;
     }
 
+    // Capture before adding so we know whether a rebuild is needed to hide the loader.
+    final wasEmpty = _messages.isEmpty;
     _messages.add(message);
     _messages.sort(Message.sort);
     final insertIndex = _messages.indexOf(message);
@@ -421,6 +426,12 @@ class MessagesViewState extends State<MessagesView> with MessagesServiceMixin, T
 
     // Update version tracker
     _listVersion.value++;
+
+    // When the first message arrives via socket into an empty view, the
+    // "Loading surrounding message context..." SliverToBoxAdapter won't
+    // disappear on its own (insertItem only updates the SliverAnimatedList,
+    // not sibling slivers). Force a full rebuild to hide the loader.
+    if (wasEmpty && mounted) setState(() {});
 
     // Clear animation flag after animation completes
     if (message.guid != null) {

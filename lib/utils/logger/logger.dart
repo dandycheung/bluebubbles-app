@@ -123,6 +123,16 @@ class BaseLogger {
   String _isolateName = "Main";
 
   Future<void> init() async {
+    // Ensure log directory and latest log file exist before AdvancedFileOutput
+    // initializes — it calls file.length() which throws PathNotFoundException if
+    // the file has not been created yet (e.g. first run or after cache clear).
+    if (!kIsWeb) {
+      final dir = Directory(logDir);
+      if (!dir.existsSync()) dir.createSync(recursive: true);
+      final latestLog = File(join(logDir, latestLogName));
+      if (!latestLog.existsSync()) latestLog.createSync();
+    }
+
     _logger = createLogger();
     _isolateName = Isolate.current.debugName ?? "Main";
 
