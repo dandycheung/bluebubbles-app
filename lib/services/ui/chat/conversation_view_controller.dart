@@ -213,7 +213,7 @@ class ConversationViewController extends StatefulController with GetSingleTicker
   }
 
   Future<void> send(SendData data) async {
-    sendFunc?.call(data);
+    await sendFunc?.call(data);
   }
 
   bool isSelected(String guid) {

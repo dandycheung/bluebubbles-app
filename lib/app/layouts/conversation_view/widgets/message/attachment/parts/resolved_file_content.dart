@@ -87,7 +87,7 @@ class ResolvedFileContent extends StatelessWidget {
       );
     }
 
-    if ((attachment.mimeStart == "video" || attachment.mimeType == "audio/mp4") &&
+    if (attachment.mimeStart == "video" &&
         !SettingsSvc.settings.highPerfMode.value &&
         !isSnap) {
       return VideoPlayer(
