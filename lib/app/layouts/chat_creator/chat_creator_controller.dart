@@ -12,6 +12,7 @@ import 'package:bluebubbles/services/ui/chat/send_data.dart';
 import 'package:bluebubbles/utils/string_utils.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:dlibphonenumber/dlibphonenumber.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:get/get.dart' hide Response;
@@ -421,10 +422,30 @@ class ChatCreatorController extends StatefulController {
   // Address field on-submit (auto-select if valid address)
   // ---------------------------------------------------------------------------
 
+  /// Converts a user-typed phone number to E.164 format (+15106405652) if it
+  /// doesn't already include a country code. Falls back to the raw input if the
+  /// library can't parse it (e.g. for short-codes or unconventional numbers).
+  ///
+  /// Uses [isPossibleNumber] rather than [isValidNumber] so that structurally-
+  /// correct numbers (right length for the region) are normalised even if they
+  /// aren't in an active subscriber range (e.g. 555 numbers in the US).
+  String normalizeToE164(String phone) {
+    if (phone.startsWith('+')) return phone; // already has country code
+    final cc = Get.deviceLocale?.countryCode ?? 'US';
+    try {
+      final parsed = PhoneNumberUtil.instance.parse(phone, cc);
+      if (PhoneNumberUtil.instance.isValidNumber(parsed)) {
+        return PhoneNumberUtil.instance.format(parsed, PhoneNumberFormat.e164);
+      }
+    } catch (_) {}
+    return phone;
+  }
+
   void addressOnSubmitted() {
     final text = addressController.text.trim();
     if (text.isEmail || text.isPhoneNumber) {
-      addSelected(SelectedContact(displayName: text, address: text));
+      final address = text.isEmail ? text : normalizeToE164(text);
+      addSelected(SelectedContact(displayName: address, address: address));
     } else if (filteredContacts.length == 1) {
       final possibleAddresses = [
         ...filteredContacts.first.phoneNumbers.map((p) => p.number),
@@ -457,14 +478,27 @@ class ChatCreatorController extends StatefulController {
     // Re-check for an existing chat in case the debounce hasn't fired yet.
     Chat? resolvedChat = activeController.value?.chat ?? await findExistingChat(checkDeleted: true, update: false);
     bool messageSentWithChat = false;
+    // Messages already synced to the DB during the new-chat creation flow.
+    // Pre-seeded into messagesService.struct before navigation so MessagesView's
+    // fast path fires and avoids an HTTP round-trip for the very first message.
+    List<Message> syncedMessages = [];
 
     // ------------------------------------------------------------------
     // Step 1: If we have a local chat, use it directly — no server check.
     // ------------------------------------------------------------------
     if (resolvedChat == null) {
       // ----------------------------------------------------------------
-      // Step 2: No local chat. Try to fetch one from the server.
+      // Step 2: No local chat. A message is required to create a new one
+      // (the server rejects POST /chat/new without one when the Private
+      // API is enabled). Validate before making any network call so the
+      // user gets immediate feedback.
       // ----------------------------------------------------------------
+      final messageText = textController.text.trim();
+      if (messageText.isEmpty) {
+        showSnackbar('Error', 'A message is required to start a new conversation');
+        return;
+      }
+
       if (!(_createCompleter?.isCompleted ?? true)) return;
       _createCompleter = Completer();
       isSending.value = true;
@@ -495,17 +529,20 @@ class ChatCreatorController extends StatefulController {
       );
 
       try {
-        // Try fetching the chat from the server first (it may already exist there).
+        // For single-contact chats, try to find an existing chat on the server via a
+        // GET request before creating one. Using createChat with no message as a lookup
+        // is incorrect — the server rejects it when the Private API is enabled.
         Chat? serverChat;
-        try {
-          final response = await HttpSvc.createChat(participants, null, method);
-          serverChat = Chat.fromMap(response.data['data'] as Map<String, dynamic>);
-        } catch (_) {}
+        if (selectedContacts.length == 1) {
+          final address = selectedContacts.first.address;
+          serverChat = await ChatsSvc.fetchChat('$method;-;$address');
+        }
 
         if (serverChat == null) {
-          // No existing chat on the server — create it and include the message text.
-          // The message is delivered as part of creation, so pendingSend must be skipped.
-          final response = await HttpSvc.createChat(participants, textController.text, method);
+          // No existing chat found on the server — create one.
+          // Message has already been validated above; it is delivered as part of
+          // creation, so pendingSend must be skipped for this path.
+          final response = await HttpSvc.createChat(participants, messageText, method);
           serverChat = Chat.fromMap(response.data['data'] as Map<String, dynamic>);
           messageSentWithChat = true;
         }
@@ -519,8 +556,8 @@ class ChatCreatorController extends StatefulController {
         if (!updated) await ChatsSvc.addChat(resolvedChat);
 
         // When the message was bundled in createChat, proactively sync it from
-        // the server so MessagesView.loadChunk can display it immediately rather
-        // than waiting for the socket echo (which has a built-in 500 ms delay for
+        // the server so MessagesView can display it immediately rather than
+        // waiting for the socket echo (which has a built-in 500 ms delay for
         // isFromMe / no-tempGuid messages).
         if (messageSentWithChat) {
           try {
@@ -529,7 +566,7 @@ class ChatCreatorController extends StatefulController {
             if (msgData is List && msgData.isNotEmpty) {
               final messages =
                   msgData.map((e) => Message.fromMap(e as Map<String, dynamic>)).toList();
-              await Chat.bulkSyncMessages(resolvedChat, messages);
+              syncedMessages = await Chat.bulkSyncMessages(resolvedChat, messages);
             }
           } catch (_) {
             // Non-fatal: the socket echo will still arrive and display the message
@@ -592,6 +629,15 @@ class ChatCreatorController extends StatefulController {
       // writing it into the CVC's textController would leave stale text visible in
       // the destination ConversationView if the clear races with Flutter rendering.
       await _activateExistingChat(resolvedChat, transferText: false);
+    }
+
+    // Pre-seed the messagesService struct with any messages already synced to the
+    // DB (only applies to the messageSentWithChat path). This means MessagesView's
+    // fast path (customService.struct.isNotEmpty) will trigger and skip the HTTP
+    // fallback that would otherwise show "Loading..." while fetching the very first
+    // message from the server.
+    if (syncedMessages.isNotEmpty && messagesService != null) {
+      messagesService!.struct.addMessages(syncedMessages);
     }
 
     // Ensure attachments are transferred to the active CVC (text is captured above).
