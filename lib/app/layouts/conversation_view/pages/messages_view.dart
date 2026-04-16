@@ -225,8 +225,19 @@ class MessagesViewState extends State<MessagesView> with MessagesServiceMixin, T
     // Reset the ready-signal so a future pendingSend on the same CVC starts fresh.
     controller.resetMessagesViewReady();
 
-    // Don't force-delete customService (it may be reused), only force-delete regular singleton
-    disposeMessagesService(force: widget.customService == null);
+    // When a customService is provided it is shared with (or transferred to) the
+    // ConversationView we are navigating to.  Calling close() on it can delete
+    // it from GetX's registry when lastReloadedChat differs from the chat's tag
+    // (e.g. the user arrived from a different conversation).  That would cause
+    // prepMessage's Get.isRegistered guard to return false, silently skipping
+    // addNewMessage so the pending send never appears in the list — a bug that
+    // only surfaces in release/AOT mode where the dispose races the send.
+    // Solution: just detach our local reference and leave the service intact.
+    disposeMessagesService(
+      force: widget.customService == null,
+      onlyDetach: widget.customService != null,
+    );
+
     // Controllers are now disposed by MessagesService.onClose()
     _setStateDebouncer?.cancel();
     _listVersion.dispose();

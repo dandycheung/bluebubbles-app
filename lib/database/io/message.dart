@@ -40,6 +40,7 @@ class Message {
   // Data detector results
   bool? hasDdResults;
   DateTime? datePlayed;
+  bool hasEffectPlayed;
   int? itemType;
   String? groupTitle;
   int? groupActionType;
@@ -171,6 +172,7 @@ class Message {
     this.isFromMe = true,
     this.hasDdResults = false,
     this.datePlayed,
+    this.hasEffectPlayed = false,
     this.itemType = 0,
     this.groupTitle,
     this.groupActionType = 0,
@@ -410,6 +412,12 @@ class Message {
 
   Message setPlayedDate({DateTime? timestamp}) {
     datePlayed = timestamp ?? DateTime.now().toUtc();
+    save();
+    return this;
+  }
+
+  Message setEffectPlayed() {
+    hasEffectPlayed = true;
     save();
     return this;
   }

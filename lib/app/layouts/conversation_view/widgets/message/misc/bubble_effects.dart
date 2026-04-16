@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'dart:ui';
 
+import 'package:bluebubbles/app/state/message_state.dart';
 import 'package:bluebubbles/app/state/message_state_scope.dart';
 import 'package:bluebubbles/app/layouts/conversation_view/widgets/message/misc/tail_clipper.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
@@ -31,21 +32,67 @@ class BubbleEffects extends StatefulWidget {
   State<StatefulWidget> createState() => _BubbleEffectsState();
 }
 
-class _BubbleEffectsState extends State<BubbleEffects> {
+class _BubbleEffectsState extends State<BubbleEffects> with SingleTickerProviderStateMixin {
   late MovieTween tween;
   final rxControl = Rx<Control>(Control.stop);
   Size size = Size.zero;
   Worker? _effectWorker;
+
+  /// Cached reference to the nearest [MessageState]. Set in
+  /// [didChangeDependencies] so it is safe to use inside async callbacks
+  /// (e.g. animationStatusListener) where [context] may be deactivated.
+  MessageState? _ms;
+
+  /// True while an auto-triggered animation is in-flight. Set to false once
+  /// the animation completes and [MessageState.markEffectPlayed] has been
+  /// called. Manual replays do not set this flag, so they never mark played.
+  bool _pendingAutoPlay = false;
+
+  /// Drives the fade-out of the invisible-ink overlay when swiped away.
+  late final AnimationController _fadeController = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 400),
+    value: 1.0,
+  );
+  late final Animation<double> _fadeAnimation = _fadeController;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (_effectWorker == null) {
       final ms = MessageStateScope.maybeOf(context);
+      _ms = ms;
       if (ms != null) {
+        // Auto-play invisible ink on first appearance.
+        final message = ms.message;
+        final effectStr =
+            effectMap.entries.firstWhereOrNull((e) => e.value == message.expressiveSendStyleId)?.key ?? "unknown";
+        final effect = stringToMessageEffect[effectStr] ?? MessageEffect.none;
+        if (effect == MessageEffect.invisibleInk) {
+          // Set size first, then flip rxControl so the single Obx rebuild
+          // that fires has the correct dimensions and BackdropFilter covers
+          // the text from the very first animated frame.
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              size = widget.globalKey?.currentContext?.size ?? Size.zero;
+              _fadeController.value = 1.0;
+              rxControl.value = Control.play;
+            }
+          });
+        } else if (effect.isBubble && !ms.hasEffectPlayed.value) {
+          _pendingAutoPlay = true;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              size = widget.globalKey?.currentContext?.size ?? Size.zero;
+              ms.triggerBubbleEffect(widget.part);
+            }
+          });
+        }
+
         _effectWorker = ever(ms.playEffectPart, (int? part) {
           if (part == widget.part) {
             size = widget.globalKey?.currentContext?.size ?? Size.zero;
+            _fadeController.value = 1.0;
             rxControl.value = Control.playFromStart;
           }
         });
@@ -56,6 +103,7 @@ class _BubbleEffectsState extends State<BubbleEffects> {
   @override
   void dispose() {
     _effectWorker?.dispose();
+    _fadeController.dispose();
     super.dispose();
   }
 
@@ -131,7 +179,10 @@ class _BubbleEffectsState extends State<BubbleEffects> {
                     if (effect != MessageEffect.invisibleInk) return;
                     if ((details.primaryDelta ?? 0).abs() > 1) {
                       message.setPlayedDate();
-                      rxControl.value = Control.stop;
+                      // Fade out, then mark stopped once the animation finishes.
+                      _fadeController.animateTo(0.0).then((_) {
+                        if (mounted) rxControl.value = Control.stop;
+                      });
                     }
                   },
             child: AbsorbPointer(
@@ -141,26 +192,29 @@ class _BubbleEffectsState extends State<BubbleEffects> {
                 children: [
                   widget.child,
                   if (rxControl.value != Control.stop)
-                    ClipPath(
-                      clipper: TailClipper(
-                        isFromMe: message.isFromMe!,
-                        showTail: widget.showTail,
-                        connectLower: false,
-                        connectUpper: false,
-                      ),
-                      child: BackdropFilter(
-                        filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-                        child: Particles(
-                          key: UniqueKey(),
-                          height: size.height,
-                          width: size.width,
-                          particles: List.generate(
-                              size.height * size.width ~/ 25,
-                              (index) => Particle(
-                                    color: Colors.white.withAlpha(150),
-                                    size: Random().nextDouble() * (size.height / 75).clamp(0.5, 1),
-                                    velocity: Offset(Random().nextDouble() * 10, Random().nextDouble() * 10),
-                                  )),
+                    FadeTransition(
+                      opacity: _fadeAnimation,
+                      child: ClipPath(
+                        clipper: TailClipper(
+                          isFromMe: message.isFromMe!,
+                          showTail: widget.showTail,
+                          connectLower: false,
+                          connectUpper: false,
+                        ),
+                        child: BackdropFilter(
+                          filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+                          child: Particles(
+                            key: UniqueKey(),
+                            height: size.height,
+                            width: size.width,
+                            particles: List.generate(
+                                size.height * size.width ~/ 25,
+                                (index) => Particle(
+                                      color: Colors.white.withAlpha(150),
+                                      size: Random().nextDouble() * (size.height / 75).clamp(0.5, 1),
+                                      velocity: Offset(Random().nextDouble() * 10, Random().nextDouble() * 10),
+                                    )),
+                          ),
                         ),
                       ),
                     ),
@@ -182,6 +236,10 @@ class _BubbleEffectsState extends State<BubbleEffects> {
           animationStatusListener: (status) {
             if (status == AnimationStatus.completed) {
               rxControl.value = Control.stop;
+              if (_pendingAutoPlay) {
+                _pendingAutoPlay = false;
+                _ms?.markEffectPlayed();
+              }
             }
           },
           builder: (context, anim, child) {

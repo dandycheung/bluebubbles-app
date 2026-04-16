@@ -167,9 +167,18 @@ mixin MessagesServiceMixin<T extends StatefulWidget> on State<T> {
     _createControllers(messages, cvController);
   }
 
-  /// Dispose the messages service and clean up resources
-  void disposeMessagesService({bool force = false}) {
-    _messageService?.close(force: force);
+  /// Dispose the messages service and clean up resources.
+  ///
+  /// Set [onlyDetach] to true to clear the mixin's local reference without
+  /// calling [MessagesService.close]. Use this when the service is being
+  /// "transferred" to another widget (e.g. a customService passed from
+  /// ChatCreator to ConversationView) so the service stays alive in GetX's
+  /// registry and [prepMessage] can still reach it via [addNewMessage].
+  void disposeMessagesService({bool force = false, bool onlyDetach = false}) {
+    if (!onlyDetach) {
+      _messageService?.close(force: force);
+    }
+
     _messageService = null;
   }
 }
