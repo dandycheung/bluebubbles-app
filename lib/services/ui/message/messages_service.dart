@@ -1439,7 +1439,8 @@ class MessagesService extends GetxController {
           //    this point the DB now contains the just-bulk-added old messages, so that
           //    query returns a stale old date and defeats the freshness check entirely.
           if (offset == 0 && _messages.isNotEmpty) {
-            final latest = (_messages.where((m) => m.associatedMessageGuid == null).toList()..sort(Message.sort)).firstOrNull;
+            final latest =
+                (_messages.where((m) => m.associatedMessageGuid == null).toList()..sort(Message.sort)).firstOrNull;
             final state = ChatsSvc.getChatState(chat.guid);
             // epoch(0) is the sentinel returned when no messages exist yet — treat it as no current latest.
             final currentDate = state?.latestMessage.value?.dateCreated;

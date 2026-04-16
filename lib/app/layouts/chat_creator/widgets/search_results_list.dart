@@ -82,8 +82,7 @@ class SearchResultsList extends StatelessWidget {
                 color: Colors.transparent,
                 child: InkWell(
                   onTap: () {
-                    final address =
-                        query.isEmail ? query : controller.normalizeToE164(query);
+                    final address = query.isEmail ? query : controller.normalizeToE164(query);
                     controller.addSelected(
                       SelectedContact(displayName: address, address: address),
                     );

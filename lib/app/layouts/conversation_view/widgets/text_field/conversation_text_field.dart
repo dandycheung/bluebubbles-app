@@ -312,8 +312,7 @@ class ConversationTextFieldState extends CustomState<ConversationTextField, void
   @override
   void dispose() {
     final draftText = controller.textController.text.trim().isNotEmpty ? controller.textController.text : '';
-    final draftAttachments =
-        controller.pickedAttachments.where((e) => e.path != null).map((e) => e.path!).toList();
+    final draftAttachments = controller.pickedAttachments.where((e) => e.path != null).map((e) => e.path!).toList();
     // Update ChatState synchronously and fire DB save in the background.
     unawaited(ChatsSvc.setChatTextFieldText(chat, draftText));
     unawaited(ChatsSvc.setChatTextFieldAttachments(chat, draftAttachments));
@@ -519,8 +518,9 @@ class ConversationTextFieldState extends CustomState<ConversationTextField, void
                                           onTap: () async {
                                             final res = await FilePicker.platform
                                                 .pickFiles(withData: true, allowMultiple: true);
-                                            if (res == null || res.files.isEmpty || res.files.first.bytes == null)
+                                            if (res == null || res.files.isEmpty || res.files.first.bytes == null) {
                                               return;
+                                            }
 
                                             for (pf.PlatformFile e in res.files) {
                                               if (e.size / 1024000 > 1000) {
@@ -745,15 +745,15 @@ class ConversationTextFieldState extends CustomState<ConversationTextField, void
                 ),
             ]),
             Obx(() => AnimatedSize(
-              duration: const Duration(milliseconds: 250),
-              curve: Curves.easeIn,
-              alignment: Alignment.bottomCenter,
-              child: !showAttachmentPicker
-                  ? SizedBox(width: NavigationSvc.width(context))
-                  : AttachmentPicker(
-                      controller: controller,
-                    ),
-            )),
+                  duration: const Duration(milliseconds: 250),
+                  curve: Curves.easeIn,
+                  alignment: Alignment.bottomCenter,
+                  child: !showAttachmentPicker
+                      ? SizedBox(width: NavigationSvc.width(context))
+                      : AttachmentPicker(
+                          controller: controller,
+                        ),
+                )),
             AnimatedSize(
               duration: const Duration(milliseconds: 250),
               curve: Curves.easeIn,
@@ -1446,7 +1446,9 @@ class TextFieldComponentState extends State<TextFieldComponent> {
     }
 
     if (isChatCreator) {
-      if ((kIsDesktop || kIsWeb) && ev.logicalKey == LogicalKeyboardKey.enter && !HardwareKeyboard.instance.isShiftPressed) {
+      if ((kIsDesktop || kIsWeb) &&
+          ev.logicalKey == LogicalKeyboardKey.enter &&
+          !HardwareKeyboard.instance.isShiftPressed) {
         sendMessage();
         return KeyEventResult.handled;
       }

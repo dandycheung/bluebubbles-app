@@ -327,12 +327,17 @@ class ThemeStruct {
         gradientBg: json["gradientBg"] == 1,
         themeData: baseTheme.copyWith(splashFactory: InkSparkle.splashFactory, extensions: [
           BubbleColors(
-            iMessageBubbleColor: map["colorScheme"]["iMessageBubble"] == null ? null : Color(map["colorScheme"]["iMessageBubble"]),
-            oniMessageBubbleColor: map["colorScheme"]["oniMessageBubble"] == null ? null : Color(map["colorScheme"]["oniMessageBubble"]),
+            iMessageBubbleColor:
+                map["colorScheme"]["iMessageBubble"] == null ? null : Color(map["colorScheme"]["iMessageBubble"]),
+            oniMessageBubbleColor:
+                map["colorScheme"]["oniMessageBubble"] == null ? null : Color(map["colorScheme"]["oniMessageBubble"]),
             smsBubbleColor: map["colorScheme"]["smsBubble"] == null ? null : Color(map["colorScheme"]["smsBubble"]),
-            onSmsBubbleColor: map["colorScheme"]["onSmsBubble"] == null ? null : Color(map["colorScheme"]["onSmsBubble"]),
-            receivedBubbleColor: map["colorScheme"]["receivedBubble"] == null ? null : Color(map["colorScheme"]["receivedBubble"]),
-            onReceivedBubbleColor: map["colorScheme"]["onReceivedBubble"] == null ? null : Color(map["colorScheme"]["onReceivedBubble"]),
+            onSmsBubbleColor:
+                map["colorScheme"]["onSmsBubble"] == null ? null : Color(map["colorScheme"]["onSmsBubble"]),
+            receivedBubbleColor:
+                map["colorScheme"]["receivedBubble"] == null ? null : Color(map["colorScheme"]["receivedBubble"]),
+            onReceivedBubbleColor:
+                map["colorScheme"]["onReceivedBubble"] == null ? null : Color(map["colorScheme"]["onReceivedBubble"]),
           ),
           BubbleText(
             bubbleText: font(
@@ -437,13 +442,13 @@ class ThemeStruct {
 
   /// Returns the default text sizes
   static Map<String, double> get defaultTextSizes => {
-        "titleLarge": 22,  // M3 default
-        "bodyLarge": 16,   // M3 default
-        "bodyMedium": 14,  // M3 default
-        "bodySmall": 12,   // M3 default
-        "labelLarge": 14,  // M3 default
-        "labelSmall": 11,  // M3 default
-        "bubbleText": 15,  // custom default
+        "titleLarge": 22, // M3 default
+        "bodyLarge": 16, // M3 default
+        "bodyMedium": 14, // M3 default
+        "bodySmall": 12, // M3 default
+        "labelLarge": 14, // M3 default
+        "labelSmall": 11, // M3 default
+        "bubbleText": 15, // custom default
       };
 
   @override

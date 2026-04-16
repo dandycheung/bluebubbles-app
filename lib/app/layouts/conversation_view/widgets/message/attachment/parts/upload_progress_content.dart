@@ -38,10 +38,7 @@ class UploadProgressContent extends StatelessWidget {
         ),
       );
     }
-    if (previewFile != null &&
-        attachment.mimeStart == "video" &&
-        !SettingsSvc.settings.highPerfMode.value &&
-        !isSnap) {
+    if (previewFile != null && attachment.mimeStart == "video" && !SettingsSvc.settings.highPerfMode.value && !isSnap) {
       return VideoPlayer(
         attachment: attachment,
         file: previewFile,

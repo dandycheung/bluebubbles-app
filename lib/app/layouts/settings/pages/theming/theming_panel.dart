@@ -418,23 +418,23 @@ class _ThemingPanelState extends CustomState<ThemingPanel, void, ThemingPanelCon
                       ),
                     if (!kIsWeb && !kIsDesktop) const SettingsDivider(padding: EdgeInsets.only(left: 16.0)),
                     Obx(() {
-                          if (SettingsSvc.settings.skin.value != Skins.iOS) return const SizedBox.shrink();
-                          return Column(
-                            children: [
-                              SettingsSwitch(
-                                onChanged: (bool val) async {
-                                  SettingsSvc.settings.colorfulAvatars.value = val;
-                                  await SettingsSvc.settings.saveOneAsync('colorfulAvatars');
-                                },
-                                initialVal: SettingsSvc.settings.colorfulAvatars.value,
-                                title: "Colorful Avatars",
-                                backgroundColor: tileColor,
-                                subtitle: "Gives letter avatars a splash of color",
-                              ),
-                              const SettingsDivider(padding: EdgeInsets.only(left: 16.0)),
-                            ],
-                          );
-                        }),
+                      if (SettingsSvc.settings.skin.value != Skins.iOS) return const SizedBox.shrink();
+                      return Column(
+                        children: [
+                          SettingsSwitch(
+                            onChanged: (bool val) async {
+                              SettingsSvc.settings.colorfulAvatars.value = val;
+                              await SettingsSvc.settings.saveOneAsync('colorfulAvatars');
+                            },
+                            initialVal: SettingsSvc.settings.colorfulAvatars.value,
+                            title: "Colorful Avatars",
+                            backgroundColor: tileColor,
+                            subtitle: "Gives letter avatars a splash of color",
+                          ),
+                          const SettingsDivider(padding: EdgeInsets.only(left: 16.0)),
+                        ],
+                      );
+                    }),
                     Obx(() => SettingsSwitch(
                           onChanged: (bool val) async {
                             SettingsSvc.settings.colorfulBubbles.value = val;

@@ -373,7 +373,9 @@ class ThemePreviewCard extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 10)
             .add(EdgeInsets.only(left: isMe ? 0 : 10, right: isMe ? 10 : 0)),
         color: bg,
-        child: Text(text, style: context.theme.textTheme.labelSmall?.copyWith(color: onBg, fontSize: _previewBubbleFontSize(context))),
+        child: Text(text,
+            style:
+                context.theme.textTheme.labelSmall?.copyWith(color: onBg, fontSize: _previewBubbleFontSize(context))),
       ),
     );
   }
@@ -424,7 +426,8 @@ class ThemePreviewCard extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text("iMessage",
-                        style: context.theme.textTheme.labelSmall?.copyWith(color: cs.outline, fontSize: _previewTextFieldFontSize(context))),
+                        style: context.theme.textTheme.labelSmall
+                            ?.copyWith(color: cs.outline, fontSize: _previewTextFieldFontSize(context))),
                   ),
                   Container(
                     width: 20,
@@ -471,7 +474,8 @@ class ThemePreviewCard extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text("Message",
-                        style: context.theme.textTheme.labelSmall?.copyWith(color: cs.outline, fontSize: _previewTextFieldFontSize(context))),
+                        style: context.theme.textTheme.labelSmall
+                            ?.copyWith(color: cs.outline, fontSize: _previewTextFieldFontSize(context))),
                   ),
                   Icon(Icons.send_rounded, size: 16, color: cs.primary),
                 ],
@@ -509,8 +513,9 @@ class ThemePreviewCard extends StatelessWidget {
               ),
               padding: const EdgeInsets.symmetric(horizontal: 10),
               alignment: Alignment.centerLeft,
-              child:
-                  Text("Message", style: context.theme.textTheme.labelSmall?.copyWith(color: cs.outline, fontSize: _previewTextFieldFontSize(context))),
+              child: Text("Message",
+                  style: context.theme.textTheme.labelSmall
+                      ?.copyWith(color: cs.outline, fontSize: _previewTextFieldFontSize(context))),
             ),
           ),
           const SizedBox(width: 6),

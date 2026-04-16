@@ -28,10 +28,33 @@ class _SendAnimationState extends CustomState<SendAnimation, SendData, Conversat
   Message? message;
   Tween<double> tween = Tween<double>(begin: 1, end: 0);
   Control control = Control.stop;
-  double textFieldSize = 0;
 
+  // The padding applied to the ConversationTextField (bottom: 10 + top: 10) plus
+  // the visual gap between the text field top edge and the bottom of the message list.
+  static const double _textFieldVerticalPadding = 17.5;
+
+  // Fixed height of the TypingIndicatorRow when visible.
+  static const double _typingIndicatorHeight = 50.0;
+
+  // Live measurement of the text field's current rendered height.
+  double get textFieldSize =>
+      (controller.textFieldKey.currentContext?.findRenderObject() as RenderBox?)?.size.height ?? 0;
+
+  // Height of the focus-info widget (NotificationsSilencedBanner) above the text field.
   double get focusInfoSize =>
       (controller.focusInfoKey.currentContext?.findRenderObject() as RenderBox?)?.size.height ?? 0;
+
+  // Extra vertical offset that differs between the iOS skin and Material/Samsung skins.
+  double get _platformVerticalOffset => iOS ? 1.0 : 18.5;
+
+  // Offset for typing indicator when it is visible.
+  double get _typingIndicatorOffset =>
+      controller.showTypingIndicator.value ? _typingIndicatorHeight : 0;
+
+  // Total bottom offset for the AnimatedPositioned — how far above the bottom
+  // of the Stack the animation bubble should land at the end of its travel.
+  double get _animationBottomOffset =>
+      textFieldSize + focusInfoSize + _textFieldVerticalPadding + _typingIndicatorOffset + _platformVerticalOffset;
 
   @override
   void initState() {
@@ -70,10 +93,6 @@ class _SendAnimationState extends CustomState<SendAnimation, SendData, Conversat
       });
     }
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final box = controller.textFieldKey.currentContext?.findRenderObject() as RenderBox?;
-      textFieldSize = box?.size.height ?? 0;
-    });
   }
 
   Future<void> send(SendData data) async {
@@ -230,14 +249,12 @@ class _SendAnimationState extends CustomState<SendAnimation, SendData, Conversat
     final messageBoxSize = NavigationSvc.width(context) - buttonSize;
     return AnimatedPositioned(
       duration: Duration(milliseconds: message != null ? duration : 0),
-      bottom: message != null
-          ? textFieldSize + focusInfoSize + 17.5 + (controller.showTypingIndicator.value ? 50 : 0) + (!iOS ? 18.5 : 0)
-          : 0,
+      bottom: message != null ? _animationBottomOffset : 0,
       right: samsung ? -38 : (iOS ? -5.0 : 5.0),
       curve: curve,
       onEnd: () async {
         if (message != null) {
-          await Future.delayed(const Duration(milliseconds: 100));
+          await Future.delayed(const Duration(milliseconds: 200));
           setState(() {
             tween = Tween<double>(begin: 1, end: 0);
             control = Control.stop;

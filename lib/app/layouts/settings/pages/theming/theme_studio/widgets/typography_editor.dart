@@ -244,9 +244,7 @@ class _SizePresetRow extends StatelessWidget {
           ),
           Expanded(
             child: SegmentedButton<String>(
-              segments: _presets.keys
-                  .map((k) => ButtonSegment<String>(value: k, label: Text(k)))
-                  .toList(),
+              segments: _presets.keys.map((k) => ButtonSegment<String>(value: k, label: Text(k))).toList(),
               selected: {selected},
               onSelectionChanged: (s) => onChanged(_presets[s.first]!),
               style: SegmentedButton.styleFrom(

@@ -356,152 +356,153 @@ class _ThemeStudioPanelState extends CustomState<ThemeStudioPanel, void, ThemeSt
         if (shouldPop && context.mounted) Navigator.of(context).pop();
       },
       child: Obx(() {
-      final hasPending = controller.pendingChanges.value;
-      return SettingsScaffold(
-        title: "Theme Studio",
-        initialHeader: null,
-        iosSubtitle: iosSubtitle,
-        materialSubtitle: materialSubtitle,
-        tileColor: tileColor,
-        headerColor: headerColor,
-        leading: hasPending
-            ? _PendingBackButton(onPressed: () => _confirmDiscard(context).then((ok) {
-                if (ok && context.mounted) Navigator.of(context).pop();
-              }))
-            : null,
-        actions: hasPending
-            ? [
-                TextButton(
-                  onPressed: () => controller.discardChanges(),
-                  child: Text("Discard", style: TextStyle(color: context.theme.colorScheme.error)),
-                ),
-                TextButton(
+        final hasPending = controller.pendingChanges.value;
+        return SettingsScaffold(
+          title: "Theme Studio",
+          initialHeader: null,
+          iosSubtitle: iosSubtitle,
+          materialSubtitle: materialSubtitle,
+          tileColor: tileColor,
+          headerColor: headerColor,
+          leading: hasPending
+              ? _PendingBackButton(
+                  onPressed: () => _confirmDiscard(context).then((ok) {
+                        if (ok && context.mounted) Navigator.of(context).pop();
+                      }))
+              : null,
+          actions: hasPending
+              ? [
+                  TextButton(
+                    onPressed: () => controller.discardChanges(),
+                    child: Text("Discard", style: TextStyle(color: context.theme.colorScheme.error)),
+                  ),
+                  TextButton(
+                    onPressed: () => controller.applyChanges(context),
+                    child: const Text("Apply"),
+                  ),
+                ]
+              : [],
+          fab: hasPending
+              ? FloatingActionButton.extended(
                   onPressed: () => controller.applyChanges(context),
-                  child: const Text("Apply"),
-                ),
-              ]
-            : [],
-        fab: hasPending
-            ? FloatingActionButton.extended(
-                onPressed: () => controller.applyChanges(context),
-                icon: const Icon(Icons.check_rounded),
-                label: const Text("Apply"),
-              )
-            : null,
-        bodySlivers: [
-        // Light/dark preview toggle
-        SliverToBoxAdapter(
-          child: Obx(() {
-            controller.version.value;
-            return Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
-              child: Row(
-                children: [
-                  Text(
-                    "Preview",
-                    style: context.theme.textTheme.titleSmall?.copyWith(
-                      color: context.theme.colorScheme.onSurface,
-                    ),
-                  ),
-                  const Spacer(),
-                  _PreviewToggle(controller: controller),
-                ],
-              ),
-            );
-          }),
-        ),
-
-        // Live preview
-        SliverToBoxAdapter(
-          child: Obx(() {
-            controller.version.value;
-            controller.previewDark.value;
-            // Also subscribe to skin so the preview rebuilds when the user
-            // switches between iOS / Material / Samsung themes.
-            SettingsSvc.settings.skin.value;
-            return Padding(
-              padding: EdgeInsets.fromLTRB(16, 0, 16, 0),
-              child: DecoratedBox(
-                position: DecorationPosition.foreground,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: context.theme.colorScheme.outline.withValues(alpha: 0.35),
-                    width: 1.5,
-                  ),
-                ),
-                child: ThemePreviewCard(struct: controller.previewTheme),
-              ),
-            );
-          }),
-        ),
-
-        // Themes
-        SliverToBoxAdapter(child: _sectionHeader(context, "Themes")),
-        SliverToBoxAdapter(
-          child: Obx(() {
-            controller.version.value;
-            controller.pendingChanges.value;
-            return ThemeSelectorSection(controller: controller);
-          }),
-        ),
-
-        // Colors
-        SliverToBoxAdapter(child: _sectionHeader(context, "Colors")),
-        SliverToBoxAdapter(
-          child: Obx(() {
-            controller.version.value;
-            if (!controller.isEditable) {
-              return Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                child: Row(
-                  children: [
-                    Icon(Icons.info_outline, size: 14, color: context.theme.colorScheme.onSurfaceVariant),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        "To customize the app colors, create a new theme.",
-                        style: context.theme.textTheme.bodySmall?.copyWith(
-                          color: context.theme.colorScheme.onSurfaceVariant,
+                  icon: const Icon(Icons.check_rounded),
+                  label: const Text("Apply"),
+                )
+              : null,
+          bodySlivers: [
+            // Light/dark preview toggle
+            SliverToBoxAdapter(
+              child: Obx(() {
+                controller.version.value;
+                return Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
+                  child: Row(
+                    children: [
+                      Text(
+                        "Preview",
+                        style: context.theme.textTheme.titleSmall?.copyWith(
+                          color: context.theme.colorScheme.onSurface,
                         ),
                       ),
+                      const Spacer(),
+                      _PreviewToggle(controller: controller),
+                    ],
+                  ),
+                );
+              }),
+            ),
+
+            // Live preview
+            SliverToBoxAdapter(
+              child: Obx(() {
+                controller.version.value;
+                controller.previewDark.value;
+                // Also subscribe to skin so the preview rebuilds when the user
+                // switches between iOS / Material / Samsung themes.
+                SettingsSvc.settings.skin.value;
+                return Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+                  child: DecoratedBox(
+                    position: DecorationPosition.foreground,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: context.theme.colorScheme.outline.withValues(alpha: 0.35),
+                        width: 1.5,
+                      ),
                     ),
-                  ],
-                ),
-              );
-            }
-            return const SizedBox.shrink();
-          }),
-        ),
-        SliverToBoxAdapter(
-          child: Obx(() {
-            controller.version.value;
-            return _ColorEditorBody(controller: controller);
-          }),
-        ),
+                    child: ThemePreviewCard(struct: controller.previewTheme),
+                  ),
+                );
+              }),
+            ),
 
-        // Typography
-        SliverToBoxAdapter(child: _sectionHeader(context, "Typography")),
-        SliverToBoxAdapter(
-          child: Obx(() {
-            controller.version.value;
-            return TypographyEditor(controller: controller);
-          }),
-        ),
+            // Themes
+            SliverToBoxAdapter(child: _sectionHeader(context, "Themes")),
+            SliverToBoxAdapter(
+              child: Obx(() {
+                controller.version.value;
+                controller.pendingChanges.value;
+                return ThemeSelectorSection(controller: controller);
+              }),
+            ),
 
-        // Manage
-        SliverToBoxAdapter(child: _sectionHeader(context, "Manage Theme")),
-        SliverToBoxAdapter(
-          child: Obx(() {
-            controller.version.value;
-            return ThemeManagementSection(controller: controller);
-          }),
-        ),
+            // Colors
+            SliverToBoxAdapter(child: _sectionHeader(context, "Colors")),
+            SliverToBoxAdapter(
+              child: Obx(() {
+                controller.version.value;
+                if (!controller.isEditable) {
+                  return Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                    child: Row(
+                      children: [
+                        Icon(Icons.info_outline, size: 14, color: context.theme.colorScheme.onSurfaceVariant),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            "To customize the app colors, create a new theme.",
+                            style: context.theme.textTheme.bodySmall?.copyWith(
+                              color: context.theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+                return const SizedBox.shrink();
+              }),
+            ),
+            SliverToBoxAdapter(
+              child: Obx(() {
+                controller.version.value;
+                return _ColorEditorBody(controller: controller);
+              }),
+            ),
 
-        const SliverToBoxAdapter(child: SizedBox(height: 48)),
-      ],
-      );
-    }),
+            // Typography
+            SliverToBoxAdapter(child: _sectionHeader(context, "Typography")),
+            SliverToBoxAdapter(
+              child: Obx(() {
+                controller.version.value;
+                return TypographyEditor(controller: controller);
+              }),
+            ),
+
+            // Manage
+            SliverToBoxAdapter(child: _sectionHeader(context, "Manage Theme")),
+            SliverToBoxAdapter(
+              child: Obx(() {
+                controller.version.value;
+                return ThemeManagementSection(controller: controller);
+              }),
+            ),
+
+            const SliverToBoxAdapter(child: SizedBox(height: 48)),
+          ],
+        );
+      }),
     );
   }
 
@@ -551,7 +552,8 @@ class _PreviewToggle extends StatelessWidget {
     });
   }
 
-  Widget _tab(BuildContext context, {required String label, required IconData icon, required bool selected, required VoidCallback onTap}) {
+  Widget _tab(BuildContext context,
+      {required String label, required IconData icon, required bool selected, required VoidCallback onTap}) {
     final cs = context.theme.colorScheme;
     return GestureDetector(
       onTap: onTap,

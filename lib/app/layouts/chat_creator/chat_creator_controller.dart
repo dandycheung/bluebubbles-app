@@ -564,8 +564,7 @@ class ChatCreatorController extends StatefulController {
             final msgResponse = await HttpSvc.chatMessages(resolvedChat.guid, limit: 1);
             final msgData = msgResponse.data['data'];
             if (msgData is List && msgData.isNotEmpty) {
-              final messages =
-                  msgData.map((e) => Message.fromMap(e as Map<String, dynamic>)).toList();
+              final messages = msgData.map((e) => Message.fromMap(e as Map<String, dynamic>)).toList();
               syncedMessages = await Chat.bulkSyncMessages(resolvedChat, messages);
             }
           } catch (_) {

@@ -818,11 +818,7 @@ class ChatsService {
     if (deleteHandles) {
       final otherChats = allChats.where((c) => c.guid != chat.guid).toList();
       final otherHandleIds = otherChats.expand((c) => c.handles).map((h) => h.id).whereType<int>().toSet();
-      handleIds = chat.handles
-          .map((e) => e.id)
-          .whereType<int>()
-          .where((id) => !otherHandleIds.contains(id))
-          .toList();
+      handleIds = chat.handles.map((e) => e.id).whereType<int>().where((id) => !otherHandleIds.contains(id)).toList();
     }
 
     // Perform the actual DB deletion
