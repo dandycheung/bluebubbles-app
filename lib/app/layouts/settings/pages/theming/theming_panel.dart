@@ -49,7 +49,6 @@ class ThemingPanel extends CustomStateful<ThemingPanelController> {
 class _ThemingPanelState extends CustomState<ThemingPanel, void, ThemingPanelController> {
   @override
   Widget build(BuildContext context) {
-    print("REBUILDING");
     return Obx(
       () => SettingsScaffold(
         title: "Theming & Styles",

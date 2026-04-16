@@ -79,7 +79,6 @@ class _SettingsPageState extends State<SettingsPage> with ThemeHelpers {
 
   @override
   Widget build(BuildContext context) {
-    print(context.theme.colorScheme.surfaceContainerHighest.hex);
     return GestureDetector(
       behavior: HitTestBehavior.translucent,
       onTap: () => FocusScope.of(context).unfocus(),

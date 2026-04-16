@@ -49,12 +49,43 @@ class _BubbleEffectsState extends State<BubbleEffects> with SingleTickerProvider
   bool _pendingAutoPlay = false;
 
   /// Drives the fade-out of the invisible-ink overlay when swiped away.
-  late final AnimationController _fadeController = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 400),
-    value: 1.0,
-  );
-  late final Animation<double> _fadeAnimation = _fadeController;
+  /// Initialized eagerly in [initState] so that [dispose] never triggers the
+  /// lazy initializer on a deactivated element.
+  late final AnimationController _fadeController;
+  late final Animation<double> _fadeAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _fadeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+      value: 1.0,
+    );
+    _fadeAnimation = _fadeController;
+  }
+
+  /// Safely reads the size of [widget.globalKey]'s render object.
+  /// Returns [Size.zero] if the render object has not yet been laid out.
+  Size _readSize() {
+    final renderBox = widget.globalKey?.currentContext?.findRenderObject() as RenderBox?;
+    return (renderBox?.hasSize == true) ? renderBox!.size : Size.zero;
+  }
+
+  /// Schedules [callback] for the first post-frame where the render object
+  /// keyed by [widget.globalKey] has a valid size. Retries each frame until
+  /// layout is complete or the widget is unmounted.
+  void _whenSized(void Function(Size s) callback) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final renderBox = widget.globalKey?.currentContext?.findRenderObject() as RenderBox?;
+      if (renderBox == null || !renderBox.hasSize) {
+        _whenSized(callback);
+        return;
+      }
+      callback(renderBox.size);
+    });
+  }
 
   @override
   void didChangeDependencies() {
@@ -72,26 +103,22 @@ class _BubbleEffectsState extends State<BubbleEffects> with SingleTickerProvider
           // Set size first, then flip rxControl so the single Obx rebuild
           // that fires has the correct dimensions and BackdropFilter covers
           // the text from the very first animated frame.
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) {
-              size = widget.globalKey?.currentContext?.size ?? Size.zero;
-              _fadeController.value = 1.0;
-              rxControl.value = Control.play;
-            }
+          _whenSized((s) {
+            size = s;
+            _fadeController.value = 1.0;
+            rxControl.value = Control.play;
           });
         } else if (effect.isBubble && !ms.hasEffectPlayed.value) {
           _pendingAutoPlay = true;
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) {
-              size = widget.globalKey?.currentContext?.size ?? Size.zero;
-              ms.triggerBubbleEffect(widget.part);
-            }
+          _whenSized((s) {
+            size = s;
+            ms.triggerBubbleEffect(widget.part);
           });
         }
 
         _effectWorker = ever(ms.playEffectPart, (int? part) {
           if (part == widget.part) {
-            size = widget.globalKey?.currentContext?.size ?? Size.zero;
+            size = _readSize();
             _fadeController.value = 1.0;
             rxControl.value = Control.playFromStart;
           }

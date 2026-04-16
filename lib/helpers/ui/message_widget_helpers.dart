@@ -26,7 +26,6 @@ List<InlineSpan> buildMessageSpans(BuildContext context, MessagePart part, Messa
             (message.isFromMe! ? context.theme.colorScheme.onPrimary : context.theme.colorScheme.onSurfaceVariant),
         fontSizeFactor: message.isBigEmoji ? 3 : 1,
       );
-  print(textStyle.fontSize);
 
   if (!isNullOrEmpty(part.subject)) {
     textSpans.addAll(MessageHelper.buildEmojiText(

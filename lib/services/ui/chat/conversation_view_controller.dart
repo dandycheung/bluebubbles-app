@@ -140,13 +140,13 @@ class ConversationViewController extends StatefulController with GetSingleTicker
     textController.mentionables = mentionables;
     KeyboardVisibilityController().onChange.listen((bool visible) async {
       keyboardOpen = visible;
-      if (scrollController.hasClients) {
+      if (scrollController.hasClients && scrollController.positions.length == 1) {
         _keyboardOffset = scrollController.offset;
       }
     });
 
     scrollController.addListener(() {
-      if (!scrollController.hasClients) return;
+      if (!scrollController.hasClients || scrollController.positions.length != 1) return;
       if (keyboardOpen &&
           SettingsSvc.settings.hideKeyboardOnScroll.value &&
           scrollController.offset > _keyboardOffset + 100) {
