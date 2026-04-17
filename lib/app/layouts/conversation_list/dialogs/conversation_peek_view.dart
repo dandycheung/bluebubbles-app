@@ -349,37 +349,39 @@ class _ConversationPeekViewState extends State<ConversationPeekView>
             await showDialog(
               barrierDismissible: false,
               context: context,
-              builder: (BuildContext context) {
+              builder: (BuildContext dialogContext) {
                 return AlertDialog(
                   title: Text(
                     "Are you sure?",
-                    style: context.theme.textTheme.titleLarge,
+                    style: dialogContext.theme.textTheme.titleLarge,
                   ),
-                  content:
-                      Text("This chat will be deleted from this device only", style: context.theme.textTheme.bodyLarge),
-                  backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
+                  content: Text("This chat will be deleted from this device only",
+                      style: dialogContext.theme.textTheme.bodyLarge),
+                  backgroundColor: dialogContext.theme.colorScheme.surfaceContainerHighest,
                   actions: <Widget>[
                     TextButton(
                       child: Text("No",
-                          style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.primary)),
+                          style: dialogContext.theme.textTheme.bodyLarge!
+                              .copyWith(color: dialogContext.theme.colorScheme.primary)),
                       onPressed: () {
-                        popPeekView();
+                        Navigator.of(dialogContext).pop();
                       },
                     ),
                     TextButton(
                       child: Text("Yes",
-                          style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.primary)),
-                      onPressed: () async {
+                          style: dialogContext.theme.textTheme.bodyLarge!
+                              .copyWith(color: dialogContext.theme.colorScheme.primary)),
+                      onPressed: () {
                         ChatsSvc.removeChat(widget.chat);
                         ChatsSvc.softDeleteChat(widget.chat);
-                        popPeekView();
+                        Navigator.of(dialogContext).pop();
                       },
                     ),
                   ],
                 );
               },
             );
-            popPeekView();
+            if (mounted) popPeekView();
           },
           child: ListTile(
             mouseCursor: MouseCursor.defer,
