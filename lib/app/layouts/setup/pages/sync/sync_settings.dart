@@ -61,6 +61,41 @@ class SyncSettings extends StatelessWidget {
                 ],
               ),
             ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 40.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    mainAxisSize: MainAxisSize.max,
+                    children: [
+                      Text(
+                        "Sync group chat icons",
+                        style: context.theme.textTheme.bodyLarge!
+                            .copyWith(color: context.theme.colorScheme.onSurfaceVariant)
+                            .copyWith(height: 1.5),
+                        textAlign: TextAlign.center,
+                      ),
+                      StatefulSwitch(
+                        parentController: controller,
+                        initial: controller.syncGroupChatIcons,
+                        update: (newVal) {
+                          controller.syncGroupChatIcons = newVal;
+                        },
+                      ),
+                    ],
+                  ),
+                  Text(
+                    "Note: Syncing group chat icons can significantly increase the time it takes to sync chats.",
+                    style: context.theme.textTheme.bodySmall!.copyWith(
+                      color: context.theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                ],
+              ),
+            ),
             if (!kIsWeb)
               Padding(
                 padding: const EdgeInsets.only(left: 40.0, right: 40.0, bottom: 20),
@@ -113,12 +148,13 @@ class SyncSettings extends StatelessWidget {
             final numberOfMessagesPerPage = controller.numberToDownload.clamp(1, double.infinity).toInt();
             final skipEmptyChats = controller.skipEmptyChats;
             final saveToDownloads = controller.saveToDownloads;
+            final syncGroupChatIcons = controller.syncGroupChatIcons;
             final syncTimeFilter = controller.syncTimeFilter;
 
             // Init the full sync first so when we go to the next page,
             // the manager is already created.
             // Don't await or else the page won't change.
-            setup.startSetup(numberOfMessagesPerPage, skipEmptyChats, saveToDownloads, syncTimeFilter);
+            setup.startSetup(numberOfMessagesPerPage, skipEmptyChats, saveToDownloads, syncGroupChatIcons, syncTimeFilter);
 
             controller.pageController.nextPage(
               duration: const Duration(milliseconds: 300),

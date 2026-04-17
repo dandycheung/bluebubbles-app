@@ -1,4 +1,5 @@
 import 'package:bluebubbles/database/models.dart';
+import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/services/services.dart';
 import 'package:faker/faker.dart';
 import 'package:flutter/foundation.dart';
@@ -89,7 +90,10 @@ class HandleState {
       final firstNative = h.contactsV2.where((c) => c.isNative).firstOrNull;
       return firstNative?.nickname ?? firstNative?.displayName ?? h.contactsV2.first.computedDisplayName;
     }
-    return h.address.contains("@") ? h.address : (h.formattedAddress ?? h.address);
+
+    // Formatted address should be filled out by the bulk sync chats process. However, if somehow
+    // it isn't, we can format it on-demand here for display purposes.
+    return h.address.contains("@") ? h.address : (h.formattedAddress ?? formatPhoneNumber(h.address));
   }
 
   static String _computeReactionDisplayName(Handle h) {

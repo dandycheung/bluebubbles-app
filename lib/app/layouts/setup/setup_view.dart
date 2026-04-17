@@ -1,9 +1,9 @@
 import 'package:bluebubbles/helpers/helpers.dart';
+import 'package:bluebubbles/app/layouts/setup/pages/permissions/request_permissions.dart';
 import 'package:bluebubbles/app/layouts/setup/pages/setup_checks/battery_optimization.dart';
 import 'package:bluebubbles/app/layouts/setup/dialogs/failed_to_connect_dialog.dart';
 import 'package:bluebubbles/app/layouts/setup/pages/sync/sync_settings.dart';
 import 'package:bluebubbles/app/layouts/setup/pages/sync/server_credentials.dart';
-import 'package:bluebubbles/app/layouts/setup/pages/contacts/request_contacts.dart';
 import 'package:bluebubbles/app/layouts/setup/pages/setup_checks/mac_setup_check.dart';
 import 'package:bluebubbles/app/layouts/setup/pages/sync/sync_progress.dart';
 import 'package:bluebubbles/app/layouts/setup/pages/welcome/welcome_page.dart';
@@ -14,7 +14,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_acrylic/flutter_acrylic.dart';
 import 'package:get/get.dart';
-import 'package:permission_handler/permission_handler.dart';
 
 class SetupViewController extends StatefulController {
   final pageController = PageController(initialPage: 0);
@@ -22,6 +21,7 @@ class SetupViewController extends StatefulController {
   int numberToDownload = 25;
   bool skipEmptyChats = true;
   bool saveToDownloads = false;
+  bool syncGroupChatIcons = false;
   int? syncTimeFilter = 15552000000; // 6 months in milliseconds (default)
   String error = "";
   bool obscurePass = true;
@@ -187,16 +187,6 @@ class SetupPages extends StatelessWidget {
       child: PageView(
         onPageChanged: (page) {
           // skip pages if the things required are already complete
-          if (!kIsWeb && !kIsDesktop && page == 1 && controller.currentPage == 1) {
-            Permission.contacts.status.then((status) {
-              if (status.isGranted) {
-                controller.pageController.nextPage(
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeInOut,
-                );
-              }
-            });
-          }
           if (!kIsWeb && !kIsDesktop && page == 2 && controller.currentPage == 2) {
             DisableBatteryOptimization.isAllBatteryOptimizationDisabled.then((isDisabled) {
               if (isDisabled ?? false) {
@@ -213,7 +203,7 @@ class SetupPages extends StatelessWidget {
         controller: controller.pageController,
         children: <Widget>[
           const WelcomePage(),
-          if (!kIsWeb && !kIsDesktop) const RequestContacts(),
+          if (!kIsWeb && !kIsDesktop) const RequestPermissions(),
           if (!kIsWeb && !kIsDesktop) const BatteryOptimizationCheck(),
           const MacSetupCheck(),
           const ServerCredentials(),

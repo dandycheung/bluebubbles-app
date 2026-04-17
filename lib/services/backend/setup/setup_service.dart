@@ -8,10 +8,11 @@ SetupService setup = Get.isRegistered<SetupService>() ? Get.find<SetupService>()
 
 class SetupService extends GetxService {
   Future<void> startSetup(
-      int numberOfMessagesPerPage, bool skipEmptyChats, bool saveToDownloads, int? syncTimeFilter) async {
+      int numberOfMessagesPerPage, bool skipEmptyChats, bool saveToDownloads, bool syncGroupChatIcons, int? syncTimeFilter) async {
     SyncSvc.numberOfMessagesPerPage = numberOfMessagesPerPage;
     SyncSvc.skipEmptyChats = skipEmptyChats;
     SyncSvc.saveToDownloads = saveToDownloads;
+    SyncSvc.syncGroupChatIcons = syncGroupChatIcons;
     SyncSvc.syncTimeFilter = syncTimeFilter;
 
     SyncSvc.initFullSync();
