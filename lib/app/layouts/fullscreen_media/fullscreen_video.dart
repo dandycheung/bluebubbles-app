@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/scheduler.dart';
 import 'package:bluebubbles/app/layouts/fullscreen_media/dialogs/metadata_dialog.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/database/models.dart';
@@ -182,9 +183,13 @@ class _FullscreenVideoState extends State<FullscreenVideo> with AutomaticKeepAli
     _cancelHideTimer();
     _setFullscreen(false);
 
-    // Sync mute state back to parent
+    // Sync mute state back to parent — deferred to avoid mutating an Rx value
+    // while the widget tree is locked (causes markNeedsBuild error in Obx).
     if (widget.mute != null) {
-      widget.mute!.value = muted.value;
+      final muteValue = muted.value;
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        widget.mute!.value = muteValue;
+      });
     }
 
     // Only dispose the player if one was not passed in (via a controller)

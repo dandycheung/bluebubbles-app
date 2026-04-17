@@ -157,7 +157,7 @@ class ConversationViewState extends State<ConversationView> with ThemeHelpers<Co
                   extendBodyBehindAppBar: true,
                   appBar: PreferredSize(
                       preferredSize: Size(
-                          NavigationSvc.width(context),
+                          double.infinity, // width is ignored by Scaffold; avoid MediaQuery.of subscription
                           (kIsDesktop ? (!iOS ? 25 : 5) : 0) +
                               90 * (iOS ? avatarScale : 0) +
                               (!iOS ? kToolbarHeight : 0)),
@@ -169,7 +169,9 @@ class ConversationViewState extends State<ConversationView> with ThemeHelpers<Co
                     child: GradientBackground(
                       controller: controller,
                       child: SizedBox(
-                        height: context.height,
+                        // sizeOf only rebuilds on screen size changes (rotation), not on
+                        // keyboard viewInsets animation frames which change viewInsets.bottom
+                        height: MediaQuery.sizeOf(context).height,
                         child: Stack(
                           clipBehavior: Clip.none,
                           children: [

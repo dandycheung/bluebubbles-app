@@ -744,16 +744,22 @@ class ConversationTextFieldState extends CustomState<ConversationTextField, void
                   ),
                 ),
             ]),
-            Obx(() => AnimatedSize(
-                  duration: const Duration(milliseconds: 250),
-                  curve: Curves.easeIn,
-                  alignment: Alignment.bottomCenter,
-                  child: !showAttachmentPicker
-                      ? SizedBox(width: NavigationSvc.width(context))
-                      : AttachmentPicker(
-                          controller: controller,
-                        ),
-                )),
+            Builder(builder: (context) {
+              // Capture width outside the Obx lambda so the reactive builder does not
+              // register a MediaQuery.of dependency and rebuild on keyboard animation frames.
+              // sizeOf only notifies on actual display-size changes (rotation / resize).
+              final pickerWidth = MediaQuery.sizeOf(context).width;
+              return Obx(() => AnimatedSize(
+                    duration: const Duration(milliseconds: 250),
+                    curve: Curves.easeIn,
+                    alignment: Alignment.bottomCenter,
+                    child: !showAttachmentPicker
+                        ? SizedBox(width: pickerWidth)
+                        : AttachmentPicker(
+                            controller: controller,
+                          ),
+                  ));
+            }),
             AnimatedSize(
               duration: const Duration(milliseconds: 250),
               curve: Curves.easeIn,
