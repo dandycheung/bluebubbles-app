@@ -134,7 +134,7 @@ dependencies:
   path_provider: ^2.1.5 # no web support
   pdf: ^3.11.3
   permission_handler: ^12.0.1 # mobile only
-  photo_manager: ^3.7.1 # only mobile
+  photo_manager: '>=3.8.3 <3.9.0' # only mobile; 3.9.0 has Kotlin classpath conflict with AGP 8.9/Kotlin 2.1
   photo_view: ^0.15.0
   printing: ^5.14.2
   pull_down_button: ^0.10.2
