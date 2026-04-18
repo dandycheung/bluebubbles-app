@@ -22,7 +22,9 @@ One instance per chat GUID. Accessed via `MessagesSvc(chatGuid)`.
 - `updateMessage(Message, {String? oldGuid})` — the main write path; merges changes into `MessageState` and handles tempGuid → realGuid remapping
 - `addMessages(List<Message>)` — bulk-inserts into the struct and creates `MessageState` entries
 - `getMessage(String guid)` → `Message?` — fast in-memory lookup
-- `getOrCreateController(Message)` → `MessageWidgetController` — lazily creates a per-message controller
+- `getOrCreateState(Message)` → `MessageState` — lazily creates or retrieves a `MessageState` for a message
+- `getOrCreateMessageState(String guid)` → `MessageState` — same but keyed by GUID
+- `getMessageStateIfExists(String guid)` → `MessageState?` — non-creating lookup
 
 **Convenience getters:**
 - `mostRecentSent` — the most recently sent outgoing message
@@ -35,22 +37,3 @@ One instance per chat GUID. Accessed via `MessagesSvc(chatGuid)`.
 - For bulk initial load, use `addMessages()` which skips per-field update overhead
 
 **For the full update flow**, see `docs/MESSAGE_RECEIVE_FLOW.md`.
-
----
-
-## MessageWidgetController (`message_widget_controller.dart`)
-
-One instance per visible message. Obtained via `MessagesSvc(chatGuid).getOrCreateController(message)`.
-
-**What it owns:**
-- Parsed `List<MessagePart>` — the message content split into typed parts (text, attachment, etc.)
-- Edit history display state
-- Audio playback tracking
-
-**Lifecycle:** Created lazily when a message widget first renders; cached in `MessagesService` so the same controller is returned on re-renders. Cleared when the message is removed from the visible list.
-
-**Access pattern in widgets:**
-```dart
-final controller = MessagesSvc(chat.guid).getOrCreateController(message);
-final parts = controller.parts;  // pre-parsed, cached
-```

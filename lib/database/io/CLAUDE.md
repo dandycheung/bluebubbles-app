@@ -12,7 +12,7 @@ After any `@Entity` annotation change: **`dart run build_runner build`**
 | `attachment.dart` | guid (unique), uti, mimeType, transferName, totalBytes | → message (ToOne via backlink) |
 | `handle.dart` | address+service unique pair, service (iMessage/SMS), country | → contact V1 (ToOne), ← ContactV2.handles (backlink) |
 | `contact_v2.dart` | displayName, nativeContactId (unique), avatarPath | ↔ handles (ToMany N:M) |
-| `contact.dart` | phone, email, vCard (legacy V1) | ← chats (backlink) |
+
 | `theme.dart` | name (unique), serialized FlutterThemeData, googleFont, gradientBg | — |
 | `theme_entry.dart` | reference to a Theme record | — |
 | `theme_object.dart` | theme metadata wrapper | — |
