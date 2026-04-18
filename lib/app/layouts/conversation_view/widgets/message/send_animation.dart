@@ -48,8 +48,7 @@ class _SendAnimationState extends CustomState<SendAnimation, SendData, Conversat
   double get _platformVerticalOffset => iOS ? 1.0 : 18.5;
 
   // Offset for typing indicator when it is visible.
-  double get _typingIndicatorOffset =>
-      controller.showTypingIndicator.value ? _typingIndicatorHeight : 0;
+  double get _typingIndicatorOffset => controller.showTypingIndicator.value ? _typingIndicatorHeight : 0;
 
   // Total bottom offset for the AnimatedPositioned — how far above the bottom
   // of the Stack the animation bubble should land at the end of its travel.
@@ -92,7 +91,6 @@ class _SendAnimationState extends CustomState<SendAnimation, SendData, Conversat
         });
       });
     }
-
   }
 
   Future<void> send(SendData data) async {

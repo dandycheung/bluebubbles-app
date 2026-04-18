@@ -56,12 +56,20 @@ class _RequestPermissionsState extends State<RequestPermissions> with WidgetsBin
       await Permission.contacts.request();
     }
     final status = await Permission.contacts.status;
-    if (mounted) setState(() { _contactsStatus = status; _contactsRequested = true; });
+    if (mounted)
+      setState(() {
+        _contactsStatus = status;
+        _contactsRequested = true;
+      });
   }
 
   Future<void> _requestNotifications() async {
     final result = await Permission.notification.request();
-    if (mounted) setState(() { _notifStatus = result; _notifRequested = true; });
+    if (mounted)
+      setState(() {
+        _notifStatus = result;
+        _notifRequested = true;
+      });
   }
 
   bool get _notifRequired {
@@ -93,14 +101,14 @@ class _RequestPermissionsState extends State<RequestPermissions> with WidgetsBin
             ),
             const SizedBox(height: 12),
             if (_notifRequired)
-            _PermissionCard(
-              icon: Icons.notifications_rounded,
-              label: "Notifications",
-              description: "Get notified instantly when new messages arrive.",
-              status: _notifStatus,
-              hasRequested: _notifRequested,
-              onRequest: _requestNotifications,
-            ),
+              _PermissionCard(
+                icon: Icons.notifications_rounded,
+                label: "Notifications",
+                description: "Get notified instantly when new messages arrive.",
+                status: _notifStatus,
+                hasRequested: _notifRequested,
+                onRequest: _requestNotifications,
+              ),
           ],
         ),
       ),
@@ -112,29 +120,32 @@ class _RequestPermissionsState extends State<RequestPermissions> with WidgetsBin
         if (!_notifStatus.isGranted && _notifRequired) missing.add("Notifications");
 
         return await showDialog<bool>(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: Text("Missing Permissions", style: context.theme.textTheme.titleLarge),
-            backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
-            content: Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Text(
-                "${missing.join(' and ')} ${missing.length == 1 ? 'permission has' : 'permissions have'} not been granted.\n\nAre you sure you want to proceed?",
-                style: context.theme.textTheme.bodyLarge,
+              context: context,
+              builder: (context) => AlertDialog(
+                title: Text("Missing Permissions", style: context.theme.textTheme.titleLarge),
+                backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
+                content: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Text(
+                    "${missing.join(' and ')} ${missing.length == 1 ? 'permission has' : 'permissions have'} not been granted.\n\nAre you sure you want to proceed?",
+                    style: context.theme.textTheme.bodyLarge,
+                  ),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(false),
+                    child: Text("No",
+                        style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.primary)),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(true),
+                    child: Text("Yes",
+                        style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.primary)),
+                  ),
+                ],
               ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: Text("No", style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.primary)),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                child: Text("Yes", style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.primary)),
-              ),
-            ],
-          ),
-        ) ?? false;
+            ) ??
+            false;
       },
     );
   }
@@ -263,7 +274,7 @@ class _PermissionCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 10),
-                  _ActionButton(
+                  const _ActionButton(
                     label: "Open Settings",
                     icon: Icons.settings_rounded,
                     onPressed: openAppSettings,

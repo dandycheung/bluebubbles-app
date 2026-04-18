@@ -154,7 +154,8 @@ class SyncSettings extends StatelessWidget {
             // Init the full sync first so when we go to the next page,
             // the manager is already created.
             // Don't await or else the page won't change.
-            setup.startSetup(numberOfMessagesPerPage, skipEmptyChats, saveToDownloads, syncGroupChatIcons, syncTimeFilter);
+            setup.startSetup(
+                numberOfMessagesPerPage, skipEmptyChats, saveToDownloads, syncGroupChatIcons, syncTimeFilter);
 
             controller.pageController.nextPage(
               duration: const Duration(milliseconds: 300),
