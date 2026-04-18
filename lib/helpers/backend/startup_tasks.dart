@@ -97,7 +97,7 @@ class StartupTasks {
 
     Logger.info("Registering HttpService...");
     GetIt.I.registerSingleton<HttpService>(HttpService());
-    HttpSvc.init();
+    await HttpSvc.init();
 
     // We then have to initialize all the services that the app will use.
     // Order matters here as some services may rely on others. For instance,
@@ -263,7 +263,7 @@ class StartupTasks {
 
     Logger.info("Registering HttpService...");
     GetIt.I.registerSingleton<HttpService>(HttpService());
-    HttpSvc.init();
+    await HttpSvc.init();
 
     Logger.info("Global isolate services initialization complete");
   }
@@ -340,7 +340,7 @@ class StartupTasks {
 
     Logger.info("Registering HttpService...");
     GetIt.I.registerSingleton<HttpService>(HttpService());
-    HttpSvc.init();
+    await HttpSvc.init();
     Logger.info("HttpService ready");
 
     Logger.info("Sync isolate services initialization complete");
@@ -444,7 +444,7 @@ class StartupTasks {
 
     Logger.info("Registering HttpService...");
     GetIt.I.registerSingleton<HttpService>(HttpService());
-    HttpSvc.init();
+    await HttpSvc.init();
 
     Logger.info("Registering IncomingMessageHandler...");
     GetIt.I.registerSingleton<IncomingMessageHandler>(

@@ -2,9 +2,11 @@ import 'package:bluebubbles/database/models.dart';
 import 'package:bluebubbles/helpers/ui/ui_helpers.dart';
 import 'package:bluebubbles/utils/logger/logger.dart';
 import 'package:bluebubbles/services/services.dart';
+import 'package:bluebubbles/services/network/http_overrides.dart';
+import 'package:bluebubbles/services/network/user_certificates.dart';
 import 'package:dio/dio.dart';
+import 'package:dio/io.dart';
 import 'package:flutter/services.dart';
-import 'package:native_dio_adapter/native_dio_adapter.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -85,16 +87,30 @@ class HttpService {
     return SettingsSvc.settings.customHeaders.value;
   }
 
-  void init() {
+  Future<void> init() async {
     dio = Dio(BaseOptions(
       connectTimeout: const Duration(milliseconds: 15000),
       receiveTimeout: Duration(milliseconds: SettingsSvc.settings.apiTimeout.value),
       sendTimeout: Duration(milliseconds: SettingsSvc.settings.apiTimeout.value),
       headers: headers,
     ));
-    // Native Adapter will use the native http implementation on macOS, iOS and Android.
-    // Other platforms still use the Dart http stack.
-    dio.httpClientAdapter = NativeAdapter();
+    // Use IOHttpClientAdapter with certificate validation so that:
+    // 1. Self-signed server certs are accepted via shouldAcceptCertificate.
+    // 2. Device-level user-installed certificates (Android) are trusted by
+    //    loading them into the SecurityContext via UserCertificates.
+    // NativeAdapter was removed because it bypasses Dart's HttpOverrides and
+    // therefore the shouldAcceptCertificate callback, breaking self-signed cert support.
+    if (!kIsWeb) {
+      // Pre-fetch user cert context (async; Android only — null on other platforms).
+      final SecurityContext? userCertContext = await UserCertificates().getContext();
+      dio.httpClientAdapter = IOHttpClientAdapter(
+        createHttpClient: () {
+          final client = HttpClient(context: userCertContext);
+          client.badCertificateCallback = shouldAcceptCertificate;
+          return client;
+        },
+      );
+    }
     dio.interceptors.add(ApiInterceptor());
     // Uncomment to run tests on most API requests
     // testAPI();

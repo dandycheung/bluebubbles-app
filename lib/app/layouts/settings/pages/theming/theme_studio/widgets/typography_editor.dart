@@ -50,24 +50,10 @@ class _TypographyEditorState extends State<TypographyEditor> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  IgnorePointer(
-                    ignoring: !editable,
-                    child: Opacity(
-                      opacity: editable ? 1.0 : 0.5,
-                      child: SettingsOptions<String>(
-                        title: "Font Family",
-                        initial: theme.googleFont,
-                        clampWidth: false,
-                        options: ['Default', ...GoogleFonts.asMap().keys],
-                        textProcessing: (s) => s,
-                        secondaryColor: context.headerColor,
-                        useCupertino: false,
-                        onChanged: (value) {
-                          if (!editable || value == null) return;
-                          ctrl.updateFont(context, value);
-                        },
-                      ),
-                    ),
+                  _FontPickerTile(
+                    currentFont: theme.googleFont,
+                    editable: editable,
+                    onChanged: (value) => ctrl.updateFont(context, value),
                   ),
                   Padding(
                     padding: const EdgeInsets.only(bottom: 8, left: 16, right: 16),
@@ -151,19 +137,20 @@ class _TypographyEditorState extends State<TypographyEditor> {
                         ),
                       ),
                     ),
-                    AnimatedCrossFade(
+                    AnimatedSize(
                       duration: const Duration(milliseconds: 200),
-                      crossFadeState: _sizesExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
-                      firstChild: const SizedBox.shrink(),
-                      secondChild: Column(
-                        children: theme.textSizes.keys.map((key) {
-                          return _SizePresetRow(
-                            label: key,
-                            currentMultiplier: _multiplierFor(key),
-                            onChanged: (v) => ctrl.updateTextSize(context, key, v),
-                          );
-                        }).toList(),
-                      ),
+                      curve: Curves.easeInOut,
+                      child: _sizesExpanded
+                          ? Column(
+                              children: theme.textSizes.keys.map((key) {
+                                return _SizePresetRow(
+                                  label: key,
+                                  currentMultiplier: _multiplierFor(key),
+                                  onChanged: (v) => ctrl.updateTextSize(context, key, v),
+                                );
+                              }).toList(),
+                            )
+                          : const SizedBox.shrink(),
                     ),
                   ],
                 ),
@@ -261,3 +248,157 @@ class _SizePresetRow extends StatelessWidget {
 }
 
 // (removed _StyleSlider — replaced by _SizePresetRow above)
+
+// ─── Font picker (lazy — avoids building 1000+ DropdownMenuItems at render) ───
+
+/// File-level cache: GoogleFonts.asMap() is called at most once per session.
+List<String>? _cachedFontNames;
+List<String> _getFontNames() => _cachedFontNames ??= ['Default', ...GoogleFonts.asMap().keys];
+
+class _FontPickerTile extends StatelessWidget {
+  const _FontPickerTile({
+    required this.currentFont,
+    required this.editable,
+    required this.onChanged,
+  });
+
+  final String currentFont;
+  final bool editable;
+  final void Function(String) onChanged;
+
+  void _openSheet(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => _FontPickerSheet(
+        currentFont: currentFont,
+        onSelected: onChanged,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        children: [
+          Text('Font Family', style: context.theme.textTheme.bodyLarge),
+          const SizedBox(width: 15),
+          Expanded(
+            child: GestureDetector(
+              onTap: editable ? () => _openSheet(context) : null,
+              child: Opacity(
+                opacity: editable ? 1.0 : 0.5,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8),
+                    color: context.headerColor,
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          currentFont,
+                          style: context.theme.textTheme.bodyLarge,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      Icon(Icons.arrow_drop_down, color: context.theme.textTheme.bodyLarge?.color),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FontPickerSheet extends StatefulWidget {
+  const _FontPickerSheet({required this.currentFont, required this.onSelected});
+
+  final String currentFont;
+  final void Function(String) onSelected;
+
+  @override
+  State<_FontPickerSheet> createState() => _FontPickerSheetState();
+}
+
+class _FontPickerSheetState extends State<_FontPickerSheet> {
+  late List<String> _filtered;
+  final _searchCtrl = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _filtered = _getFontNames();
+    _searchCtrl.addListener(_onSearch);
+  }
+
+  void _onSearch() {
+    final q = _searchCtrl.text.toLowerCase();
+    setState(() {
+      _filtered = q.isEmpty
+          ? _getFontNames()
+          : _getFontNames().where((f) => f.toLowerCase().contains(q)).toList();
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.6,
+      minChildSize: 0.4,
+      maxChildSize: 0.9,
+      expand: false,
+      builder: (_, scrollCtrl) => Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: TextField(
+              controller: _searchCtrl,
+              autofocus: false,
+              decoration: InputDecoration(
+                hintText: 'Search fonts…',
+                prefixIcon: const Icon(Icons.search),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                contentPadding: const EdgeInsets.symmetric(vertical: 10),
+              ),
+            ),
+          ),
+          Expanded(
+            child: ListView.builder(
+              controller: scrollCtrl,
+              itemCount: _filtered.length,
+              itemBuilder: (_, i) {
+                final font = _filtered[i];
+                final selected = font == widget.currentFont;
+                return ListTile(
+                  dense: true,
+                  title: Text(font, style: context.theme.textTheme.bodyMedium),
+                  selected: selected,
+                  selectedTileColor: context.theme.colorScheme.primaryContainer.withValues(alpha: 0.35),
+                  trailing: selected ? Icon(Icons.check, color: context.theme.colorScheme.primary) : null,
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    widget.onSelected(font);
+                  },
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

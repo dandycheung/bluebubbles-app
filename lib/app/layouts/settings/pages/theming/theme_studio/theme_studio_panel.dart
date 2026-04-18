@@ -34,8 +34,12 @@ class ThemeStudioController extends StatefulController {
 
   final RxList<ThemeStruct> allThemes = <ThemeStruct>[].obs;
 
-  /// Bumped whenever state changes so that Obx() widgets rebuild.
-  final RxInt version = 0.obs;
+  /// Bumped when active theme data (colors, font, sizes) changes, or when the
+  /// active theme selection changes.
+  final RxInt themeDataVersion = 0.obs;
+
+  /// Bumped when the list of available themes changes (add/remove/rename/select).
+  final RxInt themeListVersion = 0.obs;
 
   /// True when changes have been staged but not yet applied to the running UI.
   final RxBool pendingChanges = false.obs;
@@ -58,17 +62,20 @@ class ThemeStudioController extends StatefulController {
     lightTheme = ThemeStruct.getLightTheme();
     darkTheme = ThemeStruct.getDarkTheme();
     allThemes.value = ThemeStruct.getThemes();
-    version.value++;
+    themeDataVersion.value++;
+    themeListVersion.value++;
   }
 
   /// Refreshes only the list of all themes without resetting the staged
   /// light/dark selections.
   void _reloadThemesList() {
     allThemes.value = ThemeStruct.getThemes();
-    version.value++;
+    themeListVersion.value++;
   }
 
-  void bump() => version.value++;
+  void bump() {
+    themeDataVersion.value++;
+  }
 
   // ── Theme selection ────────────────────────────────────────────────────────
 
@@ -82,7 +89,8 @@ class ThemeStudioController extends StatefulController {
     } else {
       lightTheme = struct;
     }
-    version.value++;
+    themeDataVersion.value++;
+    themeListVersion.value++;
     pendingChanges.value = true;
   }
 
@@ -112,7 +120,7 @@ class ThemeStudioController extends StatefulController {
     final map = activeTheme.toMap();
     map["data"]["colorScheme"][colorKey] = newColor.toARGB32();
     activeTheme.data = ThemeStruct.fromMap(map).data;
-    version.value++;
+    themeDataVersion.value++;
     pendingChanges.value = true;
   }
 
@@ -126,7 +134,7 @@ class ThemeStudioController extends StatefulController {
     // Do not save to DB here — font changes are staged in memory only and
     // persisted when the user explicitly clicks Apply (applyChanges). This
     // ensures re-entering the page always shows the currently applied font.
-    version.value++;
+    themeDataVersion.value++;
     pendingChanges.value = true;
   }
 
@@ -137,7 +145,7 @@ class ThemeStudioController extends StatefulController {
       map["data"]["textTheme"][k]['fontSize'] = ThemeStruct.defaultTextSizes[k]! * multiplier;
     }
     activeTheme.data = ThemeStruct.fromMap(map).data;
-    version.value++;
+    themeDataVersion.value++;
     pendingChanges.value = true;
   }
 
@@ -157,6 +165,7 @@ class ThemeStudioController extends StatefulController {
       lightTheme = newTheme;
     }
     _reloadThemesList();
+    themeDataVersion.value++;
     pendingChanges.value = true;
     return newTheme;
   }
@@ -180,6 +189,7 @@ class ThemeStudioController extends StatefulController {
       lightTheme = clone;
     }
     _reloadThemesList();
+    themeDataVersion.value++;
     pendingChanges.value = true;
     return clone;
   }
@@ -208,7 +218,7 @@ class ThemeStudioController extends StatefulController {
     final brightness = isDark.value ? Brightness.dark : Brightness.light;
     final swatch = ColorScheme.fromSeed(seedColor: seed, brightness: brightness);
     activeTheme.data = activeTheme.data.copyWith(colorScheme: swatch);
-    version.value++;
+    themeDataVersion.value++;
     pendingChanges.value = true;
   }
 
@@ -221,7 +231,7 @@ class ThemeStudioController extends StatefulController {
     final swatch = await ColorScheme.fromImageProvider(
         provider: image, brightness: isDark.value ? Brightness.dark : Brightness.light);
     activeTheme.data = activeTheme.data.copyWith(colorScheme: swatch);
-    version.value++;
+    themeDataVersion.value++;
     pendingChanges.value = true;
   }
 
@@ -231,7 +241,7 @@ class ThemeStudioController extends StatefulController {
         ? ThemesService.defaultThemes.firstWhere((e) => e.name == "OLED Dark")
         : ThemesService.defaultThemes.firstWhere((e) => e.name == "Bright White");
     activeTheme.data = defaultTheme.data;
-    version.value++;
+    themeDataVersion.value++;
     pendingChanges.value = true;
   }
 
@@ -293,6 +303,11 @@ class ThemeStudioPanel extends CustomStateful<ThemeStudioController> {
 class _ThemeStudioPanelState extends CustomState<ThemeStudioPanel, void, ThemeStudioController> {
   bool _initialized = false;
 
+  /// False until the first frame is committed. Colors / Typography / Manage
+  /// sections are deferred behind this flag so the visible content (preview +
+  /// theme selector) can appear without blocking on below-fold layout work.
+  bool _contentReady = false;
+
   @override
   void initState() {
     super.initState();
@@ -304,6 +319,16 @@ class _ThemeStudioPanelState extends CustomState<ThemeStudioPanel, void, ThemeSt
     if (!_initialized) {
       _initialized = true;
       controller.init(ThemeSvc.inDarkMode(context));
+      // Defer below-fold sections two frames out:
+      //  - Frame 2: ThemeSelectorSection builds its full theme card list.
+      //  - Frame 3: Colors/Typography/Manage sections appear.
+      // Using a nested postFrameCallback ensures they never land in the same
+      // rasterize pass, keeping each frame small.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) setState(() => _contentReady = true);
+        });
+      });
     }
   }
 
@@ -392,30 +417,27 @@ class _ThemeStudioPanelState extends CustomState<ThemeStudioPanel, void, ThemeSt
           bodySlivers: [
             // Light/dark preview toggle
             SliverToBoxAdapter(
-              child: Obx(() {
-                controller.version.value;
-                return Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
-                  child: Row(
-                    children: [
-                      Text(
-                        "Preview",
-                        style: context.theme.textTheme.titleSmall?.copyWith(
-                          color: context.theme.colorScheme.onSurface,
-                        ),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
+                child: Row(
+                  children: [
+                    Text(
+                      "Preview",
+                      style: context.theme.textTheme.titleSmall?.copyWith(
+                        color: context.theme.colorScheme.onSurface,
                       ),
-                      const Spacer(),
-                      _PreviewToggle(controller: controller),
-                    ],
-                  ),
-                );
-              }),
+                    ),
+                    const Spacer(),
+                    _PreviewToggle(controller: controller),
+                  ],
+                ),
+              ),
             ),
 
             // Live preview
             SliverToBoxAdapter(
               child: Obx(() {
-                controller.version.value;
+                controller.themeDataVersion.value;
                 controller.previewDark.value;
                 // Also subscribe to skin so the preview rebuilds when the user
                 // switches between iOS / Material / Samsung themes.
@@ -431,7 +453,9 @@ class _ThemeStudioPanelState extends CustomState<ThemeStudioPanel, void, ThemeSt
                         width: 1.5,
                       ),
                     ),
+                    child: RepaintBoundary(
                     child: ThemePreviewCard(struct: controller.previewTheme),
+                  ),
                   ),
                 );
               }),
@@ -441,63 +465,67 @@ class _ThemeStudioPanelState extends CustomState<ThemeStudioPanel, void, ThemeSt
             SliverToBoxAdapter(child: _sectionHeader(context, "Themes")),
             SliverToBoxAdapter(
               child: Obx(() {
-                controller.version.value;
+                controller.themeListVersion.value;
                 controller.pendingChanges.value;
                 return ThemeSelectorSection(controller: controller);
               }),
             ),
 
-            // Colors
-            SliverToBoxAdapter(child: _sectionHeader(context, "Colors")),
-            SliverToBoxAdapter(
-              child: Obx(() {
-                controller.version.value;
-                if (!controller.isEditable) {
-                  return Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                    child: Row(
-                      children: [
-                        Icon(Icons.info_outline, size: 14, color: context.theme.colorScheme.onSurfaceVariant),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            "To customize the app colors, create a new theme.",
-                            style: context.theme.textTheme.bodySmall?.copyWith(
-                              color: context.theme.colorScheme.onSurfaceVariant,
+            // Colors / Typography / Manage — deferred until after first frame
+            // so the visible sections (preview + theme selector) appear immediately.
+            if (_contentReady) ...[                
+              // Colors
+              SliverToBoxAdapter(child: _sectionHeader(context, "Colors")),
+              SliverToBoxAdapter(
+                child: Obx(() {
+                  controller.themeDataVersion.value;
+                  if (!controller.isEditable) {
+                    return Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                      child: Row(
+                        children: [
+                          Icon(Icons.info_outline, size: 14, color: context.theme.colorScheme.onSurfaceVariant),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              "To customize the app colors, create a new theme.",
+                              style: context.theme.textTheme.bodySmall?.copyWith(
+                                color: context.theme.colorScheme.onSurfaceVariant,
+                              ),
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-                return const SizedBox.shrink();
-              }),
-            ),
-            SliverToBoxAdapter(
-              child: Obx(() {
-                controller.version.value;
-                return _ColorEditorBody(controller: controller);
-              }),
-            ),
+                        ],
+                      ),
+                    );
+                  }
+                  return const SizedBox.shrink();
+                }),
+              ),
+              SliverToBoxAdapter(
+                child: Obx(() {
+                  controller.themeDataVersion.value;
+                  return _ColorEditorBody(controller: controller);
+                }),
+              ),
 
-            // Typography
-            SliverToBoxAdapter(child: _sectionHeader(context, "Typography")),
-            SliverToBoxAdapter(
-              child: Obx(() {
-                controller.version.value;
-                return TypographyEditor(controller: controller);
-              }),
-            ),
+              // Typography
+              SliverToBoxAdapter(child: _sectionHeader(context, "Typography")),
+              SliverToBoxAdapter(
+                child: Obx(() {
+                  controller.themeDataVersion.value;
+                  return TypographyEditor(controller: controller);
+                }),
+              ),
 
-            // Manage
-            SliverToBoxAdapter(child: _sectionHeader(context, "Manage Theme")),
-            SliverToBoxAdapter(
-              child: Obx(() {
-                controller.version.value;
-                return ThemeManagementSection(controller: controller);
-              }),
-            ),
+              // Manage
+              SliverToBoxAdapter(child: _sectionHeader(context, "Manage Theme")),
+              SliverToBoxAdapter(
+                child: Obx(() {
+                  controller.themeListVersion.value;
+                  return ThemeManagementSection(controller: controller);
+                }),
+              ),
+            ],
 
             const SliverToBoxAdapter(child: SizedBox(height: 48)),
           ],
