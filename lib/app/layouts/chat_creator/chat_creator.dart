@@ -652,22 +652,24 @@ class ChatCreatorState extends State<ChatCreator> with ThemeHelpers {
                                   .map((e) => e.address.isEmail ? e.address : cleansePhoneNumber(e.address))
                                   .toList();
                               final method = selectedService.value.method;
+                              BuildContext? createDialogCtx;
                               showDialog(
                                   context: context,
-                                  builder: (BuildContext context) {
+                                  builder: (BuildContext dialogContext) {
+                                    createDialogCtx = dialogContext;
                                     return AlertDialog(
-                                      backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
+                                      backgroundColor: dialogContext.theme.colorScheme.surfaceContainerHighest,
                                       title: Text(
                                         "Creating a new $method chat...",
-                                        style: context.theme.textTheme.titleLarge,
+                                        style: dialogContext.theme.textTheme.titleLarge,
                                       ),
                                       content: SizedBox(
                                         height: 70,
                                         child: Center(
                                           child: CircularProgressIndicator(
-                                            backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
+                                            backgroundColor: dialogContext.theme.colorScheme.surfaceContainerHighest,
                                             valueColor:
-                                                AlwaysStoppedAnimation<Color>(context.theme.colorScheme.primary),
+                                                AlwaysStoppedAnimation<Color>(dialogContext.theme.colorScheme.primary),
                                           ),
                                         ),
                                       ),
@@ -710,8 +712,8 @@ class ChatCreatorState extends State<ChatCreator> with ThemeHelpers {
                                 // Let awaiters know we completed
                                 createCompleter?.complete();
 
-                                // Navigate to the new chat
-                                Navigator.of(context).pop();
+                                if (createDialogCtx != null) Navigator.of(createDialogCtx!).pop();
+                                if (!mounted) return;
                                 NavigationSvc.pushAndRemoveUntil(
                                   Get.context!,
                                   ConversationView(chat: newChat),
@@ -727,30 +729,34 @@ class ChatCreatorState extends State<ChatCreator> with ThemeHelpers {
                                   ),
                                 );
                               }).catchError((error) {
-                                Navigator.of(context).pop();
+                                if (createDialogCtx != null) Navigator.of(createDialogCtx!).pop();
+                                if (!mounted) {
+                                  if (!createCompleter!.isCompleted) createCompleter?.completeError(error);
+                                  return;
+                                }
                                 showDialog(
                                     barrierDismissible: false,
                                     context: context,
-                                    builder: (BuildContext context) {
+                                    builder: (BuildContext dialogContext) {
                                       return AlertDialog(
-                                        backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
+                                        backgroundColor: dialogContext.theme.colorScheme.surfaceContainerHighest,
                                         title: Text(
                                           "Failed to create chat!",
-                                          style: context.theme.textTheme.titleLarge,
+                                          style: dialogContext.theme.textTheme.titleLarge,
                                         ),
                                         content: Text(
                                           error is Response
                                               ? "Reason: (${error.data["error"]["type"]}) -> ${error.data["error"]["message"]}"
                                               : error.toString(),
-                                          style: context.theme.textTheme.bodyLarge,
+                                          style: dialogContext.theme.textTheme.bodyLarge,
                                         ),
                                         actions: [
                                           TextButton(
                                             child: Text("OK",
-                                                style: context.theme.textTheme.bodyLarge!
+                                                style: dialogContext.theme.textTheme.bodyLarge!
                                                     .copyWith(color: Get.context!.theme.colorScheme.primary)),
                                             onPressed: () {
-                                              Navigator.of(context).pop();
+                                              Navigator.of(dialogContext).pop();
                                             },
                                           )
                                         ],

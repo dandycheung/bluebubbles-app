@@ -164,14 +164,6 @@ class _MessagePopupState extends State<MessagePopup> with SingleTickerProviderSt
   }
 
   void popDetails({bool returnVal = true}) {
-    bool dialogOpen = Get.isDialogOpen ?? false;
-    if (dialogOpen) {
-      if (kIsWeb) {
-        Get.back();
-      } else {
-        Navigator.of(context).pop();
-      }
-    }
     Navigator.of(context).pop(returnVal);
   }
 

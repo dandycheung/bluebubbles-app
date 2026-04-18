@@ -243,31 +243,40 @@ class _PermissionCard extends StatelessWidget {
               ),
             ],
           ),
-          // Action row — only shown when not granted
-          if (!granted) ...[
-            const SizedBox(height: 14),
-            const Divider(height: 1),
-            const SizedBox(height: 14),
-            if (permanentlyDenied) ...[
-              Text(
-                "Permission permanently denied. Enable it in Settings to continue.",
-                style: context.theme.textTheme.bodySmall!.copyWith(
-                  color: context.theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(height: 10),
-              _ActionButton(
-                label: "Open Settings",
-                icon: Icons.settings_rounded,
-                onPressed: openAppSettings,
-              ),
-            ] else
-              _ActionButton(
-                label: "Grant Permission",
-                icon: Icons.lock_open_rounded,
-                onPressed: onRequest ?? () {},
-              ),
-          ],
+          // Action row — animates away when permission is granted
+          AnimatedCrossFade(
+            duration: const Duration(milliseconds: 350),
+            sizeCurve: Curves.easeInOut,
+            crossFadeState: granted ? CrossFadeState.showFirst : CrossFadeState.showSecond,
+            firstChild: const SizedBox.shrink(),
+            secondChild: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 14),
+                const Divider(height: 1),
+                const SizedBox(height: 14),
+                if (permanentlyDenied) ...[
+                  Text(
+                    "Permission permanently denied. Enable it in Settings to continue.",
+                    style: context.theme.textTheme.bodySmall!.copyWith(
+                      color: context.theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  _ActionButton(
+                    label: "Open Settings",
+                    icon: Icons.settings_rounded,
+                    onPressed: openAppSettings,
+                  ),
+                ] else
+                  _ActionButton(
+                    label: "Grant Permission",
+                    icon: Icons.lock_open_rounded,
+                    onPressed: onRequest ?? () {},
+                  ),
+              ],
+            ),
+          ),
         ],
       ),
     );

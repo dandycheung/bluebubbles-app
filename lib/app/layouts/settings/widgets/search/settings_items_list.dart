@@ -734,9 +734,13 @@ List<Widget> buildSettingItemList({
             child: SettingsTile(
               backgroundColor: tileColor,
               onTap: () async {
+                BuildContext? dialogCtx;
+
                 void closeDialog() {
                   Get.closeAllSnackbars();
-                  Navigator.of(context).pop();
+                  if (dialogCtx != null) {
+                    Navigator.of(dialogCtx!).pop();
+                  }
                   Future.delayed(const Duration(milliseconds: 400), () {
                     progress.value = null;
                     totalSize.value = null;
@@ -745,12 +749,15 @@ List<Widget> buildSettingItemList({
 
                 showDialog(
                   context: context,
-                  builder: (context) => ContactUploadProgress(
-                    progress: progress,
-                    totalSize: totalSize,
-                    uploadingContacts: uploadingContacts,
-                    onClose: closeDialog,
-                  ),
+                  builder: (dialogContext) {
+                    dialogCtx = dialogContext;
+                    return ContactUploadProgress(
+                      progress: progress,
+                      totalSize: totalSize,
+                      uploadingContacts: uploadingContacts,
+                      onClose: closeDialog,
+                    );
+                  },
                 );
 
                 final contacts = <Map<String, dynamic>>[];
