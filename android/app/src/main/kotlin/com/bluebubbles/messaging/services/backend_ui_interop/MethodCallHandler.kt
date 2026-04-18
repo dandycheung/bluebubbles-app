@@ -3,7 +3,7 @@ package com.bluebubbles.messaging.services.backend_ui_interop
 import android.content.Context
 import android.util.Log
 import com.bluebubbles.messaging.Constants
-import com.bluebubbles.messaging.MainActivity.Companion.engine
+import com.bluebubbles.messaging.MainActivity
 import com.bluebubbles.messaging.services.filesystem.GetContentUriPathHandler
 import com.bluebubbles.messaging.services.firebase.FirebaseAuthHandler
 import com.bluebubbles.messaging.services.firebase.FirebaseDeleteTokenHandler
@@ -35,8 +35,9 @@ class MethodCallHandler {
 
         /// Send a method call back to Dart (app must be launched, otherwise use the DartWorker!)
         fun invokeMethod(method: String, arguments: Map<String, Any>) {
-            if (engine != null) {
-                MethodChannel(engine!!.dartExecutor.binaryMessenger, Constants.methodChannel).invokeMethod(method, arguments)
+            val currentEngine = MainActivity.getEngine()
+            if (currentEngine != null) {
+                MethodChannel(currentEngine.dartExecutor.binaryMessenger, Constants.methodChannel).invokeMethod(method, arguments)
             }
         }
     }
@@ -44,6 +45,10 @@ class MethodCallHandler {
     fun methodCallHandler(call: MethodCall, result: MethodChannel.Result, context: Context) {
         Log.d(Constants.logTag, "Received new method call from Dart with method ${call.method}")
         when(call.method) {
+            "ready" -> {
+                Log.d(Constants.logTag, "Dart engine is ready!")
+                result.success(null)
+            }
             UnifiedPushHandler.tag -> UnifiedPushHandler().handleMethodCall(call, result, context)
             FirebaseAuthHandler.tag -> FirebaseAuthHandler().handleMethodCall(call, result, context)
             FirebaseDeleteTokenHandler.tag -> FirebaseDeleteTokenHandler().handleMethodCall(call, result, context)

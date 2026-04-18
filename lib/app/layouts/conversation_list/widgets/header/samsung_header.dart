@@ -9,35 +9,29 @@ import 'package:flutter_acrylic/flutter_acrylic.dart';
 import 'package:get/get.dart';
 
 class SamsungHeader extends CustomStateful<ConversationListController> {
-  const SamsungHeader({Key? key, required super.parentController});
+  const SamsungHeader({super.key, required super.parentController});
 
   @override
   State<StatefulWidget> createState() => _SamsungHeaderState();
 }
 
 class _SamsungHeaderState extends CustomState<SamsungHeader, void, ConversationListController> {
-  Color get backgroundColor => ss.settings.windowEffect.value == WindowEffect.disabled
-      ? headerColor
-      : Colors.transparent;
+  Color get backgroundColor =>
+      SettingsSvc.settings.windowEffect.value == WindowEffect.disabled ? headerColor : Colors.transparent;
   bool get showArchived => controller.showArchivedChats;
   bool get showUnknown => controller.showUnknownSenders;
 
   @override
   Widget build(BuildContext context) {
     return Obx(() {
-      ns.listener.value;
-      if (ns.isAvatarOnly(context)) {
+      NavigationSvc.listener.value;
+      if (NavigationSvc.isAvatarOnly(context)) {
         return SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.all(10.0).add(const EdgeInsets.only(top: 30)),
             child: Material(
               color: Colors.transparent,
-              shape: const CircleBorder(),
-              clipBehavior: Clip.antiAlias,
-              child: SizedBox(
-                width: 40,
-                child: OverflowMenu(extraItems: true, controller: controller),
-              ),
+              child: OverflowMenu(extraItems: true, controller: controller),
             ),
           ),
         );
@@ -54,7 +48,9 @@ class _SamsungHeaderState extends CustomState<SamsungHeader, void, ConversationL
         automaticallyImplyLeading: false,
         flexibleSpace: LayoutBuilder(
           builder: (context, constraints) {
-            final double expandRatio = ((constraints.maxHeight - (kToolbarHeight + (kIsDesktop ? 20 : 0))) / (context.height / 3 - (kToolbarHeight + (kIsDesktop ? 20 : 0)))).clamp(0, 1);
+            final double expandRatio = ((constraints.maxHeight - (kToolbarHeight + (kIsDesktop ? 20 : 0))) /
+                    (context.height / 3 - (kToolbarHeight + (kIsDesktop ? 20 : 0))))
+                .clamp(0, 1);
             final animation = AlwaysStoppedAnimation(expandRatio);
 
             return Stack(
@@ -85,7 +81,7 @@ class _SamsungHeaderState extends CustomState<SamsungHeader, void, ConversationL
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
                             HeaderText(controller: controller, fontSize: 20),
-                            SyncIndicator(),
+                            const SyncIndicator(),
                           ],
                         ),
                       ),
@@ -94,7 +90,7 @@ class _SamsungHeaderState extends CustomState<SamsungHeader, void, ConversationL
                 ),
                 Align(
                   alignment: Alignment.bottomRight,
-                  child: Container(
+                  child: SizedBox(
                     height: (kToolbarHeight + (kIsDesktop ? 20 : 0)),
                     child: Align(
                       alignment: Alignment.center,
@@ -107,49 +103,42 @@ class _SamsungHeaderState extends CustomState<SamsungHeader, void, ConversationL
                                   Navigator.of(context).pop();
                                 },
                                 padding: EdgeInsets.zero,
-                                icon: buildBackButton(context)
-                            ),
-                          if (!showArchived && !showUnknown)
-                            const SizedBox.shrink(),
+                                icon: buildBackButton(context)),
+                          if (!showArchived && !showUnknown) const SizedBox.shrink(),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.end,
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               if (!showArchived && !showUnknown)
                                 Padding(
-                                  padding: const EdgeInsets.only(left: 2),
-                                  child: IconButton(
-                                    onPressed: () async {
-                                      controller.openCamera(context);
-                                    },
-                                    icon: Icon(
-                                      Icons.camera_alt_outlined,
-                                      color: context.theme.colorScheme.properOnSurface,
-                                    ),
-                                  )),
+                                    padding: const EdgeInsets.only(left: 2),
+                                    child: IconButton(
+                                      onPressed: () async {
+                                        controller.openCamera(context);
+                                      },
+                                      icon: Icon(
+                                        Icons.camera_alt_outlined,
+                                        color: context.theme.colorScheme.onSurfaceVariant,
+                                      ),
+                                    )),
                               if (!showArchived && !showUnknown)
                                 IconButton(
-                                  onPressed: () async {
-                                    ns.pushLeft(
-                                      context,
-                                      SearchView(),
-                                    );
-                                  },
-                                  icon: Icon(
-                                    Icons.search,
-                                    color: context.theme.colorScheme.properOnSurface,
-                                  )),
+                                    onPressed: () async {
+                                      NavigationSvc.pushLeft(
+                                        context,
+                                        const SearchView(),
+                                      );
+                                    },
+                                    icon: Icon(
+                                      Icons.search,
+                                      color: context.theme.colorScheme.onSurfaceVariant,
+                                    )),
                               if (!showArchived && !showUnknown)
                                 const Padding(
                                   padding: EdgeInsets.only(right: 8.0),
                                   child: Material(
                                     color: Colors.transparent,
-                                    shape: CircleBorder(),
-                                    clipBehavior: Clip.antiAlias,
-                                    child: SizedBox(
-                                      width: 40,
-                                      child: OverflowMenu(),
-                                    ),
+                                    child: OverflowMenu(),
                                   ),
                                 ),
                             ],
@@ -169,7 +158,7 @@ class _SamsungHeaderState extends CustomState<SamsungHeader, void, ConversationL
 }
 
 class ExpandedHeaderText extends CustomStateful<ConversationListController> {
-  const ExpandedHeaderText({Key? key, required super.parentController});
+  const ExpandedHeaderText({super.key, required super.parentController});
 
   @override
   State<StatefulWidget> createState() => _ExpandedHeaderTextState();
@@ -179,18 +168,18 @@ class _ExpandedHeaderTextState extends CustomState<ExpandedHeaderText, void, Con
   @override
   Widget build(BuildContext context) {
     return Obx(() {
-      final unreadChats = GlobalChatService.unreadCount.value;
+      final unreadChats = ChatsSvc.unreadCount.value;
       return Text(
-          controller.selectedChats.isNotEmpty
-              ? "${controller.selectedChats.length} selected"
-              : controller.showArchivedChats
-              ? "Archived"
-              : controller.showUnknownSenders
-              ? "Unknown Senders"
-              : unreadChats > 0
-              ? "$unreadChats unread message${unreadChats > 1 ? "s" : ""}"
-              : "Messages",
-          style: context.theme.textTheme.displaySmall!.copyWith(color: context.theme.colorScheme.onBackground),
+        controller.selectedChats.isNotEmpty
+            ? "${controller.selectedChats.length} selected"
+            : controller.showArchivedChats
+                ? "Archived"
+                : controller.showUnknownSenders
+                    ? "Unknown Senders"
+                    : unreadChats > 0
+                        ? "$unreadChats unread message${unreadChats > 1 ? "s" : ""}"
+                        : "Messages",
+        style: context.theme.textTheme.displaySmall!.copyWith(color: context.theme.colorScheme.onSurface),
         textAlign: TextAlign.center,
       );
     });

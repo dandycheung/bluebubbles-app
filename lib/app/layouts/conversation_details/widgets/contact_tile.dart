@@ -2,6 +2,7 @@ import 'package:bluebubbles/app/layouts/conversation_details/dialogs/address_pic
 import 'package:bluebubbles/utils/logger/logger.dart';
 import 'package:bluebubbles/app/components/avatars/contact_avatar_widget.dart';
 import 'package:bluebubbles/database/models.dart';
+import 'package:bluebubbles/services/backend/interfaces/chat_interface.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
@@ -18,9 +19,17 @@ class ContactTile extends StatelessWidget {
   final Chat chat;
   final bool canBeRemoved;
 
-  Contact? get contact => handle.contact;
+  ContactV2? get contact => handle.contactsV2.firstOrNull;
 
-  ContactTile({
+  bool get hasPhones {
+    return contact?.addresses.any((addr) => !addr.contains('@')) ?? false;
+  }
+
+  bool get hasEmails {
+    return contact?.addresses.any((addr) => addr.contains('@')) ?? false;
+  }
+
+  const ContactTile({
     super.key,
     required this.handle,
     required this.chat,
@@ -29,166 +38,184 @@ class ContactTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bool redactedMode = ss.settings.redactedMode.value;
-    final bool hideInfo = redactedMode && ss.settings.hideContactInfo.value;
-    final bool isEmail = handle.address.isEmail;
-    final child = InkWell(
-      onLongPress: () {
-        Clipboard.setData(ClipboardData(text: handle.address));
-        if (!Platform.isAndroid || (fs.androidInfo?.version.sdkInt ?? 0) < 33) {
-          showSnackbar("Copied", "Address copied to clipboard!");
-        }
-      },
-      onTap: () async {
-        if (contact == null) {
-          await mcs.invokeMethod("open-contact-form", {'address': handle.address, 'address_type': handle.address.isEmail ? 'email' : 'phone'});
-        } else {
-          try {
-            await mcs.invokeMethod("view-contact-form", {'id': contact!.id});
-          } catch (_) {
-            showSnackbar("Error", "Failed to find contact on device!");
+    return Obx(() {
+      final bool hideInfo = SettingsSvc.settings.redactedMode.value && SettingsSvc.settings.hideContactInfo.value;
+      final bool isEmail = handle.address.isEmail;
+      final child = InkWell(
+        onLongPress: () {
+          Clipboard.setData(ClipboardData(text: handle.address));
+          if (!Platform.isAndroid || (FilesystemSvc.androidInfo?.version.sdkInt ?? 0) < 33) {
+            showSnackbar("Copied", "Address copied to clipboard!");
           }
-        }
-      },
-      child: ListTile(
-        mouseCursor: MouseCursor.defer,
-        title: RichText(
-          text: TextSpan(
-            children: MessageHelper.buildEmojiText(
-                handle.displayName,
-                context.theme.textTheme.bodyLarge!
+        },
+        onTap: () async {
+          final contactV2 = handle.contactsV2.firstOrNull;
+          if (contactV2 == null || !contactV2.isNative) {
+            await MethodChannelSvc.invokeMethod("open-contact-form",
+                {'address': handle.address, 'address_type': handle.address.isEmail ? 'email' : 'phone'});
+          } else {
+            try {
+              await MethodChannelSvc.invokeMethod("view-contact-form", {'id': contactV2.nativeContactId});
+            } catch (_) {
+              showSnackbar("Error", "Failed to find contact on device!");
+            }
+          }
+        },
+        child: ListTile(
+          mouseCursor: MouseCursor.defer,
+          title: RichText(
+            text: TextSpan(
+              children: MessageHelper.buildEmojiText(handle.displayName, context.theme.textTheme.bodyLarge!),
             ),
           ),
-        ),
-        subtitle: contact == null || hideInfo ? null : Text(
-          handle.formattedAddress ?? handle.address,
-          style: context.theme.textTheme.bodyMedium!.copyWith(color: context.theme.colorScheme.outline),
-        ),
-        leading: ContactAvatarWidget(
-          key: Key("${handle.address}-contact-tile"),
-          handle: handle,
-          borderThickness: 0.1,
-        ),
-        trailing: kIsWeb || (kIsDesktop && !isEmail) || (!isEmail && (contact?.phones.isEmpty ?? true))
-            ? Container(width: 2)
-            : FittedBox(
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            mainAxisSize: MainAxisSize.max,
-            children: <Widget>[
-              if ((contact == null && isEmail) || (contact?.emails.length ?? 0) > 0)
-                ButtonTheme(
-                  minWidth: 1,
-                  child: TextButton(
-                    style: TextButton.styleFrom(
-                      shape: const CircleBorder(),
-                      backgroundColor: ss.settings.skin.value != Skins.iOS ? null : context.theme.colorScheme.secondary,
-                    ),
-                    onLongPress: () => showAddressPicker(contact, handle, context, isEmail: true, isLongPressed: true),
-                    onPressed: () => showAddressPicker(contact, handle, isEmail: true, context),
-                    child: Icon(
-                        ss.settings.skin.value == Skins.iOS ? CupertinoIcons.mail : Icons.email,
-                        color: ss.settings.skin.value != Skins.iOS
-                            ? context.theme.colorScheme.onBackground
-                            : context.theme.colorScheme.onSecondary,
-                        size: ss.settings.skin.value != Skins.iOS ? 25 : 20
-                    ),
-                  ),
+          subtitle: handle.contactsV2.isEmpty || hideInfo
+              ? null
+              : Text(
+                  handle.formattedAddress ?? handle.address,
+                  style: context.theme.textTheme.bodyMedium!.copyWith(color: context.theme.colorScheme.outline),
                 ),
-              if (((contact == null && !isEmail) || (contact?.phones.length ?? 0) > 0) && !kIsWeb && !kIsDesktop)
-                ButtonTheme(
-                  minWidth: 1,
-                  child: TextButton(
-                    style: TextButton.styleFrom(
-                      shape: const CircleBorder(),
-                      backgroundColor: ss.settings.skin.value != Skins.iOS ? null : context.theme.colorScheme.secondary,
-                    ),
-                    onLongPress: () => showAddressPicker(contact, handle, context, isLongPressed: true),
-                    onPressed: () => showAddressPicker(contact, handle, context),
-                    child: Icon(
-                        ss.settings.skin.value == Skins.iOS
-                            ? CupertinoIcons.phone
-                            : Icons.call,
-                        color: ss.settings.skin.value != Skins.iOS
-                            ? context.theme.colorScheme.onBackground
-                            : context.theme.colorScheme.onSecondary,
-                        size: ss.settings.skin.value != Skins.iOS ? 25 : 20
-                    ),
-                  ),
-                ),
-              if (((contact == null && !isEmail) || (contact?.phones.length ?? 0) > 0) && !kIsWeb && !kIsDesktop)
-                ButtonTheme(
-                  minWidth: 1,
-                  child: TextButton(
-                    style: TextButton.styleFrom(
-                      shape: const CircleBorder(),
-                      backgroundColor: ss.settings.skin.value != Skins.iOS ? null : context.theme.colorScheme.secondary,
-                    ),
-                    onLongPress: () => showAddressPicker(contact, handle, context, isLongPressed: true, video: true),
-                    onPressed: () => showAddressPicker(contact, handle, context, video: true),
-                    child: Icon(
-                        ss.settings.skin.value == Skins.iOS
-                            ? CupertinoIcons.video_camera
-                            : Icons.video_call_outlined,
-                        color: ss.settings.skin.value != Skins.iOS
-                            ? context.theme.colorScheme.onBackground
-                            : context.theme.colorScheme.onSecondary,
-                        size: ss.settings.skin.value != Skins.iOS ? 25 : 20
-                    ),
-                  ),
-                ),
-            ],
+          leading: ContactAvatarWidget(
+            key: Key("${handle.address}-contact-tile"),
+            handle: handle,
+            borderThickness: 0.1,
           ),
+          trailing: kIsWeb || (kIsDesktop && !isEmail) || (!isEmail && !hasPhones)
+              ? Container(width: 2)
+              : FittedBox(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    mainAxisSize: MainAxisSize.max,
+                    children: <Widget>[
+                      if ((contact == null && isEmail) || hasEmails)
+                        ButtonTheme(
+                          minWidth: 1,
+                          child: TextButton(
+                            style: TextButton.styleFrom(
+                              shape: const CircleBorder(),
+                              backgroundColor: SettingsSvc.settings.skin.value != Skins.iOS
+                                  ? null
+                                  : context.theme.colorScheme.secondary,
+                            ),
+                            onLongPress: () =>
+                                showAddressPicker(contact, handle, context, isEmail: true, isLongPressed: true),
+                            onPressed: () => showAddressPicker(contact, handle, isEmail: true, context),
+                            child: Icon(
+                                SettingsSvc.settings.skin.value == Skins.iOS ? CupertinoIcons.mail : Icons.email,
+                                color: SettingsSvc.settings.skin.value != Skins.iOS
+                                    ? context.theme.colorScheme.onSurface
+                                    : context.theme.colorScheme.onSecondary,
+                                size: SettingsSvc.settings.skin.value != Skins.iOS ? 25 : 20),
+                          ),
+                        ),
+                      if (((contact == null && !isEmail) || hasPhones) && !kIsWeb && !kIsDesktop)
+                        ButtonTheme(
+                          minWidth: 1,
+                          child: TextButton(
+                            style: TextButton.styleFrom(
+                              shape: const CircleBorder(),
+                              backgroundColor: SettingsSvc.settings.skin.value != Skins.iOS
+                                  ? null
+                                  : context.theme.colorScheme.secondary,
+                            ),
+                            onLongPress: () => showAddressPicker(contact, handle, context, isLongPressed: true),
+                            onPressed: () => showAddressPicker(contact, handle, context),
+                            child: Icon(
+                                SettingsSvc.settings.skin.value == Skins.iOS ? CupertinoIcons.phone : Icons.call,
+                                color: SettingsSvc.settings.skin.value != Skins.iOS
+                                    ? context.theme.colorScheme.onSurface
+                                    : context.theme.colorScheme.onSecondary,
+                                size: SettingsSvc.settings.skin.value != Skins.iOS ? 25 : 20),
+                          ),
+                        ),
+                      if (((contact == null && !isEmail) || hasPhones) && !kIsWeb && !kIsDesktop)
+                        ButtonTheme(
+                          minWidth: 1,
+                          child: TextButton(
+                            style: TextButton.styleFrom(
+                              shape: const CircleBorder(),
+                              backgroundColor: SettingsSvc.settings.skin.value != Skins.iOS
+                                  ? null
+                                  : context.theme.colorScheme.secondary,
+                            ),
+                            onLongPress: () =>
+                                showAddressPicker(contact, handle, context, isLongPressed: true, video: true),
+                            onPressed: () => showAddressPicker(contact, handle, context, video: true),
+                            child: Icon(
+                                SettingsSvc.settings.skin.value == Skins.iOS
+                                    ? CupertinoIcons.video_camera
+                                    : Icons.video_call_outlined,
+                                color: SettingsSvc.settings.skin.value != Skins.iOS
+                                    ? context.theme.colorScheme.onSurface
+                                    : context.theme.colorScheme.onSecondary,
+                                size: SettingsSvc.settings.skin.value != Skins.iOS ? 25 : 20),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
         ),
-      ),
-    );
+      );
 
-    return canBeRemoved ? Slidable(
-      endActionPane: ActionPane(
-        motion: const StretchMotion(),
-        extentRatio: 0.25,
-        children: [
-          SlidableAction(
-            label: 'Remove',
-            backgroundColor: Colors.red,
-            icon: ss.settings.skin.value == Skins.iOS ? CupertinoIcons.trash : Icons.delete_outlined,
-            onPressed: (_) async {
-              showDialog(
-                context: context,
-                builder: (BuildContext context) {
-                  return AlertDialog(
-                    backgroundColor: context.theme.colorScheme.properSurface,
-                    title: Text(
-                      "Removing participant...",
-                      style: context.theme.textTheme.titleLarge,
-                    ),
-                    content: Container(
-                      height: 70,
-                      child: Center(child: buildProgressIndicator(context)),
-                    ),
-                  );
-                }
-              );
+      return canBeRemoved
+          ? Slidable(
+              endActionPane: ActionPane(
+                motion: const StretchMotion(),
+                extentRatio: 0.25,
+                children: [
+                  SlidableAction(
+                    label: 'Remove',
+                    backgroundColor: Colors.red,
+                    icon: SettingsSvc.settings.skin.value == Skins.iOS ? CupertinoIcons.trash : Icons.delete_outlined,
+                    onPressed: (_) async {
+                      // Capture navigator before any async gap — the tile may
+                      // be removed from the tree once the participant list
+                      // updates, making context.findAncestorStateOfType unsafe.
+                      final navigator = Navigator.of(context, rootNavigator: true);
+                      showDialog(
+                          context: context,
+                          builder: (BuildContext context) {
+                            return AlertDialog(
+                              backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
+                              title: Text(
+                                "Removing participant...",
+                                style: context.theme.textTheme.titleLarge,
+                              ),
+                              content: SizedBox(
+                                height: 70,
+                                child: Center(child: buildProgressIndicator(context)),
+                              ),
+                            );
+                          });
 
-              http.chatParticipant("remove", chat.guid, handle.address).then((response) async {
-                Get.back();
-                Logger.info("Removed participant ${handle.address}");
-                showSnackbar("Notice", "Removed participant from chat!");
-              }).catchError((err, stack) {
-                Logger.error("Failed to remove participant ${handle.address}", error: err, trace: stack);
-                late final String error;
-                if (err is Response) {
-                  error = err.data["error"]["message"].toString();
-                } else {
-                  error = err.toString();
-                }
-                showSnackbar("Error", "Failed to remove participant: $error");
-              });
-            },
-          ),
-        ],
-      ),
-      child: child,
-    ) : child;
+                      HttpSvc.chatParticipant("remove", chat.guid, handle.address).then((response) async {
+                        navigator.pop();
+                        if (response.statusCode == 200 && response.data != null && response.data['data'] != null) {
+                          final result = await ChatInterface.bulkSyncChats(
+                            chatsData: [response.data['data'] as Map<String, dynamic>],
+                          );
+                          if (result.chats.isNotEmpty) {
+                            ChatsSvc.updateChat(result.chats.first, override: true);
+                          }
+                        }
+                        Logger.info("Removed participant ${handle.address}");
+                        showSnackbar("Notice", "Removed participant from chat!");
+                      }).catchError((err, stack) {
+                        Logger.error("Failed to remove participant ${handle.address}", error: err, trace: stack);
+                        late final String error;
+                        if (err is Response) {
+                          error = err.data["error"]["message"].toString();
+                        } else {
+                          error = err.toString();
+                        }
+                        showSnackbar("Error", "Failed to remove participant: $error");
+                      });
+                    },
+                  ),
+                ],
+              ),
+              child: child,
+            )
+          : child;
+    });
   }
 }

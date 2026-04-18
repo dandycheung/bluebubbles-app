@@ -7,26 +7,75 @@ import androidx.activity.ComponentActivity
 import com.bluebubbles.messaging.services.backend_ui_interop.MethodCallHandler
 import com.bluebubbles.messaging.services.foreground.ForegroundServiceBroadcastReceiver
 import com.bluebubbles.messaging.Constants
+import com.google.firebase.firestore.FirebaseFirestoreException
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterFragmentActivity() {
     companion object {
-        var engine: FlutterEngine? = null
+        private val engineLock = Any()
+        @Volatile private var _engine: FlutterEngine? = null
+        
+        fun getEngine(): FlutterEngine? {
+            synchronized(engineLock) {
+                return _engine
+            }
+        }
+        
+        fun setEngine(newEngine: FlutterEngine?) {
+            synchronized(engineLock) {
+                _engine = newEngine
+            }
+        }
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
-        engine = flutterEngine
+        setEngine(flutterEngine)
         super.configureFlutterEngine(flutterEngine)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, Constants.methodChannel).setMethodCallHandler {
             call, result -> MethodCallHandler().methodCallHandler(call, result, this)
+        }
+
+        val defaultHandler = Thread.getDefaultUncaughtExceptionHandler()
+        Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
+            val cause = throwable.cause ?: throwable
+            if (cause is FirebaseFirestoreException) {
+                when (cause.code) {
+                    FirebaseFirestoreException.Code.PERMISSION_DENIED ->
+                        Log.e(Constants.logTag, "Firestore: PERMISSION_DENIED — missing or insufficient security rules (${cause.message})")
+                    FirebaseFirestoreException.Code.UNAVAILABLE ->
+                        Log.e(Constants.logTag, "Firestore: UNAVAILABLE — service unreachable, check network connectivity (${cause.message})")
+                    FirebaseFirestoreException.Code.UNAUTHENTICATED ->
+                        Log.e(Constants.logTag, "Firestore: UNAUTHENTICATED — request not authenticated (${cause.message})")
+                    FirebaseFirestoreException.Code.NOT_FOUND ->
+                        Log.e(Constants.logTag, "Firestore: NOT_FOUND — document or collection does not exist (${cause.message})")
+                    FirebaseFirestoreException.Code.CANCELLED ->
+                        Log.d(Constants.logTag, "Firestore: CANCELLED — listener was cancelled (${cause.message})")
+                    FirebaseFirestoreException.Code.ALREADY_EXISTS ->
+                        Log.w(Constants.logTag, "Firestore: ALREADY_EXISTS — document already exists (${cause.message})")
+                    FirebaseFirestoreException.Code.RESOURCE_EXHAUSTED ->
+                        Log.e(Constants.logTag, "Firestore: RESOURCE_EXHAUSTED — quota exceeded (${cause.message})")
+                    FirebaseFirestoreException.Code.FAILED_PRECONDITION ->
+                        Log.e(Constants.logTag, "Firestore: FAILED_PRECONDITION — operation rejected, check indexes or state (${cause.message})")
+                    FirebaseFirestoreException.Code.ABORTED ->
+                        Log.e(Constants.logTag, "Firestore: ABORTED — transaction conflict or contention (${cause.message})")
+                    FirebaseFirestoreException.Code.INTERNAL ->
+                        Log.e(Constants.logTag, "Firestore: INTERNAL — internal server error (${cause.message})")
+                    FirebaseFirestoreException.Code.DEADLINE_EXCEEDED ->
+                        Log.e(Constants.logTag, "Firestore: DEADLINE_EXCEEDED — operation timed out (${cause.message})")
+                    else ->
+                        Log.e(Constants.logTag, "Firestore: unhandled error ${cause.code} (${cause.message})")
+                }
+            } else {
+                defaultHandler?.uncaughtException(thread, throwable)
+            }
         }
     }
 
     override fun onDestroy() {
         Log.d(Constants.logTag, "BlueBubbles MainActivity is being destroyed")
-        engine = null
+        setEngine(null)
 
         // If we are finishing "gracefully", the dart code would have started the foreground service.
         // If we are finishing because the system is destroying the activity, we need to start the foreground service

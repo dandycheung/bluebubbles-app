@@ -2,37 +2,13 @@ import 'dart:async';
 
 import 'package:bluebubbles/database/models.dart';
 
-enum QueueType {newMessage, updatedMessage, sendMessage, sendAttachment, sendMultipart}
+enum QueueType { sendMessage, sendAttachment, sendMultipart }
 
 abstract class QueueItem {
   QueueType type;
   Completer<void>? completer;
 
   QueueItem({required this.type, this.completer});
-}
-
-class IncomingItem extends QueueItem {
-  Chat chat;
-  Message message;
-  String? tempGuid;
-
-  IncomingItem._({
-    required super.type,
-    super.completer,
-    required this.chat,
-    required this.message,
-    this.tempGuid,
-  });
-
-  factory IncomingItem.fromMap(QueueType t, Map<String, dynamic> m, [Completer<void>? c]) {
-    return IncomingItem._(
-      type: t,
-      completer: c,
-      chat: Chat.fromMap(m['chats'].first.cast<String, Object>()),
-      message: Message.fromMap(m),
-      tempGuid: m['tempGuid'],
-    );
-  }
 }
 
 class OutgoingItem extends QueueItem {

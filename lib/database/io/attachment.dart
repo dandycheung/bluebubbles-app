@@ -1,11 +1,11 @@
 import 'dart:convert';
 
 import 'package:bluebubbles/helpers/helpers.dart';
-import 'package:bluebubbles/database/database.dart';
-import 'package:bluebubbles/objectbox.g.dart';
+import 'package:bluebubbles/generated/objectbox.g.dart';
 import 'package:bluebubbles/database/io/message.dart';
+import 'package:bluebubbles/services/backend/descriptors/attachment_query_descriptor.dart';
+import 'package:bluebubbles/services/backend/interfaces/attachment_interface.dart';
 import 'package:bluebubbles/services/services.dart';
-import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:mime_type/mime_type.dart';
 // (needed when generating objectbox model code)
@@ -33,15 +33,14 @@ class Attachment {
   Uint8List? bytes;
   String? webUrl;
   bool hasLivePhoto;
+  bool isDownloaded;
 
   final message = ToOne<Message>();
 
   Map<String, dynamic>? metadata;
 
-  String? get dbMetadata => metadata == null
-      ? null : jsonEncode(metadata);
-  set dbMetadata(String? json) => metadata = json == null
-      ? null : jsonDecode(json) as Map<String, dynamic>;
+  String? get dbMetadata => metadata == null ? null : jsonEncode(metadata);
+  set dbMetadata(String? json) => metadata = json == null ? null : jsonDecode(json) as Map<String, dynamic>;
 
   Attachment({
     this.id,
@@ -58,6 +57,7 @@ class Attachment {
     this.bytes,
     this.webUrl,
     this.hasLivePhoto = false,
+    this.isDownloaded = false,
   });
 
   /// Convert JSON to [Attachment]
@@ -88,146 +88,132 @@ class Attachment {
       width: json["width"] ?? 0,
       metadata: metadata is String ? null : metadata,
       hasLivePhoto: json["hasLivePhoto"] ?? false,
+      isDownloaded: json["isDownloaded"] ?? false,
     );
   }
 
-  /// Save a new attachment or update an existing attachment on disk
-  /// [message] is used to create a link between the attachment and message,
-  /// when provided
-  Attachment save(Message? message) {
+  Future<Attachment> saveAsync(Message? message) async {
     if (kIsWeb) return this;
-    Database.runInTransaction(TxMode.write, () {
-      /// Find an existing attachment and update the attachment ID if applicable
-      Attachment? existing = Attachment.findOne(guid!);
-      if (existing != null) {
-        id = existing.id;
-      }
-      try {
-        /// store the attachment and add the link between the message and
-        /// attachment
-        if (message?.id != null) {
-          this.message.target = message;
-        }
 
-        id = Database.attachments.put(this);
-      } on UniqueViolationException catch (_) {}
-    });
+    final result = await AttachmentInterface.saveAttachmentAsync(
+      attachmentData: toMap(),
+      messageData: message?.toMap(),
+    );
+
+    id = result.id;
     return this;
   }
 
-  /// Save many attachments at once. [map] is used to establish a link between
-  /// the message and its attachments.
-  static void bulkSave(Map<Message, List<Attachment>> map) {
-    return Database.runInTransaction(TxMode.write, () {
-      /// convert List<List<Attachment>> into just List<Attachment> (flatten it)
-      final attachments = map.values.flattened.toList();
-      /// find existing attachments
-      List<Attachment> existingAttachments =
-          Attachment.find(cond: Attachment_.guid.oneOf(attachments.map((e) => e.guid!).toList()));
-      /// map existing attachment IDs to the attachments to save, if applicable
-      for (Attachment a in attachments) {
-        final existing = existingAttachments.firstWhereOrNull((e) => e.guid == a.guid);
-        if (existing != null) {
-          a.id = existing.id;
-        }
-      }
-      try {
-        /// store the attachments and update their ids
-        final ids = Database.attachments.putMany(attachments);
-        for (int i = 0; i < attachments.length; i++) {
-          attachments[i].id = ids[i];
-        }
-      } on UniqueViolationException catch (_) {}
-    });
+  static Future<void> bulkSaveAsync(Map<Message, List<Attachment>> map) async {
+    // Convert the map to serializable format
+    Map<Map<String, dynamic>, List<Map<String, dynamic>>> mapData = {};
+    for (var entry in map.entries) {
+      mapData[entry.key.toMap()] = entry.value.map((e) => e.toMap()).toList();
+    }
+
+    await AttachmentInterface.bulkSaveAttachmentsAsync(mapData: mapData);
   }
 
-  /// replaces a temporary attachment with the new one from the server
-  static Future<Attachment> replaceAttachment(String? oldGuid, Attachment newAttachment) async {
+  /// replaces a temporary attachment with the new one from the server (async version)
+  /// Note: This must be called from the main thread to access cm/cvc services
+  static Future<Attachment> replaceAttachmentAsync(String? oldGuid, Attachment newAttachment) async {
     if (kIsWeb) return newAttachment;
-    Attachment? existing = Attachment.findOne(oldGuid!);
+
+    Attachment? existing = await Attachment.findOneAsync(oldGuid!);
     if (existing == null) {
       return Future.error("Old GUID ($oldGuid) does not exist!");
     }
-    // update current chat image data to prevent the image or video thumbnail from reloading
-    if (cm.activeChat != null) {
-      final data = cvc(cm.activeChat!.chat).imageData[oldGuid];
-      if (data != null) {
-        cvc(cm.activeChat!.chat).imageData.remove(oldGuid);
-        cvc(cm.activeChat!.chat).imageData[newAttachment.guid!] = data;
-      }
+
+    // Handle cm/cvc services on main thread BEFORE calling isolate
+    if (ChatsSvc.activeChat != null) {
+      // Image caching is now handled by Flutter's image cache automatically
     }
 
-    // update values and save
-    existing.guid = newAttachment.guid;
-    existing.originalROWID = newAttachment.originalROWID;
-    existing.uti = newAttachment.uti;
-    existing.mimeType = newAttachment.mimeType ?? existing.mimeType;
-    existing.isOutgoing = newAttachment.isOutgoing;
-    existing.transferName = newAttachment.transferName;
-    existing.totalBytes = newAttachment.totalBytes;
-    existing.bytes = newAttachment.bytes;
-    existing.webUrl = newAttachment.webUrl;
-    existing.hasLivePhoto = newAttachment.hasLivePhoto;
-    existing.save(null);
+    // Call the isolate-safe database operations
+    final updatedAttachment = await AttachmentInterface.replaceAttachmentAsync(
+      oldGuid: oldGuid,
+      newAttachmentData: newAttachment.toMap(),
+    );
 
-    // change the directory path
-    String appDocPath = fs.appDocDir.path;
+    // Handle file system operations on main thread AFTER isolate call
+    String appDocPath = FilesystemSvc.appDocDir.path;
     String pathName = "$appDocPath/attachments/$oldGuid";
     Directory directory = Directory(pathName);
 
     if (directory.existsSync()) {
-      await directory.rename("$appDocPath/attachments/${newAttachment.guid}");
+      final newDirPath = "$appDocPath/attachments/${newAttachment.guid}";
+      await directory.rename(newDirPath);
+
+      // After the directory rename the file inside still has its old name (the temp transferName).
+      // If the server assigned a different transferName, rename the file to match so that
+      // attachment.path resolves correctly and the file won't be re-downloaded.
+      if (newAttachment.transferName != null) {
+        final expectedPath = newAttachment.path; // uses new guid + new transferName
+        if (!File(expectedPath).existsSync()) {
+          final files = Directory(newDirPath).listSync().whereType<File>().toList();
+          if (files.isNotEmpty) {
+            await files.first.rename(expectedPath);
+          }
+        }
+      }
     }
 
-    // grab values from existing
-    newAttachment.id = existing.id;
-    newAttachment.width = existing.width;
-    newAttachment.height = existing.height;
-    newAttachment.metadata = existing.metadata;
+    // Update newAttachment with values from result
+    newAttachment.id = updatedAttachment.id;
+    newAttachment.width = updatedAttachment.width;
+    newAttachment.height = updatedAttachment.height;
+    newAttachment.metadata = updatedAttachment.metadata;
+    // Preserve isDownloaded from the DB record — the action layer does not overwrite it,
+    // so if prepAttachment set it to true the value survives the GUID swap.
+    newAttachment.isDownloaded = updatedAttachment.isDownloaded;
+
     return newAttachment;
   }
 
-  /// find an attachment by its guid
-  static Attachment? findOne(String guid) {
+  static Future<Attachment?> findOneAsync(String guid) async {
     if (kIsWeb) return null;
-    final query = Database.attachments.query(Attachment_.guid.equals(guid)).build();
-    query.limit = 1;
-    final result = query.findFirst();
-    query.close();
-    return result;
+    return await AttachmentInterface.findOneAttachmentAsync(guid: guid);
   }
 
-  /// Find all attachments matching a specified condition, or all attachments
-  /// if no condition is provided
-  static List<Attachment> find({Condition<Attachment>? cond}) {
-    final query = Database.attachments.query(cond).build();
-    return query.find();
+  static Future<List<Attachment>> findAsync({
+    AttachmentQueryDescriptor? queryDescriptor,
+  }) async {
+    if (kIsWeb) return [];
+    return await AttachmentInterface.findAttachmentsAsync(queryDescriptor: queryDescriptor);
   }
 
-  /// Delete an attachment and remove all instances of that attachment in the DB
-  static void delete(String guid) {
+  static Future<void> deleteAsync(String guid) async {
     if (kIsWeb) return;
-    Database.runInTransaction(TxMode.write, () {
-      final query = Database.attachments.query(Attachment_.guid.equals(guid)).build();
-      final result = query.findFirst();
-      query.close();
-      if (result?.id != null) {
-        Database.attachments.remove(result!.id!);
-      }
-    });
+
+    await AttachmentInterface.deleteAttachmentAsync(guid: guid);
   }
 
   String getFriendlySize({decimals = 2}) {
     return (totalBytes ?? 0.0).toDouble().getFriendlySize();
   }
 
-  bool get hasValidSize => (width ?? 0) > 0 && (height ?? 0) > 0;
+  /// Returns the best available width for display purposes.
+  /// Prefers the dedicated DB field; falls back to a `width` key in metadata
+  /// (e.g. sent by the server before local dimension extraction runs).
+  int? get displayWidth {
+    if (width != null && width! > 0) return width;
+    return (metadata?['width'] as num?)?.toInt();
+  }
 
-  double get aspectRatio => hasValidSize ? (_isPortrait && height! < width! ?  (height! / width!).abs() : (width! / height!).abs()) : 0.78;
+  /// Returns the best available height for display purposes.
+  /// Prefers the dedicated DB field; falls back to a `height` key in metadata.
+  int? get displayHeight {
+    if (height != null && height! > 0) return height;
+    return (metadata?['height'] as num?)?.toInt();
+  }
+
+  bool get hasValidSize => (displayWidth ?? 0) > 0 && (displayHeight ?? 0) > 0;
+
+  double get aspectRatio => hasValidSize ? (displayWidth! / displayHeight!).abs() : 0.78;
 
   String? get mimeStart => mimeType?.split("/").first;
 
-  static String get baseDirectory => "${fs.appDocDir.path}/attachments";
+  static String get baseDirectory => FilesystemSvc.attachmentsPath;
 
   String get directory => "$baseDirectory/$guid";
 
@@ -267,6 +253,10 @@ class Attachment {
     if (attachment2.hasLivePhoto) {
       attachment1.hasLivePhoto = attachment2.hasLivePhoto;
     }
+    // Only overwrite isDownloaded if the new attachment is downloaded
+    if (!attachment1.isDownloaded && attachment2.isDownloaded) {
+      attachment1.isDownloaded = attachment2.isDownloaded;
+    }
     if (!attachment1.message.hasValue) {
       attachment1.message.target = attachment2.message.target;
     }
@@ -274,25 +264,18 @@ class Attachment {
   }
 
   Map<String, dynamic> toMap() => {
-    "ROWID": id,
-    "originalROWID": originalROWID,
-    "guid": guid,
-    "uti": uti,
-    "mimeType": mimeType,
-    "isOutgoing": isOutgoing!,
-    "transferName": transferName,
-    "totalBytes": totalBytes,
-    "height": height,
-    "width": width,
-    "metadata": jsonEncode(metadata),
-    "hasLivePhoto": hasLivePhoto,
-  };
-
-  bool  get _isPortrait {
-    if (metadata?['orientation'] == '1') return true;
-    if (metadata?['orientation'] == 1) return true;
-    if (metadata?['orientation'] == 'portrait') return true;
-    if (metadata?['Image Orientation']?.contains("90") ?? false) return true;
-    return false;
-  }
+        "ROWID": id,
+        "originalROWID": originalROWID,
+        "guid": guid,
+        "uti": uti,
+        "mimeType": mimeType,
+        "isOutgoing": isOutgoing!,
+        "transferName": transferName,
+        "totalBytes": totalBytes,
+        "height": height,
+        "width": width,
+        "metadata": jsonEncode(metadata),
+        "hasLivePhoto": hasLivePhoto,
+        "isDownloaded": isDownloaded,
+      };
 }

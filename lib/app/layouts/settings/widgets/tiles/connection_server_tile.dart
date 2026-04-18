@@ -29,7 +29,7 @@ class ConnectionServerTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Obx(() {
       String? subtitle;
-      switch (socket.state.value) {
+      switch (SocketSvc.state.value) {
         case SocketState.connected:
           subtitle = "Connected";
           break;
@@ -48,16 +48,15 @@ class ConnectionServerTile extends StatelessWidget {
         backgroundColor: tileColor,
         title: "Connection & Server",
         onTap: () {
-          ns.pushAndRemoveSettingsUntil(
+          NavigationSvc.pushAndRemoveSettingsUntil(
             context,
             ServerManagementPanel(),
             (Route route) => route.isFirst,
           );
         },
         onLongPress: () {
-          Clipboard.setData(ClipboardData(text: http.origin));
-          if (!Platform.isAndroid ||
-              (fs.androidInfo?.version.sdkInt ?? 0) < 33) {
+          Clipboard.setData(ClipboardData(text: HttpSvc.origin));
+          if (!Platform.isAndroid || (FilesystemSvc.androidInfo?.version.sdkInt ?? 0) < 33) {
             showSnackbar("Copied", "Server address copied to clipboard!");
           }
         },
@@ -68,13 +67,13 @@ class ConnectionServerTile extends StatelessWidget {
               shape: samsung
                   ? SquircleBorder(
                       side: BorderSide(
-                        color: getIndicatorColor(socket.state.value),
+                        color: getIndicatorColor(SocketSvc.state.value),
                         width: 3.0,
                       ),
                     )
                   : null,
-              color: ss.settings.skin.value != Skins.Material
-                  ? getIndicatorColor(socket.state.value)
+              color: SettingsSvc.settings.skin.value != Skins.Material
+                  ? getIndicatorColor(SocketSvc.state.value)
                   : Colors.transparent,
               borderRadius: iOS ? BorderRadius.circular(6) : null,
               child: SizedBox(
@@ -84,22 +83,16 @@ class ConnectionServerTile extends StatelessWidget {
                   alignment: Alignment.center,
                   children: [
                     Icon(
-                      iOS
-                          ? CupertinoIcons.antenna_radiowaves_left_right
-                          : Icons.router,
-                      color: ss.settings.skin.value != Skins.Material
-                          ? Colors.white
-                          : Colors.grey,
-                      size: ss.settings.skin.value != Skins.Material
-                          ? 21
-                          : 28,
+                      iOS ? CupertinoIcons.antenna_radiowaves_left_right : Icons.router,
+                      color: SettingsSvc.settings.skin.value != Skins.Material ? Colors.white : Colors.grey,
+                      size: SettingsSvc.settings.skin.value != Skins.Material ? 21 : 28,
                     ),
                     if (material)
                       Positioned.fill(
                         child: Align(
                           alignment: Alignment.bottomRight,
                           child: getIndicatorIcon(
-                            socket.state.value,
+                            SocketSvc.state.value,
                             size: 12,
                             showAlpha: false,
                           ),
@@ -116,8 +109,7 @@ class ConnectionServerTile extends StatelessWidget {
           children: [
             Text(
               subtitle,
-              style: context.theme.textTheme.bodyMedium!.apply(
-                  color: context.theme.colorScheme.outline.withAlpha(220)),
+              style: context.theme.textTheme.bodyMedium!.apply(color: context.theme.colorScheme.outline.withAlpha(220)),
             ),
             const SizedBox(width: 5),
             const NextButton(),

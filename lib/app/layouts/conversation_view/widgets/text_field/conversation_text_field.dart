@@ -7,6 +7,8 @@ import 'package:bluebubbles/app/components/custom_text_editing_controllers.dart'
 import 'package:bluebubbles/app/layouts/conversation_view/dialogs/custom_mention_dialog.dart';
 import 'package:bluebubbles/app/layouts/conversation_view/widgets/media_picker/text_field_attachment_picker.dart';
 import 'package:bluebubbles/app/layouts/conversation_view/widgets/message/send_animation.dart';
+import 'package:bluebubbles/app/layouts/conversation_view/widgets/text_field/conversation_text_field_local_controller.dart';
+import 'package:bluebubbles/app/layouts/conversation_view/widgets/text_field/helpers/text_field_match_helper.dart';
 import 'package:bluebubbles/app/layouts/conversation_view/widgets/text_field/picked_attachments_holder.dart';
 import 'package:bluebubbles/app/layouts/conversation_view/widgets/text_field/reply_holder.dart';
 import 'package:bluebubbles/app/layouts/conversation_view/widgets/text_field/text_field_suffix.dart';
@@ -15,7 +17,7 @@ import 'package:bluebubbles/app/wrappers/stateful_boilerplate.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/database/models.dart';
 import 'package:bluebubbles/services/services.dart';
-import 'package:bluebubbles/utils/emoji.dart';
+import 'package:bluebubbles/services/ui/chat/send_data.dart';
 import 'package:bluebubbles/utils/logger/logger.dart';
 import 'package:bluebubbles/utils/share.dart';
 import 'package:chunked_stream/chunked_stream.dart';
@@ -29,18 +31,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:get/get.dart';
+import 'package:bluebubbles/app/layouts/camera/camera_screen.dart';
 import 'package:tenor_flutter/tenor_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:pasteboard/pasteboard.dart';
 import 'package:path/path.dart' hide context;
 import 'package:permission_handler/permission_handler.dart';
-import 'package:supercharged/supercharged.dart';
-import 'package:tuple/tuple.dart';
-import 'package:unicode_emojis/unicode_emojis.dart';
 import 'package:universal_io/io.dart';
+import 'package:supercharged/supercharged.dart';
+import 'package:unicode_emojis/unicode_emojis.dart';
 
 class ConversationTextField extends CustomStateful<ConversationViewController> {
-  ConversationTextField({
+  const ConversationTextField({
     super.key,
     required super.parentController,
   });
@@ -53,24 +55,20 @@ class ConversationTextField extends CustomStateful<ConversationViewController> {
   ConversationTextFieldState createState() => ConversationTextFieldState();
 }
 
-class ConversationTextFieldState extends CustomState<ConversationTextField, void, ConversationViewController> with TickerProviderStateMixin {
+class ConversationTextFieldState extends CustomState<ConversationTextField, void, ConversationViewController>
+    with TickerProviderStateMixin {
   final recorderController = kIsWeb ? null : RecorderController();
-
-  // typing indicators
-  String oldText = "\n";
-  Timer? _debounceTyping;
-
-  // previous text state
-  TextSelection oldTextFieldSelection = const TextSelection.collapsed(offset: 0);
+  final localController = ConversationTextFieldLocalController();
 
   Chat get chat => controller.chat;
 
   String get chatGuid => chat.guid;
 
-  bool get showAttachmentPicker => controller.showAttachmentPicker;
+  bool get showAttachmentPicker => localController.showAttachmentPickerLocal.value;
 
   late final double emojiPickerHeight = max(256, context.height * 0.4);
-  late final emojiColumns = ns.width(context) ~/ 56; // Intentionally not responsive to prevent rebuilds when resizing
+  late final emojiColumns =
+      NavigationSvc.width(context) ~/ 56; // Intentionally not responsive to prevent rebuilds when resizing
   RxBool get showEmojiPicker => controller.showEmojiPicker;
 
   final proxyController = TextEditingController();
@@ -86,12 +84,12 @@ class ConversationTextFieldState extends CustomState<ConversationTextField, void
     controller.textController.processMentions();
 
     // Save state
-    oldTextFieldSelection = controller.textController.selection;
+    localController.oldTextFieldSelection.value = controller.textController.selection;
 
     if (controller.fromChatCreator) {
       controller.focusNode.requestFocus();
-    } else if (ss.settings.autoOpenKeyboard.value) {
-      updateObx(() {
+    } else if (SettingsSvc.settings.autoOpenKeyboard.value && !controller.fromSearchResult) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
         controller.focusNode.requestFocus();
       });
     }
@@ -107,14 +105,15 @@ class ConversationTextFieldState extends CustomState<ConversationTextField, void
         if (proxyController.text.isEmpty) return;
         String emoji = proxyController.text;
         proxyController.clear();
-        TextEditingController realController = controller.editing.lastOrNull?.item3 ?? controller.lastFocusedTextController;
+        TextEditingController realController =
+            controller.editing.lastOrNull?.controller ?? controller.lastFocusedTextController;
         String text = realController.text;
         TextSelection selection = realController.selection;
 
         realController.text = text.substring(0, selection.start) + emoji + text.substring(selection.end);
         realController.selection = TextSelection.collapsed(offset: selection.start + emoji.length);
 
-        (controller.editing.lastOrNull?.item3.focusNode ?? controller.lastFocusedNode).requestFocus();
+        (controller.editing.lastOrNull?.controller.focusNode ?? controller.lastFocusedNode).requestFocus();
       });
     }
   }
@@ -125,16 +124,25 @@ class ConversationTextFieldState extends CustomState<ConversationTextField, void
   }
 
   void getTextDraft({String? text}) {
-    // Only change the text if the incoming text is different.
-    final incomingText = text ?? chat.textFieldText;
+    // Skip restoring a draft when navigating from the chat creator — the send path
+    // clears both the text controller and the persisted draft before navigating, so
+    // any non-empty value here would be a stale artifact on the CVC's chat object.
+    if (controller.fromChatCreator) return;
+    // Read from ChatState — it is the source of truth and is always up-to-date,
+    // even before the async DB write from a previous session has completed.
+    final incomingText = text ?? ChatsSvc.getChatState(chatGuid)?.textFieldText.value ?? chat.textFieldText;
     if (incomingText != null && incomingText.isNotEmpty && incomingText != controller.textController.text) {
       controller.textController.text = incomingText;
     }
   }
 
   Future<void> getAttachmentDrafts({List<String> attachments = const []}) async {
-    // Only change the attachments if the incoming attachments are different.
-    final incomingAttachments = attachments.isEmpty ? chat.textFieldAttachments : attachments;
+    // Read from ChatState — it is the source of truth and is always up-to-date.
+    // Fall back to chat.textFieldAttachments for the first load after a cold start
+    // (before ChatState has been updated by any setChatTextFieldAttachments call).
+    final incomingAttachments = attachments.isNotEmpty
+        ? attachments
+        : (ChatsSvc.getChatState(chatGuid)?.textFieldAttachments.toList() ?? chat.textFieldAttachments);
     final currentPicked = controller.pickedAttachments.map((element) => element.path).toList();
     if (incomingAttachments.any((element) => !currentPicked.contains(element))) {
       controller.pickedAttachments.clear();
@@ -156,16 +164,31 @@ class ConversationTextFieldState extends CustomState<ConversationTextField, void
 
   void focusListener(bool subject) async {
     final _focusNode = subject ? controller.subjectFocusNode : controller.focusNode;
-    if (_focusNode.hasFocus && showAttachmentPicker) {
-      setState(() {
-        controller.showAttachmentPicker = !showAttachmentPicker;
-      });
+    // OPTIMIZATION: Only update if state actually needs to change
+    if (_focusNode.hasFocus && localController.showAttachmentPickerLocal.value) {
+      localController.showAttachmentPickerLocal.value = false;
     }
   }
 
   void textListener(bool subject) {
-    if (!subject && controller.textController.text.trim().isNotEmpty) {
-      chat.textFieldText = controller.textController.text;
+    // OPTIMIZATION: Debounce draft saving to avoid database writes on every keystroke
+    if (!subject) {
+      localController.debounceDraftSave?.cancel();
+      localController.debounceDraftSave = Timer(const Duration(milliseconds: 500), () {
+        unawaited(ChatsSvc.setChatTextFieldText(chat, controller.textController.text));
+      });
+    }
+
+    // typing indicators and text change detection
+    final newText = "${controller.subjectTextController.text}\n${controller.textController.text}";
+
+    // OPTIMIZATION: Early exit if only selection changed (cursor moved), not text content
+    if (newText == localController.oldText.value) {
+      // Text unchanged, only update selection tracking for mentions
+      if (!subject) {
+        localController.oldTextFieldSelection.value = controller.textController.selection;
+      }
+      return;
     }
 
     if (!subject) {
@@ -182,16 +205,17 @@ class ConversationTextFieldState extends CustomState<ConversationTextField, void
 
           // Now we determine which side of the mention to put the cursor on.
           // We can use the old selection to figure out if the user is moving left/right
-          if (oldTextFieldSelection.isCollapsed) {
-            if (oldTextFieldSelection.baseOffset > selection.baseOffset) {
+          if (localController.oldTextFieldSelection.value.isCollapsed) {
+            if (localController.oldTextFieldSelection.value.baseOffset > selection.baseOffset) {
               // moving left
-              oldTextFieldSelection = TextSelection.collapsed(offset: behindMatches.last.start);
-              controller.textController.selection = oldTextFieldSelection;
+              localController.oldTextFieldSelection.value = TextSelection.collapsed(offset: behindMatches.last.start);
+              controller.textController.selection = localController.oldTextFieldSelection.value;
               return;
-            } else if (oldTextFieldSelection.baseOffset < selection.baseOffset) {
+            } else if (localController.oldTextFieldSelection.value.baseOffset < selection.baseOffset) {
               // moving right
-              oldTextFieldSelection = TextSelection.collapsed(offset: behind.length + aheadMatches.first.end);
-              controller.textController.selection = oldTextFieldSelection;
+              localController.oldTextFieldSelection.value =
+                  TextSelection.collapsed(offset: behind.length + aheadMatches.first.end);
+              controller.textController.selection = localController.oldTextFieldSelection.value;
               return;
             }
           }
@@ -199,146 +223,87 @@ class ConversationTextFieldState extends CustomState<ConversationTextField, void
           // If we get here then we need to pick the closest side
           if (selection.baseOffset - behindMatches.last.end < aheadMatches.first.start - selection.baseOffset) {
             // moving left
-            oldTextFieldSelection = TextSelection.collapsed(offset: behindMatches.last.start);
-            controller.textController.selection = oldTextFieldSelection;
+            localController.oldTextFieldSelection.value = TextSelection.collapsed(offset: behindMatches.last.start);
+            controller.textController.selection = localController.oldTextFieldSelection.value;
             return;
           } else {
             // Closer to right
-            oldTextFieldSelection = TextSelection.collapsed(offset: behind.length + aheadMatches.first.end);
-            controller.textController.selection = oldTextFieldSelection;
+            localController.oldTextFieldSelection.value =
+                TextSelection.collapsed(offset: behind.length + aheadMatches.first.end);
+            controller.textController.selection = localController.oldTextFieldSelection.value;
             return;
           }
         }
       }
 
-      if (!selection.isCollapsed && oldTextFieldSelection.baseOffset == selection.baseOffset) {
-        if (oldTextFieldSelection.extentOffset < selection.extentOffset) {
+      if (!selection.isCollapsed && localController.oldTextFieldSelection.value.baseOffset == selection.baseOffset) {
+        if (localController.oldTextFieldSelection.value.extentOffset < selection.extentOffset) {
           // Means we're shift+selecting rightwards
           final behind = text.substring(0, selection.extentOffset);
           final ahead = text.substring(selection.extentOffset);
           final aheadMatches = MentionTextEditingController.escapingChar.allMatches(ahead);
           if (aheadMatches.length % 2 != 0) {
             // Assuming the rest of the code works, we're guaranteed to be inside a mention now
-            oldTextFieldSelection = TextSelection(baseOffset: selection.baseOffset, extentOffset: behind.length + aheadMatches.first.end);
-            controller.textController.selection = oldTextFieldSelection;
+            localController.oldTextFieldSelection.value =
+                TextSelection(baseOffset: selection.baseOffset, extentOffset: behind.length + aheadMatches.first.end);
+            controller.textController.selection = localController.oldTextFieldSelection.value;
             return;
           }
-        } else if (oldTextFieldSelection.extentOffset > selection.extentOffset) {
+        } else if (localController.oldTextFieldSelection.value.extentOffset > selection.extentOffset) {
           // Means we're shift+selecting leftwards
           final behind = text.substring(0, selection.extentOffset);
           final behindMatches = MentionTextEditingController.escapingChar.allMatches(behind);
           if (behindMatches.length % 2 != 0) {
             // Assuming the rest of the code works, we're guaranteed to be inside a mention now
-            oldTextFieldSelection = TextSelection(baseOffset: selection.baseOffset, extentOffset: behindMatches.last.start);
-            controller.textController.selection = oldTextFieldSelection;
+            localController.oldTextFieldSelection.value =
+                TextSelection(baseOffset: selection.baseOffset, extentOffset: behindMatches.last.start);
+            controller.textController.selection = localController.oldTextFieldSelection.value;
             return;
           }
         }
       }
 
-      oldTextFieldSelection = controller.textController.selection;
+      localController.oldTextFieldSelection.value = controller.textController.selection;
     }
 
-    // typing indicators
-    final newText = "${controller.subjectTextController.text}\n${controller.textController.text}";
-    if (newText != oldText) {
-      _debounceTyping?.cancel();
-      oldText = newText;
-      // don't send a bunch of duplicate events for every typing change
-      if (ss.settings.enablePrivateAPI.value &&
-          (chat.autoSendTypingIndicators ?? ss.settings.privateSendTypingIndicators.value)) {
-        if (_debounceTyping == null) {
-          socket.sendMessage("started-typing", {"chatGuid": chatGuid});
-        }
-        _debounceTyping = Timer(const Duration(seconds: 3), () {
-          socket.sendMessage("stopped-typing", {"chatGuid": chatGuid});
-          _debounceTyping = null;
-        });
+    localController.debounceTyping?.cancel();
+    localController.oldText.value = newText;
+    // don't send a bunch of duplicate events for every typing change
+    if (SettingsSvc.settings.enablePrivateAPI.value &&
+        (chat.autoSendTypingIndicators ?? SettingsSvc.settings.privateSendTypingIndicators.value)) {
+      if (localController.debounceTyping == null) {
+        SocketSvc.sendMessage("started-typing", {"chatGuid": chatGuid});
       }
+      localController.debounceTyping = Timer(const Duration(seconds: 3), () {
+        SocketSvc.sendMessage("stopped-typing", {"chatGuid": chatGuid});
+        localController.debounceTyping = null;
+      });
+    }
 
-      // emoji picker
-      final _controller = subject ? controller.subjectTextController : controller.textController;
-      final newEmojiText = _controller.text;
-      if (newEmojiText.contains(":")) {
-        final regExp = RegExp(r"(?<=^|[^a-zA-Z\d]):[^: \n]{2,}(?:(?=[ \n]|$)|:)", multiLine: true);
-        final matches = regExp.allMatches(newEmojiText);
-        List<Emoji> allMatches = [];
-        String emojiName = "";
-        if (matches.isNotEmpty && matches.first.start < _controller.selection.start) {
-          RegExpMatch match = matches.lastWhere((m) => m.start < _controller.selection.start);
-          if (newEmojiText[match.end - 1] == ":") {
-            // This will get handled by the text field controller
-          } else if (match.end >= _controller.selection.start) {
-            emojiName = newEmojiText.substring(match.start + 1, match.end).toLowerCase();
-            allMatches = limitGenerator(emojiQuery(emojiName), limit: 50).toSet().toList(); // Maybe make this configurable?
-          }
-          Logger.info("${allMatches.length} matches found for: $emojiName");
-        }
-        if (allMatches.isNotEmpty) {
-          controller.mentionMatches.value = [];
-          controller.mentionSelectedIndex.value = 0;
-          controller.emojiMatches.value = allMatches;
-          controller.emojiSelectedIndex.value = 0;
-          return;
-        } else {
-          controller.emojiMatches.value = [];
-          controller.emojiSelectedIndex.value = 0;
-        }
-      }
+    // OPTIMIZATION: Only run expensive emoji/mention matching if relevant characters present
+    final _controller = subject ? controller.subjectTextController : controller.textController;
+    final newEmojiText = _controller.text;
 
-      if (ss.settings.enablePrivateAPI.value && !subject && newEmojiText.contains("@")) {
-        final regExp = RegExp(r"(?<=^|[^a-zA-Z\d])@(?:[^@ \n]+|$)(?=[ \n]|$)", multiLine: true);
-        final matches = regExp.allMatches(newEmojiText);
-        List<Mentionable> allMatches = [];
-        String mentionName = "";
-        if (matches.isNotEmpty && matches.first.start < _controller.selection.start) {
-          RegExpMatch match = matches.lastWhere((m) => m.start < _controller.selection.start);
-          final text = newEmojiText.substring(match.start, match.end);
-          if (text.endsWith("@")) {
-            allMatches = controller.mentionables;
-          } else if (newEmojiText[match.end - 1] == "@") {
-            mentionName = newEmojiText.substring(match.start + 1, match.end - 1).toLowerCase();
-            allMatches = controller.mentionables
-                .where((e) =>
-            e.address.toLowerCase().startsWith(mentionName.toLowerCase()) ||
-                e.displayName.toLowerCase().startsWith(mentionName.toLowerCase()))
-                .toList();
-            allMatches.addAll(controller.mentionables
-                .where((e) =>
-            !allMatches.contains(e) &&
-                (e.address.isCaseInsensitiveContains(mentionName) ||
-                    e.displayName.isCaseInsensitiveContains(mentionName)))
-                .toList());
-          } else if (match.end >= _controller.selection.start) {
-            mentionName = newEmojiText.substring(match.start + 1, match.end).toLowerCase();
-            allMatches = controller.mentionables
-                .where((e) =>
-            e.address.toLowerCase().startsWith(mentionName.toLowerCase()) ||
-                e.displayName.toLowerCase().startsWith(mentionName.toLowerCase()))
-                .toList();
-            allMatches.addAll(controller.mentionables
-                .where((e) =>
-            !allMatches.contains(e) &&
-                (e.address.isCaseInsensitiveContains(mentionName) ||
-                    e.displayName.isCaseInsensitiveContains(mentionName)))
-                .toList());
-          }
-          Logger.info("${allMatches.length} matches found for: $mentionName");
-        }
-        if (allMatches.isNotEmpty) {
-          controller.emojiMatches.value = [];
-          controller.emojiSelectedIndex.value = 0;
-          controller.mentionMatches.value = allMatches;
-          controller.mentionSelectedIndex.value = 0;
-          return;
-        } else {
-          controller.mentionMatches.value = [];
-          controller.mentionSelectedIndex.value = 0;
-        }
-      }
-
+    // Debounce emoji search to avoid running regex on every keystroke
+    if (newEmojiText.contains(":")) {
+      localController.debounceEmojiSearch?.cancel();
+      localController.debounceEmojiSearch = Timer(const Duration(milliseconds: 150), () {
+        TextFieldMatchHelper.processEmojiMatches(controller, _controller, subject);
+      });
+    } else {
+      localController.debounceEmojiSearch?.cancel();
       controller.emojiMatches.value = [];
       controller.emojiSelectedIndex.value = 0;
+    }
+
+    // Debounce mention search to avoid running regex on every keystroke
+    if (SettingsSvc.settings.enablePrivateAPI.value && !subject && newEmojiText.contains("@")) {
+      localController.debounceMentionSearch?.cancel();
+      localController.debounceMentionSearch = Timer(const Duration(milliseconds: 150), () {
+        TextFieldMatchHelper.processMentionMatches(controller, _controller, subject);
+      });
+    } else {
+      localController.debounceMentionSearch?.cancel();
       controller.mentionMatches.value = [];
       controller.mentionSelectedIndex.value = 0;
     }
@@ -346,21 +311,21 @@ class ConversationTextFieldState extends CustomState<ConversationTextField, void
 
   @override
   void dispose() {
-    if (controller.textController.text.trim().isNotEmpty) {
-      chat.textFieldText = controller.textController.text;
-    } else {
-      chat.textFieldText = "";
-    }
-    chat.textFieldAttachments = controller.pickedAttachments.where((e) => e.path != null).map((e) => e.path!).toList();
-    chat.save(updateTextFieldText: true, updateTextFieldAttachments: true);
+    final draftText = controller.textController.text.trim().isNotEmpty ? controller.textController.text : '';
+    final draftAttachments = controller.pickedAttachments.where((e) => e.path != null).map((e) => e.path!).toList();
+    // Update ChatState synchronously and fire DB save in the background.
+    unawaited(ChatsSvc.setChatTextFieldText(chat, draftText));
+    unawaited(ChatsSvc.setChatTextFieldAttachments(chat, draftAttachments));
 
     controller.focusNode.dispose();
     controller.subjectFocusNode.dispose();
     controller.textController.dispose();
     controller.subjectTextController.dispose();
     recorderController?.dispose();
-    if (chat.autoSendTypingIndicators ?? ss.settings.privateSendTypingIndicators.value) {
-      socket.sendMessage("stopped-typing", {"chatGuid": chatGuid});
+    localController.cancelAllTimers();
+    Get.delete<ConversationTextFieldLocalController>();
+    if (chat.autoSendTypingIndicators ?? SettingsSvc.settings.privateSendTypingIndicators.value) {
+      SocketSvc.sendMessage("stopped-typing", {"chatGuid": chatGuid});
     }
 
     super.dispose();
@@ -378,16 +343,16 @@ class ConversationTextFieldState extends CustomState<ConversationTextField, void
         context: context,
         builder: (BuildContext context) {
           return AlertDialog(
-            backgroundColor: context.theme.colorScheme.properSurface,
+            backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
             title: Text(
               "Scheduling message...",
               style: context.theme.textTheme.titleLarge,
             ),
-            content: Container(
+            content: SizedBox(
               height: 70,
               child: Center(
                 child: CircularProgressIndicator(
-                  backgroundColor: context.theme.colorScheme.properSurface,
+                  backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
                   valueColor: AlwaysStoppedAnimation<Color>(context.theme.colorScheme.primary),
                 ),
               ),
@@ -395,7 +360,7 @@ class ConversationTextFieldState extends CustomState<ConversationTextField, void
           );
         },
       );
-      final response = await http.createScheduled(chat.guid, text, date.toUtc(), {"type": "once"});
+      final response = await HttpSvc.createScheduled(chat.guid, text, date.toUtc(), {"type": "once"});
       Navigator.of(context).pop();
       if (response.statusCode == 200 && response.data != null) {
         showSnackbar("Notice", "Message scheduled successfully for ${buildFullDate(date)}");
@@ -405,14 +370,16 @@ class ConversationTextFieldState extends CustomState<ConversationTextField, void
         showSnackbar("Error", "Something went wrong!");
       }
     } else {
-      if (text.isEmpty && controller.subjectTextController.text.isEmpty && !ss.settings.privateAPIAttachmentSend.value) {
+      if (text.isEmpty &&
+          controller.subjectTextController.text.isEmpty &&
+          !SettingsSvc.settings.privateAPIAttachmentSend.value) {
         if (controller.replyToMessage != null) {
           return showSnackbar("Error", "Turn on Private API Attachment Send to send replies with media!");
         } else if (effect != null) {
           return showSnackbar("Error", "Turn on Private API Attachment Send to send effects with media!");
         }
       }
-      if (effect == null && ss.settings.enablePrivateAPI.value) {
+      if (effect == null && SettingsSvc.settings.enablePrivateAPI.value) {
         final cleansed = text.replaceAll("!", "").toLowerCase();
         switch (cleansed) {
           case "congratulations":
@@ -434,27 +401,24 @@ class ConversationTextFieldState extends CustomState<ConversationTextField, void
             break;
         }
       }
-      await controller.send(
-        controller.pickedAttachments,
-        text,
-        controller.subjectTextController.text,
-        controller.replyToMessage?.item1.threadOriginatorGuid ?? controller.replyToMessage?.item1.guid,
-        controller.replyToMessage?.item2,
-        effect,
-        false,
-      );
+      await controller.send(SendData(
+        attachments: controller.pickedAttachments,
+        text: text,
+        subject: controller.subjectTextController.text,
+        replyGuid: controller.replyToMessage?.message.threadOriginatorGuid ?? controller.replyToMessage?.message.guid,
+        replyPart: controller.replyToMessage?.partIndex,
+        effectId: effect,
+      ));
     }
     controller.pickedAttachments.clear();
     controller.textController.clear();
     controller.subjectTextController.clear();
     controller.replyToMessage = null;
     controller.scheduledDate.value = null;
-    _debounceTyping = null;
-    // Remove the saved text field draft
-    if ((chat.textFieldText ?? "").isNotEmpty) {
-      chat.textFieldText = "";
-      chat.save(updateTextFieldText: true);
-    }
+    localController.debounceTyping = null;
+    // Clear the draft now that the message has been sent.
+    unawaited(ChatsSvc.setChatTextFieldText(chat, ''));
+    unawaited(ChatsSvc.setChatTextFieldAttachments(chat, []));
   }
 
   Future<void> openFullCamera({String type = 'camera'}) async {
@@ -464,12 +428,27 @@ class ConversationTextFieldState extends CustomState<ConversationTextField, void
       return;
     }
 
-    late final XFile? file;
-    if (type == 'camera') {
+    if (type == 'video') {
+      final micGranted = (await Permission.microphone.request()).isGranted;
+      if (!micGranted) {
+        showSnackbar("Error", "Microphone access was denied!");
+        return;
+      }
+    }
+
+    final XFile? file;
+    if (Platform.isAndroid && !kIsWeb) {
+      file = await Navigator.of(context).push<XFile?>(
+        MaterialPageRoute(
+          builder: (_) => CameraScreen(initialMode: type == 'video' ? 'video' : 'photo'),
+        ),
+      );
+    } else if (type == 'camera') {
       file = await ImagePicker().pickImage(source: ImageSource.camera);
     } else {
       file = await ImagePicker().pickVideo(source: ImageSource.camera);
     }
+
     if (file != null) {
       controller.pickedAttachments.add(PlatformFile(
         path: file.path,
@@ -492,99 +471,92 @@ class ConversationTextFieldState extends CustomState<ConversationTextField, void
           mainAxisSize: MainAxisSize.min,
           children: [
             Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-              if (!kIsWeb && iOS && Platform.isAndroid)
-                GestureDetector(
-                  onLongPress: () {
-                    openFullCamera(type: 'video');
-                  },
+              Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
                   child: IconButton(
-                      padding: const EdgeInsets.only(left: 10),
-                      icon: Icon(
-                        CupertinoIcons.camera_fill,
-                        color: context.theme.colorScheme.outline,
-                        size: 28,
-                      ),
-                      visualDensity: VisualDensity.compact,
-                      onPressed: () {
-                        openFullCamera();
-                      }),
-                ),
-              IconButton(
-                icon: Icon(
-                  iOS
-                      ? CupertinoIcons.add_circled_solid
-                      : material
-                          ? Icons.add_circle_outline
-                          : Icons.add,
-                  color: context.theme.colorScheme.outline,
-                  size: 28,
-                ),
-                visualDensity: Platform.isAndroid ? VisualDensity.compact : null,
-                onPressed: () async {
-                  if (kIsDesktop) {
-                    final res = await FilePicker.platform.pickFiles(withReadStream: true, allowMultiple: true);
-                    if (res == null || res.files.isEmpty || res.files.first.readStream == null) return;
+                    style: IconButton.styleFrom(
+                      backgroundColor: context.theme.colorScheme.outline.withValues(alpha: 0.2),
+                      shape: const CircleBorder(),
+                      padding: EdgeInsets.zero,
+                      minimumSize: const Size(36, 36),
+                      fixedSize: const Size(36, 36),
+                    ),
+                    icon: Icon(
+                      Icons.add,
+                      color: context.theme.colorScheme.outline,
+                      size: 22,
+                    ),
+                    visualDensity: Platform.isAndroid ? VisualDensity.compact : null,
+                    onPressed: () async {
+                      if (kIsDesktop) {
+                        final res = await FilePicker.platform.pickFiles(withReadStream: true, allowMultiple: true);
+                        if (res == null || res.files.isEmpty || res.files.first.readStream == null) return;
 
-                    for (pf.PlatformFile e in res.files) {
-                      if (e.size / 1024000 > 1000) {
-                        showSnackbar("Error", "This file is over 1 GB! Please compress it before sending.");
-                        continue;
+                        for (pf.PlatformFile e in res.files) {
+                          if (e.size / 1024000 > 1000) {
+                            showSnackbar("Error", "This file is over 1 GB! Please compress it before sending.");
+                            continue;
+                          }
+                          controller.pickedAttachments.add(PlatformFile(
+                            path: e.path,
+                            name: e.name,
+                            size: e.size,
+                            bytes: await readByteStream(e.readStream!),
+                          ));
+                        }
+                      } else if (kIsWeb) {
+                        showDialog(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                                  title: Text("What would you like to do?", style: context.theme.textTheme.titleLarge),
+                                  content: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: <Widget>[
+                                        ListTile(
+                                          title: Text("Upload file", style: Theme.of(context).textTheme.bodyLarge),
+                                          onTap: () async {
+                                            final res = await FilePicker.platform
+                                                .pickFiles(withData: true, allowMultiple: true);
+                                            if (res == null || res.files.isEmpty || res.files.first.bytes == null) {
+                                              return;
+                                            }
+
+                                            for (pf.PlatformFile e in res.files) {
+                                              if (e.size / 1024000 > 1000) {
+                                                showSnackbar("Error",
+                                                    "This file is over 1 GB! Please compress it before sending.");
+                                                continue;
+                                              }
+                                              controller.pickedAttachments.add(PlatformFile(
+                                                path: null,
+                                                name: e.name,
+                                                size: e.size,
+                                                bytes: e.bytes!,
+                                              ));
+                                            }
+                                            Get.back();
+                                          },
+                                        ),
+                                        ListTile(
+                                          title: Text("Send location", style: Theme.of(context).textTheme.bodyLarge),
+                                          onTap: () async {
+                                            Share.location(chat);
+                                            Get.back();
+                                          },
+                                        ),
+                                      ]),
+                                  backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
+                                ));
+                      } else {
+                        if (!showAttachmentPicker) {
+                          controller.focusNode.unfocus();
+                          controller.subjectFocusNode.unfocus();
+                        }
+                        localController.showAttachmentPickerLocal.value = !showAttachmentPicker;
                       }
-                      controller.pickedAttachments.add(PlatformFile(
-                        path: e.path,
-                        name: e.name,
-                        size: e.size,
-                        bytes: await readByteStream(e.readStream!),
-                      ));
-                    }
-                  } else if (kIsWeb) {
-                    showDialog(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                              title: Text("What would you like to do?", style: context.theme.textTheme.titleLarge),
-                              content: Column(mainAxisAlignment: MainAxisAlignment.center, mainAxisSize: MainAxisSize.min, children: <Widget>[
-                                ListTile(
-                                  title: Text("Upload file", style: Theme.of(context).textTheme.bodyLarge),
-                                  onTap: () async {
-                                    final res = await FilePicker.platform.pickFiles(withData: true, allowMultiple: true);
-                                    if (res == null || res.files.isEmpty || res.files.first.bytes == null) return;
-
-                                    for (pf.PlatformFile e in res.files) {
-                                      if (e.size / 1024000 > 1000) {
-                                        showSnackbar("Error", "This file is over 1 GB! Please compress it before sending.");
-                                        continue;
-                                      }
-                                      controller.pickedAttachments.add(PlatformFile(
-                                        path: null,
-                                        name: e.name,
-                                        size: e.size,
-                                        bytes: e.bytes!,
-                                      ));
-                                    }
-                                    Get.back();
-                                  },
-                                ),
-                                ListTile(
-                                  title: Text("Send location", style: Theme.of(context).textTheme.bodyLarge),
-                                  onTap: () async {
-                                    Share.location(chat);
-                                    Get.back();
-                                  },
-                                ),
-                              ]),
-                              backgroundColor: context.theme.colorScheme.properSurface,
-                            ));
-                  } else {
-                    if (!showAttachmentPicker) {
-                      controller.focusNode.unfocus();
-                      controller.subjectFocusNode.unfocus();
-                    }
-                    setState(() {
-                      controller.showAttachmentPicker = !showAttachmentPicker;
-                    });
-                  }
-                },
-              ),
+                    },
+                  )),
               if (!kIsWeb && !Platform.isAndroid)
                 IconButton(
                     icon: Icon(Icons.gif, color: context.theme.colorScheme.outline, size: 28),
@@ -593,16 +565,58 @@ class ConversationTextFieldState extends CustomState<ConversationTextField, void
                         controller.showingOverlays = true;
                       }
                       Tenor tenor = Tenor(apiKey: kIsWeb ? TENOR_API_KEY : dotenv.get('TENOR_API_KEY'));
-                      TenorResult? result = await tenor.showAsBottomSheet(
+                      TextEditingController tenorController = TextEditingController();
+                      FocusNode focus = FocusNode();
+                      Future<TenorResult?> resultFuture = tenor.showAsBottomSheet(
+                        maxExtent: 0.8,
+                        minExtent: 0.5,
+                        debounce: const Duration(seconds: 1),
                         context: context,
+                        searchFieldController: tenorController,
+                        // Copied and slightly modified from source, just so I can autofocus
+                        searchFieldWidget: Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              TextField(
+                                focusNode: focus,
+                                controller: tenorController,
+                                decoration: InputDecoration(
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                    borderSide: const BorderSide(
+                                      width: 0,
+                                      style: BorderStyle.none,
+                                    ),
+                                  ),
+                                  contentPadding: const EdgeInsets.fromLTRB(28, 5, 32, 7),
+                                  filled: true,
+                                  hintStyle: const TenorSearchFieldStyle().hintStyle,
+                                  hintText: "Search Tenor",
+                                  isCollapsed: true,
+                                  isDense: true,
+                                ),
+                                style: context.theme.textTheme.bodyMedium!,
+                              ),
+                              const Positioned(
+                                left: 4,
+                                child: Icon(
+                                  Icons.search,
+                                  color: Color(0xFF8A8A86),
+                                  size: 22,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                         style: TenorStyle(
-                          color: context.theme.colorScheme.properSurface,
+                          color: context.theme.colorScheme.surfaceContainerHighest,
                           attributionStyle: TenorAttributionStyle(brightnes: context.theme.brightness),
                           tabBarStyle: TenorTabBarStyle(
                             decoration: BoxDecoration(
-                              color: context.theme.colorScheme.properSurface,
-                              borderRadius: BorderRadius.circular(8)
-                            ),
+                                color: context.theme.colorScheme.surfaceContainerHighest,
+                                borderRadius: BorderRadius.circular(8)),
                             indicator: BoxDecoration(
                               color: context.theme.colorScheme.primary,
                               borderRadius: BorderRadius.circular(8),
@@ -610,17 +624,16 @@ class ConversationTextFieldState extends CustomState<ConversationTextField, void
                             labelColor: context.theme.colorScheme.onSurface,
                             unselectedLabelColor: context.theme.colorScheme.onSurface.withValues(alpha: 0.5),
                           ),
-                          searchFieldStyle: TenorSearchFieldStyle(
-                            fillColor: context.theme.colorScheme.properSurface,
-                          ),
                         ),
                       );
+                      focus.requestFocus();
+                      TenorResult? result = await resultFuture;
                       if (kIsDesktop || kIsWeb) {
                         controller.showingOverlays = false;
                       }
                       final selectedGif = result?.media.tinyGif ?? result?.media.tinyGifTransparent;
                       if (result != null && selectedGif != null) {
-                        final response = await http.downloadFromUrl(selectedGif.url);
+                        final response = await HttpSvc.downloadFromUrl(selectedGif.url);
                         if (response.statusCode == 200) {
                           try {
                             final Uint8List data = response.data;
@@ -637,15 +650,17 @@ class ConversationTextFieldState extends CustomState<ConversationTextField, void
                     }),
               if (kIsDesktop || kIsWeb)
                 IconButton(
-                  icon: Icon(iOS ? CupertinoIcons.smiley_fill : Icons.emoji_emotions, color: context.theme.colorScheme.outline, size: 28),
+                  icon: Icon(iOS ? CupertinoIcons.smiley_fill : Icons.emoji_emotions,
+                      color: context.theme.colorScheme.outline, size: 28),
                   onPressed: () {
                     showEmojiPicker.value = !showEmojiPicker.value;
-                    (controller.editing.lastOrNull?.item3.focusNode ?? controller.lastFocusedNode).requestFocus();
+                    (controller.editing.lastOrNull?.controller.focusNode ?? controller.lastFocusedNode).requestFocus();
                   },
                 ),
               if (kIsDesktop && !Platform.isLinux)
                 IconButton(
-                  icon: Icon(iOS ? CupertinoIcons.location_solid : Icons.location_on_outlined, color: context.theme.colorScheme.outline, size: 28),
+                  icon: Icon(iOS ? CupertinoIcons.location_solid : Icons.location_on_outlined,
+                      color: context.theme.colorScheme.outline, size: 28),
                   onPressed: () async {
                     await Share.location(chat);
                   },
@@ -673,7 +688,8 @@ class ConversationTextFieldState extends CustomState<ConversationTextField, void
                                 child: !controller.showRecording.value
                                     ? const SizedBox.shrink()
                                     : Builder(builder: (context) {
-                                        final box = controller.textFieldKey.currentContext?.findRenderObject() as RenderBox?;
+                                        final box =
+                                            controller.textFieldKey.currentContext?.findRenderObject() as RenderBox?;
                                         final textFieldSize = box?.size ?? const Size(250, 35);
                                         Duration start = DateTime.now().duration();
                                         return kIsDesktop
@@ -685,36 +701,37 @@ class ConversationTextFieldState extends CustomState<ConversationTextField, void
                                                     padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 15),
                                                     width: textFieldSize.width - (samsung ? 0 : 80),
                                                     height: textFieldSize.height - 15,
-                                                    child: Center(
-                                                      child: AnimatedOpacity(
-                                                        duration: const Duration(seconds: 1),
-                                                        opacity: (elapsed.inMilliseconds ~/ 1200 % 2 + 0.5).clamp(0, 1),
-                                                        child:
-                                                            Text("Recording... (${prettyDuration(elapsed)})", style: context.textTheme.titleMedium),
-                                                      ),
-                                                    ),
                                                     decoration: BoxDecoration(
                                                       border: Border.fromBorderSide(BorderSide(
                                                         color: context.theme.colorScheme.outline,
                                                         width: 1,
                                                       )),
                                                       borderRadius: BorderRadius.circular(20),
-                                                      color: context.theme.colorScheme.properSurface,
+                                                      color: context.theme.colorScheme.surfaceContainerHighest,
+                                                    ),
+                                                    child: Center(
+                                                      child: AnimatedOpacity(
+                                                        duration: const Duration(seconds: 1),
+                                                        opacity: (elapsed.inMilliseconds ~/ 1200 % 2 + 0.5).clamp(0, 1),
+                                                        child: Text("Recording... (${prettyDuration(elapsed)})",
+                                                            style: context.textTheme.titleMedium),
+                                                      ),
                                                     ),
                                                   );
                                                 })
                                             : VoiceMessageRecorder(
-                                              recorderController: recorderController,
-                                              textFieldSize: textFieldSize,
-                                              iOS: iOS,
-                                              samsung: samsung,
-                                        );
+                                                recorderController: recorderController,
+                                                textFieldSize: textFieldSize,
+                                                iOS: iOS,
+                                                samsung: samsung,
+                                              );
                                       }),
                               ))),
                     SendAnimation(parentController: controller),
                   ],
                 ),
               ),
+              if (iOS) const SizedBox(width: 10),
               if (samsung)
                 Padding(
                   padding: const EdgeInsets.only(right: 5.0),
@@ -727,16 +744,22 @@ class ConversationTextFieldState extends CustomState<ConversationTextField, void
                   ),
                 ),
             ]),
-            AnimatedSize(
-              duration: const Duration(milliseconds: 250),
-              curve: Curves.easeIn,
-              alignment: Alignment.bottomCenter,
-              child: !showAttachmentPicker
-                  ? SizedBox(width: ns.width(context))
-                  : AttachmentPicker(
-                      controller: controller,
-                    ),
-            ),
+            Builder(builder: (context) {
+              // Capture width outside the Obx lambda so the reactive builder does not
+              // register a MediaQuery.of dependency and rebuild on keyboard animation frames.
+              // sizeOf only notifies on actual display-size changes (rotation / resize).
+              final pickerWidth = MediaQuery.sizeOf(context).width;
+              return Obx(() => AnimatedSize(
+                    duration: const Duration(milliseconds: 250),
+                    curve: Curves.easeIn,
+                    alignment: Alignment.bottomCenter,
+                    child: !showAttachmentPicker
+                        ? SizedBox(width: pickerWidth)
+                        : AttachmentPicker(
+                            controller: controller,
+                          ),
+                  ));
+            }),
             AnimatedSize(
               duration: const Duration(milliseconds: 250),
               curve: Curves.easeIn,
@@ -756,7 +779,9 @@ class ConversationTextFieldState extends CustomState<ConversationTextField, void
                               emojiSizeMax: 28,
                               backgroundColor: Colors.transparent,
                               columns: emojiColumns,
-                              noRecents: Text("No Recents", style: context.textTheme.headlineMedium!.copyWith(color: context.theme.colorScheme.outline)),
+                              noRecents: Text("No Recents",
+                                  style: context.textTheme.headlineMedium!
+                                      .copyWith(color: context.theme.colorScheme.outline)),
                             ),
                             viewOrderConfig: const ViewOrderConfig(
                               top: EmojiPickerItem.categoryBar,
@@ -769,7 +794,8 @@ class ConversationTextFieldState extends CustomState<ConversationTextField, void
                               dividerColor: Colors.transparent,
                             ),
                             bottomActionBarConfig: BottomActionBarConfig(
-                              customBottomActionBar: (Config config, EmojiViewState state, VoidCallback showSearchView) {
+                              customBottomActionBar:
+                                  (Config config, EmojiViewState state, VoidCallback showSearchView) {
                                 return Container(
                                   margin: const EdgeInsets.only(top: 10),
                                   child: Row(
@@ -847,6 +873,8 @@ class TextFieldComponent extends StatefulWidget {
     required this.sendMessage,
     this.focusNode,
     this.initialAttachments = const [],
+    this.alwaysShowSend = false,
+    this.hideMediaPicker = false,
   });
 
   final SpellCheckTextEditingController? subjectTextController;
@@ -858,13 +886,20 @@ class TextFieldComponent extends StatefulWidget {
 
   final List<PlatformFile> initialAttachments;
 
+  /// When true the send button is always shown even with no text/attachments.
+  /// Used by the chat creator when an existing chat has been resolved.
+  final bool alwaysShowSend;
+
+  /// When true, the camera, attachment picker, and GIF icons are hidden.
+  /// Used by the chat creator when no existing chat has been matched yet.
+  final bool hideMediaPicker;
+
   @override
   State<StatefulWidget> createState() => TextFieldComponentState();
 }
 
-
 class TextFieldComponentState extends State<TextFieldComponent> {
-  late final ConversationViewController? controller;
+  late ConversationViewController? controller;
   late final FocusNode? focusNode;
   late final RecorderController? recorderController;
   late final List<PlatformFile> initialAttachments;
@@ -873,6 +908,7 @@ class TextFieldComponentState extends State<TextFieldComponent> {
   late final Future<void> Function({String? effect}) sendMessage;
 
   late final ValueNotifier<bool> isRecordingNotifier;
+
   TextFieldComponentState() : isRecordingNotifier = ValueNotifier<bool>(false);
 
   @override
@@ -891,7 +927,11 @@ class TextFieldComponentState extends State<TextFieldComponent> {
       isRecordingNotifier.value = recorderController?.isRecording ?? false;
     });
 
-    assert(!(subjectTextController == null && !isChatCreator && ss.settings.enablePrivateAPI.value && ss.settings.privateSubjectLine.value && chat!.isIMessage));
+    assert(!(subjectTextController == null &&
+        !isChatCreator &&
+        SettingsSvc.settings.enablePrivateAPI.value &&
+        SettingsSvc.settings.privateSubjectLine.value &&
+        chat!.isIMessage));
   }
 
   @override
@@ -901,243 +941,413 @@ class TextFieldComponentState extends State<TextFieldComponent> {
     super.dispose();
   }
 
-  bool get iOS => ss.settings.skin.value == Skins.iOS;
+  @override
+  void didUpdateWidget(TextFieldComponent old) {
+    super.didUpdateWidget(old);
+    if (widget.controller != old.controller) {
+      controller = widget.controller;
+    }
+  }
 
-  bool get samsung => ss.settings.skin.value == Skins.Samsung;
+  bool get iOS => SettingsSvc.settings.skin.value == Skins.iOS;
+
+  bool get material => SettingsSvc.settings.skin.value == Skins.Material;
+
+  bool get samsung => SettingsSvc.settings.skin.value == Skins.Samsung;
 
   Chat? get chat => controller?.chat;
 
   bool get isChatCreator => focusNode != null;
 
+  bool _showAttachmentPickerLocal = false;
+
+  Future<void> _openCamera({String type = 'camera'}) async {
+    bool granted = (await Permission.camera.request()).isGranted;
+    if (!granted) {
+      showSnackbar("Error", "Camera access was denied!");
+      return;
+    }
+
+    if (type == 'video') {
+      final micGranted = (await Permission.microphone.request()).isGranted;
+      if (!micGranted) {
+        showSnackbar("Error", "Microphone access was denied!");
+        return;
+      }
+    }
+
+    final XFile? file;
+    if (Platform.isAndroid && !kIsWeb) {
+      file = await Navigator.of(context).push<XFile?>(
+        MaterialPageRoute(
+          builder: (_) => CameraScreen(initialMode: type == 'video' ? 'video' : 'photo'),
+        ),
+      );
+    } else if (type == 'camera') {
+      file = await ImagePicker().pickImage(source: ImageSource.camera);
+    } else {
+      file = await ImagePicker().pickVideo(source: ImageSource.camera);
+    }
+
+    if (file != null) {
+      controller!.pickedAttachments.add(PlatformFile(
+        path: file.path,
+        name: file.path.split('/').last,
+        size: await file.length(),
+        bytes: await file.readAsBytes(),
+      ));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final txtController = controller?.textController ?? textController;
     final subjController = controller?.subjectTextController ?? subjectTextController;
-    return Focus(
+    final showIcons = isChatCreator && !widget.hideMediaPicker && controller != null;
+    // Captured here because contextMenuBuilder receives its own `context` that shadows this
+    // one and may not have the dark theme properly applied (it's a detached overlay context).
+    final outerTheme = Theme.of(context);
+    Widget textInput = Focus(
       onKeyEvent: (_, ev) => handleKey(_, ev, context, isChatCreator),
       child: Padding(
         padding: const EdgeInsets.only(right: 5.0),
         child: ValueListenableBuilder<bool>(
-        valueListenable: isRecordingNotifier,
-        builder: (context, isRecording, child) {
-        return Container(
-          decoration: iOS
-              ? BoxDecoration(
-                  border: Border.fromBorderSide(BorderSide(
-                    color: (isRecording & iOS) ? context.theme.colorScheme.primary.withValues(alpha: 1.0) : context.theme.colorScheme.properSurface,
-                    width: 1.5,
-                  )),
-                  borderRadius: BorderRadius.circular(20),
-                )
-              : BoxDecoration(
-                  color: context.theme.colorScheme.properSurface,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-          clipBehavior: Clip.antiAlias,
-          child: AnimatedSize(
-            duration: const Duration(milliseconds: 400),
-            alignment: Alignment.bottomCenter,
-            curve: Curves.easeOutBack,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (!isChatCreator) ReplyHolder(controller: controller!),
-                if (initialAttachments.isNotEmpty || !isChatCreator)
-                  PickedAttachmentsHolder(
-                    controller: controller,
-                    textController: txtController,
-                    initialAttachments: initialAttachments,
-                  ),
-                if (!isChatCreator)
-                  Obx(() {
-                    if (controller!.pickedAttachments.isNotEmpty && iOS) {
-                      return Divider(
-                        height: 1.5,
-                        thickness: 1.5,
-                        color: context.theme.colorScheme.properSurface,
-                      );
-                    }
-                    return const SizedBox.shrink();
-                  }),
-                if (!isChatCreator && ss.settings.enablePrivateAPI.value && ss.settings.privateSubjectLine.value && chat!.isIMessage)
-                  TextField(
-                    textCapitalization: TextCapitalization.sentences,
-                    focusNode: controller!.subjectFocusNode,
-                    autocorrect: true,
-                    controller: subjController,
-                    scrollPhysics: const CustomBouncingScrollPhysics(),
-                    style: context.theme.extension<BubbleText>()!.bubbleText.copyWith(fontWeight: FontWeight.bold),
-                    keyboardType: TextInputType.multiline,
-                    maxLines: 14,
-                    minLines: 1,
-                    enableIMEPersonalizedLearning: !ss.settings.incognitoKeyboard.value,
-                    textInputAction: TextInputAction.next,
-                    cursorColor: context.theme.colorScheme.primary,
-                    cursorHeight: context.theme.extension<BubbleText>()!.bubbleText.fontSize! * 1.25,
-                    decoration: InputDecoration(
-                      contentPadding: EdgeInsets.all(iOS && !kIsDesktop && !kIsWeb ? 10 : 12.5),
-                      isDense: true,
-                      isCollapsed: true,
-                      hintText: "Subject",
-                      enabledBorder: InputBorder.none,
-                      border: InputBorder.none,
-                      focusedBorder: InputBorder.none,
-                      fillColor: Colors.transparent,
-                      hintStyle: context.theme
-                          .extension<BubbleText>()!
-                          .bubbleText
-                          .copyWith(color: context.theme.colorScheme.outline, fontWeight: FontWeight.bold),
-                      suffixIconConstraints: const BoxConstraints(minHeight: 0),
-                    ),
-                    onTap: () {
-                      HapticFeedback.selectionClick();
-                    },
-                    onSubmitted: (String value) {
-                      controller?.subjectFocusNode.requestFocus();
-                    },
-                    contentInsertionConfiguration: ContentInsertionConfiguration(onContentInserted: onContentCommit),
-                  ),
-                if (!isChatCreator && ss.settings.enablePrivateAPI.value && ss.settings.privateSubjectLine.value && chat!.isIMessage && iOS)
-                  Divider(
-                    height: 1.5,
-                    thickness: 1.5,
-                    indent: 10,
-                    color: context.theme.colorScheme.properSurface,
-                  ),
-                TextField(
-                  textCapitalization: TextCapitalization.sentences,
-                  focusNode: controller?.focusNode ?? focusNode,
-                  autocorrect: true,
-                  controller: txtController,
-                  scrollPhysics: const CustomBouncingScrollPhysics(),
-                  style: context.theme.extension<BubbleText>()!.bubbleText,
-                  keyboardType: TextInputType.multiline,
-                  maxLines: 14,
-                  minLines: 1,
-                  autofocus: (kIsWeb || kIsDesktop) && !isChatCreator,
-                  enableIMEPersonalizedLearning: !ss.settings.incognitoKeyboard.value,
-                  textInputAction: ss.settings.sendWithReturn.value && !kIsWeb && !kIsDesktop ? TextInputAction.send : TextInputAction.newline,
-                  cursorColor: context.theme.colorScheme.primary,
-                  cursorHeight: context.theme.extension<BubbleText>()!.bubbleText.fontSize! * 1.25,
-                  decoration: InputDecoration(
-                    contentPadding: EdgeInsets.all(iOS && !kIsDesktop && !kIsWeb ? 10 : 12.5),
-                    isDense: true,
-                    isCollapsed: true,
-                    hintText: isChatCreator
-                        ? "New Message"
-                        : ss.settings.recipientAsPlaceholder.value == true
-                            ? isRecording ? "" : chat!.getTitle()
-                            : (chat!.isTextForwarding && !isRecording)
-                                ? "Text Forwarding"
-                                : (!isRecording) // Only show iMessage when not recording
-                                  ? "iMessage" : "",
-                    enabledBorder: InputBorder.none,
-                    border: InputBorder.none,
-                    focusedBorder: InputBorder.none,
-                    filled: (isRecording & iOS),
-                    fillColor: (isRecording & iOS) ? context.theme.colorScheme.primary.withValues(alpha: 0.3) : Colors.transparent,
-                    hintStyle: context.theme.extension<BubbleText>()!.bubbleText.copyWith(color: context.theme.colorScheme.outline),
-                    suffixIconConstraints: const BoxConstraints(minHeight: 0),
-                    suffixIcon: samsung && !isChatCreator
-                        ? null
-                        : Padding(
-                            padding: EdgeInsets.only(right: iOS ? 0.0 : 5.0),
-                            child: TextFieldSuffix(
-                              subjectTextController: subjController,
-                              textController: txtController,
-                              controller: controller,
-                              recorderController: recorderController,
-                              sendMessage: sendMessage,
-                              isChatCreator: isChatCreator,
-                            ),
+            valueListenable: isRecordingNotifier,
+            builder: (context, isRecording, child) {
+              return Container(
+                // Border is placed in the foregroundDecoration so it paints on top of
+                // child content (ReplyHolder, attachments, etc.) and remains visible
+                // at all corners instead of being covered by opaque children.
+                foregroundDecoration: iOS
+                    ? BoxDecoration(
+                        border: Border.fromBorderSide(BorderSide(
+                          color: (isRecording & iOS)
+                              ? context.theme.colorScheme.primary.withValues(alpha: 1.0)
+                              : context.theme.colorScheme.outlineVariant.withValues(alpha: 0.25),
+                          width: 1,
+                        )),
+                        borderRadius: BorderRadius.circular(20),
+                      )
+                    : null,
+                decoration: iOS
+                    ? const BoxDecoration(
+                        borderRadius: BorderRadius.all(Radius.circular(20)),
+                      )
+                    : BoxDecoration(
+                        color: context.theme.colorScheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                clipBehavior: Clip.antiAlias,
+                child: AnimatedSize(
+                  duration: const Duration(milliseconds: 400),
+                  alignment: Alignment.bottomCenter,
+                  // easeOutBack overshoots its target size, which works fine in the full
+                  // conversation view but causes a brief layout overflow in chat creator
+                  // where the available vertical space is tighter (keyboard is open).
+                  curve: isChatCreator ? Curves.easeOut : Curves.easeOutBack,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (widget.controller != null) ReplyHolder(controller: widget.controller!),
+                      if (initialAttachments.isNotEmpty || !isChatCreator || widget.controller != null)
+                        PickedAttachmentsHolder(
+                          controller: widget.controller,
+                          textController: txtController,
+                          initialAttachments: initialAttachments,
+                        ),
+                      if (!isChatCreator)
+                        Obx(() {
+                          if (controller!.pickedAttachments.isNotEmpty && iOS) {
+                            return Divider(
+                              height: 1.5,
+                              thickness: 1.5,
+                              color: context.theme.colorScheme.surfaceContainerHighest,
+                            );
+                          }
+                          return const SizedBox.shrink();
+                        }),
+                      if (!isChatCreator &&
+                          SettingsSvc.settings.enablePrivateAPI.value &&
+                          SettingsSvc.settings.privateSubjectLine.value &&
+                          chat!.isIMessage)
+                        TextField(
+                          textCapitalization: TextCapitalization.sentences,
+                          focusNode: controller!.subjectFocusNode,
+                          autocorrect: true,
+                          controller: subjController,
+                          scrollPhysics: const CustomBouncingScrollPhysics(),
+                          style:
+                              context.theme.extension<BubbleText>()!.bubbleText.copyWith(fontWeight: FontWeight.bold),
+                          keyboardType: TextInputType.multiline,
+                          maxLines: 14,
+                          minLines: 1,
+                          enableIMEPersonalizedLearning: !SettingsSvc.settings.incognitoKeyboard.value,
+                          textInputAction: TextInputAction.next,
+                          cursorColor: context.theme.colorScheme.primary,
+                          cursorHeight: context.theme.extension<BubbleText>()!.bubbleText.fontSize! * 1.25,
+                          decoration: InputDecoration(
+                            contentPadding: EdgeInsets.all(iOS && !kIsDesktop && !kIsWeb ? 10 : 12.5),
+                            isDense: true,
+                            isCollapsed: true,
+                            hintText: "Subject",
+                            enabledBorder: InputBorder.none,
+                            border: InputBorder.none,
+                            focusedBorder: InputBorder.none,
+                            fillColor: Colors.transparent,
+                            hintStyle: context.theme
+                                .extension<BubbleText>()!
+                                .bubbleText
+                                .copyWith(color: context.theme.colorScheme.outline, fontWeight: FontWeight.bold),
+                            suffixIconConstraints: const BoxConstraints(minHeight: 0),
                           ),
-                  ),
-                  contextMenuBuilder: (BuildContext context, EditableTextState editableTextState) {
-                    final start = editableTextState.textEditingValue.selection.start;
-                    final end = editableTextState.textEditingValue.selection.end;
-                    final text = editableTextState.textEditingValue.text;
-                    final selected = editableTextState.textEditingValue.text
-                        .substring((start - 1).clamp(0, text.length), (end + 1).clamp(min(1, text.length), text.length));
+                          onTap: () {
+                            HapticFeedback.selectionClick();
+                          },
+                          onSubmitted: (String value) {
+                            controller?.subjectFocusNode.requestFocus();
+                          },
+                          contentInsertionConfiguration:
+                              ContentInsertionConfiguration(onContentInserted: onContentCommit),
+                        ),
+                      if (!isChatCreator &&
+                          SettingsSvc.settings.enablePrivateAPI.value &&
+                          SettingsSvc.settings.privateSubjectLine.value &&
+                          chat!.isIMessage &&
+                          iOS)
+                        Divider(
+                          height: 1.5,
+                          thickness: 1.5,
+                          indent: 10,
+                          color: context.theme.colorScheme.surfaceContainerHighest,
+                        ),
+                      TextField(
+                        textCapitalization: TextCapitalization.sentences,
+                        focusNode: controller?.focusNode ?? focusNode,
+                        autocorrect: true,
+                        controller: txtController,
+                        scrollPhysics: const CustomBouncingScrollPhysics(),
+                        style: context.theme.extension<BubbleText>()!.bubbleText,
+                        keyboardType: TextInputType.multiline,
+                        maxLines: 14,
+                        minLines: 1,
+                        autofocus: (kIsWeb || kIsDesktop) && !isChatCreator,
+                        enableIMEPersonalizedLearning: !SettingsSvc.settings.incognitoKeyboard.value,
+                        textInputAction: SettingsSvc.settings.sendWithReturn.value && !kIsWeb && !kIsDesktop
+                            ? TextInputAction.send
+                            : TextInputAction.newline,
+                        cursorColor: context.theme.colorScheme.primary,
+                        cursorHeight: context.theme.extension<BubbleText>()!.bubbleText.fontSize! * 1.25,
+                        decoration: InputDecoration(
+                          contentPadding: EdgeInsets.all(iOS && !kIsDesktop && !kIsWeb ? 10 : 12.5),
+                          isDense: true,
+                          isCollapsed: true,
+                          hintText: isChatCreator
+                              ? "New Message"
+                              : SettingsSvc.settings.recipientAsPlaceholder.value == true
+                                  ? isRecording
+                                      ? ""
+                                      : chat!.getTitle()
+                                  : (chat!.isTextForwarding && !isRecording)
+                                      ? "Text Forwarding"
+                                      : (!isRecording) // Only show iMessage when not recording
+                                          ? "iMessage"
+                                          : "",
+                          enabledBorder: InputBorder.none,
+                          border: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          filled: (isRecording & iOS),
+                          fillColor: (isRecording & iOS)
+                              ? context.theme.colorScheme.primary.withValues(alpha: 0.3)
+                              : Colors.transparent,
+                          hintStyle: context.theme
+                              .extension<BubbleText>()!
+                              .bubbleText
+                              .copyWith(color: context.theme.colorScheme.outline),
+                          suffixIconConstraints: const BoxConstraints(minHeight: 0),
+                          suffixIcon: samsung && !isChatCreator
+                              ? null
+                              : Padding(
+                                  padding: EdgeInsets.only(right: iOS ? 0.0 : 5.0),
+                                  child: TextFieldSuffix(
+                                    subjectTextController: subjController,
+                                    textController: txtController,
+                                    controller: controller,
+                                    recorderController: recorderController,
+                                    sendMessage: sendMessage,
+                                    isChatCreator: isChatCreator,
+                                    alwaysShowSend: widget.alwaysShowSend,
+                                    hasInitialAttachments: initialAttachments.isNotEmpty,
+                                  ),
+                                ),
+                        ),
+                        contextMenuBuilder: (BuildContext context, EditableTextState editableTextState) {
+                          final start = editableTextState.textEditingValue.selection.start;
+                          final end = editableTextState.textEditingValue.selection.end;
+                          final text = editableTextState.textEditingValue.text;
+                          final selected = editableTextState.textEditingValue.text.substring(
+                              (start - 1).clamp(0, text.length), (end + 1).clamp(min(1, text.length), text.length));
 
-                    return AdaptiveTextSelectionToolbar.editableText(
-                      editableTextState: editableTextState,
-                    )..buttonItems?.addAllIf(
-                        MentionTextEditingController.escapingRegex.allMatches(selected).length == 1,
-                        [
-                          ContextMenuButtonItem(
-                            onPressed: () {
-                              final TextSelection selection = editableTextState.textEditingValue.selection;
-                              if (selection.isCollapsed) {
-                                return;
-                              }
-                              String text = editableTextState.textEditingValue.text;
-                              final textPart = text.substring(0, (end + 1).clamp(1, text.length));
-                              final mentionMatch = MentionTextEditingController.escapingRegex.allMatches(textPart).lastOrNull;
-                              if (mentionMatch == null) return; // Shouldn't happen
-                              final mentionText = textPart.substring(mentionMatch.start, mentionMatch.end);
-                              int? mentionIndex = int.tryParse(mentionText.substring(1, mentionText.length - 1));
-                              if (mentionIndex == null) return; // Shouldn't happen
-                              final mention = controller?.mentionables[mentionIndex];
-                              final replacement = mention != null ? "@${mention.displayName}" : "";
-                              text = editableTextState.textEditingValue.text
-                                  .replaceRange((start - 1).clamp(0, text.length), (end + 1).clamp(min(1, text.length), text.length), replacement);
-                              final checkSpace = end + replacement.length - 1;
-                              final spaceAfter =
-                                  checkSpace < text.length && text.substring(end + replacement.length - 1, end + replacement.length) == " ";
-                              (controller?.textController ?? textController).value = TextEditingValue(
-                                  text: text,
-                                  selection: TextSelection.fromPosition(
-                                      TextPosition(offset: selection.baseOffset + replacement.length + (spaceAfter ? 1 : 0))));
-                              editableTextState.hideToolbar();
-                            },
-                            label: "Remove Mention",
-                          ),
-                          ContextMenuButtonItem(
-                            onPressed: () async {
-                              final text = editableTextState.textEditingValue.text;
-                              final textPart = text.substring(0, (end + 1).clamp(1, text.length));
-                              final mentionMatch = MentionTextEditingController.escapingRegex.allMatches(textPart).lastOrNull;
-                              if (mentionMatch == null) return; // Shouldn't happen
-                              final mentionText = textPart.substring(mentionMatch.start, mentionMatch.end);
-                              int? mentionIndex = int.tryParse(mentionText.substring(1, mentionText.length - 1));
-                              if (mentionIndex == null) return; // Shouldn't happen
-                              final mention = controller?.mentionables[mentionIndex];
-                              if (kIsDesktop || kIsWeb) {
-                                controller?.showingOverlays = true;
-                              }
-                              final changed = await showCustomMentionDialog(context, mention);
-                              if (kIsDesktop || kIsWeb) {
-                                controller?.showingOverlays = false;
-                              }
-                              if (!isNullOrEmpty(changed) && mention != null) {
-                                mention.customDisplayName = changed!;
-                              }
-                              final spaceAfter = end < text.length && text.substring(end, end + 1) == " ";
-                              txtController.selection = TextSelection.fromPosition(TextPosition(offset: end + (spaceAfter ? 1 : 0)));
-                              editableTextState.hideToolbar();
-                            },
-                            label: "Custom Mention",
-                          ),
-                        ],
-                      );
-                  },
-                  onTap: () {
-                    HapticFeedback.selectionClick();
-                  },
-                  onSubmitted: (String value) {
-                    controller?.focusNode.requestFocus();
-                    if (isNullOrEmpty(value) && (controller?.pickedAttachments.isEmpty ?? false)) return;
-                    sendMessage.call();
-                  },
-                  contentInsertionConfiguration: ContentInsertionConfiguration(onContentInserted: onContentCommit),
+                          final toolbar = AdaptiveTextSelectionToolbar.editableText(
+                            editableTextState: editableTextState,
+                          )..buttonItems?.addAllIf(
+                              MentionTextEditingController.escapingRegex.allMatches(selected).length == 1,
+                              [
+                                ContextMenuButtonItem(
+                                  onPressed: () {
+                                    final TextSelection selection = editableTextState.textEditingValue.selection;
+                                    if (selection.isCollapsed) {
+                                      return;
+                                    }
+                                    String text = editableTextState.textEditingValue.text;
+                                    final textPart = text.substring(0, (end + 1).clamp(1, text.length));
+                                    final mentionMatch =
+                                        MentionTextEditingController.escapingRegex.allMatches(textPart).lastOrNull;
+                                    if (mentionMatch == null) return; // Shouldn't happen
+                                    final mentionText = textPart.substring(mentionMatch.start, mentionMatch.end);
+                                    int? mentionIndex = int.tryParse(mentionText.substring(1, mentionText.length - 1));
+                                    if (mentionIndex == null) return; // Shouldn't happen
+                                    final mention = controller?.mentionables[mentionIndex];
+                                    final replacement = mention != null ? "@${mention.displayName}" : "";
+                                    text = editableTextState.textEditingValue.text.replaceRange(
+                                        (start - 1).clamp(0, text.length),
+                                        (end + 1).clamp(min(1, text.length), text.length),
+                                        replacement);
+                                    final checkSpace = end + replacement.length - 1;
+                                    final spaceAfter = checkSpace < text.length &&
+                                        text.substring(end + replacement.length - 1, end + replacement.length) == " ";
+                                    (controller?.textController ?? textController).value = TextEditingValue(
+                                        text: text,
+                                        selection: TextSelection.fromPosition(TextPosition(
+                                            offset: selection.baseOffset + replacement.length + (spaceAfter ? 1 : 0))));
+                                    editableTextState.hideToolbar();
+                                  },
+                                  label: "Remove Mention",
+                                ),
+                                ContextMenuButtonItem(
+                                  onPressed: () async {
+                                    final text = editableTextState.textEditingValue.text;
+                                    final textPart = text.substring(0, (end + 1).clamp(1, text.length));
+                                    final mentionMatch =
+                                        MentionTextEditingController.escapingRegex.allMatches(textPart).lastOrNull;
+                                    if (mentionMatch == null) return; // Shouldn't happen
+                                    final mentionText = textPart.substring(mentionMatch.start, mentionMatch.end);
+                                    int? mentionIndex = int.tryParse(mentionText.substring(1, mentionText.length - 1));
+                                    if (mentionIndex == null) return; // Shouldn't happen
+                                    final mention = controller?.mentionables[mentionIndex];
+                                    if (kIsDesktop || kIsWeb) {
+                                      controller?.showingOverlays = true;
+                                    }
+                                    final changed = await showCustomMentionDialog(context, mention);
+                                    if (kIsDesktop || kIsWeb) {
+                                      controller?.showingOverlays = false;
+                                    }
+                                    if (!isNullOrEmpty(changed) && mention != null) {
+                                      mention.customDisplayName = changed!;
+                                    }
+                                    final spaceAfter = end < text.length && text.substring(end, end + 1) == " ";
+                                    txtController.selection =
+                                        TextSelection.fromPosition(TextPosition(offset: end + (spaceAfter ? 1 : 0)));
+                                    editableTextState.hideToolbar();
+                                  },
+                                  label: "Custom Mention",
+                                ),
+                              ],
+                            );
+
+                          // Use outerTheme (captured from the real build context) because the
+                          // contextMenuBuilder's own `context` parameter shadows the build context
+                          // and may not have the dark theme applied (it's a detached overlay context).
+                          return Theme(
+                            data: outerTheme.copyWith(
+                              cardColor: outerTheme.colorScheme.surfaceContainerHighest,
+                              colorScheme: outerTheme.colorScheme.copyWith(
+                                surface: outerTheme.colorScheme.surfaceContainerHighest,
+                              ),
+                            ),
+                            child: toolbar,
+                          );
+                        },
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                        },
+                        onSubmitted: (String value) {
+                          controller?.focusNode.requestFocus();
+                          if (isNullOrEmpty(value) && (controller?.pickedAttachments.isEmpty ?? false)) return;
+                          sendMessage.call();
+                        },
+                        contentInsertionConfiguration:
+                            ContentInsertionConfiguration(onContentInserted: onContentCommit),
+                      ),
+                    ],
+                  ),
                 ),
-              ],
-            ),
-          ),
-        );
-        }
-        ),
+              );
+            }),
       ),
+    );
+    if (!showIcons) return textInput;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+          if (!kIsWeb && iOS && Platform.isAndroid)
+            GestureDetector(
+              onLongPress: () {
+                _openCamera(type: 'video');
+              },
+              child: IconButton(
+                padding: const EdgeInsets.only(left: 10),
+                icon: Icon(CupertinoIcons.camera_fill, color: context.theme.colorScheme.outline, size: 28),
+                visualDensity: VisualDensity.compact,
+                onPressed: () {
+                  _openCamera();
+                },
+              ),
+            ),
+          IconButton(
+            icon: Icon(
+              iOS
+                  ? CupertinoIcons.add_circled_solid
+                  : material
+                      ? Icons.add_circle_outline
+                      : Icons.add,
+              color: context.theme.colorScheme.outline,
+              size: 28,
+            ),
+            visualDensity: Platform.isAndroid ? VisualDensity.compact : null,
+            onPressed: () async {
+              if (kIsDesktop) {
+                final res = await FilePicker.platform.pickFiles(withReadStream: true, allowMultiple: true);
+                if (res == null || res.files.isEmpty || res.files.first.readStream == null) return;
+                for (pf.PlatformFile e in res.files) {
+                  if (e.size / 1024000 > 1000) {
+                    showSnackbar("Error", "This file is over 1 GB! Please compress it before sending.");
+                    continue;
+                  }
+                  controller!.pickedAttachments.add(PlatformFile(
+                    path: e.path,
+                    name: e.name,
+                    size: e.size,
+                    bytes: await readByteStream(e.readStream!),
+                  ));
+                }
+              } else {
+                if (!_showAttachmentPickerLocal) FocusScope.of(context).unfocus();
+                setState(() => _showAttachmentPickerLocal = !_showAttachmentPickerLocal);
+              }
+            },
+          ),
+          Expanded(child: textInput),
+        ]),
+        AnimatedSize(
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeIn,
+          alignment: Alignment.bottomCenter,
+          child: _showAttachmentPickerLocal
+              ? AttachmentPicker(controller: controller!)
+              : SizedBox(width: NavigationSvc.width(context)),
+        ),
+      ],
     );
   }
 
@@ -1149,11 +1359,11 @@ class TextFieldComponentState extends State<TextFieldComponent> {
     Logger.info("  -> Content Length: ${content.hasData ? content.data!.length : "null"}");
 
     // Parse the filename from the URI and read the data as a List<int>
-    String filename = fs.uriToFilename(content.uri, content.mimeType);
+    String filename = FilesystemSvc.uriToFilename(content.uri, content.mimeType);
 
     // Save the data to a location and add it to the file picker
     if (content.hasData) {
-      controller?.pickedAttachments.add(PlatformFile(
+      widget.controller?.pickedAttachments.add(PlatformFile(
         name: filename,
         size: content.data!.length,
         bytes: content.data,
@@ -1169,35 +1379,82 @@ class TextFieldComponentState extends State<TextFieldComponent> {
     if ((kIsWeb || Platform.isWindows || Platform.isLinux) &&
         (ev.physicalKey == PhysicalKeyboardKey.keyV || ev.logicalKey == LogicalKeyboardKey.keyV) &&
         HardwareKeyboard.instance.isControlPressed) {
-      Pasteboard.image.then((image) {
-        if (image != null) {
-          controller!.pickedAttachments.add(PlatformFile(
-            name: "${randomString(8)}.png",
-            bytes: image,
-            size: image.length,
-          ));
-        }
-      });
-      Pasteboard.files().then((files) {
-        for (final String path in files) {
-          final String name = basename(path);
-          final File file = File(path);
-          controller!.pickedAttachments.add(PlatformFile(
-            name: name,
-            path: path,
-            bytes: file.readAsBytesSync(),
-            size: file.lengthSync(),
-          ));
-        }
-      });
+      if (kIsDesktop) {
+        Pasteboard.files().then((files) {
+          if (files.isEmpty) {
+            Pasteboard.image.then((image) async {
+              if (image != null) {
+                controller!.pickedAttachments.add(PlatformFile(
+                  name: "image-${controller!.pickedAttachments.length + 1}.png",
+                  bytes: image,
+                  size: image.length,
+                ));
+              } else {
+                String? clipboardText = (await Clipboard.getData(Clipboard.kTextPlain))?.text;
+                if (clipboardText == null) return;
+
+                TextSelection selection = controller!.lastFocusedTextController.selection;
+                String oldText = controller!.lastFocusedTextController.text;
+                String newText = oldText.replaceRange(selection.start, selection.end, clipboardText);
+                controller!.lastFocusedTextController.value = TextEditingValue(
+                  text: newText,
+                  selection: TextSelection.fromPosition(
+                    TextPosition(offset: selection.start + clipboardText.length),
+                  ),
+                );
+              }
+            });
+          } else {
+            for (final String path in files) {
+              final String name = basename(path);
+              final File file = File(path);
+              controller!.pickedAttachments.add(PlatformFile(
+                name: name,
+                path: path,
+                bytes: file.readAsBytesSync(),
+                size: file.lengthSync(),
+              ));
+            }
+          }
+        });
+      } else {
+        // This is just web
+        Pasteboard.image.then((image) async {
+          if (image != null) {
+            controller!.pickedAttachments.add(PlatformFile(
+              name: "image-${controller!.pickedAttachments.length + 1}.png",
+              bytes: image,
+              size: image.length,
+            ));
+          } else {
+            String? clipboardText = (await Clipboard.getData(Clipboard.kTextPlain))?.text;
+            if (clipboardText == null) return;
+
+            TextSelection selection = controller!.lastFocusedTextController.selection;
+            String oldText = controller!.lastFocusedTextController.text;
+            String newText = oldText.replaceRange(selection.start, selection.end, clipboardText);
+            controller!.lastFocusedTextController.value = TextEditingValue(
+              text: newText,
+              selection: TextSelection.fromPosition(
+                TextPosition(offset: selection.start + clipboardText.length),
+              ),
+            );
+          }
+        });
+      }
+      return KeyEventResult.handled;
     }
 
-    if (HardwareKeyboard.instance.isMetaPressed || HardwareKeyboard.instance.isControlPressed || HardwareKeyboard.instance.isAltPressed) {
+    if (HardwareKeyboard.instance.isMetaPressed ||
+        HardwareKeyboard.instance.isControlPressed ||
+        HardwareKeyboard.instance.isAltPressed) {
       return KeyEventResult.ignored;
     }
 
     if (isChatCreator) {
-      if (ev.logicalKey == LogicalKeyboardKey.enter && !HardwareKeyboard.instance.isShiftPressed) {
+      if ((kIsDesktop || kIsWeb) &&
+          ev.logicalKey == LogicalKeyboardKey.enter &&
+          !HardwareKeyboard.instance.isShiftPressed) {
         sendMessage();
         return KeyEventResult.handled;
       }
@@ -1214,8 +1471,9 @@ class TextFieldComponentState extends State<TextFieldComponent> {
         controller!.mentionSelectedIndex.value++;
         if (controller!.mentionSelectedIndex.value >= downMovementIndex &&
             controller!.mentionSelectedIndex < controller!.mentionMatches.length - maxShown + downMovementIndex + 1) {
-          controller!.emojiScrollController
-              .jumpTo(max((controller!.mentionSelectedIndex.value - downMovementIndex) * 40, controller!.emojiScrollController.offset));
+          controller!.emojiScrollController.jumpTo(max(
+              (controller!.mentionSelectedIndex.value - downMovementIndex) * 40,
+              controller!.emojiScrollController.offset));
         }
         return KeyEventResult.handled;
       }
@@ -1223,8 +1481,8 @@ class TextFieldComponentState extends State<TextFieldComponent> {
         controller!.emojiSelectedIndex.value++;
         if (controller!.emojiSelectedIndex.value >= downMovementIndex &&
             controller!.emojiSelectedIndex < controller!.emojiMatches.length - maxShown + downMovementIndex + 1) {
-          controller!.emojiScrollController
-              .jumpTo(max((controller!.emojiSelectedIndex.value - downMovementIndex) * 40, controller!.emojiScrollController.offset));
+          controller!.emojiScrollController.jumpTo(max((controller!.emojiSelectedIndex.value - downMovementIndex) * 40,
+              controller!.emojiScrollController.offset));
         }
         return KeyEventResult.handled;
       }
@@ -1234,18 +1492,25 @@ class TextFieldComponentState extends State<TextFieldComponent> {
     if (ev.logicalKey == LogicalKeyboardKey.arrowUp) {
       if (chat != null &&
           controller!.lastFocusedTextController.text.isEmpty &&
-          ss.settings.editLastSentMessageOnUpArrow.value &&
-          ss.isMinVenturaSync &&
-          ss.serverDetailsSync().item4 >= 148) {
-        final message = ms(chat!.guid).mostRecentSent;
-        if (message != null && !message.guid!.startsWith("temp")) {
-          final parts = mwc(message).parts;
-          final part = parts.filter((p) => p.text?.isNotEmpty ?? false).lastOrNull;
-          if (part != null) {
-            final FocusNode? node = kIsDesktop || kIsWeb ? FocusNode() : null;
-            controller!.editing.add(Tuple3(message, part, SpellCheckTextEditingController(text: part.text!, focusNode: node)));
-            node?.requestFocus();
-            return KeyEventResult.handled;
+          SettingsSvc.settings.editLastSentMessageOnUpArrow.value &&
+          SettingsSvc.serverDetails.isMinVentura &&
+          SettingsSvc.serverDetails.supportsEditAndUnsend) {
+        final message = MessagesSvc(chat!.guid).mostRecentSent;
+        if (message != null) {
+          final messageController = MessagesSvc(chat!.guid).getOrCreateState(message);
+          final isSending = messageController.isSending.value;
+          if (!isSending) {
+            final parts = messageController.parts;
+            final part = parts.filter((p) => p.text?.isNotEmpty ?? false).lastOrNull;
+            if (part != null) {
+              final FocusNode? node = kIsDesktop || kIsWeb ? FocusNode() : null;
+              controller!.editing.add(MessageEditEntry(
+                  message: message,
+                  part: part,
+                  controller: SpellCheckTextEditingController(text: part.text!, focusNode: node)));
+              node?.requestFocus();
+              return KeyEventResult.handled;
+            }
           }
         }
       }
@@ -1253,8 +1518,8 @@ class TextFieldComponentState extends State<TextFieldComponent> {
         controller!.mentionSelectedIndex.value--;
         if (controller!.mentionSelectedIndex.value >= upMovementIndex &&
             controller!.mentionSelectedIndex < controller!.mentionMatches.length - maxShown + upMovementIndex + 1) {
-          controller!.emojiScrollController
-              .jumpTo(min((controller!.mentionSelectedIndex.value - upMovementIndex) * 40, controller!.emojiScrollController.offset));
+          controller!.emojiScrollController.jumpTo(min((controller!.mentionSelectedIndex.value - upMovementIndex) * 40,
+              controller!.emojiScrollController.offset));
         }
         return KeyEventResult.handled;
       }
@@ -1262,8 +1527,8 @@ class TextFieldComponentState extends State<TextFieldComponent> {
         controller!.emojiSelectedIndex.value--;
         if (controller!.emojiSelectedIndex.value >= upMovementIndex &&
             controller!.emojiSelectedIndex < controller!.emojiMatches.length - maxShown + upMovementIndex + 1) {
-          controller!.emojiScrollController
-              .jumpTo(min((controller!.emojiSelectedIndex.value - upMovementIndex) * 40, controller!.emojiScrollController.offset));
+          controller!.emojiScrollController.jumpTo(min(
+              (controller!.emojiSelectedIndex.value - upMovementIndex) * 40, controller!.emojiScrollController.offset));
         }
         return KeyEventResult.handled;
       }
@@ -1271,16 +1536,19 @@ class TextFieldComponentState extends State<TextFieldComponent> {
 
     // Tab or Enter
     if (ev.logicalKey == LogicalKeyboardKey.tab || ev.logicalKey == LogicalKeyboardKey.enter) {
-      if (controller!.focusNode.hasPrimaryFocus && controller!.mentionMatches.length > controller!.mentionSelectedIndex.value) {
+      if (controller!.focusNode.hasPrimaryFocus &&
+          controller!.mentionMatches.length > controller!.mentionSelectedIndex.value) {
         int index = controller!.mentionSelectedIndex.value;
-        TextEditingController textField =
-            controller!.subjectFocusNode.hasPrimaryFocus ? controller!.subjectTextController : controller!.textController;
+        TextEditingController textField = controller!.subjectFocusNode.hasPrimaryFocus
+            ? controller!.subjectTextController
+            : controller!.textController;
         String text = textField.text;
         RegExp regExp = RegExp(r"@(?:[^@ \n]+|$)(?=[ \n]|$)", multiLine: true);
         Iterable<RegExpMatch> matches = regExp.allMatches(text);
         if (matches.isNotEmpty && matches.any((m) => m.start < textField.selection.start)) {
           RegExpMatch match = matches.lastWhere((m) => m.start < textField.selection.start);
-          controller!.textController.addMention(text.substring(match.start, match.end), controller!.mentionMatches[index]);
+          controller!.textController
+              .addMention(text.substring(match.start, match.end), controller!.mentionMatches[index]);
         } else {
           // If the user moved the cursor before trying to insert a mention, reset the picker
           controller!.emojiScrollController.jumpTo(0);
@@ -1292,8 +1560,9 @@ class TextFieldComponentState extends State<TextFieldComponent> {
       }
       if (controller!.emojiMatches.length > controller!.emojiSelectedIndex.value) {
         int index = controller!.emojiSelectedIndex.value;
-        TextEditingController textField =
-            controller!.subjectFocusNode.hasPrimaryFocus ? controller!.subjectTextController : controller!.textController;
+        TextEditingController textField = controller!.subjectFocusNode.hasPrimaryFocus
+            ? controller!.subjectTextController
+            : controller!.textController;
         String text = textField.text;
         RegExp regExp = RegExp(r":[^: \n]{2,}(?=[ \n]|$)", multiLine: true);
         Iterable<RegExpMatch> matches = regExp.allMatches(text);
@@ -1301,7 +1570,8 @@ class TextFieldComponentState extends State<TextFieldComponent> {
           RegExpMatch match = matches.lastWhere((m) => m.start < textField.selection.start);
           String emoji = controller!.emojiMatches[index].emoji;
           String _text = "${text.substring(0, match.start)}$emoji ${text.substring(match.end)}";
-          textField.value = TextEditingValue(text: _text, selection: TextSelection.collapsed(offset: match.start + emoji.length + 1));
+          textField.value =
+              TextEditingValue(text: _text, selection: TextSelection.collapsed(offset: match.start + emoji.length + 1));
         } else {
           // If the user moved the cursor before trying to insert an emoji, reset the picker
           controller!.emojiScrollController.jumpTo(0);
@@ -1311,7 +1581,7 @@ class TextFieldComponentState extends State<TextFieldComponent> {
 
         return KeyEventResult.handled;
       }
-      if (ss.settings.privateSubjectLine.value) {
+      if (SettingsSvc.settings.privateSubjectLine.value) {
         if (ev.logicalKey == LogicalKeyboardKey.tab) {
           // Tab to switch between text fields
           if (!HardwareKeyboard.instance.isShiftPressed && controller!.subjectFocusNode.hasPrimaryFocus) {
@@ -1344,16 +1614,22 @@ class TextFieldComponentState extends State<TextFieldComponent> {
         controller!.replyToMessage = null;
         return KeyEventResult.handled;
       }
+      if (controller!.pickedAttachments.isNotEmpty) {
+        controller!.pickedAttachments.clear();
+        return KeyEventResult.handled;
+      }
     }
 
-    if ((kIsDesktop || kIsWeb) && ev.logicalKey == LogicalKeyboardKey.enter && !HardwareKeyboard.instance.isShiftPressed) {
+    if ((kIsDesktop || kIsWeb) &&
+        ev.logicalKey == LogicalKeyboardKey.enter &&
+        !HardwareKeyboard.instance.isShiftPressed) {
       sendMessage();
       controller!.focusNode.requestFocus();
       return KeyEventResult.handled;
     }
 
     if (kIsDesktop || kIsWeb) return KeyEventResult.ignored;
-    if (ev.physicalKey == PhysicalKeyboardKey.enter && ss.settings.sendWithReturn.value) {
+    if (ev.physicalKey == PhysicalKeyboardKey.enter && SettingsSvc.settings.sendWithReturn.value) {
       if (!isNullOrEmpty(textController.text) || !isNullOrEmpty(controller!.subjectTextController.text)) {
         sendMessage();
         controller!.focusNode.previousFocus(); // I genuinely don't know why this works

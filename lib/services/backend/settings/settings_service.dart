@@ -7,6 +7,8 @@ import 'package:bluebubbles/app/wrappers/scrollbar_wrapper.dart';
 import 'package:bluebubbles/app/wrappers/theme_switcher.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/database/models.dart';
+import 'package:bluebubbles/services/backend/interfaces/app_interface.dart';
+import 'package:bluebubbles/services/backend/interfaces/server_interface.dart';
 import 'package:bluebubbles/services/services.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -16,28 +18,42 @@ import 'package:get/get.dart';
 import 'package:github/github.dart' hide Source;
 import 'package:local_auth/local_auth.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:store_checker/store_checker.dart';
-import 'package:tuple/tuple.dart';
+import 'package:bluebubbles/models/models.dart' show ServerDetails, AppUpdateInfo, ServerUpdateInfo;
+import 'package:bluebubbles/utils/logger/logger.dart';
 import 'package:universal_io/io.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:version/version.dart';
+import 'package:get_it/get_it.dart';
 
-SettingsService ss = Get.isRegistered<SettingsService>() ? Get.find<SettingsService>() : Get.put(SettingsService());
+// ignore: non_constant_identifier_names
+SettingsService get SettingsSvc => GetIt.I<SettingsService>();
 
-class SettingsService extends GetxService {
+class SettingsService {
   late Settings settings;
   late FCMData fcmData;
   bool _canAuthenticate = false;
   bool _showingPapiPopup = false;
-  late final SharedPreferences prefs;
   Completer<void> initCompleted = Completer<void>();
 
-  bool get canAuthenticate => _canAuthenticate && (Platform.isWindows || (fs.androidInfo?.version.sdkInt ?? 0) > 28);
+  /// Cached server details. Populated from [PrefsSvc] on startup and refreshed
+  /// in the background via [refreshServerDetails]. Access via the [serverDetails]
+  /// getter; use [_serverDetails] within this class for reactive ([Obx]) access.
+  final Rx<ServerDetails> _serverDetails = const ServerDetails.empty().obs;
+
+  bool get canAuthenticate =>
+      _canAuthenticate && (Platform.isWindows || (FilesystemSvc.androidInfo?.version.sdkInt ?? 0) > 28);
 
   Future<void> init({bool headless = false}) async {
-    prefs = await SharedPreferences.getInstance();
     settings = Settings.getSettings();
+    // Populate server details from prefs so sync getters are usable immediately.
+    _serverDetails.value = ServerDetails(
+      macOSVersion: PrefsSvc.i.getInt("macos-version") ?? 11,
+      macOSMinorVersion: PrefsSvc.i.getInt("macos-minor-version") ?? 0,
+      serverVersion: PrefsSvc.i.getString("server-version") ?? "0.0.0",
+      serverVersionCode: PrefsSvc.i.getInt("server-version-code") ?? 0,
+    );
+
     if (!headless && !kIsWeb && !kIsDesktop) {
       // Parallelize independent operations
       try {
@@ -69,8 +85,8 @@ class SettingsService extends GetxService {
             _canAuthenticate = await LocalAuthentication().isDeviceSupported();
           } catch (_) {}
         }
-        ss.settings.launchAtStartup.value =
-            await setupLaunchAtStartup(ss.settings.launchAtStartup.value, ss.settings.launchAtStartupMinimized.value);
+        SettingsSvc.settings.launchAtStartup.value = await setupLaunchAtStartup(
+            SettingsSvc.settings.launchAtStartup.value, SettingsSvc.settings.launchAtStartupMinimized.value);
       });
     }
 
@@ -122,16 +138,12 @@ class SettingsService extends GetxService {
     return true;
   }
 
-  // this is a separate method because objectbox needs to be initialized
-  void getFcmData() {
+  void loadFcmDataFromDatabase() {
     fcmData = FCMData.getFCM();
   }
 
-  Future<void> saveSettings([Settings? newSettings, bool updateDisplayMode = false]) async {
-    // Set the new settings as the current settings in the manager
-    settings = newSettings ?? settings;
-    settings.save();
-    if (updateDisplayMode && !kIsWeb && !kIsDesktop) {
+  Future<void> updateDisplayMode() async {
+    if (!kIsWeb && !kIsDesktop) {
       try {
         final mode = await settings.getDisplayMode();
         FlutterDisplayMode.setPreferredMode(mode);
@@ -144,282 +156,324 @@ class SettingsService extends GetxService {
     await fcmData.save(wait: true);
   }
 
-  Future<Tuple4<int, int, String, int>> getServerDetails({bool refresh = false}) async {
-    if (refresh) {
-      final response = await http.serverInfo();
-      if (response.statusCode == 200) {
-        if (settings.iCloudAccount.isEmpty && response.data['data']['detected_icloud'] is String) {
-          settings.iCloudAccount.value = response.data['data']['detected_icloud'];
-          settings.save();
-        }
-
-        if (response.data['data']['private_api'] is bool) {
-          settings.serverPrivateAPI.value = response.data['data']['private_api'];
-          settings.save();
-        }
-
-        final version = int.tryParse(response.data['data']['os_version'].split(".")[0]);
-        final minorVersion = int.tryParse(response.data['data']['os_version'].split(".")[1]);
-        final serverVersion = response.data['data']['server_version'];
-        final code = Version.parse(serverVersion ?? "0.0.0");
-        final versionCode = code.major * 100 + code.minor * 21 + code.patch;
-        if (version != null) await prefs.setInt("macos-version", version);
-        if (minorVersion != null) await prefs.setInt("macos-minor-version", minorVersion);
-        if (serverVersion != null) await prefs.setString("server-version", serverVersion);
-        await prefs.setInt("server-version-code", versionCode);
-
-        if (settings.finishedSetup.value && settings.reachedConversationList.value) {
-          if (settings.enablePrivateAPI.value) {
-            await prefs.setBool('private-api-enable-tip', true);
-          } else if (settings.serverPrivateAPI.value == true && prefs.getBool('private-api-enable-tip') != true) {
-            final ScrollController controller = ScrollController();
-            if (_showingPapiPopup) Navigator.of(Get.context!).pop();
-            _showingPapiPopup = true;
-            await showDialog(
-              context: Get.context!,
-              barrierDismissible: false,
-              builder: (BuildContext context) {
-                return AlertDialog(
-                  title: const Text("Private API Features"),
-                  content: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      ConstrainedBox(
-                        constraints: BoxConstraints(maxHeight: min(context.height / 3, Get.context!.height - 300)),
-                        child: ScrollbarWrapper(
-                          controller: controller,
-                          showScrollbar: true,
-                          child: SingleChildScrollView(
-                            controller: controller,
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text("You've enabled Private API Features on your server!"),
-                                const SizedBox(height: 10),
-                                const Text("Private API features give you the ability to:"),
-                                const Text(" - Send & Receive typing indicators"),
-                                const Text(" - Send tapbacks, effects, and mentions"),
-                                const Text(" - Send messages with subject lines"),
-                                if (isMinBigSurSync) const Text(" - Send replies"),
-                                if (isMinVenturaSync) const Text(" - Edit & Unsend messages"),
-                                const SizedBox(height: 10),
-                                const Text(" - Mark chats read on the Mac server"),
-                                if (isMinVenturaSync) const Text(" - Mark chats as unread on the Mac server"),
-                                const SizedBox(height: 10),
-                                const Text(" - Rename group chats"),
-                                const Text(" - Add & remove people from group chats"),
-                                if (isMinBigSurSync) const Text(" - Change the group chat photo"),
-                                if (isMinBigSurSync) const SizedBox(height: 10),
-                                if (isMinMontereySync) const Text(" - View Focus statuses"),
-                                if (isMinBigSurSync) const Text(" - Use Find My Friends"),
-                                if (isMinBigSurSync) const Text(" - Be notified of incoming FaceTime calls"),
-                                if (isMinVenturaSync) const Text(" - Answer FaceTime calls (experimental)"),
-                                const SizedBox(height: 10),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Align(
-                            alignment: Alignment.center,
-                            child: ElevatedButton(
-                              onPressed: () async {
-                                await prefs.setBool('private-api-enable-tip', true);
-                                Navigator.of(context).pop();
-                                ns.closeSettings(context);
-                                ns.closeAllConversationView(context);
-                                await cm.setAllInactive();
-                                await Navigator.of(Get.context!).push(
-                                  ThemeSwitcher.buildPageRoute(
-                                    builder: (BuildContext context) {
-                                      return SettingsPage(
-                                        initialPage: PrivateAPIPanel(
-                                          enablePrivateAPIonInit: true,
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                );
-                              },
-                              child: const Padding(
-                                padding: EdgeInsets.symmetric(vertical: 8),
-                                child: Text(
-                                  "Enable Private API Features",
-                                  textScaler: TextScaler.linear(1.2),
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          Align(
-                            alignment: Alignment.center,
-                            child: TextButton(
-                              onPressed: () async {
-                                await prefs.setBool('private-api-enable-tip', true);
-                                Navigator.of(context).pop();
-                              },
-                              child: const Text("Don't ask again"),
-                            ),
-                          )
-                        ],
-                      ),
-                    ],
-                  ),
-                );
-              },
-            );
-            _showingPapiPopup = false;
-          }
-        }
-
-        return Tuple4(version ?? 11, minorVersion ?? 0, serverVersion, versionCode);
-      } else {
-        return const Tuple4(11, 0, "0.0.0", 0);
+  Future<Map<String, dynamic>> getServerDetailsDict() async {
+    final response = await HttpSvc.serverInfo();
+    if (response.statusCode == 200) {
+      final List<String> toSave = [];
+      if (settings.iCloudAccount.isEmpty && response.data['data']['detected_icloud'] is String) {
+        settings.iCloudAccount.value = response.data['data']['detected_icloud'];
+        toSave.add('iCloudAccount');
       }
-    } else {
-      return serverDetailsSync();
+
+      if (response.data['data']['private_api'] is bool) {
+        settings.serverPrivateAPI.value = response.data['data']['private_api'];
+        toSave.add('serverPrivateAPI');
+      }
+
+      final version = int.tryParse(response.data['data']['os_version'].split(".")[0]);
+      final minorVersion = int.tryParse(response.data['data']['os_version'].split(".")[1]);
+      final serverVersion = response.data['data']['server_version'];
+      final code = Version.parse(serverVersion ?? "0.0.0");
+      final versionCode = code.major * 100 + code.minor * 21 + code.patch;
+      if (version != null) await PrefsSvc.i.setInt("macos-version", version);
+      if (minorVersion != null) await PrefsSvc.i.setInt("macos-minor-version", minorVersion);
+      if (serverVersion != null) await PrefsSvc.i.setString("server-version", serverVersion);
+      await PrefsSvc.i.setInt("server-version-code", versionCode);
+
+      if (toSave.isNotEmpty) {
+        await settings.saveManyAsync(toSave);
+      }
+
+      return {
+        'macOSVersion': version ?? 11,
+        'macOSMinorVersion': minorVersion ?? 0,
+        'serverVersion': serverVersion ?? "0.0.0",
+        'serverVersionCode': versionCode,
+        'recommendPrivateApi': settings.finishedSetup.value &&
+            settings.reachedConversationList.value &&
+            !settings.enablePrivateAPI.value &&
+            settings.serverPrivateAPI.value == true &&
+            PrefsSvc.i.getBool('private-api-enable-tip') != true,
+      };
+    }
+
+    return {
+      'macOSVersion': 11,
+      'macOSMinorVersion': 0,
+      'serverVersion': "0.0.0",
+      'serverVersionCode': 0,
+      'recommendPrivateApi': false,
+    };
+  }
+
+  /// Fetches server details via HTTP (main isolate), updates [serverDetails],
+  /// and persists values to [PrefsSvc]. Also handles [iCloudAccount] and
+  /// [serverPrivateAPI] side effects and shows the PAPI popup when applicable.
+  /// Used during the first-time setup flow.
+  Future<ServerDetails> fetchServerDetails() async {
+    final detailsDict = await getServerDetailsDict();
+    final details = ServerDetails(
+      macOSVersion: detailsDict['macOSVersion'] as int,
+      macOSMinorVersion: detailsDict['macOSMinorVersion'] as int,
+      serverVersion: detailsDict['serverVersion'] as String,
+      serverVersionCode: detailsDict['serverVersionCode'] as int,
+    );
+    _serverDetails.value = details;
+
+    if (detailsDict['recommendPrivateApi'] as bool) {
+      await _showPapiPopup();
+    }
+
+    return details;
+  }
+
+  /// Refreshes [serverDetails] in the background via [ServerInterface]
+  /// (routes through the GlobalIsolate on all platforms). Updates [serverDetails]
+  /// and persists the new values to [PrefsSvc]. Safe to call fire-and-forget.
+  Future<void> refreshServerDetails() async {
+    try {
+      final details = await ServerInterface.getServerDetails();
+      _serverDetails.value = details;
+
+      await Future.wait([
+        PrefsSvc.i.setInt("macos-version", details.macOSVersion),
+        PrefsSvc.i.setInt("macos-minor-version", details.macOSMinorVersion),
+        PrefsSvc.i.setString("server-version", details.serverVersion),
+        PrefsSvc.i.setInt("server-version-code", details.serverVersionCode),
+      ]);
+    } catch (e, s) {
+      Logger.warn("Failed to refresh server details", error: e, trace: s, tag: 'SettingsService');
     }
   }
 
-  Tuple4<int, int, String, int> serverDetailsSync() => Tuple4(
-      prefs.getInt("macos-version") ?? 11,
-      prefs.getInt("macos-minor-version") ?? 0,
-      prefs.getString("server-version") ?? "0.0.0",
-      prefs.getInt("server-version-code") ?? 0);
+  /// Returns the current cached [ServerDetails].
+  ServerDetails getServerDetails() => _serverDetails.value;
 
-  Future<bool> get isMinSierra async {
-    final val = await getServerDetails();
-    return val.item1 > 10 || (val.item1 == 10 && val.item2 > 11);
+  Future<void> _showPapiPopup() async {
+    final ScrollController controller = ScrollController();
+    if (_showingPapiPopup) Navigator.of(Get.context!).pop();
+    _showingPapiPopup = true;
+    await showDialog(
+      context: Get.context!,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text("Private API Features"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ConstrainedBox(
+                constraints: BoxConstraints(maxHeight: min(context.height / 3, Get.context!.height - 300)),
+                child: ScrollbarWrapper(
+                  controller: controller,
+                  showScrollbar: true,
+                  child: SingleChildScrollView(
+                    controller: controller,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text("You've enabled Private API Features on your server!"),
+                        const SizedBox(height: 10),
+                        const Text("Private API features give you the ability to:"),
+                        const Text(" - Send & Receive typing indicators"),
+                        const Text(" - Send tapbacks, effects, and mentions"),
+                        const Text(" - Send messages with subject lines"),
+                        if (_serverDetails.value.isMinBigSur) const Text(" - Send replies"),
+                        if (_serverDetails.value.isMinVentura) const Text(" - Edit & Unsend messages"),
+                        const SizedBox(height: 10),
+                        const Text(" - Mark chats read on the Mac server"),
+                        if (_serverDetails.value.isMinVentura) const Text(" - Mark chats as unread on the Mac server"),
+                        const SizedBox(height: 10),
+                        const Text(" - Rename group chats"),
+                        const Text(" - Add & remove people from group chats"),
+                        if (_serverDetails.value.isMinBigSur) const Text(" - Change the group chat photo"),
+                        if (_serverDetails.value.isMinBigSur) const SizedBox(height: 10),
+                        if (_serverDetails.value.isMinMonterey) const Text(" - View Focus statuses"),
+                        if (_serverDetails.value.isMinBigSur) const Text(" - Use Find My Friends"),
+                        if (_serverDetails.value.isMinBigSur) const Text(" - Be notified of incoming FaceTime calls"),
+                        if (_serverDetails.value.isMinVentura) const Text(" - Answer FaceTime calls (experimental)"),
+                        const SizedBox(height: 10),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Align(
+                    alignment: Alignment.center,
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        await PrefsSvc.i.setBool('private-api-enable-tip', true);
+                        if (!context.mounted) return;
+                        Navigator.of(context).pop();
+                        NavigationSvc.closeSettings(context);
+                        NavigationSvc.closeAllConversationView(context);
+                        await ChatsSvc.setAllInactive();
+                        await Navigator.of(Get.context!).push(
+                          ThemeSwitcher.buildPageRoute(
+                            builder: (BuildContext context) {
+                              return SettingsPage(
+                                initialPage: PrivateAPIPanel(
+                                  enablePrivateAPIonInit: true,
+                                ),
+                              );
+                            },
+                          ),
+                        );
+                      },
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 8),
+                        child: Text(
+                          "Enable Private API Features",
+                          textScaler: TextScaler.linear(1.2),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Align(
+                    alignment: Alignment.center,
+                    child: TextButton(
+                      onPressed: () async {
+                        await PrefsSvc.i.setBool('private-api-enable-tip', true);
+                        if (!context.mounted) return;
+                        Navigator.of(context).pop();
+                      },
+                      child: const Text("Don't ask again"),
+                    ),
+                  )
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+    _showingPapiPopup = false;
   }
 
-  Future<bool> get isMinBigSur async {
-    final val = await getServerDetails();
-    return val.item1 >= 11;
-  }
-
-  Future<bool> get isMinMonterey async {
-    final val = await getServerDetails();
-    return val.item1 >= 12;
-  }
-
-  Future<bool> get isMinVentura async {
-    final val = await getServerDetails();
-    return val.item1 >= 13;
-  }
-
-  Future<bool> get isMinSonoma async {
-    final val = await getServerDetails();
-    return val.item1 >= 14;
-  }
-
-  Future<bool> get isMinSequioa async {
-    final val = await getServerDetails();
-    return val.item1 >= 15;
-  }
-
-  bool get isMinMontereySync {
-    return (prefs.getInt("macos-version") ?? 11) >= 12;
-  }
-
-  bool get isMinBigSurSync {
-    return (prefs.getInt("macos-version") ?? 11) >= 11;
-  }
-
-  bool get isMinVenturaSync {
-    return (prefs.getInt("macos-version") ?? 11) >= 13;
-  }
-
-  bool get isMinCatalinaSync {
-    return (prefs.getInt("macos-minor-version") ?? 11) >= 15 || isMinBigSurSync;
-  }
-
-  bool get isMinSonomaSync {
-    return (prefs.getInt("macos-version") ?? 11) >= 14;
-  }
-
-  bool get isMinSequioaSync {
-    return (prefs.getInt("macos-version") ?? 11) >= 15;
-  }
+  /// Returns the current cached [ServerDetails].
+  ServerDetails get serverDetails => _serverDetails.value;
 
   /// Group chats can be created on macOS <= Catalina or
   /// if the Private API is enabled, and the server supports it (v1.8.0).
-  Future<bool> canCreateGroupChat() async {
-    int serverVersion = (await ss.getServerDetails()).item4;
-    bool isMin_1_8_0 = serverVersion >= 268; // Server: v1.8.0 (1 * 100 + 8 * 21 + 0)
-    bool papiEnabled = settings.enablePrivateAPI.value;
-    return (isMin_1_8_0 && papiEnabled) || !isMinBigSurSync;
+  bool canCreateGroupChat() {
+    return canCreateGroupChatSync();
   }
 
   /// Group chats can be created on macOS <= Catalina or
   /// if the Private API is enabled, and the server supports it (v1.8.0).
   bool canCreateGroupChatSync() {
-    int serverVersion = ss.serverDetailsSync().item4;
-    bool isMin_1_8_0 = serverVersion >= 268; // Server: v1.8.0 (1 * 100 + 8 * 21 + 0)
     bool papiEnabled = settings.enablePrivateAPI.value;
-    return (isMin_1_8_0 && papiEnabled) || !isMinBigSurSync;
+    return (_serverDetails.value.supportsCreateGroupChat && papiEnabled) || !_serverDetails.value.isMinBigSur;
   }
 
-  Future<void> checkServerUpdate() async {
-    final response = await http.checkUpdate();
+  Future<Map<String, dynamic>> getServerUpdateDict() async {
+    final response = await HttpSvc.checkUpdate();
     if (response.statusCode == 200) {
       bool available = response.data['data']['available'] ?? false;
       Map<String, dynamic> metadata = response.data['data']['metadata'] ?? {};
-      if (!available || prefs.getString("server-update-check") == metadata['version']) return;
-      showDialog(
-        context: Get.context!,
-        builder: (context) => AlertDialog(
-          backgroundColor: context.theme.colorScheme.properSurface,
-          title: Text("Server Update Check", style: context.theme.textTheme.titleLarge),
-          content: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              const SizedBox(
-                height: 15.0,
-              ),
-              Text(available ? "Updates available:" : "Your server is up-to-date!",
-                  style: context.theme.textTheme.bodyLarge),
-              const SizedBox(
-                height: 15.0,
-              ),
-              if (metadata.isNotEmpty)
-                Text(
-                    "Version: ${metadata['version'] ?? "Unknown"}\nRelease Date: ${metadata['release_date'] ?? "Unknown"}\nRelease Name: ${metadata['release_name'] ?? "Unknown"}\n\nWarning: Installing the update will briefly disconnect you.",
-                    style: context.theme.textTheme.bodyLarge)
-            ],
-          ),
-          actions: [
-            TextButton(
-              child: Text("OK",
-                  style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.primary)),
-              onPressed: () async {
-                await prefs.setString("server-update-check", metadata['version']);
-                Navigator.of(context).pop();
-              },
-            ),
-            TextButton(
-              child: Text("Install",
-                  style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.primary)),
-              onPressed: () async {
-                await prefs.setString("server-update-check", metadata['version']);
-                http.installUpdate();
-                Navigator.of(context).pop();
-              },
-            ),
-          ],
-        ),
-      );
+
+      return {
+        'available': available,
+        'metadata': metadata,
+      };
     }
+
+    return {
+      'available': false,
+      'metadata': <String, dynamic>{},
+    };
   }
 
-  Future<void> checkClientUpdate() async {
-    if (!kIsDesktop && (kIsWeb || (await StoreChecker.getSource) != Source.IS_INSTALLED_FROM_LOCAL_SOURCE)) return;
-    if (kIsDesktop) return; // todo
+  Future<ServerUpdateInfo> checkForServerUpdate() async {
+    final updateDict = await getServerUpdateDict();
+    final metadata = updateDict['metadata'] as Map<String, dynamic>;
+
+    return ServerUpdateInfo(
+      available: updateDict['available'] as bool,
+      version: metadata['version'] as String?,
+      releaseDate: metadata['release_date'] as String?,
+      releaseName: metadata['release_name'] as String?,
+    );
+  }
+
+  Future<void> checkServerUpdate() async {
+    late ServerUpdateInfo updateInfo;
+    if (Platform.isAndroid) {
+      updateInfo = await ServerInterface.checkForServerUpdate();
+    } else {
+      updateInfo = await checkForServerUpdate();
+    }
+
+    if (!updateInfo.available ||
+        (updateInfo.version != null && PrefsSvc.i.getString("server-update-check") == updateInfo.version)) {
+      return;
+    }
+
+    showDialog(
+      context: Get.context!,
+      builder: (context) => AlertDialog(
+        backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
+        title: Text("Server Update Check", style: context.theme.textTheme.titleLarge),
+        content: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            const SizedBox(
+              height: 15.0,
+            ),
+            Text(updateInfo.available ? "Updates available:" : "Your server is up-to-date!",
+                style: context.theme.textTheme.bodyLarge),
+            const SizedBox(
+              height: 15.0,
+            ),
+            if (updateInfo.version != null)
+              Text(
+                  "Version: ${updateInfo.version ?? "Unknown"}\nRelease Date: ${updateInfo.releaseDate ?? "Unknown"}\nRelease Name: ${updateInfo.releaseName ?? "Unknown"}\n\nWarning: Installing the update will briefly disconnect you.",
+                  style: context.theme.textTheme.bodyLarge)
+          ],
+        ),
+        actions: [
+          TextButton(
+            child: Text("OK",
+                style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.primary)),
+            onPressed: () async {
+              if (updateInfo.version != null) {
+                await PrefsSvc.i.setString("server-update-check", updateInfo.version!);
+              }
+              Navigator.of(context).pop();
+            },
+          ),
+          TextButton(
+            child: Text("Install",
+                style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.primary)),
+            onPressed: () async {
+              if (updateInfo.version != null) {
+                await PrefsSvc.i.setString("server-update-check", updateInfo.version!);
+              }
+              HttpSvc.installUpdate();
+              Navigator.of(context).pop();
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<Map<String, dynamic>> getAppUpdateDict() async {
+    bool available = true;
+    if (!kIsDesktop && (kIsWeb || (await StoreChecker.getSource) != Source.IS_INSTALLED_FROM_LOCAL_SOURCE)) {
+      available = false;
+    }
+    if (kIsDesktop) {
+      available = false;
+    }
+
     final github = GitHub();
     final stream = github.repositories.listReleases(RepositorySlug('bluebubblesapp', 'bluebubbles-app'));
     final release = await stream.firstWhere(
@@ -427,14 +481,51 @@ class SettingsService extends GetxService {
     final version = release.tagName!.split("+").first.replaceAll("v", "");
     final code = release.tagName!.split("+").last.split('-').first;
     final isDesktopRelease = release.tagName!.split('+').last.contains('desktop');
-    final buildNumber = fs.packageInfo.buildNumber.lastChars(min(4, fs.packageInfo.buildNumber.length));
+    final buildNumber =
+        FilesystemSvc.packageInfo.buildNumber.lastChars(min(4, FilesystemSvc.packageInfo.buildNumber.length));
     if (int.parse(code) <= int.parse(buildNumber) ||
-        prefs.getString("client-update-check") == code ||
-        (Platform.isAndroid && isDesktopRelease)) return;
+        PrefsSvc.i.getString("client-update-check") == code ||
+        (Platform.isAndroid && isDesktopRelease)) {
+      available = false;
+    }
+
+    return {
+      'available': available,
+      'latestRelease': release,
+      'isDesktopRelease': isDesktopRelease,
+      'parsedVersion': {
+        'version': version,
+        'code': code,
+        'build': buildNumber,
+      }
+    };
+  }
+
+  Future<AppUpdateInfo> checkForUpdate() async {
+    final updateDict = await getAppUpdateDict();
+    return AppUpdateInfo(
+      available: updateDict['available'] as bool,
+      latestRelease: updateDict['latestRelease'] as Release,
+      isDesktopRelease: updateDict['isDesktopRelease'] as bool,
+      version: (updateDict['parsedVersion'] as Map<String, String>)['version']!,
+      code: (updateDict['parsedVersion'] as Map<String, String>)['code']!,
+      buildNumber: (updateDict['parsedVersion'] as Map<String, String>)['build']!,
+    );
+  }
+
+  Future<void> checkClientUpdate() async {
+    late AppUpdateInfo updateInfo;
+    if (Platform.isAndroid) {
+      updateInfo = await AppInterface.checkForUpdate();
+    } else {
+      updateInfo = await checkForUpdate();
+    }
+    if (!updateInfo.available) return;
+
     showDialog(
       context: Get.context!,
       builder: (context) => AlertDialog(
-        backgroundColor: context.theme.colorScheme.properSurface,
+        backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
         title: Text("App Update Check", style: context.theme.textTheme.titleLarge),
         content: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -447,24 +538,25 @@ class SettingsService extends GetxService {
             const SizedBox(
               height: 15.0,
             ),
-            Text("Version: $version\nRelease Date: ${buildDate(release.createdAt)}\nRelease Name: ${release.name}",
+            Text(
+                "Version: ${updateInfo.version}\nRelease Date: ${buildDate(updateInfo.latestRelease.createdAt)}\nRelease Name: ${updateInfo.latestRelease.name}",
                 style: context.theme.textTheme.bodyLarge)
           ],
         ),
         actions: [
-          if (release.htmlUrl != null)
+          if (updateInfo.latestRelease.htmlUrl != null)
             TextButton(
               child: Text("Download",
                   style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.primary)),
               onPressed: () async {
-                await launchUrl(Uri.parse(release.htmlUrl!), mode: LaunchMode.externalApplication);
+                await launchUrl(Uri.parse(updateInfo.latestRelease.htmlUrl!), mode: LaunchMode.externalApplication);
               },
             ),
           TextButton(
             child: Text("OK",
                 style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.primary)),
             onPressed: () async {
-              await prefs.setString("client-update-check", code);
+              await PrefsSvc.i.setString("client-update-check", updateInfo.code);
               Navigator.of(context).pop();
             },
           ),

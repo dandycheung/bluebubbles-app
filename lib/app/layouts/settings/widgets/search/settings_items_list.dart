@@ -33,7 +33,6 @@ import 'package:dio/dio.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:get/get.dart' hide Response;
 import 'package:in_app_review/in_app_review.dart';
 import 'package:universal_io/io.dart';
@@ -49,7 +48,6 @@ List<Widget> buildSettingItemList({
   required bool material,
   required TextStyle iosSubtitle,
   required TextStyle materialSubtitle,
-  required dynamic ss,
   required dynamic ns,
   required RxnDouble progress,
   required RxnInt totalSize,
@@ -69,28 +67,26 @@ List<Widget> buildSettingItemList({
       ),
     if (!kIsWeb && (!iOS || kIsDesktop))
       SearchableSettingItem(
-        title:
-        ss.settings.redactedMode.value && ss.settings.hideContactInfo.value
+        title: SettingsSvc.settings.redactedMode.value && SettingsSvc.settings.hideContactInfo.value
             ? "User Name"
-            : ss.settings.userName.value,
+            : SettingsSvc.settings.userName.value,
         child: SettingsSection(
           backgroundColor: tileColor,
           children: [
             SettingsTile(
               backgroundColor: tileColor,
-              title: ss.settings.redactedMode.value &&
-                  ss.settings.hideContactInfo.value
+              title: SettingsSvc.settings.redactedMode.value && SettingsSvc.settings.hideContactInfo.value
                   ? "User Name"
-                  : ss.settings.userName.value,
+                  : SettingsSvc.settings.userName.value,
               subtitle: "Tap to view more details",
               onTap: () {
                 ns.pushAndRemoveSettingsUntil(
                   context,
-                  ProfilePanel(),
-                      (route) => route.isFirst,
+                  const ProfilePanel(),
+                  (route) => route.isFirst,
                 );
               },
-              leading: ContactAvatarWidget(
+              leading: const ContactAvatarWidget(
                 handle: null,
                 borderThickness: 0.1,
                 editable: false,
@@ -132,7 +128,7 @@ List<Widget> buildSettingItemList({
         ns.pushAndRemoveSettingsUntil(
           context,
           ServerManagementPanel(),
-              (Route route) => route.isFirst,
+          (Route route) => route.isFirst,
         );
       },
       // Helps search
@@ -147,8 +143,8 @@ List<Widget> buildSettingItemList({
             material: material,
           ),
 
-          if (ss.serverDetailsSync().item4 >= 205) const SettingsDivider(),
-          if (ss.serverDetailsSync().item4 >= 205)
+          if (SettingsSvc.serverDetails.supportsScheduledMessages) const SettingsDivider(),
+          if (SettingsSvc.serverDetails.supportsScheduledMessages)
             SearchableSettingItem(
                 title: "Scheduled Messages",
                 searchTags: ["Scheduled Messages"],
@@ -158,8 +154,8 @@ List<Widget> buildSettingItemList({
                   onTap: () {
                     ns.pushAndRemoveSettingsUntil(
                       context,
-                      ScheduledMessagesPanel(),
-                          (Route route) => route.isFirst,
+                      const ScheduledMessagesPanel(),
+                      (Route route) => route.isFirst,
                     );
                   },
                   trailing: const NextButton(),
@@ -168,8 +164,7 @@ List<Widget> buildSettingItemList({
                     materialIcon: Icons.schedule_send_outlined,
                     containerColor: Colors.redAccent,
                   ),
-                )
-            ),
+                )),
 
           if (Platform.isAndroid) const SettingsDivider(),
           if (Platform.isAndroid)
@@ -182,8 +177,8 @@ List<Widget> buildSettingItemList({
                 onTap: () {
                   ns.pushAndRemoveSettingsUntil(
                     context,
-                    MessageRemindersPanel(),
-                        (Route route) => route.isFirst,
+                    const MessageRemindersPanel(),
+                    (Route route) => route.isFirst,
                   );
                 },
                 trailing: const NextButton(),
@@ -199,18 +194,16 @@ List<Widget> buildSettingItemList({
     ),
     SearchableSettingItem(
         title: "Appearance",
-        child: SettingsHeader(
-            iosSubtitle: iosSubtitle,
-            materialSubtitle: materialSubtitle,
-            text: "Appearance")),
+        child: SettingsHeader(iosSubtitle: iosSubtitle, materialSubtitle: materialSubtitle, text: "Appearance")),
     SearchableSettingItem(
         title: "Appearance Settings",
         searchTags: [
           "Dark Mode",
           "Light Mode",
-          "Advanced Theming",
+          "Theme Studio",
           "Tablet Mode",
-          "Immersive Mode", "Material You",
+          "Immersive Mode",
+          "Material You",
           "Colors for Media",
           "Colorful Avatars",
           "Colorful Bubbles",
@@ -222,7 +215,7 @@ List<Widget> buildSettingItemList({
           ns.pushAndRemoveSettingsUntil(
             context,
             ThemingPanel(),
-                (Route route) => route.isFirst,
+            (Route route) => route.isFirst,
           );
         },
         child: SettingsSection(
@@ -235,15 +228,14 @@ List<Widget> buildSettingItemList({
                 ns.pushAndRemoveSettingsUntil(
                   context,
                   ThemingPanel(),
-                      (Route route) => route.isFirst,
+                  (Route route) => route.isFirst,
                 );
               },
               trailing: Row(mainAxisSize: MainAxisSize.min, children: [
                 Text(
-                  "${ss.settings.skin.value.toString().split(".").last}  |  ${AdaptiveTheme.of(context).mode.toString().split(".").last.capitalizeFirst!}",
-                  style: context.theme.textTheme.bodyMedium!.apply(
-                      color: context.theme.colorScheme.outline
-                          .withValues(alpha: 0.85)),
+                  "${SettingsSvc.settings.skin.value.toString().split(".").last}  |  ${AdaptiveTheme.of(context).mode.toString().split(".").last.capitalizeFirst!}",
+                  style: context.theme.textTheme.bodyMedium!
+                      .apply(color: context.theme.colorScheme.outline.withValues(alpha: 0.85)),
                 ),
                 const SizedBox(width: 5),
                 const NextButton(),
@@ -263,7 +255,6 @@ List<Widget> buildSettingItemList({
         text: "Application Settings",
       ),
     ),
-
     SettingsSection(
       backgroundColor: tileColor,
       searchableSettingsItems: [
@@ -286,8 +277,8 @@ List<Widget> buildSettingItemList({
           onTap: () {
             ns.pushAndRemoveSettingsUntil(
               context,
-              AttachmentPanel(),
-                  (Route route) => route.isFirst,
+              const AttachmentPanel(),
+              (Route route) => route.isFirst,
             );
           },
           child: SettingsTile(
@@ -296,8 +287,8 @@ List<Widget> buildSettingItemList({
             onTap: () {
               ns.pushAndRemoveSettingsUntil(
                 context,
-                AttachmentPanel(),
-                    (Route route) => route.isFirst,
+                const AttachmentPanel(),
+                (Route route) => route.isFirst,
               );
             },
             leading: const SettingsLeadingIcon(
@@ -326,8 +317,8 @@ List<Widget> buildSettingItemList({
           onTap: () {
             ns.pushAndRemoveSettingsUntil(
               context,
-              NotificationPanel(),
-                  (Route route) => route.isFirst,
+              const NotificationPanel(),
+              (Route route) => route.isFirst,
             );
           },
           child: SettingsTile(
@@ -336,8 +327,8 @@ List<Widget> buildSettingItemList({
             onTap: () {
               ns.pushAndRemoveSettingsUntil(
                 context,
-                NotificationPanel(),
-                    (Route route) => route.isFirst,
+                const NotificationPanel(),
+                (Route route) => route.isFirst,
               );
             },
             leading: const SettingsLeadingIcon(
@@ -374,8 +365,8 @@ List<Widget> buildSettingItemList({
           onTap: () {
             ns.pushAndRemoveSettingsUntil(
               context,
-              ChatListPanel(),
-                  (Route route) => route.isFirst,
+              const ChatListPanel(),
+              (Route route) => route.isFirst,
             );
           },
           child: SettingsTile(
@@ -384,8 +375,8 @@ List<Widget> buildSettingItemList({
             onTap: () {
               ns.pushAndRemoveSettingsUntil(
                 context,
-                ChatListPanel(),
-                    (Route route) => route.isFirst,
+                const ChatListPanel(),
+                (Route route) => route.isFirst,
               );
             },
             leading: const SettingsLeadingIcon(
@@ -424,8 +415,8 @@ List<Widget> buildSettingItemList({
           onTap: () {
             ns.pushAndRemoveSettingsUntil(
               context,
-              ConversationPanel(),
-                  (Route route) => route.isFirst,
+              const ConversationPanel(),
+              (Route route) => route.isFirst,
             );
           },
           child: SettingsTile(
@@ -434,8 +425,8 @@ List<Widget> buildSettingItemList({
             onTap: () {
               ns.pushAndRemoveSettingsUntil(
                 context,
-                ConversationPanel(),
-                    (Route route) => route.isFirst,
+                const ConversationPanel(),
+                (Route route) => route.isFirst,
               );
             },
             leading: const SettingsLeadingIcon(
@@ -448,7 +439,7 @@ List<Widget> buildSettingItemList({
         ),
 
         if (kIsDesktop)
-        // Desktop Settings Tile
+          // Desktop Settings Tile
           SearchableSettingItem(
               title: "Desktop Settings", // Title to search,
               searchTags: [
@@ -466,8 +457,8 @@ List<Widget> buildSettingItemList({
               onTap: () {
                 ns.pushAndRemoveSettingsUntil(
                   context,
-                  DesktopPanel(),
-                      (Route route) => route.isFirst,
+                  const DesktopPanel(),
+                  (Route route) => route.isFirst,
                 );
               },
               child: SettingsTile(
@@ -476,8 +467,8 @@ List<Widget> buildSettingItemList({
                 onTap: () {
                   ns.pushAndRemoveSettingsUntil(
                     context,
-                    DesktopPanel(),
-                        (Route route) => route.isFirst,
+                    const DesktopPanel(),
+                    (Route route) => route.isFirst,
                   );
                 },
                 leading: const SettingsLeadingIcon(
@@ -509,8 +500,8 @@ List<Widget> buildSettingItemList({
           onTap: () {
             ns.pushAndRemoveSettingsUntil(
               context,
-              MiscPanel(),
-                  (Route route) => route.isFirst,
+              const MiscPanel(),
+              (Route route) => route.isFirst,
             );
           },
           child: SettingsTile(
@@ -519,8 +510,8 @@ List<Widget> buildSettingItemList({
             onTap: () {
               ns.pushAndRemoveSettingsUntil(
                 context,
-                MiscPanel(),
-                    (Route route) => route.isFirst,
+                const MiscPanel(),
+                (Route route) => route.isFirst,
               );
             },
             leading: const SettingsLeadingIcon(
@@ -532,46 +523,6 @@ List<Widget> buildSettingItemList({
         )
       ],
     ),
-
-    // Desktop Settings Tile (only for desktop)
-    if (kIsDesktop)
-      SearchableSettingItem(
-        title: "Desktop Settings", // Title to search
-        searchTags: [
-          "Launch on Startup",
-          "Launch on Startup Minimized",
-          "Use Custom TitleBar",
-          "Minimize to Tray",
-          "Close to Tray",
-          "Desktop Notifications",
-          "Notification Sound Volume",
-          "Actions",
-          "Show Reply Field"
-        ],
-        onTap: () {
-          ns.pushAndRemoveSettingsUntil(
-            context,
-            DesktopPanel(),
-                (Route route) => route.isFirst,
-          );
-        },
-        child: SettingsTile(
-          backgroundColor: tileColor,
-          title: "Desktop Settings",
-          onTap: () {
-            ns.pushAndRemoveSettingsUntil(
-              context,
-              DesktopPanel(),
-                  (Route route) => route.isFirst,
-            );
-          },
-          leading: const SettingsLeadingIcon(
-            iosIcon: CupertinoIcons.desktopcomputer,
-            materialIcon: Icons.desktop_windows,
-          ),
-          trailing: const NextButton(),
-        ),
-      ),
     SearchableSettingItem(
       title: "Advanced", // Title to search
       child: SettingsHeader(
@@ -580,7 +531,6 @@ List<Widget> buildSettingItemList({
         text: "Advanced",
       ),
     ),
-
     SettingsSection(
       backgroundColor: tileColor,
       searchableSettingsItems: [
@@ -604,7 +554,7 @@ List<Widget> buildSettingItemList({
             ns.pushAndRemoveSettingsUntil(
               context,
               PrivateAPIPanel(),
-                  (Route route) => route.isFirst,
+              (Route route) => route.isFirst,
             );
           },
           child: PrivateAPITile(tileColor: tileColor),
@@ -623,8 +573,8 @@ List<Widget> buildSettingItemList({
           onTap: () async {
             ns.pushAndRemoveSettingsUntil(
               context,
-              RedactedModePanel(),
-                  (Route route) => route.isFirst,
+              const RedactedModePanel(),
+              (Route route) => route.isFirst,
             );
           },
           child: RedactedModeTile(tileColor: tileColor),
@@ -638,8 +588,8 @@ List<Widget> buildSettingItemList({
             onTap: () async {
               ns.pushAndRemoveSettingsUntil(
                 context,
-                TaskerPanel(),
-                    (Route route) => route.isFirst,
+                const TaskerPanel(),
+                (Route route) => route.isFirst,
               );
             },
             child: SettingsTile(
@@ -649,8 +599,8 @@ List<Widget> buildSettingItemList({
               onTap: () async {
                 ns.pushAndRemoveSettingsUntil(
                   context,
-                  TaskerPanel(),
-                      (Route route) => route.isFirst,
+                  const TaskerPanel(),
+                  (Route route) => route.isFirst,
                 );
               },
               leading: const SettingsLeadingIcon(
@@ -664,16 +614,12 @@ List<Widget> buildSettingItemList({
         // Notification Providers Tile
         SearchableSettingItem(
           title: "Notification Providers", // Title to search
-          searchTags: [
-            "Google Firebase (FCM)",
-            "Background Service",
-            "Unified Push"
-          ], // Search tags
+          searchTags: ["Google Firebase (FCM)", "Background Service", "Unified Push"], // Search tags
           onTap: () async {
             ns.pushAndRemoveSettingsUntil(
               context,
-              NotificationProvidersPanel(),
-                  (Route route) => route.isFirst,
+              const NotificationProvidersPanel(),
+              (Route route) => route.isFirst,
             );
           }, // On tap to search
           child: SettingsTile(
@@ -681,8 +627,8 @@ List<Widget> buildSettingItemList({
             onTap: () async {
               ns.pushAndRemoveSettingsUntil(
                 context,
-                NotificationProvidersPanel(),
-                    (Route route) => route.isFirst,
+                const NotificationProvidersPanel(),
+                (Route route) => route.isFirst,
               );
             },
             leading: const SettingsLeadingIcon(
@@ -713,8 +659,8 @@ List<Widget> buildSettingItemList({
           onTap: () async {
             ns.pushAndRemoveSettingsUntil(
               context,
-              TroubleshootPanel(),
-                  (Route route) => route.isFirst,
+              const TroubleshootPanel(),
+              (Route route) => route.isFirst,
             );
           },
           child: SettingsTile(
@@ -722,8 +668,8 @@ List<Widget> buildSettingItemList({
             onTap: () async {
               ns.pushAndRemoveSettingsUntil(
                 context,
-                TroubleshootPanel(),
-                    (Route route) => route.isFirst,
+                const TroubleshootPanel(),
+                (Route route) => route.isFirst,
               );
             },
             leading: const SettingsLeadingIcon(
@@ -738,15 +684,10 @@ List<Widget> buildSettingItemList({
         ),
       ],
     ),
-
     SearchableSettingItem(
       title: "Backup and restore",
-      child: SettingsHeader(
-          iosSubtitle: iosSubtitle,
-          materialSubtitle: materialSubtitle,
-          text: "Backup and Restore"),
+      child: SettingsHeader(iosSubtitle: iosSubtitle, materialSubtitle: materialSubtitle, text: "Backup and Restore"),
     ),
-
     SettingsSection(
       backgroundColor: tileColor,
       searchableSettingsItems: [
@@ -763,8 +704,8 @@ List<Widget> buildSettingItemList({
           onTap: () {
             ns.pushAndRemoveSettingsUntil(
               context,
-              BackupRestorePanel(),
-                  (Route route) => route.isFirst,
+              const BackupRestorePanel(),
+              (Route route) => route.isFirst,
             );
           },
           child: SettingsTile(
@@ -772,8 +713,8 @@ List<Widget> buildSettingItemList({
             onTap: () {
               ns.pushAndRemoveSettingsUntil(
                 context,
-                BackupRestorePanel(),
-                    (Route route) => route.isFirst,
+                const BackupRestorePanel(),
+                (Route route) => route.isFirst,
               );
             },
             trailing: const NextButton(),
@@ -793,9 +734,13 @@ List<Widget> buildSettingItemList({
             child: SettingsTile(
               backgroundColor: tileColor,
               onTap: () async {
+                BuildContext? dialogCtx;
+
                 void closeDialog() {
                   Get.closeAllSnackbars();
-                  Navigator.of(context).pop();
+                  if (dialogCtx != null) {
+                    Navigator.of(dialogCtx!).pop();
+                  }
                   Future.delayed(const Duration(milliseconds: 400), () {
                     progress.value = null;
                     totalSize.value = null;
@@ -804,35 +749,36 @@ List<Widget> buildSettingItemList({
 
                 showDialog(
                   context: context,
-                  builder: (context) => ContactUploadProgress(
-                    progress: progress,
-                    totalSize: totalSize,
-                    uploadingContacts: uploadingContacts,
-                    onClose: closeDialog,
-                  ),
+                  builder: (dialogContext) {
+                    dialogCtx = dialogContext;
+                    return ContactUploadProgress(
+                      progress: progress,
+                      totalSize: totalSize,
+                      uploadingContacts: uploadingContacts,
+                      onClose: closeDialog,
+                    );
+                  },
                 );
 
                 final contacts = <Map<String, dynamic>>[];
-                for (Contact c in cs.contacts) {
+                final allContacts = await ContactsSvcV2.getAllContacts();
+                for (ContactV2 c in allContacts) {
                   var map = c.toMap();
                   contacts.add(map);
                 }
-                http.createContact(contacts, onSendProgress: (count, total) {
+                HttpSvc.createContact(contacts, onSendProgress: (count, total) {
                   uploadingContacts.value = true;
                   progress.value = count / total;
                   totalSize.value = total;
                   if (progress.value == 1.0) {
                     uploadingContacts.value = false;
-                    showSnackbar(
-                        "Notice", "Successfully exported contacts to server");
+                    showSnackbar("Notice", "Successfully exported contacts to server");
                   }
                 }).catchError((err, stack) {
                   if (err is Response) {
-                    Logger.error(err.data["error"]["message"].toString(),
-                        error: err, trace: stack);
+                    Logger.error(err.data["error"]["message"].toString(), error: err, trace: stack);
                   } else {
-                    Logger.error("Failed to create contact!",
-                        error: err, trace: stack);
+                    Logger.error("Failed to create contact!", error: err, trace: stack);
                   }
 
                   closeDialog.call();
@@ -855,7 +801,7 @@ List<Widget> buildSettingItemList({
           child: SettingsTile(
             title: "Leave Us a Review",
             subtitle:
-            "Enjoying the app? Leave us a review on the ${Platform.isAndroid ? 'Google Play Store' : 'Microsoft Store'}!",
+                "Enjoying the app? Leave us a review on the ${Platform.isAndroid ? 'Google Play Store' : 'Microsoft Store'}!",
             onTap: () async {
               final InAppReview inAppReview = InAppReview.instance;
               inAppReview.openStoreListing(microsoftStoreId: '9P3XF8KJ0LSM');
@@ -874,14 +820,9 @@ List<Widget> buildSettingItemList({
             title: "Make a Donation", // Title to search
             child: SettingsTile(
               title: "Make a Donation",
-              subtitle:
-              "Support the developers by making a one-time or recurring donation to the BlueBubbles Team!",
+              subtitle: "Support the developers by making a one-time or recurring donation to the BlueBubbles Team!",
               onTap: () async {
-                await launchUrl(
-                    Uri(
-                        scheme: "https",
-                        host: "bluebubbles.app",
-                        path: "donate"),
+                await launchUrl(Uri(scheme: "https", host: "bluebubbles.app", path: "donate"),
                     mode: LaunchMode.externalApplication);
               },
               leading: const SettingsLeadingIcon(
@@ -897,11 +838,9 @@ List<Widget> buildSettingItemList({
           title: "Join Our Discord", // Title to search
           child: SettingsTile(
             title: "Join Our Discord",
-            subtitle:
-            "Join our Discord server to chat with other BlueBubbles users and the developers",
+            subtitle: "Join our Discord server to chat with other BlueBubbles users and the developers",
             onTap: () async {
-              await launchUrl(
-                  Uri(scheme: "https", host: "discord.gg", path: "hbx7EhNFjp"),
+              await launchUrl(Uri(scheme: "https", host: "discord.gg", path: "hbx7EhNFjp"),
                   mode: LaunchMode.externalApplication);
             },
             leading: SettingsLeadingIcon(
@@ -927,8 +866,8 @@ List<Widget> buildSettingItemList({
           onTap: () {
             ns.pushAndRemoveSettingsUntil(
               context,
-              AboutPanel(),
-                  (Route route) => route.isFirst,
+              const AboutPanel(),
+              (Route route) => route.isFirst,
             );
           },
           child: SettingsTile(
@@ -938,8 +877,8 @@ List<Widget> buildSettingItemList({
             onTap: () {
               ns.pushAndRemoveSettingsUntil(
                 context,
-                AboutPanel(),
-                    (Route route) => route.isFirst,
+                const AboutPanel(),
+                (Route route) => route.isFirst,
               );
             },
             trailing: const NextButton(),
@@ -971,14 +910,12 @@ List<Widget> buildSettingItemList({
                         "This will remove all attachments from this app. Recent attachments will be automatically re-downloaded when you enter a chat. This will not delete attachments from your server.",
                         style: context.theme.textTheme.bodyLarge,
                       ),
-                      backgroundColor: context.theme.colorScheme.properSurface,
+                      backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
                       actions: <Widget>[
                         TextButton(
                           child: Text("No",
                               style: context.theme.textTheme.bodyLarge!
-                                  .copyWith(
-                                  color:
-                                  context.theme.colorScheme.primary)),
+                                  .copyWith(color: context.theme.colorScheme.primary)),
                           onPressed: () {
                             Navigator.of(context).pop();
                           },
@@ -986,15 +923,11 @@ List<Widget> buildSettingItemList({
                         TextButton(
                           child: Text("Yes",
                               style: context.theme.textTheme.bodyLarge!
-                                  .copyWith(
-                                  color:
-                                  context.theme.colorScheme.primary)),
+                                  .copyWith(color: context.theme.colorScheme.primary)),
                           onPressed: () async {
-                            final dir =
-                            Directory("${fs.appDocDir.path}/attachments");
+                            final dir = Directory(FilesystemSvc.attachmentsPath);
                             await dir.delete(recursive: true);
-                            showSnackbar(
-                                "Success", "Deleted cached attachments");
+                            showSnackbar("Success", "Deleted cached attachments");
                           },
                         ),
                       ],
@@ -1031,14 +964,12 @@ List<Widget> buildSettingItemList({
                         "This will delete all app data, including your settings, messages, attachments, and more. This action cannot be undone. It is recommended that you take a backup of your settings before proceeding. This will also close the app once the process is complete.",
                         style: context.theme.textTheme.bodyLarge,
                       ),
-                      backgroundColor: context.theme.colorScheme.properSurface,
+                      backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
                       actions: <Widget>[
                         TextButton(
                           child: Text("No",
                               style: context.theme.textTheme.bodyLarge!
-                                  .copyWith(
-                                  color:
-                                  context.theme.colorScheme.primary)),
+                                  .copyWith(color: context.theme.colorScheme.primary)),
                           onPressed: () {
                             Navigator.of(context).pop();
                           },
@@ -1046,33 +977,26 @@ List<Widget> buildSettingItemList({
                         TextButton(
                           child: Text("Yes",
                               style: context.theme.textTheme.bodyLarge!
-                                  .copyWith(
-                                  color:
-                                  context.theme.colorScheme.primary)),
+                                  .copyWith(color: context.theme.colorScheme.primary)),
                           onPressed: () async {
-                            fs.deleteDB();
-                            socket.forgetConnection();
-                            ss.settings = Settings();
-                            await ss.settings.saveAsync();
+                            FilesystemSvc.deleteDB();
+                            SocketSvc.forgetConnection();
+                            SettingsSvc.settings = Settings();
+                            await SettingsSvc.settings.saveAsync();
 
-                            await ss.prefs.clear();
-                            await ss.prefs
-                                .setString("selected-dark", "OLED Dark");
-                            await ss.prefs
-                                .setString("selected-light", "Bright White");
-                            Database.themes.putMany(ts.defaultThemes);
+                            await PrefsSvc.i.clear();
+                            await PrefsSvc.i.setString("selected-dark", "OLED Dark");
+                            await PrefsSvc.i.setString("selected-light", "Bright White");
+                            Database.themes.putMany(ThemesService.defaultThemes);
 
                             await FCMData.deleteFcmData();
 
                             try {
-                              if (fcm.token != null) {
-                                await mcs.invokeMethod("firebase-delete-token");
+                              if (FirebaseSvc.token != null) {
+                                await MethodChannelSvc.invokeMethod("firebase-delete-token");
                               }
                             } catch (e, s) {
-                              Logger.error(
-                                  "Failed to delete Firebase FCM token",
-                                  error: e,
-                                  trace: s);
+                              Logger.error("Failed to delete Firebase FCM token", error: e, trace: s);
                             }
 
                             exit(0);

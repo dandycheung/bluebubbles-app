@@ -25,14 +25,13 @@ class PrivateAPITile extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                ss.settings.enablePrivateAPI.value
-                    ? ss.settings.serverPrivateAPI.value == false
+                SettingsSvc.settings.enablePrivateAPI.value
+                    ? SettingsSvc.settings.serverPrivateAPI.value == false
                         ? "Not Set Up"
                         : "Enabled"
                     : "Disabled",
                 style: context.theme.textTheme.bodyMedium!.apply(
-                  color: context.theme.colorScheme.outline
-                      .withValues(alpha: 0.85),
+                  color: context.theme.colorScheme.outline.withValues(alpha: 0.85),
                 ),
               ),
               const SizedBox(width: 5),
@@ -40,7 +39,7 @@ class PrivateAPITile extends StatelessWidget {
             ],
           ),
           onTap: () async {
-            ns.pushAndRemoveSettingsUntil(
+            NavigationSvc.pushAndRemoveSettingsUntil(
               context,
               PrivateAPIPanel(),
               (Route route) => route.isFirst,
@@ -49,8 +48,8 @@ class PrivateAPITile extends StatelessWidget {
           leading: SettingsLeadingIcon(
             iosIcon: CupertinoIcons.exclamationmark_shield_fill,
             materialIcon: Icons.gpp_maybe,
-            containerColor: ss.settings.enablePrivateAPI.value
-                ? ss.settings.serverPrivateAPI.value == false
+            containerColor: SettingsSvc.settings.enablePrivateAPI.value
+                ? SettingsSvc.settings.serverPrivateAPI.value == false
                     ? Colors.redAccent
                     : Colors.green
                 : Colors.amber,

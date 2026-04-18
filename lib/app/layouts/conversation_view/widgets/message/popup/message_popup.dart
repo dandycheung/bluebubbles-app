@@ -1,23 +1,25 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 import 'dart:ui';
 
 import 'package:bluebubbles/app/components/custom_text_editing_controllers.dart';
 import 'package:bluebubbles/app/layouts/chat_creator/chat_creator.dart';
+import 'package:bluebubbles/app/layouts/chat_creator/new_chat_creator.dart';
 import 'package:bluebubbles/app/layouts/conversation_details/dialogs/timeframe_picker.dart';
-import 'package:bluebubbles/app/layouts/conversation_view/widgets/message/attachment/attachment_holder.dart';
-import 'package:bluebubbles/app/layouts/conversation_view/widgets/message/interactive/embedded_media.dart';
 import 'package:bluebubbles/app/layouts/conversation_view/widgets/message/popup/details_menu_action.dart';
 import 'package:bluebubbles/app/layouts/conversation_view/widgets/message/popup/reaction_picker_clipper.dart';
 import 'package:bluebubbles/app/components/avatars/contact_avatar_widget.dart';
 import 'package:bluebubbles/app/components/custom/custom_cupertino_alert_dialog.dart';
 import 'package:bluebubbles/app/layouts/findmy/findmy_pin_clipper.dart';
+import 'package:bluebubbles/app/wrappers/bb_annotated_region.dart';
 import 'package:bluebubbles/app/wrappers/theme_switcher.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/app/layouts/conversation_view/pages/conversation_view.dart';
 import 'package:bluebubbles/app/layouts/conversation_view/widgets/message/reply/reply_thread_popup.dart';
 import 'package:bluebubbles/app/wrappers/titlebar_wrapper.dart';
-import 'package:bluebubbles/app/wrappers/stateful_boilerplate.dart';
+import 'package:bluebubbles/app/state/message_state.dart';
+import 'package:bluebubbles/app/state/message_state_scope.dart';
 import 'package:bluebubbles/services/services.dart';
 import 'package:bluebubbles/utils/logger/logger.dart';
 import 'package:bluebubbles/utils/share.dart';
@@ -31,21 +33,30 @@ import 'package:flutter_acrylic/flutter_acrylic.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'package:pasteboard/pasteboard.dart';
 import 'package:path/path.dart' hide context;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:sprung/sprung.dart';
-import 'package:tuple/tuple.dart';
+import 'package:bluebubbles/models/models.dart' show MessageReplyContext;
 import 'package:url_launcher/url_launcher_string.dart';
 import 'package:universal_io/io.dart';
+
+class MessagePopupServerDetails {
+  final bool minSierra;
+  final bool minBigSur;
+  final bool supportsOriginalDownload;
+  const MessagePopupServerDetails(
+      {required this.minSierra, required this.minBigSur, required this.supportsOriginalDownload});
+}
 
 class MessagePopup extends StatefulWidget {
   final Offset childPosition;
   final Size size;
   final Widget child;
   final MessagePart part;
-  final MessageWidgetController controller;
+  final MessageState controller;
   final ConversationViewController cvController;
-  final Tuple3<bool, bool, bool> serverDetails;
+  final MessagePopupServerDetails serverDetails;
   final Function([String? type, int? part]) sendTapback;
   final BuildContext? Function() widthContext;
 
@@ -66,7 +77,7 @@ class MessagePopup extends StatefulWidget {
   State<StatefulWidget> createState() => _MessagePopupState();
 }
 
-class _MessagePopupState extends OptimizedState<MessagePopup> with SingleTickerProviderStateMixin {
+class _MessagePopupState extends State<MessagePopup> with SingleTickerProviderStateMixin, ThemeHelpers {
   late final AnimationController controller = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 150),
@@ -82,14 +93,15 @@ class _MessagePopupState extends OptimizedState<MessagePopup> with SingleTickerP
         View.of(context).devicePixelRatio,
       ).bottom;
   late int numberToShow = 5;
-  late Chat? dmChat = chats.chats
-      .firstWhereOrNull((chat) => !chat.isGroup && chat.participants.firstWhereOrNull((handle) => handle.address == message.handle?.address) != null);
+  late Chat? dmChat = ChatsSvc.allChats.firstWhereOrNull((chat) =>
+      !chat.isGroup &&
+      chat.handles.firstWhereOrNull((handle) => handle.address == message.handleRelation.target?.address) != null);
   String? selfReaction;
   String? currentlySelectedReaction = "init";
 
   ConversationViewController get cvController => widget.cvController;
 
-  MessagesService get service => ms(chat.guid);
+  MessagesService get service => MessagesSvc(chat.guid);
 
   Chat get chat => widget.cvController.chat;
 
@@ -97,21 +109,27 @@ class _MessagePopupState extends OptimizedState<MessagePopup> with SingleTickerP
 
   Message get message => widget.controller.message;
 
-  bool get isSent => !message.guid!.startsWith('temp') && !message.guid!.startsWith('error');
+  bool get isSent {
+    final isSending = widget.controller.isSending.value;
+    final hasError = widget.controller.hasError.value;
+    return !isSending && !hasError;
+  }
 
   bool get showDownload =>
-      (isSent && part.attachments.isNotEmpty && part.attachments.where((element) => as.getContent(element) is PlatformFile).isNotEmpty) ||
+      (isSent &&
+          part.attachments.isNotEmpty &&
+          part.attachments.where((element) => AttachmentsSvc.getContent(element) is PlatformFile).isNotEmpty) ||
       isEmbeddedMedia;
 
   late bool isEmbeddedMedia = (message.balloonBundleId == "com.apple.Handwriting.HandwritingProvider" ||
           message.balloonBundleId == "com.apple.DigitalTouchBalloonProvider") &&
       File(message.interactiveMediaPath!).existsSync();
 
-  bool get minSierra => widget.serverDetails.item1;
+  bool get minSierra => widget.serverDetails.minSierra;
 
-  bool get minBigSur => widget.serverDetails.item2;
+  bool get minBigSur => widget.serverDetails.minBigSur;
 
-  bool get supportsOriginalDownload => widget.serverDetails.item3;
+  bool get supportsOriginalDownload => widget.serverDetails.supportsOriginalDownload;
 
   BuildContext get widthContext => widget.widthContext.call() ?? context;
 
@@ -127,22 +145,17 @@ class _MessagePopupState extends OptimizedState<MessagePopup> with SingleTickerP
       numberToShow = 5;
     }
 
-    updateObx(() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       currentlySelectedReaction = null;
       reactions = getUniqueReactionMessages(message.associatedMessages
-          .where((e) => ReactionTypes.toList().contains(e.associatedMessageType?.replaceAll("-", "")) && (e.associatedMessagePart ?? 0) == part.part)
+          .where((e) =>
+              ReactionTypes.toList().contains(e.associatedMessageType?.replaceAll("-", "")) &&
+              (e.associatedMessagePart ?? 0) == part.part)
           .toList());
       final self = reactions.firstWhereOrNull((e) => e.isFromMe!)?.associatedMessageType;
       if (!(self?.contains("-") ?? true)) {
         selfReaction = self;
         currentlySelectedReaction = selfReaction;
-      }
-      for (Message m in reactions) {
-        if (m.isFromMe!) {
-          m.handle = null;
-        } else {
-          m.handle ??= m.getHandle();
-        }
       }
       setState(() {
         if (iOS) messageOffset = itemHeight * numberToShow + 40;
@@ -151,29 +164,15 @@ class _MessagePopupState extends OptimizedState<MessagePopup> with SingleTickerP
   }
 
   void popDetails({bool returnVal = true}) {
-    bool dialogOpen = Get.isDialogOpen ?? false;
-    if (dialogOpen) {
-      if (kIsWeb) {
-        Get.back();
-      } else {
-        Navigator.of(context).pop();
-      }
-    }
     Navigator.of(context).pop(returnVal);
   }
 
   @override
   Widget build(BuildContext context) {
-    double narrowWidth = message.isFromMe! || !ss.settings.alwaysShowAvatars.value ? 330 : 360;
-    bool narrowScreen = ns.width(widthContext) < narrowWidth;
+    double narrowWidth = message.isFromMe! || !SettingsSvc.settings.alwaysShowAvatars.value ? 330 : 360;
+    bool narrowScreen = NavigationSvc.width(widthContext) < narrowWidth;
 
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle(
-        systemNavigationBarColor: ss.settings.immersiveMode.value ? Colors.transparent : context.theme.colorScheme.background, // navigation bar color
-        systemNavigationBarIconBrightness: context.theme.colorScheme.brightness.opposite,
-        statusBarColor: Colors.transparent, // status bar color
-        statusBarIconBrightness: context.theme.colorScheme.brightness.opposite,
-      ),
+    return BBAnnotatedRegion(
       child: Theme(
         data: context.theme.copyWith(
           // in case some components still use legacy theming
@@ -181,9 +180,10 @@ class _MessagePopupState extends OptimizedState<MessagePopup> with SingleTickerP
           colorScheme: context.theme.colorScheme.copyWith(
             primary: context.theme.colorScheme.bubble(context, chat.isIMessage),
             onPrimary: context.theme.colorScheme.onBubble(context, chat.isIMessage),
-            surface:
-                ss.settings.monetTheming.value == Monet.full ? null : (context.theme.extensions[BubbleColors] as BubbleColors?)?.receivedBubbleColor,
-            onSurface: ss.settings.monetTheming.value == Monet.full
+            surface: SettingsSvc.settings.monetTheming.value == Monet.full
+                ? null
+                : (context.theme.extensions[BubbleColors] as BubbleColors?)?.receivedBubbleColor,
+            onSurface: SettingsSvc.settings.monetTheming.value == Monet.full
                 ? null
                 : (context.theme.extensions[BubbleColors] as BubbleColors?)?.onReceivedBubbleColor,
           ),
@@ -191,22 +191,23 @@ class _MessagePopupState extends OptimizedState<MessagePopup> with SingleTickerP
         child: TitleBarWrapper(
             child: Scaffold(
                 extendBodyBehindAppBar: true,
-                backgroundColor: kIsDesktop && iOS && ss.settings.windowEffect.value != WindowEffect.disabled
-                    ? context.theme.colorScheme.properSurface.withValues(alpha: 0.6)
+                backgroundColor: kIsDesktop && iOS && SettingsSvc.settings.windowEffect.value != WindowEffect.disabled
+                    ? context.theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.6)
                     : Colors.transparent,
                 appBar: iOS
                     ? null
                     : AppBar(
-                        backgroundColor: context.theme.colorScheme.background.oppositeLightenOrDarken(5),
-                        systemOverlayStyle:
-                            context.theme.colorScheme.brightness == Brightness.dark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
+                        backgroundColor: context.theme.colorScheme.surface.oppositeLightenOrDarken(5),
+                        systemOverlayStyle: context.theme.colorScheme.brightness == Brightness.dark
+                            ? SystemUiOverlayStyle.light
+                            : SystemUiOverlayStyle.dark,
                         automaticallyImplyLeading: false,
                         leadingWidth: 40,
                         toolbarHeight: kIsDesktop ? 80 : null,
                         leading: Padding(
                           padding: EdgeInsets.only(top: kIsDesktop ? 20 : 0, left: 10.0),
                           child: BackButton(
-                            color: context.theme.colorScheme.onBackground,
+                            color: context.theme.colorScheme.onSurface,
                             onPressed: () {
                               popDetails();
                               return true;
@@ -214,21 +215,27 @@ class _MessagePopupState extends OptimizedState<MessagePopup> with SingleTickerP
                           ),
                         ),
                         actions: buildMaterialDetailsMenu(context),
-                ),
+                      ),
                 body: Stack(
                   fit: StackFit.expand,
                   children: [
                     GestureDetector(
                       onTap: popDetails,
                       child: iOS
-                          ? (ss.settings.highPerfMode.value
-                              ? Container(color: context.theme.colorScheme.background.withValues(alpha: 0.8))
+                          ? (SettingsSvc.settings.highPerfMode.value
+                              ? Container(color: context.theme.colorScheme.surface.withValues(alpha: 0.5))
                               : BackdropFilter(
                                   filter: ImageFilter.blur(
-                                      sigmaX: kIsDesktop && ss.settings.windowEffect.value != WindowEffect.disabled ? 10 : 30,
-                                      sigmaY: kIsDesktop && ss.settings.windowEffect.value != WindowEffect.disabled ? 10 : 30),
+                                      sigmaX:
+                                          kIsDesktop && SettingsSvc.settings.windowEffect.value != WindowEffect.disabled
+                                              ? 10
+                                              : 30,
+                                      sigmaY:
+                                          kIsDesktop && SettingsSvc.settings.windowEffect.value != WindowEffect.disabled
+                                              ? 10
+                                              : 30),
                                   child: Container(
-                                    color: context.theme.colorScheme.properSurface.withValues(alpha: 0.3),
+                                    color: context.theme.colorScheme.surface.withValues(alpha: 0.5).darkenAmount(0.2),
                                   ),
                                 ))
                           : null,
@@ -243,12 +250,17 @@ class _MessagePopupState extends OptimizedState<MessagePopup> with SingleTickerP
                           tween: Tween<double>(begin: 0.8, end: 1),
                           curve: Curves.easeOutBack,
                           duration: const Duration(milliseconds: 500),
-                          child: ConstrainedBox(constraints: BoxConstraints(maxWidth: widget.size.width), child: widget.child),
+                          child: ConstrainedBox(
+                              constraints: BoxConstraints(maxWidth: widget.size.width),
+                              child: MessageStateScope(
+                                messageState: widget.controller,
+                                child: widget.child,
+                              )),
                           builder: (context, size, child) {
                             return Transform.scale(
                               scale: size.clamp(1, double.infinity),
-                              child: child,
                               alignment: message.isFromMe! ? Alignment.centerRight : Alignment.centerLeft,
+                              child: child,
                             );
                           },
                         ),
@@ -265,9 +277,11 @@ class _MessagePopupState extends OptimizedState<MessagePopup> with SingleTickerP
                           child: reactions.isNotEmpty ? ReactionDetails(reactions: reactions) : const SizedBox.shrink(),
                         ),
                       ),
-                    if (ss.settings.enablePrivateAPI.value && isSent && minSierra && chat.isIMessage)
+                    if (SettingsSvc.settings.enablePrivateAPI.value && isSent && minSierra && chat.isIMessage)
                       Positioned(
-                        bottom: (iOS ? itemHeight * numberToShow + 35 + widget.size.height : context.height - materialOffset)
+                        bottom: (iOS
+                                ? itemHeight * numberToShow + 35 + widget.size.height
+                                : context.height - materialOffset)
                             .clamp(0, context.height - (narrowScreen ? 200 : 125)),
                         right: message.isFromMe! ? 15 : null,
                         left: !message.isFromMe! ? widget.childPosition.dx + 10 : null,
@@ -280,7 +294,9 @@ class _MessagePopupState extends OptimizedState<MessagePopup> with SingleTickerP
                               : ClipShadowPath(
                                   shadow: iOS
                                       ? BoxShadow(
-                                          color: context.theme.colorScheme.properSurface.withAlpha(iOS ? 150 : 255).lightenOrDarken(iOS ? 0 : 10))
+                                          color: context.theme.colorScheme.surfaceContainerHighest
+                                              .withAlpha(iOS ? 150 : 255)
+                                              .lightenOrDarken(iOS ? 0 : 10))
                                       : BoxShadow(
                                           color: context.theme.colorScheme.shadow,
                                           blurRadius: 2,
@@ -293,7 +309,9 @@ class _MessagePopupState extends OptimizedState<MessagePopup> with SingleTickerP
                                     filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
                                     child: Container(
                                       padding: const EdgeInsets.all(5).add(const EdgeInsets.only(bottom: 15)),
-                                      color: context.theme.colorScheme.properSurface.withAlpha(iOS ? 150 : 255).lightenOrDarken(iOS ? 0 : 10),
+                                      color: context.theme.colorScheme.surfaceContainerHighest
+                                          .withAlpha(iOS ? 150 : 255)
+                                          .lightenOrDarken(iOS ? 0 : 10),
                                       child: Column(
                                           mainAxisSize: MainAxisSize.min,
                                           children: List.generate(narrowScreen ? 2 : 1, (index) {
@@ -301,12 +319,17 @@ class _MessagePopupState extends OptimizedState<MessagePopup> with SingleTickerP
                                               mainAxisSize: MainAxisSize.min,
                                               mainAxisAlignment: MainAxisAlignment.start,
                                               children: ReactionTypes.toList()
-                                                  .slice(narrowScreen && index == 1 ? 3 : 0, narrowScreen && index == 0 ? 3 : null)
+                                                  .slice(narrowScreen && index == 1 ? 3 : 0,
+                                                      narrowScreen && index == 0 ? 3 : null)
                                                   .map((e) {
                                                 return Padding(
-                                                  padding: iOS ? const EdgeInsets.all(5.0) : const EdgeInsets.symmetric(horizontal: 5),
+                                                  padding: iOS
+                                                      ? const EdgeInsets.all(5.0)
+                                                      : const EdgeInsets.symmetric(horizontal: 5),
                                                   child: Material(
-                                                    color: currentlySelectedReaction == e ? context.theme.colorScheme.primary : Colors.transparent,
+                                                    color: currentlySelectedReaction == e
+                                                        ? context.theme.colorScheme.primary
+                                                        : Colors.transparent,
                                                     borderRadius: BorderRadius.circular(20),
                                                     child: SizedBox(
                                                       width: iOS ? 35 : null,
@@ -325,7 +348,8 @@ class _MessagePopupState extends OptimizedState<MessagePopup> with SingleTickerP
                                                           popDetails();
                                                         },
                                                         child: Padding(
-                                                          padding: const EdgeInsets.all(6.5).add(EdgeInsets.only(right: e == "emphasize" ? 2.5 : 0)),
+                                                          padding: const EdgeInsets.all(6.5)
+                                                              .add(EdgeInsets.only(right: e == "emphasize" ? 2.5 : 0)),
                                                           child: iOS
                                                               ? SvgPicture.asset(
                                                                   'assets/reactions/$e-black.svg',
@@ -341,7 +365,9 @@ class _MessagePopupState extends OptimizedState<MessagePopup> with SingleTickerP
                                                                   child: Builder(builder: (context) {
                                                                     final text = Text(
                                                                       ReactionTypes.reactionToEmoji[e] ?? "X",
-                                                                      style: const TextStyle(fontSize: 18, fontFamily: 'Apple Color Emoji'),
+                                                                      style: const TextStyle(
+                                                                          fontSize: 18,
+                                                                          fontFamily: 'Apple Color Emoji'),
                                                                       textAlign: TextAlign.center,
                                                                     );
                                                                     // rotate thumbs down to match iOS
@@ -399,7 +425,7 @@ class _MessagePopupState extends OptimizedState<MessagePopup> with SingleTickerP
                           },
                         ),
                       ),
-                    if (!iOS && ss.settings.enablePrivateAPI.value && minBigSur && chat.isIMessage && isSent)
+                    if (!iOS && SettingsSvc.settings.enablePrivateAPI.value && minBigSur && chat.isIMessage && isSent)
                       Positioned(
                         left: !message.isFromMe!
                             ? widget.childPosition.dx + widget.size.width + (reactions.isNotEmpty ? 20 : 5)
@@ -427,7 +453,7 @@ class _MessagePopupState extends OptimizedState<MessagePopup> with SingleTickerP
 
   void reply() {
     popDetails();
-    cvController.replyToMessage = Tuple2(message, part.part);
+    cvController.replyToMessage = MessageReplyContext(message, part.part);
   }
 
   Future<void> download() async {
@@ -440,11 +466,12 @@ class _MessagePopupState extends OptimizedState<MessagePopup> with SingleTickerP
           size: 0,
         );
       } else {
-        content = as.getContent(part.attachments.first);
+        content = AttachmentsSvc.getContent(part.attachments.first);
       }
       if (content is PlatformFile) {
         popDetails();
-        await as.saveToDisk(content, isDocument: part.attachments.first.mimeStart != "image" && part.attachments.first.mimeStart != "video");
+        await AttachmentsSvc.saveToDisk(content,
+            isDocument: part.attachments.first.mimeStart != "image" && part.attachments.first.mimeStart != "video");
       }
     } catch (ex, trace) {
       Logger.error("Error downloading attachment: ${ex.toString()}", error: ex, trace: trace);
@@ -454,28 +481,47 @@ class _MessagePopupState extends OptimizedState<MessagePopup> with SingleTickerP
 
   void openLink() {
     String? url = part.url;
-    mcs.invokeMethod("open-browser", {"link": url ?? part.text});
+    MethodChannelSvc.invokeMethod("open-browser", {"link": url ?? part.text});
     popDetails();
   }
 
   Future<void> openAttachmentWeb() async {
-    await launchUrlString("${part.attachments.first.webUrl!}?guid=${ss.settings.guidAuthKey}");
+    await launchUrlString("${part.attachments.first.webUrl!}?guid=${SettingsSvc.settings.guidAuthKey}");
     popDetails();
   }
 
   void copyText() {
     Clipboard.setData(ClipboardData(text: part.fullText));
     popDetails();
-    if (!Platform.isAndroid || (fs.androidInfo?.version.sdkInt ?? 0) < 33) {
+    if (!Platform.isAndroid || (FilesystemSvc.androidInfo?.version.sdkInt ?? 0) < 33) {
       showSnackbar("Copied", "Copied to clipboard!");
     }
+  }
+
+  void copyAttachment() {
+    if (part.attachments.length == 1 && part.attachments.first.mimeStart == "image") {
+      Uint8List bytes = File(part.attachments.first.path).readAsBytesSync();
+      Pasteboard.writeImage(bytes).then((_) {
+        popDetails();
+      }).catchError((e) {
+        Logger.error("Failed to copy image!", error: e);
+        showSnackbar("Copy Error", "Failed to copy image!");
+      });
+      return;
+    }
+    Pasteboard.writeFiles(part.attachments.map((element) => element.path).toList()).then((_) {
+      popDetails();
+    }).catchError((e) {
+      Logger.error("Failed to copy attachment(s)!", error: e);
+      showSnackbar("Copy Error", "Failed to copy attachment(s)!");
+    });
   }
 
   void copySelection() {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: context.theme.colorScheme.properSurface,
+        backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
         title: Text("Copy Selection", style: context.theme.textTheme.titleLarge),
         content: SelectableText(part.fullText, style: context.theme.extension<BubbleText>()!.bubbleText),
       ),
@@ -496,7 +542,7 @@ class _MessagePopupState extends OptimizedState<MessagePopup> with SingleTickerP
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: context.theme.colorScheme.properSurface,
+        backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
         title: Text("Downloading attachment${length > 1 ? "s" : ""}...", style: context.theme.textTheme.titleLarge),
         content: Column(mainAxisAlignment: MainAxisAlignment.center, mainAxisSize: MainAxisSize.min, children: <Widget>[
           Obx(
@@ -531,9 +577,11 @@ class _MessagePopupState extends OptimizedState<MessagePopup> with SingleTickerP
         actions: [
           Obx(
             () => downloadingAttachments.value
-                ? Container(height: 0, width: 0)
+                ? const SizedBox(height: 0, width: 0)
                 : TextButton(
-                    child: Text("Close", style: context.theme.textTheme.bodyLarge!.copyWith(color: Get.context!.theme.colorScheme.primary)),
+                    child: Text("Close",
+                        style:
+                            context.theme.textTheme.bodyLarge!.copyWith(color: Get.context!.theme.colorScheme.primary)),
                     onPressed: () async {
                       Get.closeAllSnackbars();
                       Navigator.of(context).pop();
@@ -547,15 +595,17 @@ class _MessagePopupState extends OptimizedState<MessagePopup> with SingleTickerP
     try {
       for (Attachment? element in toDownload) {
         attachmentObs.value = element;
-        final response = await http.downloadAttachment(element!.guid!,
-            original: true, onReceiveProgress: (count, total) => progress.value = kIsWeb ? (count / total) : (count / element.totalBytes!));
+        final response = await HttpSvc.downloadAttachment(element!.guid!,
+            original: true,
+            onReceiveProgress: (count, total) =>
+                progress.value = kIsWeb ? (count / total) : (count / element.totalBytes!));
         final file = PlatformFile(
           name: element.transferName!,
           size: response.data.length,
           bytes: response.data,
         );
 
-        await as.saveToDisk(file, isDocument: element.mimeStart != "image" && element.mimeStart != "video");
+        await AttachmentsSvc.saveToDisk(file, isDocument: element.mimeStart != "image" && element.mimeStart != "video");
       }
       progress.value = 1;
       downloadingAttachments.value = false;
@@ -574,7 +624,7 @@ class _MessagePopupState extends OptimizedState<MessagePopup> with SingleTickerP
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: context.theme.colorScheme.properSurface,
+        backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
         title: Text("Downloading live photo${length > 1 ? "s" : ""}...", style: context.theme.textTheme.titleLarge),
         content: Column(mainAxisAlignment: MainAxisAlignment.center, mainAxisSize: MainAxisSize.min, children: <Widget>[
           Obx(
@@ -610,9 +660,11 @@ class _MessagePopupState extends OptimizedState<MessagePopup> with SingleTickerP
         actions: [
           Obx(
             () => downloadingAttachments.value
-                ? Container(height: 0, width: 0)
+                ? const SizedBox(height: 0, width: 0)
                 : TextButton(
-                    child: Text("Close", style: context.theme.textTheme.bodyLarge!.copyWith(color: Get.context!.theme.colorScheme.primary)),
+                    child: Text("Close",
+                        style:
+                            context.theme.textTheme.bodyLarge!.copyWith(color: Get.context!.theme.colorScheme.primary)),
                     onPressed: () async {
                       Get.closeAllSnackbars();
                       Navigator.of(context).pop();
@@ -626,14 +678,15 @@ class _MessagePopupState extends OptimizedState<MessagePopup> with SingleTickerP
     try {
       for (Attachment? element in toDownload) {
         attachmentObs.value = element;
-        final response = await http.downloadLivePhoto(element!.guid!, onReceiveProgress: (count, total) => progress.value = count);
+        final response = await HttpSvc.downloadLivePhoto(element!.guid!,
+            onReceiveProgress: (count, total) => progress.value = count);
         final nameSplit = element.transferName!.split(".");
         final file = PlatformFile(
           name: "${nameSplit.take(nameSplit.length - 1).join(".")}.mov",
           size: response.data.length,
           bytes: response.data,
         );
-        await as.saveToDisk(file, isDocument: true);
+        await AttachmentsSvc.saveToDisk(file, isDocument: true);
       }
       downloadingAttachments.value = false;
     } catch (ex, trace) {
@@ -658,14 +711,16 @@ class _MessagePopupState extends OptimizedState<MessagePopup> with SingleTickerP
 
   void createContact() async {
     popDetails();
-    await mcs
-        .invokeMethod("open-contact-form", {'address': message.handle!.address, 'address_type': message.handle!.address.isEmail ? 'email' : 'phone'});
+    await MethodChannelSvc.invokeMethod("open-contact-form", {
+      'address': message.handleRelation.target!.address,
+      'address_type': message.handleRelation.target!.address.isEmail ? 'email' : 'phone'
+    });
   }
 
   void showThread() {
     popDetails();
     if (message.threadOriginatorGuid != null) {
-      final mwc = getActiveMwc(message.threadOriginatorGuid!);
+      final mwc = service.getMessageStateIfExists(message.threadOriginatorGuid!);
       if (mwc == null) return showSnackbar("Error", "Failed to find thread!");
       showReplyThread(context, mwc.message, mwc.parts[message.normalizedThreadPart], service, cvController);
     } else {
@@ -674,12 +729,12 @@ class _MessagePopupState extends OptimizedState<MessagePopup> with SingleTickerP
   }
 
   void newConvo() {
-    Handle? handle = message.handle;
+    Handle? handle = message.handleRelation.target;
     if (handle == null) return;
     popDetails();
-    ns.pushAndRemoveUntil(
+    NavigationSvc.pushAndRemoveUntil(
       context,
-      ChatCreator(initialSelected: [SelectedContact(displayName: handle.displayName, address: handle.address)]),
+      NewChatCreator(initialSelected: [SelectedContact(displayName: handle.displayName, address: handle.address)]),
       (route) => route.isFirst,
     );
   }
@@ -687,9 +742,9 @@ class _MessagePopupState extends OptimizedState<MessagePopup> with SingleTickerP
   void forward() async {
     popDetails();
     List<PlatformFile> attachments = [];
-    final _attachments = message.attachments
-        .where((e) => as.getContent(e!, autoDownload: false) is PlatformFile)
-        .map((e) => as.getContent(e!, autoDownload: false) as PlatformFile);
+    final _attachments = message.dbAttachments
+        .where((e) => AttachmentsSvc.getContent(e, autoDownload: false) is PlatformFile)
+        .map((e) => AttachmentsSvc.getContent(e, autoDownload: false) as PlatformFile);
     for (PlatformFile a in _attachments) {
       Uint8List? bytes = a.bytes;
       bytes ??= await File(a.path!).readAsBytes();
@@ -701,9 +756,9 @@ class _MessagePopupState extends OptimizedState<MessagePopup> with SingleTickerP
       ));
     }
     if (attachments.isNotEmpty || !isNullOrEmpty(message.text)) {
-      ns.pushAndRemoveUntil(
+      NavigationSvc.pushAndRemoveUntil(
         context,
-        ChatCreator(
+        NewChatCreator(
           initialText: message.text,
           initialAttachments: attachments,
         ),
@@ -715,30 +770,25 @@ class _MessagePopupState extends OptimizedState<MessagePopup> with SingleTickerP
   void redownload() {
     if (isEmbeddedMedia) {
       popDetails();
-      getActiveMwc(message.guid!)?.updateWidgets<EmbeddedMedia>(null);
+      service.getMessageStateIfExists(message.guid!)?.embeddedMediaRefreshKey.value++;
     } else {
-      for (Attachment? element in part.attachments) {
-        widget.cvController.imageData.remove(element!.guid!);
-        as.redownloadAttachment(element);
+      final msgGuid = message.guid;
+      if (msgGuid != null) {
+        for (Attachment? element in part.attachments) {
+          if (element != null) {
+            unawaited(service.redownloadAttachment(msgGuid, element));
+          }
+        }
       }
       popDetails();
-      getActiveMwc(message.guid!)?.updateWidgets<AttachmentHolder>(null);
     }
   }
 
   void share() {
     if (part.attachments.isNotEmpty && !message.isLegacyUrlPreview && !kIsWeb && !kIsDesktop) {
-      for (Attachment? element in part.attachments) {
-        Share.file(
-          "${element!.mimeType!.split("/")[0].capitalizeFirst} shared from BlueBubbles: ${element.transferName}",
-          element.path,
-        );
-      }
+      Share.files(part.attachments.map((a) => a.path).nonNulls.toList());
     } else if (part.text!.isNotEmpty) {
-      Share.text(
-        "Text shared from BlueBubbles",
-        part.text!,
-      );
+      Share.text(part.text!);
     }
     popDetails();
   }
@@ -762,7 +812,7 @@ class _MessagePopupState extends OptimizedState<MessagePopup> with SingleTickerP
         showSnackbar("Error", "Select a date in the future");
         return;
       }
-      await notif.createReminder(chat, message, finalDate);
+      await NotificationsSvc.createReminder(chat, message, finalDate);
       popDetails();
       showSnackbar("Notice", "Scheduled reminder for ${buildDate(finalDate)}");
     }
@@ -770,17 +820,14 @@ class _MessagePopupState extends OptimizedState<MessagePopup> with SingleTickerP
 
   void unsend() async {
     popDetails();
-    final response = await http.unsend(message.guid!, partIndex: part.part);
-    if (response.statusCode == 200) {
-      final updatedMessage = Message.fromMap(response.data['data']);
-      ah.handleUpdatedMessage(chat, updatedMessage, null);
-    }
+    await MessagesSvc(chat.guid).unsendMessage(message, part.part);
   }
 
   void edit() {
     popDetails();
     final FocusNode? node = kIsDesktop || kIsWeb ? FocusNode() : null;
-    cvController.editing.add(Tuple3(message, part, SpellCheckTextEditingController(text: part.text!, focusNode: node)));
+    cvController.editing.add(MessageEditEntry(
+        message: message, part: part, controller: SpellCheckTextEditingController(text: part.text!, focusNode: node)));
   }
 
   void delete() {
@@ -798,25 +845,29 @@ class _MessagePopupState extends OptimizedState<MessagePopup> with SingleTickerP
   }
 
   void toggleBookmark() {
-    message.isBookmarked = !message.isBookmarked;
-    message.save(updateIsBookmarked: true);
+    // Toggle bookmark through service to update both DB and MessageState
+    MessagesSvc(cvController.chat.guid).toggleBookmark(message);
     popDetails();
   }
 
   void messageInfo() {
     const encoder = JsonEncoder.withIndent("     ");
-    Map map = message.toMap(includeObjects: true);
+    Map map = message.toMap();
     if (map["dateCreated"] is int) {
-      map["dateCreated"] = DateFormat("MMMM d, yyyy h:mm:ss a").format(DateTime.fromMillisecondsSinceEpoch(map["dateCreated"]));
+      map["dateCreated"] =
+          DateFormat("MMMM d, yyyy h:mm:ss a").format(DateTime.fromMillisecondsSinceEpoch(map["dateCreated"]));
     }
     if (map["dateDelivered"] is int) {
-      map["dateDelivered"] = DateFormat("MMMM d, yyyy h:mm:ss a").format(DateTime.fromMillisecondsSinceEpoch(map["dateDelivered"]));
+      map["dateDelivered"] =
+          DateFormat("MMMM d, yyyy h:mm:ss a").format(DateTime.fromMillisecondsSinceEpoch(map["dateDelivered"]));
     }
     if (map["dateRead"] is int) {
-      map["dateRead"] = DateFormat("MMMM d, yyyy h:mm:ss a").format(DateTime.fromMillisecondsSinceEpoch(map["dateRead"]));
+      map["dateRead"] =
+          DateFormat("MMMM d, yyyy h:mm:ss a").format(DateTime.fromMillisecondsSinceEpoch(map["dateRead"]));
     }
     if (map["dateEdited"] is int) {
-      map["dateEdited"] = DateFormat("MMMM d, yyyy h:mm:ss a").format(DateTime.fromMillisecondsSinceEpoch(map["dateEdited"]));
+      map["dateEdited"] =
+          DateFormat("MMMM d, yyyy h:mm:ss a").format(DateTime.fromMillisecondsSinceEpoch(map["dateEdited"]));
     }
     String str = encoder.convert(map);
     showDialog(
@@ -826,13 +877,14 @@ class _MessagePopupState extends OptimizedState<MessagePopup> with SingleTickerP
           "Message Info",
           style: context.theme.textTheme.titleLarge,
         ),
-        backgroundColor: context.theme.colorScheme.properSurface,
+        backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
         content: SizedBox(
-          width: ns.width(widthContext) * 3 / 5,
+          width: NavigationSvc.width(widthContext) * 3 / 5,
           height: context.height * 1 / 4,
           child: Container(
             padding: const EdgeInsets.all(10.0),
-            decoration: BoxDecoration(color: context.theme.colorScheme.background, borderRadius: const BorderRadius.all(Radius.circular(10))),
+            decoration: BoxDecoration(
+                color: context.theme.colorScheme.surface, borderRadius: const BorderRadius.all(Radius.circular(10))),
             child: SingleChildScrollView(
               child: SelectableText(
                 str,
@@ -843,7 +895,8 @@ class _MessagePopupState extends OptimizedState<MessagePopup> with SingleTickerP
         ),
         actions: [
           TextButton(
-            child: Text("Close", style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.primary)),
+            child: Text("Close",
+                style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.primary)),
             onPressed: () => Navigator.of(context).pop(),
           ),
         ],
@@ -853,143 +906,163 @@ class _MessagePopupState extends OptimizedState<MessagePopup> with SingleTickerP
 
   get _allActions {
     final canEdit = (message.dateCreated?.toUtc().isWithin(DateTime.now().toUtc(), minutes: 15) ?? false);
+    final canUnsend = (message.dateCreated?.toUtc().isWithin(DateTime.now().toUtc(), minutes: 2) ?? false);
     return [
-        if (ss.settings.enablePrivateAPI.value && minBigSur && chat.isIMessage && isSent)
-          DetailsMenuActionWidget(
-            onTap: reply,
-            action: DetailsMenuAction.Reply,
-          ),
-        if (showDownload)
-          DetailsMenuActionWidget(
-            onTap: download,
-            action: DetailsMenuAction.Save,
-          ),
-        if ((part.text?.hasUrl ?? false) && !kIsWeb && !kIsDesktop && !ls.isBubble)
-          DetailsMenuActionWidget(
-            onTap: openLink,
-            action: DetailsMenuAction.OpenInBrowser,
-          ),
-        if (showDownload && kIsWeb && part.attachments.firstOrNull?.webUrl != null)
-          DetailsMenuActionWidget(
-            onTap: openAttachmentWeb,
-            action: DetailsMenuAction.OpenInNewTab,
-          ),
-        if (!isNullOrEmptyString(part.fullText))
-          DetailsMenuActionWidget(
-            onTap: copyText,
-            action: DetailsMenuAction.CopyText,
-          ),
-        if (showDownload &&
-            supportsOriginalDownload &&
-            part.attachments
-                .where((element) =>
-                    (element.uti?.contains("heic") ?? false) ||
-                    (element.uti?.contains("heif") ?? false) ||
-                    (element.uti?.contains("quicktime") ?? false) ||
-                    (element.uti?.contains("coreaudio") ?? false) ||
-                    (element.uti?.contains("tiff") ?? false))
-                .isNotEmpty)
-          DetailsMenuActionWidget(
-            onTap: downloadOriginal,
-            action: DetailsMenuAction.SaveOriginal,
-          ),
-        if (showDownload && part.attachments.where((e) => e.hasLivePhoto).isNotEmpty)
-          DetailsMenuActionWidget(
-            onTap: downloadLivePhoto,
-            action: DetailsMenuAction.SaveLivePhoto,
-          ),
-        if (chat.isGroup && !message.isFromMe! && dmChat != null && !ls.isBubble)
-          DetailsMenuActionWidget(
-            onTap: openDm,
-            action: DetailsMenuAction.OpenDirectMessage,
-          ),
-        if (message.threadOriginatorGuid != null || service.struct.threads(message.guid!, part.part, returnOriginator: false).isNotEmpty)
-          DetailsMenuActionWidget(
-            onTap: showThread,
-            action: DetailsMenuAction.ViewThread,
-          ),
-        if ((part.attachments.isNotEmpty && !kIsWeb && !kIsDesktop) || (!kIsWeb && !kIsDesktop && !isNullOrEmpty(part.text)))
-          DetailsMenuActionWidget(
-            onTap: share,
-            action: DetailsMenuAction.Share,
-          ),
-        if (showDownload)
-          DetailsMenuActionWidget(
-            onTap: redownload,
-            action: DetailsMenuAction.ReDownloadFromServer,
-          ),
-        if (!kIsWeb && !kIsDesktop)
-          DetailsMenuActionWidget(
-            onTap: remindLater,
-            action: DetailsMenuAction.RemindLater,
-          ),
-        if (!kIsWeb && !kIsDesktop && !message.isFromMe! && message.handle != null && message.handle!.contact == null)
-          DetailsMenuActionWidget(
-            onTap: createContact,
-            action: DetailsMenuAction.CreateContact,
-          ),
-        if (ss.isMinVenturaSync && message.isFromMe! && !message.guid!.startsWith("temp") && ss.serverDetailsSync().item4 >= 148)
-          DetailsMenuActionWidget(
-            onTap: unsend,
-            action: DetailsMenuAction.UndoSend,
-          ),
-        if (ss.isMinVenturaSync &&
-            message.isFromMe! &&
-            !message.guid!.startsWith("temp") &&
-            ss.serverDetailsSync().item4 >= 148 &&
-            (part.text?.isNotEmpty ?? false))
-          DetailsMenuActionWidget(
-            onTap: edit,
-            customTitle: canEdit ? 'Edit' : 'Edit (too old)',
-            shouldDisableBtn: !canEdit,
-            action: DetailsMenuAction.Edit,
-          ),
-        if (!ls.isBubble && !message.isInteractive)
-          DetailsMenuActionWidget(
-            onTap: forward,
-            action: DetailsMenuAction.Forward,
-          ),
-        if (chat.isGroup && !message.isFromMe! && dmChat == null && !ls.isBubble)
-          DetailsMenuActionWidget(
-            onTap: newConvo,
-            action: DetailsMenuAction.StartConversation,
-          ),
-        if (!isNullOrEmptyString(part.fullText) && (kIsDesktop || kIsWeb))
-          DetailsMenuActionWidget(
-            onTap: copySelection,
-            action: DetailsMenuAction.CopySelection,
-          ),
+      if (SettingsSvc.settings.enablePrivateAPI.value && minBigSur && chat.isIMessage && isSent)
         DetailsMenuActionWidget(
-          onTap: delete,
-          action: DetailsMenuAction.Delete,
+          onTap: reply,
+          action: DetailsMenuAction.Reply,
         ),
+      if (showDownload)
         DetailsMenuActionWidget(
-          onTap: toggleBookmark,
-          action: DetailsMenuAction.Bookmark,
-          customTitle: message.isBookmarked ? "Remove Bookmark" : "Add Bookmark",
+          onTap: download,
+          action: DetailsMenuAction.Save,
         ),
+      if ((part.text?.hasUrl ?? false) && !kIsWeb && !kIsDesktop && !LifecycleSvc.isBubble)
         DetailsMenuActionWidget(
-          onTap: selectMultiple,
-          action: DetailsMenuAction.SelectMultiple,
+          onTap: openLink,
+          action: DetailsMenuAction.OpenInBrowser,
         ),
+      if (showDownload && kIsWeb && part.attachments.firstOrNull?.webUrl != null)
         DetailsMenuActionWidget(
-          onTap: messageInfo,
-          action: DetailsMenuAction.MessageInfo,
+          onTap: openAttachmentWeb,
+          action: DetailsMenuAction.OpenInNewTab,
         ),
-      ].sorted((a, b) => ss.settings.detailsMenuActions.indexOf(a.action).compareTo(ss.settings.detailsMenuActions.indexOf(b.action)));
+      if (!isNullOrEmptyString(part.fullText))
+        DetailsMenuActionWidget(
+          onTap: copyText,
+          action: DetailsMenuAction.CopyText,
+        ),
+      if (showDownload && kIsDesktop)
+        DetailsMenuActionWidget(
+          onTap: copyAttachment,
+          action: DetailsMenuAction.CopyAttachment,
+        ),
+      if (showDownload &&
+          supportsOriginalDownload &&
+          part.attachments
+              .where((element) =>
+                  (element.uti?.contains("heic") ?? false) ||
+                  (element.uti?.contains("heif") ?? false) ||
+                  (element.uti?.contains("quicktime") ?? false) ||
+                  (element.uti?.contains("coreaudio") ?? false) ||
+                  (element.uti?.contains("tiff") ?? false))
+              .isNotEmpty)
+        DetailsMenuActionWidget(
+          onTap: downloadOriginal,
+          action: DetailsMenuAction.SaveOriginal,
+        ),
+      if (showDownload && part.attachments.where((e) => e.hasLivePhoto).isNotEmpty)
+        DetailsMenuActionWidget(
+          onTap: downloadLivePhoto,
+          action: DetailsMenuAction.SaveLivePhoto,
+        ),
+      if (chat.isGroup && !message.isFromMe! && dmChat != null && !LifecycleSvc.isBubble)
+        DetailsMenuActionWidget(
+          onTap: openDm,
+          action: DetailsMenuAction.OpenDirectMessage,
+        ),
+      if (message.threadOriginatorGuid != null ||
+          service.struct.threads(message.guid!, part.part, returnOriginator: false).isNotEmpty)
+        DetailsMenuActionWidget(
+          onTap: showThread,
+          action: DetailsMenuAction.ViewThread,
+        ),
+      if ((part.attachments.isNotEmpty && !kIsWeb && !(kIsDesktop && Platform.isLinux)) ||
+          (!kIsWeb && !(kIsDesktop && Platform.isLinux) && !isNullOrEmpty(part.text)))
+        DetailsMenuActionWidget(
+          onTap: share,
+          action: DetailsMenuAction.Share,
+        ),
+      if (showDownload)
+        DetailsMenuActionWidget(
+          onTap: redownload,
+          action: DetailsMenuAction.ReDownloadFromServer,
+        ),
+      if (!kIsWeb && !kIsDesktop)
+        DetailsMenuActionWidget(
+          onTap: remindLater,
+          action: DetailsMenuAction.RemindLater,
+        ),
+      if (!kIsWeb &&
+          !kIsDesktop &&
+          !message.isFromMe! &&
+          message.handleRelation.target != null &&
+          message.handleRelation.target!.contactsV2.isEmpty)
+        DetailsMenuActionWidget(
+          onTap: createContact,
+          action: DetailsMenuAction.CreateContact,
+        ),
+      if (SettingsSvc.serverDetails.isMinVentura &&
+          message.isFromMe! &&
+          !widget.controller.isSending.value &&
+          SettingsSvc.serverDetails.supportsEditAndUnsend)
+        DetailsMenuActionWidget(
+          onTap: unsend,
+          customTitle: canUnsend ? 'Undo Send' : 'Undo Send (too old)',
+          shouldDisableBtn: !canUnsend,
+          action: DetailsMenuAction.UndoSend,
+        ),
+      if (SettingsSvc.serverDetails.isMinVentura &&
+          message.isFromMe! &&
+          !widget.controller.isSending.value &&
+          SettingsSvc.serverDetails.supportsEditAndUnsend &&
+          (part.text?.isNotEmpty ?? false))
+        DetailsMenuActionWidget(
+          onTap: edit,
+          customTitle: canEdit ? 'Edit' : 'Edit (too old)',
+          shouldDisableBtn: !canEdit,
+          action: DetailsMenuAction.Edit,
+        ),
+      if (!LifecycleSvc.isBubble && !message.isInteractive)
+        DetailsMenuActionWidget(
+          onTap: forward,
+          action: DetailsMenuAction.Forward,
+        ),
+      if (chat.isGroup && !message.isFromMe! && dmChat == null && !LifecycleSvc.isBubble)
+        DetailsMenuActionWidget(
+          onTap: newConvo,
+          action: DetailsMenuAction.StartConversation,
+        ),
+      if (!isNullOrEmptyString(part.fullText) && (kIsDesktop || kIsWeb))
+        DetailsMenuActionWidget(
+          onTap: copySelection,
+          action: DetailsMenuAction.CopySelection,
+        ),
+      DetailsMenuActionWidget(
+        onTap: delete,
+        action: DetailsMenuAction.Delete,
+      ),
+      DetailsMenuActionWidget(
+        onTap: toggleBookmark,
+        action: DetailsMenuAction.Bookmark,
+        customTitle: message.isBookmarked ? "Remove Bookmark" : "Add Bookmark",
+      ),
+      DetailsMenuActionWidget(
+        onTap: selectMultiple,
+        action: DetailsMenuAction.SelectMultiple,
+      ),
+      DetailsMenuActionWidget(
+        onTap: messageInfo,
+        action: DetailsMenuAction.MessageInfo,
+      ),
+    ].sorted((a, b) => SettingsSvc.settings.detailsMenuActions
+        .indexOf(a.action)
+        .compareTo(SettingsSvc.settings.detailsMenuActions.indexOf(b.action)));
   }
 
   Widget buildDetailsMenu(BuildContext context) {
-    double maxMenuWidth = min(max(ns.width(widthContext) * 3 / 5, 200), ns.width(widthContext) * 4 / 5);
+    double maxMenuWidth =
+        min(max(NavigationSvc.width(widthContext) * 3 / 5, 200), NavigationSvc.width(widthContext) * 4 / 5);
 
     List<DetailsMenuActionWidget> allActions = _allActions;
 
     return ClipRRect(
-      borderRadius: BorderRadius.circular(10.0),
+      borderRadius: BorderRadius.circular(20),
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
         child: Container(
-          color: context.theme.colorScheme.properSurface.withAlpha(150),
+          color: context.theme.colorScheme.surfaceContainerHighest.withAlpha(150),
           width: maxMenuWidth,
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -1004,15 +1077,16 @@ class _MessagePopupState extends OptimizedState<MessagePopup> with SingleTickerP
                       children: allActions.sublist(numberToShow - 1),
                     );
                     Get.dialog(
-                        ss.settings.skin.value == Skins.iOS
+                        SettingsSvc.settings.skin.value == Skins.iOS
                             ? CupertinoAlertDialog(
-                                backgroundColor: context.theme.colorScheme.properSurface,
+                                backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
                                 content: content,
                               )
                             : AlertDialog(
-                                backgroundColor: context.theme.colorScheme.properSurface,
+                                backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
                                 content: content,
                               ),
+                        navigatorKey: NavigationSvc.key,
                         name: 'Popup Menu');
                   },
                   title: 'More...',
@@ -1035,40 +1109,41 @@ class _MessagePopupState extends OptimizedState<MessagePopup> with SingleTickerP
         if (action.action == DetailsMenuAction.Edit) {
           isDisabled = !((message.dateCreated?.toUtc().isWithin(DateTime.now().toUtc(), minutes: 15) ?? false));
         }
-  
-        Color color = isDisabled ? context.theme.colorScheme.properOnSurface.withValues(alpha: 0.5) : context.theme.colorScheme.properOnSurface;
+
+        Color color = isDisabled
+            ? context.theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5)
+            : context.theme.colorScheme.onSurfaceVariant;
         return Padding(
-          padding: EdgeInsets.only(top: kIsDesktop ? 20 : 0),
-          child: IconButton(
-            icon: Icon(action.nonIosIcon, color: color),
-            onPressed: isDisabled ? null : action.onTap,
-            tooltip: action.title,
-          )
-        );
+            padding: EdgeInsets.only(top: kIsDesktop ? 20 : 0),
+            child: IconButton(
+              icon: Icon(action.nonIosIcon, color: color),
+              onPressed: isDisabled ? null : action.onTap,
+              tooltip: action.title,
+            ));
       }),
       Padding(
-        padding: EdgeInsets.only(top: kIsDesktop ? 20 : 0),
-        child: PopupMenuButton<int>(
-          color: context.theme.colorScheme.properSurface,
-          shape: ss.settings.skin.value != Skins.Material ? const RoundedRectangleBorder(
-            borderRadius: BorderRadius.all(Radius.circular(20.0)),
-          ) : null,
-          onSelected: (int value) {
-            allActions[value + numberToShow - 1].onTap?.call();
-          },
-          itemBuilder: (context) {
-            return allActions.slice(numberToShow - 1).mapIndexed((index, action) {
-              return PopupMenuItem(
-                value: index,
-                child: Text(
-                  action.title,
-                  style: context.textTheme.bodyLarge!.apply(color: context.theme.colorScheme.properOnSurface),
-                ),
-              );
-            }).toList();
-          }
-        )
-      )
+          padding: EdgeInsets.only(top: kIsDesktop ? 20 : 0),
+          child: PopupMenuButton<int>(
+              color: context.theme.colorScheme.surfaceContainerHighest,
+              shape: SettingsSvc.settings.skin.value != Skins.Material
+                  ? const RoundedRectangleBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(20.0)),
+                    )
+                  : null,
+              onSelected: (int value) {
+                allActions[value + numberToShow - 1].onTap?.call();
+              },
+              itemBuilder: (context) {
+                return allActions.slice(numberToShow - 1).mapIndexed((index, action) {
+                  return PopupMenuItem(
+                    value: index,
+                    child: Text(
+                      action.title,
+                      style: context.textTheme.bodyLarge!.apply(color: context.theme.colorScheme.onSurfaceVariant),
+                    ),
+                  );
+                }).toList();
+              }))
     ];
   }
 }
@@ -1083,117 +1158,119 @@ class ReactionDetails extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      borderRadius: BorderRadius.circular(20),
-      clipBehavior: Clip.antiAlias,
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-        child: Container(
-          alignment: Alignment.center,
-          height: 120,
-          color: context.theme.colorScheme.properSurface.withAlpha(ss.settings.skin.value == Skins.iOS ? 150 : 255),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10.0),
-            child: ListView.separated(
-              shrinkWrap: true,
-              physics: ThemeSwitcher.getScrollPhysics(),
-              scrollDirection: Axis.horizontal,
-              findChildIndexCallback: (key) => findChildIndexByKey(reactions, key, (item) => item.guid),
-              separatorBuilder: (context, index) => const SizedBox(width: 10),
-              itemBuilder: (context, index) {
-                final message = reactions[index];
-                final hideContactInfo = ss.settings.redactedMode.value && ss.settings.hideContactInfo.value;
-                return Column(
-                  key: ValueKey(message.guid!),
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 25.0, vertical: 10),
-                      child: ContactAvatarWidget(
-                        handle: message.handle,
-                        borderThickness: 0.1,
-                        editable: false,
-                        fontSize: 22,
-                      ),
-                    ),
-                    if (!ss.settings.hideNamesForReactions.value && !hideContactInfo)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 8.0),
-                        child: Text(
-                          message.isFromMe! ? ss.settings.userName.value : (message.handle?.displayName ?? "Unknown"),
-                          style: context.theme.textTheme.bodySmall!.copyWith(color: context.theme.colorScheme.properOnSurface),
+    return Obx(() => Material(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+          clipBehavior: Clip.antiAlias,
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+            child: Container(
+              alignment: Alignment.center,
+              height: 120,
+              color: context.theme.colorScheme.surfaceContainerHighest
+                  .withAlpha(SettingsSvc.settings.skin.value == Skins.iOS ? 150 : 255),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 10.0),
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  physics: ThemeSwitcher.getScrollPhysics(),
+                  scrollDirection: Axis.horizontal,
+                  findChildIndexCallback: (key) => findChildIndexByKey(reactions, key, (item) => item.guid),
+                  separatorBuilder: (context, index) => const SizedBox(width: 10),
+                  itemBuilder: (context, index) {
+                    final message = reactions[index];
+                    final handle = message.handleRelation.target;
+                    String? reactionName;
+                    if (!SettingsSvc.settings.hideNamesForReactions.value) {
+                      if (message.isFromMe!) {
+                        reactionName = SettingsSvc.settings.userName.value;
+                      } else if (handle != null) {
+                        reactionName = HandleSvc.getOrCreateHandleState(handle).reactionDisplayName.value;
+                      }
+                    }
+                    return Column(
+                      key: ValueKey(message.guid!),
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 25.0, vertical: 10),
+                          child: ContactAvatarWidget(
+                            handle: handle,
+                            borderThickness: 0.1,
+                            editable: false,
+                            fontSize: 22,
+                          ),
                         ),
-                      ),
-                    if (ss.settings.hideNamesForReactions.value)
-                      const SizedBox(
-                        height: 8,
-                      ),
-                    if (!ss.settings.hideNamesForReactions.value && hideContactInfo)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 8.0),
-                        child: Text(
-                          message.isFromMe! ? ss.settings.userName.value : (message.handle?.fakeName ?? "Friend"),
-                          style: context.theme.textTheme.bodySmall!.copyWith(color: context.theme.colorScheme.properOnSurface),
-                        ),
-                      ),
-                    Container(
-                      height: 28,
-                      width: 28,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(100),
-                        color: message.isFromMe! ? context.theme.colorScheme.primary : context.theme.colorScheme.properSurface,
-                        boxShadow: [
-                          BoxShadow(
-                            blurRadius: 1.0,
-                            color: context.theme.colorScheme.outline,
+                        if (reactionName != null && reactionName.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 8.0),
+                            child: Text(
+                              reactionName,
+                              style: context.theme.textTheme.bodySmall!
+                                  .copyWith(color: context.theme.colorScheme.onSurfaceVariant),
+                            ),
                           )
-                        ],
-                      ),
-                      child: Padding(
-                        padding: ss.settings.skin.value == Skins.iOS
-                            ? const EdgeInsets.only(top: 8.0, left: 7.0, right: 7.0, bottom: 7.0)
-                                .add(EdgeInsets.only(right: message.associatedMessageType == "emphasize" ? 1 : 0))
-                            : EdgeInsets.zero,
-                        child: ss.settings.skin.value == Skins.iOS
-                            ? SvgPicture.asset(
-                                'assets/reactions/${message.associatedMessageType}-black.svg',
-                                colorFilter: ColorFilter.mode(
-                                    message.associatedMessageType == "love"
-                                        ? Colors.pink
-                                        : message.isFromMe!
-                                            ? context.theme.colorScheme.onPrimary
-                                            : context.theme.colorScheme.properOnSurface,
-                                    BlendMode.srcIn),
+                        else
+                          const SizedBox(height: 8),
+                        Container(
+                          height: 28,
+                          width: 28,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(100),
+                            color: message.isFromMe!
+                                ? context.theme.colorScheme.primary
+                                : context.theme.colorScheme.surfaceContainerHighest,
+                            boxShadow: [
+                              BoxShadow(
+                                blurRadius: 1.0,
+                                color: context.theme.colorScheme.outline,
                               )
-                            : Center(
-                                child: Builder(builder: (context) {
-                                  final text = Text(
-                                    ReactionTypes.reactionToEmoji[message.associatedMessageType] ?? "X",
-                                    style: const TextStyle(fontSize: 18, fontFamily: 'Apple Color Emoji'),
-                                    textAlign: TextAlign.center,
-                                  );
-                                  // rotate thumbs down to match iOS
-                                  if (message.associatedMessageType == "dislike") {
-                                    return Transform(
-                                      transform: Matrix4.identity()..rotateY(pi),
-                                      alignment: FractionalOffset.center,
-                                      child: text,
-                                    );
-                                  }
-                                  return text;
-                                }),
-                              ),
-                      ),
-                    )
-                  ],
-                );
-              },
-              itemCount: reactions.length,
+                            ],
+                          ),
+                          child: Padding(
+                            padding: SettingsSvc.settings.skin.value == Skins.iOS
+                                ? const EdgeInsets.only(top: 8.0, left: 7.0, right: 7.0, bottom: 7.0)
+                                    .add(EdgeInsets.only(right: message.associatedMessageType == "emphasize" ? 1 : 0))
+                                : EdgeInsets.zero,
+                            child: SettingsSvc.settings.skin.value == Skins.iOS
+                                ? SvgPicture.asset(
+                                    'assets/reactions/${message.associatedMessageType}-black.svg',
+                                    colorFilter: ColorFilter.mode(
+                                        message.associatedMessageType == "love"
+                                            ? Colors.pink
+                                            : message.isFromMe!
+                                                ? context.theme.colorScheme.onPrimary
+                                                : context.theme.colorScheme.onSurfaceVariant,
+                                        BlendMode.srcIn),
+                                  )
+                                : Center(
+                                    child: Builder(builder: (context) {
+                                      final text = Text(
+                                        ReactionTypes.reactionToEmoji[message.associatedMessageType] ?? "X",
+                                        style: const TextStyle(fontSize: 18, fontFamily: 'Apple Color Emoji'),
+                                        textAlign: TextAlign.center,
+                                      );
+                                      // rotate thumbs down to match iOS
+                                      if (message.associatedMessageType == "dislike") {
+                                        return Transform(
+                                          transform: Matrix4.identity()..rotateY(pi),
+                                          alignment: FractionalOffset.center,
+                                          child: text,
+                                        );
+                                      }
+                                      return text;
+                                    }),
+                                  ),
+                          ),
+                        )
+                      ],
+                    );
+                  },
+                  itemCount: reactions.length,
+                ),
+              ),
             ),
           ),
-        ),
-      ),
-    );
+        )); // end Obx
   }
 }

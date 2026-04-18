@@ -1,12 +1,12 @@
 import 'dart:math';
 
+import 'package:bluebubbles/database/models.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/app/layouts/conversation_list/pages/conversation_list.dart';
 import 'package:bluebubbles/app/layouts/conversation_list/widgets/tile/conversation_tile.dart';
 import 'package:bluebubbles/app/layouts/conversation_list/widgets/tile/pinned_conversation_tile.dart';
 import 'package:bluebubbles/app/layouts/conversation_list/widgets/conversation_list_fab.dart';
 import 'package:bluebubbles/app/layouts/conversation_list/widgets/header/cupertino_header.dart';
-import 'package:bluebubbles/app/wrappers/stateful_boilerplate.dart';
 import 'package:bluebubbles/app/wrappers/scrollbar_wrapper.dart';
 import 'package:bluebubbles/services/services.dart';
 import 'package:flutter/foundation.dart';
@@ -15,9 +15,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_acrylic/flutter_acrylic.dart';
 import 'package:get/get.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
+import 'package:universal_io/io.dart';
 
 class CupertinoConversationList extends StatefulWidget {
-  const CupertinoConversationList({Key? key, required this.parentController});
+  const CupertinoConversationList({super.key, required this.parentController});
 
   final ConversationListController parentController;
 
@@ -25,21 +26,24 @@ class CupertinoConversationList extends StatefulWidget {
   State<StatefulWidget> createState() => CupertinoConversationListState();
 }
 
-class CupertinoConversationListState extends OptimizedState<CupertinoConversationList> {
+class CupertinoConversationListState extends State<CupertinoConversationList> with ThemeHelpers {
   bool get showArchived => widget.parentController.showArchivedChats;
 
   bool get showUnknown => widget.parentController.showUnknownSenders;
 
-  Color get backgroundColor => ss.settings.windowEffect.value == WindowEffect.disabled ? context.theme.colorScheme.background : Colors.transparent;
+  Color get backgroundColor => SettingsSvc.settings.windowEffect.value == WindowEffect.disabled
+      ? context.theme.colorScheme.surface
+      : Colors.transparent;
 
   ConversationListController get controller => widget.parentController;
 
   @override
   void initState() {
     super.initState();
+
     // update widget when background color changes
     if (kIsDesktop) {
-      ss.settings.windowEffect.listen((WindowEffect effect) {
+      SettingsSvc.settings.windowEffect.listen((WindowEffect effect) {
         setState(() {});
       });
     }
@@ -48,16 +52,20 @@ class CupertinoConversationListState extends OptimizedState<CupertinoConversatio
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: ss.settings.windowEffect.value != WindowEffect.disabled ? Colors.transparent : context.theme.colorScheme.background,
+      backgroundColor: SettingsSvc.settings.windowEffect.value != WindowEffect.disabled
+          ? Colors.transparent
+          : context.theme.colorScheme.surface,
       extendBodyBehindAppBar: !showArchived && !showUnknown,
-      floatingActionButton: Obx(() => !ss.settings.moveChatCreatorToHeader.value && !showArchived && !showUnknown
-          ? ConversationListFAB(parentController: controller)
-          : const SizedBox.shrink()),
+      floatingActionButton: Obx(() =>
+          !SettingsSvc.settings.moveChatCreatorToHeader.value && !showArchived && !showUnknown
+              ? ConversationListFAB(parentController: controller)
+              : const SizedBox.shrink()),
       appBar: showArchived || showUnknown
           ? AppBar(
               leading: buildBackButton(context),
               elevation: 0,
-              systemOverlayStyle: brightness == Brightness.dark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
+              systemOverlayStyle:
+                  brightness == Brightness.dark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
               centerTitle: true,
               backgroundColor: Colors.transparent,
               title: Text(showArchived ? "Archive" : "Unknown Senders", style: context.theme.textTheme.titleLarge),
@@ -70,46 +78,70 @@ class CupertinoConversationListState extends OptimizedState<CupertinoConversatio
             controller: controller.iosScrollController,
             child: Obx(() => CustomScrollView(
                   controller: controller.iosScrollController,
-                  physics: ts.scrollPhysics,
+                  physics: ThemeSvc.scrollPhysics,
                   slivers: <Widget>[
                     if (!showArchived && !showUnknown) CupertinoHeader(controller: controller),
                     Obx(() {
-                      ns.listener.value;
-                      final _chats = chats.chats.archivedHelper(showArchived).unknownSendersHelper(showUnknown).bigPinHelper(true);
+                      // Force reactivity by accessing observable values first
+                      // ignore: unused_local_variable
+                      final loaded = ChatsSvc.loadedFirstChatBatch.value;
+                      // Observe chatListVersion so pinned section rebuilds when a chat is pinned/unpinned
+                      // ignore: unused_local_variable
+                      final _version = ChatsSvc.chatListVersion.value;
+                      NavigationSvc.listener.value;
+                      final _chats = ChatsSvc.getFilteredChats(
+                          showArchived: showArchived, showUnknown: showUnknown, pinnedOnly: true);
 
                       if (_chats.isEmpty) {
                         return const SliverToBoxAdapter(child: SizedBox.shrink());
                       }
 
                       int rowCount = context.mediaQuery.orientation == Orientation.portrait || kIsDesktop
-                          ? ss.settings.pinRowsPortrait.value
-                          : ss.settings.pinRowsLandscape.value;
-                      int colCount = kIsDesktop ? ss.settings.pinColumnsLandscape.value : ss.settings.pinColumnsPortrait.value;
+                          ? SettingsSvc.settings.pinRowsPortrait.value
+                          : SettingsSvc.settings.pinRowsLandscape.value;
+                      int colCount = kIsDesktop
+                          ? SettingsSvc.settings.pinColumnsLandscape.value
+                          : SettingsSvc.settings.pinColumnsPortrait.value;
                       int pinCount = _chats.length;
                       int usedRowCount = min((pinCount / colCount).ceil(), rowCount);
                       int maxOnPage = rowCount * colCount;
                       PageController _controller = PageController();
                       int _pageCount = (pinCount / maxOnPage).ceil();
-                      int _filledPageCount = (pinCount / maxOnPage).floor();
 
                       return SliverPadding(
                         padding: const EdgeInsets.only(top: 10),
                         sliver: SliverToBoxAdapter(
                           child: LayoutBuilder(builder: (BuildContext context, BoxConstraints constraints) {
-                            double availableWidth = constraints.maxWidth - 50;
-                            double spaceBetween = (colCount - 1) * 30;
-                            double maxWidth = ((availableWidth - spaceBetween) / colCount).floorToDouble();
-                            TextStyle style = context.theme.textTheme.bodyMedium!;
-                            double height = usedRowCount * (maxWidth * 1.15 + 10 + style.height! * style.fontSize! * 2);
+                            // Horizontal overhead per tile: margins (4+4) + padding (11+11) + extra gap
+                            const double tileHOverhead = 42.0;
+                            // Vertical overhead per tile: AnimatedContainer margins (top:1) + padding (4+2)
+                            //   + ChatTitle fixed padding (top:6 + bottom:4)
+                            const double tileVOverhead = 17.0;
+                            // PageView horizontal padding (10 each side)
+                            const double pageHPadding = 20.0;
+
+                            // Derive a clean, capped avatar size from the actual available width
+                            final double rawAvatarSize =
+                                (constraints.maxWidth - pageHPadding - colCount * tileHOverhead) / colCount;
+                            final double avatarSize =
+                                clampDouble(rawAvatarSize, 70.0, Platform.isAndroid ? 120.0 : 140.0);
+                            final double tileWidth = avatarSize + tileHOverhead;
+
+                            final TextStyle style = context.theme.textTheme.bodyMedium!;
+                            final double textHeight = (style.height ?? 1.2) * (style.fontSize ?? 14);
+                            final double tileHeight = avatarSize + textHeight + tileVOverhead;
+                            final double totalHeight = usedRowCount * tileHeight;
+
                             // avatar only
-                            if (ns.isAvatarOnly(context)) {
+                            if (NavigationSvc.isAvatarOnly(context)) {
                               return Column(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   ListView.builder(
                                     shrinkWrap: true,
                                     itemCount: _chats.length,
-                                    findChildIndexCallback: (key) => findChildIndexByKey(_chats, key, (item) => item.guid),
+                                    findChildIndexCallback: (key) =>
+                                        findChildIndexByKey(_chats, key, (item) => item.guid),
                                     itemBuilder: (context, index) {
                                       final chat = _chats[index];
                                       return Center(
@@ -133,35 +165,56 @@ class CupertinoConversationListState extends OptimizedState<CupertinoConversatio
                                 ],
                               );
                             }
+
                             return Column(
                               children: <Widget>[
                                 SizedBox(
-                                  height: height,
+                                  height: totalHeight,
                                   child: PageView.builder(
                                     clipBehavior: Clip.none,
                                     physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
                                     scrollDirection: Axis.horizontal,
                                     controller: _controller,
-                                    itemBuilder: (context, index) {
+                                    itemCount: _pageCount,
+                                    itemBuilder: (context, pageIndex) {
+                                      final int start = pageIndex * maxOnPage;
+                                      final List<Chat> pageChats =
+                                          _chats.sublist(start, min(start + maxOnPage, pinCount));
+
                                       return Padding(
                                         padding: const EdgeInsets.symmetric(horizontal: 10),
-                                        child: Wrap(
-                                          crossAxisAlignment: WrapCrossAlignment.center,
-                                          alignment: _pageCount > 1 ? WrapAlignment.start : WrapAlignment.center,
-                                          children: List.generate(
-                                            index < _filledPageCount ? maxOnPage : _chats.length % maxOnPage,
-                                            (_index) {
-                                              return PinnedConversationTile(
-                                                key: Key(_chats[index * maxOnPage + _index].guid.toString()),
-                                                chat: _chats[index * maxOnPage + _index],
-                                                controller: controller,
-                                              );
-                                            },
-                                          ),
+                                        child: Column(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: List.generate(usedRowCount, (rowIndex) {
+                                            final int rowStart = rowIndex * colCount;
+                                            final List<Chat> rowChats =
+                                                pageChats.skip(rowStart).take(colCount).toList();
+                                            final bool singleRow = usedRowCount == 1;
+
+                                            return Row(
+                                              mainAxisAlignment:
+                                                  singleRow ? MainAxisAlignment.center : MainAxisAlignment.start,
+                                              children: [
+                                                for (final chat in rowChats)
+                                                  SizedBox(
+                                                    width: tileWidth,
+                                                    child: PinnedConversationTile(
+                                                      key: Key(chat.guid),
+                                                      chat: chat,
+                                                      avatarSize: avatarSize,
+                                                      controller: controller,
+                                                    ),
+                                                  ),
+                                                // Fill empty slots in multi-row mode so rows align
+                                                if (!singleRow)
+                                                  for (int i = rowChats.length; i < colCount; i++)
+                                                    SizedBox(width: tileWidth),
+                                              ],
+                                            );
+                                          }),
                                         ),
                                       );
                                     },
-                                    itemCount: _pageCount,
                                   ),
                                 ),
                                 if (_pageCount > 1)
@@ -183,9 +236,9 @@ class CupertinoConversationListState extends OptimizedState<CupertinoConversatio
                                         effect: ColorTransitionEffect(
                                           activeDotColor: context.theme.colorScheme.primary,
                                           dotColor: context.theme.colorScheme.outline,
-                                          dotWidth: maxWidth * 0.1,
-                                          dotHeight: maxWidth * 0.1,
-                                          spacing: maxWidth * 0.07,
+                                          dotWidth: avatarSize * 0.1,
+                                          dotHeight: avatarSize * 0.1,
+                                          spacing: avatarSize * 0.07,
                                         ),
                                       ),
                                     ),
@@ -197,9 +250,17 @@ class CupertinoConversationListState extends OptimizedState<CupertinoConversatio
                       );
                     }),
                     Obx(() {
-                      final _chats = chats.chats.archivedHelper(showArchived).unknownSendersHelper(showUnknown).bigPinHelper(false);
+                      // Force reactivity by accessing observable values first
+                      final loaded = ChatsSvc.loadedFirstChatBatch.value;
+                      // Observe chat list version to trigger rebuild when order changes
+                      final _ = ChatsSvc.chatListVersion.value;
+                      final _chats = ChatsSvc.getFilteredChats(
+                          showArchived: showArchived, showUnknown: showUnknown, excludePinned: true);
+                      final _pinnedChats = ChatsSvc.getFilteredChats(
+                          showArchived: showArchived, showUnknown: showUnknown, pinnedOnly: true);
+                      final hasPinnedChats = _pinnedChats.isNotEmpty;
 
-                      if (!chats.loadedChatBatch.value || _chats.isEmpty) {
+                      if (!loaded || _chats.isEmpty) {
                         return SliverToBoxAdapter(
                           child: Center(
                             child: Padding(
@@ -209,7 +270,7 @@ class CupertinoConversationListState extends OptimizedState<CupertinoConversatio
                                   Padding(
                                     padding: const EdgeInsets.all(8.0),
                                     child: Text(
-                                      !chats.loadedChatBatch.value
+                                      !loaded
                                           ? "Loading chats..."
                                           : showArchived
                                               ? "You have no archived chats"
@@ -220,7 +281,7 @@ class CupertinoConversationListState extends OptimizedState<CupertinoConversatio
                                       textAlign: TextAlign.center,
                                     ),
                                   ),
-                                  if (!chats.loadedChatBatch.value) buildProgressIndicator(context, size: 15),
+                                  if (!loaded) buildProgressIndicator(context, size: 15),
                                 ],
                               ),
                             ),
@@ -228,35 +289,57 @@ class CupertinoConversationListState extends OptimizedState<CupertinoConversatio
                         );
                       }
 
-                      return SliverList(
-                        delegate: SliverChildBuilderDelegate(
-                          (context, index) {
-                            final chat = chats.chats.firstWhere((e) => e.guid == _chats[index].guid);
-                            final child = ConversationTile(
-                              key: Key(chat.guid.toString()),
-                              chat: chat,
-                              controller: controller,
-                            );
-                            final separator = Obx(() => !ss.settings.hideDividers.value
-                                ? Padding(
-                                    padding: const EdgeInsets.only(left: 20),
-                                    child: Divider(
-                                      color: context.theme.colorScheme.outline.withValues(alpha: 0.5),
-                                      thickness: 0.5,
-                                      height: 0.5,
-                                    ),
-                                  )
-                                : const SizedBox.shrink());
+                      return SliverPadding(
+                        padding: const EdgeInsets.only(top: 10),
+                        sliver: SliverList(
+                          delegate: SliverChildBuilderDelegate(
+                            (context, index) {
+                              final chat = ChatsSvc.findChatByGuid(_chats[index].guid)!;
 
-                            return Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                child,
-                                separator,
-                              ],
-                            );
-                          },
-                          childCount: _chats.length,
+                              // No need for Obx here - ConversationTile handles its own reactivity
+                              final child = ConversationTile(
+                                key: Key(chat.guid),
+                                chat: chat,
+                                controller: controller,
+                              );
+
+                              final separator = Obx(() => !SettingsSvc.settings.hideDividers.value
+                                  ? Padding(
+                                      padding:
+                                          EdgeInsets.only(left: SettingsSvc.settings.denseChatTiles.value ? 70 : 82),
+                                      child: Divider(
+                                        color: context.theme.colorScheme.outline.withValues(alpha: 0.4),
+                                        thickness: 0.5,
+                                        height: 0.5,
+                                      ),
+                                    )
+                                  : const SizedBox.shrink());
+
+                              final topDivider = index == 0 && !hasPinnedChats
+                                  ? Obx(() => !SettingsSvc.settings.hideDividers.value
+                                      ? Padding(
+                                          padding: EdgeInsets.only(
+                                              left: SettingsSvc.settings.denseChatTiles.value ? 70 : 82),
+                                          child: Divider(
+                                            color: context.theme.colorScheme.outline.withValues(alpha: 0.4),
+                                            thickness: 0.5,
+                                            height: 0.5,
+                                          ),
+                                        )
+                                      : const SizedBox.shrink())
+                                  : const SizedBox.shrink();
+
+                              return Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  topDivider,
+                                  child,
+                                  separator,
+                                ],
+                              );
+                            },
+                            childCount: _chats.length,
+                          ),
                         ),
                       );
                     }),

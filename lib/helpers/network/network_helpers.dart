@@ -7,7 +7,7 @@ import 'package:universal_io/io.dart';
 /// Take the passed [address] or serverAddress from Settings
 /// and sanitize it, making sure it includes an http schema
 String? sanitizeServerAddress({String? address}) {
-  String serverAddress = address ?? http.origin;
+  String serverAddress = address ?? HttpSvc.origin;
 
   String sanitized = serverAddress.replaceAll('"', "").trim();
   if (sanitized.isEmpty) return null;
@@ -25,11 +25,11 @@ String? sanitizeServerAddress({String? address}) {
 }
 
 Future<int> getOrCreateUniqueId() async {
-  int uniqueId = ss.settings.firstFcmRegisterDate.value;
+  int uniqueId = SettingsSvc.settings.firstFcmRegisterDate.value;
   if (uniqueId == 0) {
     uniqueId = (DateTime.now().millisecondsSinceEpoch / 1000).round();
-    ss.settings.firstFcmRegisterDate.value = uniqueId;
-    await ss.settings.saveOne('firstFcmRegisterDate');
+    SettingsSvc.settings.firstFcmRegisterDate.value = uniqueId;
+    await SettingsSvc.settings.saveOneAsync('firstFcmRegisterDate');
   }
 
   return uniqueId;

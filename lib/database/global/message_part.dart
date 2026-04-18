@@ -1,6 +1,5 @@
 import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/database/models.dart';
-import 'package:bluebubbles/services/services.dart';
 import 'package:collection/collection.dart';
 import 'package:faker/faker.dart';
 
@@ -13,30 +12,35 @@ class MessagePart {
     this.isUnsent = false,
     this.edits = const [],
     required this.part,
+    this.shouldRedact = false,
   }) {
     if (attachments.isEmpty) attachments = [];
     if (mentions.isEmpty) mentions = [];
     if (edits.isEmpty) edits = [];
   }
 
+  /// Whether this part's display text/subject should be replaced with fake
+  /// content.  Managed by [MessageState.buildMessageParts] and updated via
+  /// [MessageState.updateShouldHideMessageContentInternal] so widgets never
+  /// need to check settings directly.
+  bool shouldRedact;
+
   String? subject;
   late final String fakeSubject = faker.lorem.words(subject?.split(" ").length ?? 0).join(" ");
   String? get displaySubject {
     if (subject == null) return null;
-    if (ss.settings.redactedMode.value && ss.settings.hideMessageContent.value) {
-      return fakeSubject;
-    }
+    if (shouldRedact) return fakeSubject;
     return subject;
   }
+
   String? text;
   late final String fakeText = faker.lorem.words(text?.split(" ").length ?? 0).join(" ");
   String? get displayText {
     if (text == null) return null;
-    if (ss.settings.redactedMode.value && ss.settings.hideMessageContent.value) {
-      return fakeText;
-    }
+    if (shouldRedact) return fakeText;
     return text;
   }
+
   List<Attachment> attachments;
   List<Mention> mentions;
   bool isUnsent;

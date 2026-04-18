@@ -1,10 +1,11 @@
-import 'dart:async';
 import 'dart:isolate';
 import 'dart:math';
 import 'dart:ui';
 
 import 'package:adaptive_theme/adaptive_theme.dart';
+import 'package:async_task/async_task_extension.dart';
 import 'package:bitsdojo_window/bitsdojo_window.dart';
+import 'package:bluebubbles/app/wrappers/bb_annotated_region.dart';
 import 'package:bluebubbles/app/components/custom/custom_error_box.dart';
 import 'package:bluebubbles/helpers/backend/startup_tasks.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
@@ -16,7 +17,6 @@ import 'package:bluebubbles/app/layouts/startup/failure_to_start.dart';
 import 'package:bluebubbles/app/layouts/setup/setup_view.dart';
 import 'package:bluebubbles/app/layouts/startup/splash_screen.dart';
 import 'package:bluebubbles/app/wrappers/titlebar_wrapper.dart';
-import 'package:bluebubbles/app/wrappers/stateful_boilerplate.dart';
 import 'package:bluebubbles/database/models.dart';
 import 'package:bluebubbles/services/services.dart';
 import 'package:collection/collection.dart';
@@ -34,7 +34,6 @@ import 'package:google_ml_kit/google_ml_kit.dart' hide Message;
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:local_notifier/local_notifier.dart';
-import 'package:path/path.dart' show join;
 import 'package:path/path.dart' as p;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:screen_retriever/screen_retriever.dart';
@@ -67,11 +66,10 @@ Future<Null> bubble() async {
 Future<Null> initApp(bool bubble, List<String> arguments) async {
   runZonedGuarded<Future<void>>(() async {
     WidgetsFlutterBinding.ensureInitialized();
-
     await StartupTasks.initStartupServices(isBubble: bubble);
 
     /* ----- RANDOM STUFF INITIALIZATION ----- */
-    HttpOverrides.global = BadCertOverride();
+    HttpOverrides.global = CustomHttpContext();
     dynamic exception;
     StackTrace? stacktrace;
 
@@ -89,15 +87,15 @@ Future<Null> initApp(bool bubble, List<String> arguments) async {
       });
 
       /* ----- DATE FORMATTING INITIALIZATION ----- */
-      await initializeDateFormatting();
+      Future.microtask(() => initializeDateFormatting());
 
       /* ----- MEDIAKIT INITIALIZATION ----- */
       MediaKit.ensureInitialized();
 
       /* ----- SPLASH SCREEN INITIALIZATION ----- */
-      if (!ss.settings.finishedSetup.value && !kIsWeb && !kIsDesktop) {
+      if (!SettingsSvc.settings.finishedSetup.value && !kIsWeb && !kIsDesktop) {
         runApp(MaterialApp(
-            home: SplashScreen(shouldNavigate: false),
+            home: const SplashScreen(shouldNavigate: false),
             theme: ThemeData(
               colorScheme: ColorScheme.fromSwatch(
                   backgroundColor:
@@ -110,7 +108,7 @@ Future<Null> initApp(bool bubble, List<String> arguments) async {
         /* ----- TIME ZONE INITIALIZATION ----- */
         tz.initializeTimeZones();
         try {
-          tz.setLocalLocation(tz.getLocation(await FlutterTimezone.getLocalTimezone()));
+          tz.setLocalLocation(tz.getLocation((await FlutterTimezone.getLocalTimezone()).identifier));
         } catch (_) {}
 
         /* ----- MLKIT INITIALIZATION ----- */
@@ -126,14 +124,14 @@ Future<Null> initApp(bool bubble, List<String> arguments) async {
       if (kIsDesktop) {
         /* ----- WINDOW INITIALIZATION ----- */
         await windowManager.ensureInitialized();
-        await windowManager.setPreventClose(ss.settings.closeToTray.value);
+        await windowManager.setPreventClose(SettingsSvc.settings.closeToTray.value);
         await windowManager.setTitle('BlueBubbles');
         await Window.initialize();
         if (Platform.isWindows) {
           await Window.hideWindowControls();
         } else if (Platform.isLinux) {
-          await windowManager
-              .setTitleBarStyle(ss.settings.useCustomTitleBar.value ? TitleBarStyle.hidden : TitleBarStyle.normal);
+          await windowManager.setTitleBarStyle(
+              SettingsSvc.settings.useCustomTitleBar.value ? TitleBarStyle.hidden : TitleBarStyle.normal);
         }
         windowManager.addListener(DesktopWindowListener.instance);
         doWhenWindowReady(() async {
@@ -141,25 +139,25 @@ Future<Null> initApp(bool bubble, List<String> arguments) async {
           Display primary = await ScreenRetriever.instance.getPrimaryDisplay();
 
           Size size = await windowManager.getSize();
-          double width = ss.prefs.getDouble("window-width") ?? size.width;
-          double height = ss.prefs.getDouble("window-height") ?? size.height;
+          double width = PrefsSvc.i.getDouble("window-width") ?? size.width;
+          double height = PrefsSvc.i.getDouble("window-height") ?? size.height;
 
           width = width.clamp(300, max(300, primary.size.width));
           height = height.clamp(300, max(300, primary.size.height));
           await windowManager.setSize(Size(width, height));
-          await ss.prefs.setDouble("window-width", width);
-          await ss.prefs.setDouble("window-height", height);
+          await PrefsSvc.i.setDouble("window-width", width);
+          await PrefsSvc.i.setDouble("window-height", height);
 
           await windowManager.setAlignment(Alignment.center);
           Offset offset = await windowManager.getPosition();
-          double? posX = ss.prefs.getDouble("window-x") ?? offset.dx;
-          double? posY = ss.prefs.getDouble("window-y") ?? offset.dy;
+          double? posX = PrefsSvc.i.getDouble("window-x") ?? offset.dx;
+          double? posY = PrefsSvc.i.getDouble("window-y") ?? offset.dy;
 
           posX = posX.clamp(0, max(0, primary.size.width - width));
           posY = posY.clamp(0, max(0, primary.size.height - height));
           await windowManager.setPosition(Offset(posX, posY), animate: true);
-          await ss.prefs.setDouble("window-x", posX);
-          await ss.prefs.setDouble("window-y", posY);
+          await PrefsSvc.i.setDouble("window-x", posX);
+          await PrefsSvc.i.setDouble("window-y", posY);
 
           await windowManager.setTitle('BlueBubbles');
           if (arguments.firstOrNull != "minimized") {
@@ -167,9 +165,10 @@ Future<Null> initApp(bool bubble, List<String> arguments) async {
           } else {
             await windowManager.hide();
           }
-          if (!(ss.canAuthenticate && ss.settings.shouldSecure.value)) {
-            chats.init();
-            socket;
+          bool shouldAuthenticate = SettingsSvc.canAuthenticate && SettingsSvc.settings.shouldSecure.value;
+          if (!shouldAuthenticate) {
+            ChatsSvc.init();
+            SocketSvc.init();
           }
         });
 
@@ -178,8 +177,9 @@ Future<Null> initApp(bool bubble, List<String> arguments) async {
       }
 
       /* ----- EMOJI FONT INITIALIZATION ----- */
-      fs.checkFont();
+      Future.microtask(() => FilesystemSvc.checkFont());
     } catch (e, s) {
+      print(s.toString());
       Logger.error("Failure during app initialization!", error: e, trace: s);
       exception = e;
       stacktrace = s;
@@ -190,19 +190,22 @@ Future<Null> initApp(bool bubble, List<String> arguments) async {
       ThemeData light = ThemeStruct.getLightTheme().data;
       ThemeData dark = ThemeStruct.getDarkTheme().data;
 
-      final tuple = ts.getStructsFromData(light, dark);
-      light = tuple.item1;
-      dark = tuple.item2;
+      final pair = ThemeSvc.getStructsFromData(light, dark);
+      light = pair.light;
+      dark = pair.dark;
 
-      runApp(Main(
+      runApp(MaterialApp(
+          home: Main(
         lightTheme: light,
         darkTheme: dark,
-      ));
+      )));
     } else {
       runApp(FailureToStart(e: exception, s: stacktrace));
       throw Exception("$exception $stacktrace");
     }
   }, (dynamic error, StackTrace stackTrace) {
+    print("Failure during app initialization: $error");
+    print(stackTrace);
     Logger.error("Unhandled Exception", trace: stackTrace, error: error);
   });
 }
@@ -214,26 +217,26 @@ class DesktopWindowListener extends WindowListener {
 
   @override
   void onWindowFocus() {
-    ls.open();
+    LifecycleSvc.open();
   }
 
   @override
   void onWindowBlur() {
-    ls.close();
+    LifecycleSvc.close();
   }
 
   @override
   void onWindowResized() async {
     Size size = await windowManager.getSize();
-    await ss.prefs.setDouble("window-width", size.width);
-    await ss.prefs.setDouble("window-height", size.height);
+    await PrefsSvc.i.setDouble("window-width", size.width);
+    await PrefsSvc.i.setDouble("window-height", size.height);
   }
 
   @override
   void onWindowMoved() async {
     Offset offset = await windowManager.getPosition();
-    await ss.prefs.setDouble("window-x", offset.dx);
-    await ss.prefs.setDouble("window-y", offset.dy);
+    await PrefsSvc.i.setDouble("window-x", offset.dx);
+    await PrefsSvc.i.setDouble("window-y", offset.dy);
   }
 
   @override
@@ -275,14 +278,15 @@ class Main extends StatelessWidget {
         title: 'BlueBubbles',
         theme: theme.copyWith(appBarTheme: theme.appBarTheme.copyWith(elevation: 0.0)),
         darkTheme: darkTheme.copyWith(appBarTheme: darkTheme.appBarTheme.copyWith(elevation: 0.0)),
-        navigatorKey: ns.key,
+        navigatorKey: NavigationSvc.key,
+        navigatorObservers: [routeObserver],
         scrollBehavior: const MaterialScrollBehavior().copyWith(
           // Specifically for GNU/Linux & Android-x86 family, where touch isn't interpreted as a drag device by Flutter apparently.
           dragDevices: Platform.isLinux || Platform.isAndroid ? PointerDeviceKind.values.toSet() : null,
           // Prevent scrolling with multiple fingers accelerating the scrolling
           multitouchDragStrategy: MultitouchDragStrategy.latestPointer,
         ),
-        home: Home(),
+        home: const Home(),
         shortcuts: {
           LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.comma): const OpenSettingsIntent(),
           LogicalKeySet(LogicalKeyboardKey.alt, LogicalKeyboardKey.keyN): const OpenNewChatCreatorIntent(),
@@ -324,10 +328,10 @@ class Main extends StatelessWidget {
           child: SecureApplication(
             child: Builder(
               builder: (context) {
-                if (ss.canAuthenticate && (!ls.isAlive || !StartupTasks.uiReady.isCompleted)) {
-                  if (ss.settings.shouldSecure.value) {
+                if (SettingsSvc.canAuthenticate && (!LifecycleSvc.isAlive || !StartupTasks.uiReady.isCompleted)) {
+                  if (SettingsSvc.settings.shouldSecure.value) {
                     SecureApplicationProvider.of(context, listen: false)!.lock();
-                    if (ss.settings.securityLevel.value == SecurityLevel.locked_and_secured) {
+                    if (SettingsSvc.settings.securityLevel.value == SecurityLevel.locked_and_secured) {
                       SecureApplicationProvider.of(context, listen: false)!.secure();
                     }
                   }
@@ -342,23 +346,24 @@ class Main extends StatelessWidget {
                         isAuthing = true;
                         localAuth
                             .authenticate(
-                                localizedReason: 'Please authenticate to unlock BlueBubbles',
-                                options: const AuthenticationOptions(stickyAuth: true))
+                          localizedReason: 'Please authenticate to unlock BlueBubbles',
+                          persistAcrossBackgrounding: true,
+                        )
                             .then((result) {
                           isAuthing = false;
                           if (result) {
                             SecureApplicationProvider.of(context, listen: false)!.authSuccess(unlock: true);
                             if (kIsDesktop) {
                               Future.delayed(Duration.zero, () {
-                                chats.init();
-                                socket;
+                                ChatsSvc.init();
+                                SocketSvc.init();
                               });
                             }
                           }
                         });
                       }
                       return Container(
-                        color: context.theme.colorScheme.background,
+                        color: context.theme.colorScheme.surface,
                         child: Center(
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -383,14 +388,15 @@ class Main extends StatelessWidget {
                                     onTap: () async {
                                       final localAuth = LocalAuthentication();
                                       bool didAuthenticate = await localAuth.authenticate(
-                                          localizedReason: 'Please authenticate to unlock BlueBubbles',
-                                          options: const AuthenticationOptions(stickyAuth: true));
+                                        localizedReason: 'Please authenticate to unlock BlueBubbles',
+                                        persistAcrossBackgrounding: true,
+                                      );
                                       if (didAuthenticate) {
                                         controller!.authSuccess(unlock: true);
                                         if (kIsDesktop) {
                                           Future.delayed(Duration.zero, () {
-                                            chats.init();
-                                            socket;
+                                            ChatsSvc.init();
+                                            SocketSvc.init();
                                           });
                                         }
                                       }
@@ -417,13 +423,13 @@ class Main extends StatelessWidget {
 }
 
 class Home extends StatefulWidget {
-  Home({super.key});
+  const Home({super.key});
 
   @override
   State<Home> createState() => _HomeState();
 }
 
-class _HomeState extends OptimizedState<Home> with WidgetsBindingObserver, TrayListener {
+class _HomeState extends State<Home> with WidgetsBindingObserver, TrayListener {
   final ReceivePort port = ReceivePort();
   bool serverCompatible = true;
   bool fullyLoaded = false;
@@ -436,8 +442,8 @@ class _HomeState extends OptimizedState<Home> with WidgetsBindingObserver, TrayL
     WidgetsBinding.instance.addObserver(this);
 
     /* ----- APP REFRESH LISTENER INITIALIZATION ----- */
-    eventDispatcher.stream.listen((event) {
-      if (event.item1 == 'refresh-all') {
+    EventDispatcherSvc.stream.listen((event) {
+      if (event.type == 'refresh-all') {
         setState(() {});
       }
     });
@@ -445,8 +451,8 @@ class _HomeState extends OptimizedState<Home> with WidgetsBindingObserver, TrayL
     SchedulerBinding.instance.addPostFrameCallback((_) async {
       StartupTasks.uiReady.complete();
 
-      if (!ls.isBubble && !kIsWeb && !kIsDesktop) {
-        ls.createFakePort();
+      if (!LifecycleSvc.isBubble && !kIsWeb && !kIsDesktop) {
+        LifecycleSvc.createFakePort();
       }
 
       ErrorWidget.builder = (FlutterErrorDetails error) {
@@ -456,9 +462,9 @@ class _HomeState extends OptimizedState<Home> with WidgetsBindingObserver, TrayL
         );
       };
       /* ----- SERVER VERSION CHECK ----- */
-      if (kIsWeb && ss.settings.finishedSetup.value) {
-        int version = (await ss.getServerDetails()).item4;
-        if (version < 42) {
+      if (kIsWeb && SettingsSvc.settings.finishedSetup.value) {
+        final serverDetails = await SettingsSvc.getServerDetails();
+        if (!serverDetails.minimumWebSupportedVersion) {
           setState(() {
             serverCompatible = false;
           });
@@ -475,11 +481,11 @@ class _HomeState extends OptimizedState<Home> with WidgetsBindingObserver, TrayL
       if (kIsDesktop) {
         if (Platform.isWindows) {
           /* ----- CONTACT IMAGE CACHE DELETION ----- */
-          Directory temp = Directory(join(fs.appDocDir.path, "temp"));
+          Directory temp = FilesystemSvc.appTemp;
           if (await temp.exists()) await temp.delete(recursive: true);
 
           /* ----- BADGE ICON LISTENER ----- */
-          GlobalChatService.unreadCount.listen((count) async {
+          ChatsSvc.unreadCount.listen((count) async {
             if (count == 0) {
               await WindowsTaskbar.resetOverlayIcon();
             } else if (count <= 9) {
@@ -490,17 +496,17 @@ class _HomeState extends OptimizedState<Home> with WidgetsBindingObserver, TrayL
           });
 
           /* ----- WINDOW EFFECT INITIALIZATION ----- */
-          eventDispatcher.stream.listen((event) async {
-            if (event.item1 == 'theme-update') {
+          EventDispatcherSvc.stream.listen((event) async {
+            if (event.type == 'theme-update') {
               EasyDebounce.debounce('window-effect', const Duration(milliseconds: 500), () async {
                 if (mounted) {
-                  await WindowEffects.setEffect(color: context.theme.colorScheme.background);
+                  await WindowEffects.setEffect(color: context.theme.colorScheme.surface);
                 }
               });
             }
           });
 
-          Future(() => eventDispatcher.emit("theme-update", null));
+          Future(() => EventDispatcherSvc.emit("theme-update", null));
         }
 
         /* ----- SYSTEM TRAY INITIALIZATION ----- */
@@ -521,12 +527,14 @@ class _HomeState extends OptimizedState<Home> with WidgetsBindingObserver, TrayL
         await localNotifier.setup(appName: "BlueBubbles");
       }
 
-      if (!ss.settings.finishedSetup.value) {
+      if (!SettingsSvc.settings.finishedSetup.value) {
         setState(() {
           fullyLoaded = true;
         });
-      } else if ((fs.androidInfo?.version.sdkInt ?? 0) >= 33) {
-        Permission.notification.request();
+      } else {
+        if ((FilesystemSvc.androidInfo?.version.sdkInt ?? 0) >= 33) {
+          Permission.notification.request();
+        }
       }
     });
   }
@@ -587,7 +595,7 @@ class _HomeState extends OptimizedState<Home> with WidgetsBindingObserver, TrayL
       }
       AdaptiveTheme.maybeOf(context)?.setSystem();
 
-      eventDispatcher.emit("theme-update", null);
+      EventDispatcherSvc.emit("theme-update", null);
     }
   }
 
@@ -595,23 +603,15 @@ class _HomeState extends OptimizedState<Home> with WidgetsBindingObserver, TrayL
   @override
   Widget build(BuildContext context) {
     SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
-      systemNavigationBarColor: ss.settings.immersiveMode.value
+      systemNavigationBarColor: SettingsSvc.settings.immersiveMode.value
           ? Colors.transparent
-          : context.theme.colorScheme.background, // navigation bar color
+          : context.theme.colorScheme.surface, // navigation bar color
       systemNavigationBarIconBrightness: context.theme.colorScheme.brightness.opposite,
       statusBarColor: Colors.transparent, // status bar color
       statusBarIconBrightness: context.theme.colorScheme.brightness.opposite,
     ));
 
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle(
-        systemNavigationBarColor: ss.settings.immersiveMode.value
-            ? Colors.transparent
-            : context.theme.colorScheme.background, // navigation bar color
-        systemNavigationBarIconBrightness: context.theme.colorScheme.brightness.opposite,
-        statusBarColor: Colors.transparent, // status bar color
-        statusBarIconBrightness: context.theme.colorScheme.brightness.opposite,
-      ),
+    return BBAnnotatedRegion(
       child: Actions(
         actions: {
           OpenSettingsIntent: OpenSettingsAction(context),
@@ -623,10 +623,10 @@ class _HomeState extends OptimizedState<Home> with WidgetsBindingObserver, TrayL
           GoBackIntent: GoBackAction(context),
         },
         child: Obx(() => Scaffold(
-              backgroundColor: context.theme.colorScheme.background.themeOpacity(context),
+              backgroundColor: context.theme.colorScheme.surface.themeOpacity(context),
               body: Builder(
                 builder: (BuildContext context) {
-                  if (ss.settings.finishedSetup.value) {
+                  if (SettingsSvc.settings.finishedSetup.value) {
                     if (!serverCompatible && kIsWeb) {
                       return const FailureToStart(
                         otherTitle: "Server version too low, please upgrade!",
@@ -641,7 +641,7 @@ class _HomeState extends OptimizedState<Home> with WidgetsBindingObserver, TrayL
                     return PopScope(
                       canPop: false,
                       child: TitleBarWrapper(
-                          child: kIsWeb || kIsDesktop ? SetupView() : SplashScreen(shouldNavigate: fullyLoaded)),
+                          child: kIsWeb || kIsDesktop ? const SetupView() : SplashScreen(shouldNavigate: fullyLoaded)),
                     );
                   }
                 },

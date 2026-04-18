@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/scheduler.dart';
 
 class SettingsSearchBariOS extends StatefulWidget {
   final ValueChanged<String>? onChanged;
@@ -17,28 +18,29 @@ class _SettingsSearchBariOSState extends State<SettingsSearchBariOS> {
 
   @override
   Widget build(BuildContext context) {
-   return CupertinoSearchTextField(
-     controller: widget.controller,
-     focusNode: widget.focusNode, // connect the focus node
-     placeholder: "Search Settings",
-     placeholderStyle: TextStyle(
-       color: Theme.of(context).brightness == Brightness.dark
-           ? Colors.white.withOpacity(0.5)
-           : Colors.black.withOpacity(0.5),
-        fontSize: Theme.of(context).textTheme.bodyLarge?.fontSize
-     ),
-     style: TextStyle(
-       color: Theme.of(context).brightness == Brightness.dark
-           ? CupertinoColors.white // white text color for dark mode
-           : CupertinoColors.black, // black text color for light mode
-        fontSize: Theme.of(context).textTheme.bodyLarge?.fontSize
-     ),
-     onChanged: (query){
-       setState(() {
-         searchValue = query.toLowerCase();
-       });
-       widget.onChanged?.call(query);
-     },
-   );
+    return CupertinoSearchTextField(
+      controller: widget.controller,
+      focusNode: widget.focusNode, // connect the focus node
+      placeholder: "Search Settings",
+      placeholderStyle: TextStyle(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Colors.white.withOpacity(0.5)
+              : Colors.black.withOpacity(0.5),
+          fontSize: Theme.of(context).textTheme.bodyLarge?.fontSize),
+      style: TextStyle(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? CupertinoColors.white // white text color for dark mode
+              : CupertinoColors.black, // black text color for light mode
+          fontSize: Theme.of(context).textTheme.bodyLarge?.fontSize),
+      onChanged: (query) {
+        setState(() {
+          searchValue = query.toLowerCase();
+        });
+        // Defer the callback to prevent accessing size during layout
+        SchedulerBinding.instance.addPostFrameCallback((_) {
+          widget.onChanged?.call(query);
+        });
+      },
+    );
   }
 }

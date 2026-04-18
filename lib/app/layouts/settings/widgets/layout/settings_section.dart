@@ -2,6 +2,7 @@ import 'package:bluebubbles/helpers/types/constants.dart';
 import 'package:bluebubbles/helpers/ui/theme_helpers.dart';
 import 'package:bluebubbles/services/services.dart';
 import 'package:flutter/material.dart';
+import 'settings_divider.dart';
 import '../search/searchable_setting_item.dart';
 
 class SettingsSection extends StatelessWidget {
@@ -10,7 +11,8 @@ class SettingsSection extends StatelessWidget {
   final List<SearchableSettingItem>? searchableSettingsItems;
   final Color backgroundColor;
 
-  SettingsSection({
+  const SettingsSection({
+    super.key,
     this.children,
     required this.backgroundColor,
     this.searchableSettingsItems,
@@ -22,7 +24,14 @@ class SettingsSection extends StatelessWidget {
 
     if (searchableSettingsItems != null) {
       // No filtering here - parent already filtered if needed
-      displayedChildren = searchableSettingsItems!.map((item) => item.child).toList();
+      final items = searchableSettingsItems!.map((item) => item.child).toList();
+      // Interleave dividers between items (SettingsDivider is a no-op on non-iOS skins)
+      for (int i = 0; i < items.length; i++) {
+        displayedChildren.add(items[i]);
+        if (i < items.length - 1) {
+          displayedChildren.add(const SettingsDivider());
+        }
+      }
     } else if (children != null) {
       displayedChildren = children!;
     }
@@ -34,33 +43,33 @@ class SettingsSection extends StatelessWidget {
 
     // Always return section container
     return Padding(
-      padding: ss.settings.skin.value == Skins.iOS
+      padding: SettingsSvc.settings.skin.value == Skins.iOS
           ? const EdgeInsets.symmetric(horizontal: 20)
-          : ss.settings.skin.value == Skins.Samsung
-          ? const EdgeInsets.symmetric(vertical: 5)
-          : EdgeInsets.zero,
+          : SettingsSvc.settings.skin.value == Skins.Samsung
+              ? const EdgeInsets.symmetric(vertical: 5)
+              : EdgeInsets.zero,
       child: ClipRRect(
-        borderRadius: ss.settings.skin.value == Skins.Samsung
+        borderRadius: SettingsSvc.settings.skin.value == Skins.Samsung
             ? BorderRadius.circular(25)
-            : ss.settings.skin.value == Skins.iOS
-            ? BorderRadius.circular(10)
-            : BorderRadius.circular(0),
-        clipBehavior: ss.settings.skin.value != Skins.Material ? Clip.antiAlias : Clip.none,
+            : SettingsSvc.settings.skin.value == Skins.iOS
+                ? BorderRadius.circular(10)
+                : BorderRadius.circular(0),
+        clipBehavior: SettingsSvc.settings.skin.value != Skins.Material ? Clip.antiAlias : Clip.none,
         child: Container(
-          color: ss.settings.skin.value == Skins.iOS ? null : backgroundColor,
-          decoration: ss.settings.skin.value == Skins.iOS
+          color: SettingsSvc.settings.skin.value == Skins.iOS ? null : backgroundColor,
+          decoration: SettingsSvc.settings.skin.value == Skins.iOS
               ? BoxDecoration(
-            color: backgroundColor,
-            borderRadius: BorderRadius.circular(10),
-            boxShadow: [
-              BoxShadow(
-                color: backgroundColor.darkenAmount(0.1).withValues(alpha: 0.25),
-                spreadRadius: 5,
-                blurRadius: 7,
-                offset: const Offset(0, 3),
-              ),
-            ],
-          )
+                  color: backgroundColor,
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: [
+                    BoxShadow(
+                      color: backgroundColor.darkenAmount(0.1).withValues(alpha: 0.25),
+                      spreadRadius: 5,
+                      blurRadius: 7,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                )
               : null,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,

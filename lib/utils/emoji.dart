@@ -5,14 +5,22 @@ extension Slugify on Emoji {
   String get slug => shortName.toLowerCase().replaceAll(RegExp(r'([^a-z]{1,})'), '_');
   String get skinToneSlug => "$slug$skinTone";
 
-  String get skinTone => unified.split("-").where((element) => element.startsWith("1F3F")).map((e) => "_tone${int.parse(e.substring(4), radix: 16) - 10}").join("");
+  String get skinTone => unified
+      .split("-")
+      .where((element) => element.startsWith("1F3F"))
+      .map((e) => "_tone${int.parse(e.substring(4), radix: 16) - 10}")
+      .join("");
 
   Emoji get slugCopy => copyWith(shortName: slug);
   Emoji get skinToneSlugCopy => copyWith(shortName: skinToneSlug);
 }
 
-final Map<String, Emoji> shortNameToEmoji = Map.fromEntries(UnicodeEmojis.allEmojis.map((e) => MapEntry(e.slug, e.slugCopy)));
-final Map<String, Emoji> shortNameToSkinToneEmoji = Map.fromEntries(UnicodeEmojis.allEmojis.map((e) => e.skinVariations?.mapIndexed((i, e) => MapEntry(e.skinToneSlug, e.skinToneSlugCopy))).nonNulls.flattened);
+final Map<String, Emoji> shortNameToEmoji =
+    Map.fromEntries(UnicodeEmojis.allEmojis.map((e) => MapEntry(e.slug, e.slugCopy)));
+final Map<String, Emoji> shortNameToSkinToneEmoji = Map.fromEntries(UnicodeEmojis.allEmojis
+    .map((e) => e.skinVariations?.mapIndexed((i, e) => MapEntry(e.skinToneSlug, e.skinToneSlugCopy)))
+    .nonNulls
+    .flattened);
 
 Iterable<Emoji> limitGenerator(Iterable<Emoji> generator, {int? limit}) sync* {
   int count = 0;

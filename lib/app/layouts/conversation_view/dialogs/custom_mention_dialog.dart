@@ -14,18 +14,20 @@ Future<String?> showCustomMentionDialog(BuildContext context, Mentionable? menti
         return AlertDialog(
           actions: [
             TextButton(
-              child: Text("Cancel", style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.primary)),
-              onPressed: () => Get.back(),
+              child: Text("Cancel",
+                  style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.primary)),
+              onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
             ),
             TextButton(
-              child: Text("OK", style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.primary)),
+              child: Text("OK",
+                  style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.primary)),
               onPressed: () {
                 if (isNullOrEmptyString(mentionController.text)) {
                   changed = mention?.handle.displayName ?? "";
                 } else {
                   changed = mentionController.text;
                 }
-                Get.back();
+                Navigator.of(context, rootNavigator: true).pop();
               },
             ),
           ],
@@ -35,7 +37,7 @@ Future<String?> showCustomMentionDialog(BuildContext context, Mentionable? menti
             autocorrect: true,
             scrollPhysics: const CustomBouncingScrollPhysics(),
             autofocus: true,
-            enableIMEPersonalizedLearning: !ss.settings.incognitoKeyboard.value,
+            enableIMEPersonalizedLearning: !SettingsSvc.settings.incognitoKeyboard.value,
             decoration: InputDecoration(
               labelText: "Custom Mention",
               hintText: mention?.handle.displayName ?? "",
@@ -46,13 +48,12 @@ Future<String?> showCustomMentionDialog(BuildContext context, Mentionable? menti
                 val = mention?.handle.displayName ?? "";
               }
               changed = val;
-              Get.back();
+              Navigator.of(context, rootNavigator: true).pop();
             },
           ),
           title: Text("Custom Mention", style: context.theme.textTheme.titleLarge),
-          backgroundColor: context.theme.colorScheme.properSurface,
+          backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
         );
-      }
-  );
+      });
   return changed;
 }

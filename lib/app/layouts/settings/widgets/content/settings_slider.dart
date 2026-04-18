@@ -3,18 +3,18 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 class SettingsSlider extends StatelessWidget {
-  SettingsSlider(
+  const SettingsSlider(
       {required this.startingVal,
-        this.update,
-        this.onChangeEnd,
-        this.formatValue,
-        required this.min,
-        required this.max,
-        this.leadingMinWidth,
-        required this.divisions,
-        this.leading,
-        this.backgroundColor,
-        super.key});
+      this.update,
+      this.onChangeEnd,
+      this.formatValue,
+      required this.min,
+      required this.max,
+      this.leadingMinWidth,
+      required this.divisions,
+      this.leading,
+      this.backgroundColor,
+      super.key});
 
   final double startingVal;
   final Function(double val)? update;

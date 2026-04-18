@@ -1,8 +1,8 @@
 import 'dart:math';
 import 'dart:typed_data';
 
-import 'package:bluebubbles/app/layouts/chat_creator/chat_creator.dart';
-import 'package:bluebubbles/app/wrappers/stateful_boilerplate.dart';
+import 'package:bluebubbles/app/layouts/chat_creator/new_chat_creator.dart';
+import 'package:bluebubbles/app/state/chat_state_scope.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/database/models.dart';
 import 'package:bluebubbles/services/services.dart';
@@ -12,7 +12,7 @@ import 'package:get/get.dart';
 import 'package:universal_io/io.dart';
 
 class ManualMark extends StatefulWidget {
-  const ManualMark({required this.controller});
+  const ManualMark({super.key, required this.controller});
 
   final ConversationViewController controller;
 
@@ -20,7 +20,7 @@ class ManualMark extends StatefulWidget {
   State<StatefulWidget> createState() => ManualMarkState();
 }
 
-class ManualMarkState extends OptimizedState<ManualMark> {
+class ManualMarkState extends State<ManualMark> with ThemeHelpers {
   bool marked = false;
   bool marking = false;
 
@@ -28,7 +28,9 @@ class ManualMarkState extends OptimizedState<ManualMark> {
 
   @override
   Widget build(BuildContext context) {
-    final manualMark = ss.settings.enablePrivateAPI.value && ss.settings.privateManualMarkAsRead.value && !(chat.autoSendReadReceipts ?? false);
+    final manualMark = SettingsSvc.settings.enablePrivateAPI.value &&
+        SettingsSvc.settings.privateManualMarkAsRead.value &&
+        !(chat.autoSendReadReceipts ?? false);
     return Obx(() {
       if (!manualMark && !widget.controller.inSelectMode.value) return const SizedBox.shrink();
       return Row(
@@ -36,23 +38,30 @@ class ManualMarkState extends OptimizedState<ManualMark> {
         children: [
           IconButton(
             icon: Icon(
-              widget.controller.inSelectMode.value ? (iOS ? CupertinoIcons.trash : Icons.delete_outlined)
-                  : marking ? (iOS ? CupertinoIcons.arrow_2_circlepath : Icons.sync)
-                  : marked ? (iOS ? CupertinoIcons.app : Icons.mark_chat_read_outlined)
-                  : (iOS ? CupertinoIcons.app_badge : Icons.mark_chat_unread_outlined),
-              color: !iOS ? context.theme.colorScheme.onBackground
+              widget.controller.inSelectMode.value
+                  ? (iOS ? CupertinoIcons.trash : Icons.delete_outlined)
+                  : marking
+                      ? (iOS ? CupertinoIcons.arrow_2_circlepath : Icons.sync)
+                      : marked
+                          ? (iOS ? CupertinoIcons.app : Icons.mark_chat_read_outlined)
+                          : (iOS ? CupertinoIcons.app_badge : Icons.mark_chat_unread_outlined),
+              color: !iOS
+                  ? context.theme.colorScheme.onSurface
                   : (!marked && !marking || widget.controller.inSelectMode.value)
-                  ? context.theme.colorScheme.primary
-                  : context.theme.colorScheme.outline,
+                      ? context.theme.colorScheme.primary
+                      : context.theme.colorScheme.outline,
             ),
-            tooltip: widget.controller.inSelectMode.value ? "Delete"
-              : marking ? null
-              : marked ? "Mark Unread"
-              : "Mark Read",
+            tooltip: widget.controller.inSelectMode.value
+                ? "Delete"
+                : marking
+                    ? null
+                    : marked
+                        ? "Mark Unread"
+                        : "Mark Read",
             onPressed: () async {
               if (widget.controller.inSelectMode.value) {
                 for (Message m in widget.controller.selected) {
-                  ms(chat.guid).removeMessage(m);
+                  MessagesSvc(chat.guid).removeMessage(m);
                   Message.softDelete(m.guid!);
                 }
                 widget.controller.inSelectMode.value = false;
@@ -64,9 +73,9 @@ class ManualMarkState extends OptimizedState<ManualMark> {
                 marking = true;
               });
               if (!marked) {
-                await http.markChatRead(chat.guid);
+                await HttpSvc.markChatRead(chat.guid);
               } else {
-                await http.markChatUnread(chat.guid);
+                await HttpSvc.markChatUnread(chat.guid);
               }
               setState(() {
                 marking = false;
@@ -78,16 +87,16 @@ class ManualMarkState extends OptimizedState<ManualMark> {
             IconButton(
               icon: Icon(
                 iOS ? CupertinoIcons.arrow_right : Icons.forward_outlined,
-                color: !iOS ? context.theme.colorScheme.onBackground : context.theme.colorScheme.primary,
+                color: !iOS ? context.theme.colorScheme.onSurface : context.theme.colorScheme.primary,
               ),
               onPressed: () async {
                 List<PlatformFile> attachments = [];
                 String text = "";
                 widget.controller.selected.sort((a, b) => Message.sort(a, b, descending: false));
                 for (Message m in widget.controller.selected) {
-                  final _attachments = m.attachments
-                      .where((e) => as.getContent(e!, autoDownload: false) is PlatformFile)
-                      .map((e) => as.getContent(e!, autoDownload: false) as PlatformFile);
+                  final _attachments = m.dbAttachments
+                      .where((e) => AttachmentsSvc.getContent(e, autoDownload: false) is PlatformFile)
+                      .map((e) => AttachmentsSvc.getContent(e, autoDownload: false) as PlatformFile);
                   for (PlatformFile a in _attachments) {
                     Uint8List? bytes = a.bytes;
                     bytes ??= await File(a.path!).readAsBytes();
@@ -108,9 +117,9 @@ class ManualMarkState extends OptimizedState<ManualMark> {
                 }
                 widget.controller.inSelectMode.value = false;
                 widget.controller.selected.clear();
-                ns.pushAndRemoveUntil(
+                NavigationSvc.pushAndRemoveUntil(
                   context,
-                  ChatCreator(
+                  NewChatCreator(
                     initialText: text,
                     initialAttachments: attachments,
                   ),
@@ -125,29 +134,68 @@ class ManualMarkState extends OptimizedState<ManualMark> {
 }
 
 class ConnectionIndicator extends StatelessWidget {
-  const ConnectionIndicator();
+  const ConnectionIndicator({super.key});
 
-  bool get noniOS => ss.settings.skin.value != Skins.iOS;
+  bool get noniOS => SettingsSvc.settings.skin.value != Skins.iOS;
 
   @override
   Widget build(BuildContext context) {
     return Align(
       alignment: Alignment.topCenter,
       child: Obx(() => AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        height: 0,
-        decoration: BoxDecoration(
-          boxShadow: [
-            BoxShadow(
-              color: getIndicatorColor(socket.state.value).withValues(alpha: 0.4),
-              spreadRadius: socket.state.value != SocketState.connected && (ls.isAlive || kIsDesktop)
-                  ? max(MediaQuery.of(context).viewPadding.top, 40).clamp(0, noniOS ? 30 : double.infinity).toDouble()
-                  : 0,
-              blurRadius: max(MediaQuery.of(context).viewPadding.top, 40).clamp(0, noniOS ? 30 : double.infinity).toDouble(),
+            duration: const Duration(milliseconds: 300),
+            height: 0,
+            decoration: BoxDecoration(
+              boxShadow: [
+                BoxShadow(
+                  color: getIndicatorColor(SocketSvc.state.value).withValues(alpha: 0.4),
+                  spreadRadius: SocketSvc.state.value != SocketState.connected && (LifecycleSvc.isAlive || kIsDesktop)
+                      ? max(MediaQuery.of(context).viewPadding.top, 40)
+                          .clamp(0, noniOS ? 30 : double.infinity)
+                          .toDouble()
+                      : 0,
+                  blurRadius: max(MediaQuery.of(context).viewPadding.top, 40)
+                      .clamp(0, noniOS ? 30 : double.infinity)
+                      .toDouble(),
+                ),
+              ],
             ),
-          ],
-        ),
-      )),
+          )),
     );
+  }
+}
+
+/// A send-progress [LinearProgressIndicator] shared by both header skins.
+///
+/// Reads [Chat.sendProgress] from [ChatStateScope] so it never needs a
+/// [Chat] constructor parameter.  Place it in a [Positioned] at the bottom
+/// of the header stack.
+class HeaderProgressIndicator extends StatelessWidget {
+  const HeaderProgressIndicator({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final chat = ChatStateScope.chatOf(context);
+    return Obx(() => TweenAnimationBuilder<double>(
+          duration: chat.sendProgress.value == 0
+              ? Duration.zero
+              : chat.sendProgress.value == 1
+                  ? const Duration(milliseconds: 250)
+                  : const Duration(seconds: 10),
+          curve: chat.sendProgress.value == 1 ? Curves.easeInOut : Curves.easeOutExpo,
+          tween: Tween<double>(
+            begin: 0,
+            end: chat.sendProgress.value,
+          ),
+          builder: (context, value, _) => AnimatedOpacity(
+            opacity: value == 1 ? 0 : 1,
+            duration: const Duration(milliseconds: 250),
+            child: LinearProgressIndicator(
+              value: value,
+              backgroundColor: Colors.transparent,
+              minHeight: 3,
+            ),
+          ),
+        ));
   }
 }

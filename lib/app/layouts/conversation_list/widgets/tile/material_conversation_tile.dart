@@ -1,16 +1,14 @@
-import 'package:async_task/async_task_extension.dart';
-import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/app/layouts/conversation_list/widgets/tile/conversation_tile.dart';
+import 'package:bluebubbles/app/layouts/conversation_list/widgets/tile/trailing_state_mixin.dart';
+import 'package:bluebubbles/app/state/chat_state_scope.dart';
 import 'package:bluebubbles/app/wrappers/stateful_boilerplate.dart';
-import 'package:bluebubbles/database/database.dart';
-import 'package:bluebubbles/database/models.dart';
+import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/services/services.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 class MaterialConversationTile extends CustomStateful<ConversationTileController> {
-  const MaterialConversationTile({Key? key, required super.parentController});
+  const MaterialConversationTile({super.key, required super.parentController});
 
   @override
   State<StatefulWidget> createState() => _MaterialConversationTileState();
@@ -52,35 +50,45 @@ class _MaterialConversationTileState extends CustomState<MaterialConversationTil
         ),
         child: ListTile(
           mouseCursor: MouseCursor.defer,
-          dense: ss.settings.denseChatTiles.value,
-          visualDensity: ss.settings.denseChatTiles.value ? VisualDensity.compact : null,
-          minVerticalPadding: ss.settings.denseChatTiles.value ? 7.5 : 10,
+          dense: SettingsSvc.settings.denseChatTiles.value,
+          visualDensity: SettingsSvc.settings.denseChatTiles.value ? VisualDensity.compact : null,
+          minVerticalPadding: SettingsSvc.settings.denseChatTiles.value ? 7.5 : 10,
           title: Obx(() => ChatTitle(
                 parentController: controller,
                 style: context.theme.textTheme.bodyLarge!
                     .copyWith(
                       fontWeight: controller.shouldHighlight.value
-                          ? FontWeight.w600
-                          : GlobalChatService.unreadState(controller.chat.guid).value
+                          ? FontWeight.w500
+                          : (ChatsSvc.getChatState(controller.chat.guid)?.hasUnreadMessage.value ?? false)
                               ? FontWeight.bold
                               : null,
+                      color: SettingsSvc.settings.monetTheming.value != Monet.none
+                          ? context.theme.colorScheme.onSurface
+                          : null,
                     )
                     .apply(fontSizeFactor: 1.1),
               )),
           subtitle: controller.subtitle ??
               Obx(() {
-                final unread = GlobalChatService.unreadState(controller.chat.guid).value;
+                final unread = ChatsSvc.getChatState(controller.chat.guid)?.hasUnreadMessage.value ?? false;
+                final isMonet = SettingsSvc.settings.monetTheming.value != Monet.none;
                 return ChatSubtitle(
-                    parentController: controller,
-                    style: context.theme.textTheme.bodyMedium!
-                        .copyWith(
-                          fontWeight: unread ? FontWeight.bold : null,
-                          color: controller.shouldHighlight.value || unread ? context.textTheme.bodyMedium!.color : context.theme.colorScheme.outline,
-                          height: 1.5,
-                        )
-                        .apply(fontSizeFactor: 1.05),
-                  );
-      }),
+                  parentController: controller,
+                  style: context.theme.textTheme.bodyMedium!
+                      .copyWith(
+                        fontWeight: unread ? FontWeight.w500 : null,
+                        color: controller.shouldHighlight.value || unread
+                            ? isMonet
+                                ? context.theme.colorScheme.onSurface
+                                : context.textTheme.bodyMedium!.color
+                            : isMonet
+                                ? context.theme.colorScheme.onSurfaceVariant
+                                : context.theme.colorScheme.outline,
+                        height: 1.5,
+                      )
+                      .apply(fontSizeFactor: 1.05),
+                );
+              }),
           contentPadding: const EdgeInsets.only(left: 6, right: 16),
           leading: leading,
           trailing: MaterialTrailing(parentController: controller),
@@ -88,135 +96,73 @@ class _MaterialConversationTileState extends CustomState<MaterialConversationTil
       ),
     );
 
-    return Obx(() {
-      ns.listener.value;
-      return AnimatedContainer(
-        padding: const EdgeInsets.only(left: 10),
-        clipBehavior: Clip.antiAlias,
-        decoration: BoxDecoration(
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(20),
-            bottomLeft: Radius.circular(20),
+    return ChatStateScope(
+      chatState: controller.chatState!,
+      child: Obx(() {
+        NavigationSvc.listener.value;
+        return AnimatedContainer(
+          padding: const EdgeInsets.only(left: 10),
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(20),
+              bottomLeft: Radius.circular(20),
+            ),
+            color: controller.isSelected
+                ? context.theme.colorScheme.primaryContainer.withValues(alpha: 0.5)
+                : shouldPartialHighlight
+                    ? context.theme.colorScheme.surfaceContainerHighest
+                    : shouldHighlight
+                        ? context.theme.colorScheme.primaryContainer
+                        : hoverHighlight
+                            ? context.theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5)
+                            : SettingsSvc.settings.monetTheming.value == Monet.full
+                                ? context.theme.colorScheme.surface
+                                : null,
           ),
-          color: controller.isSelected
-              ? context.theme.colorScheme.primaryContainer.withValues(alpha: 0.5)
-              : shouldPartialHighlight
-                  ? context.theme.colorScheme.properSurface
-                  : shouldHighlight
-                      ? context.theme.colorScheme.primaryContainer
-                      : hoverHighlight
-                          ? context.theme.colorScheme.properSurface.withValues(alpha: 0.5)
-                          : null,
-        ),
-        duration: const Duration(milliseconds: 100),
-        child: ns.isAvatarOnly(context)
-            ? InkWell(
-                mouseCursor: MouseCursor.defer,
-                onTap: () => controller.onTap(context),
-                onSecondaryTapUp: (details) => controller.onSecondaryTap(Get.context!, details),
-                onLongPress: controller.onLongPress,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(20),
-                  bottomLeft: Radius.circular(20),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 15.0),
-                  child: Center(child: leading),
-                ),
-              )
-            : child,
-      );
-    });
+          duration: const Duration(milliseconds: 100),
+          child: NavigationSvc.isAvatarOnly(context)
+              ? InkWell(
+                  mouseCursor: MouseCursor.defer,
+                  onTap: () => controller.onTap(context),
+                  onSecondaryTapUp: (details) => controller.onSecondaryTap(Get.context!, details),
+                  onLongPress: controller.onLongPress,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(20),
+                    bottomLeft: Radius.circular(20),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 15.0),
+                    child: Center(child: leading),
+                  ),
+                )
+              : child,
+        );
+      }),
+    );
   }
 }
 
 class MaterialTrailing extends CustomStateful<ConversationTileController> {
-  const MaterialTrailing({Key? key, required super.parentController});
+  const MaterialTrailing({super.key, required super.parentController});
 
   @override
   State<StatefulWidget> createState() => _MaterialTrailingState();
 }
 
-class _MaterialTrailingState extends CustomState<MaterialTrailing, void, ConversationTileController> {
-  DateTime? dateCreated;
-  late final StreamSubscription sub;
-  String? cachedLatestMessageGuid = "";
-  Message? cachedLatestMessage;
-
-  @override
-  void initState() {
-    super.initState();
-    tag = controller.chat.guid;
-    // keep controller in memory since the widget is part of a list
-    // (it will be disposed when scrolled out of view)
-    forceDelete = false;
-    cachedLatestMessage = controller.chat.latestMessage;
-    cachedLatestMessageGuid = cachedLatestMessage?.guid;
-    dateCreated = cachedLatestMessage?.dateCreated;
-    // run query after render has completed
-    if (!kIsWeb) {
-      updateObx(() {
-        final latestMessageQuery = (Database.messages.query(Message_.dateDeleted.isNull())
-              ..link(Message_.chat, Chat_.guid.equals(controller.chat.guid))
-              ..order(Message_.dateCreated, flags: Order.descending))
-            .watch();
-
-        sub = latestMessageQuery.listen((Query<Message> query) async {
-          final message = await runAsync(() {
-            return query.findFirst();
-          });
-          if (message != null &&
-              ss.settings.statusIndicatorsOnChats.value &&
-              (message.dateDelivered != cachedLatestMessage?.dateDelivered || message.dateRead != cachedLatestMessage?.dateRead)) {
-            setState(() {});
-          }
-          cachedLatestMessage = message;
-          // check if we really need to update this widget
-          if (message != null && message.guid != cachedLatestMessageGuid) {
-            if (dateCreated != message.dateCreated) {
-              setState(() {
-                dateCreated = message.dateCreated;
-              });
-            }
-          }
-          cachedLatestMessageGuid = message?.guid;
-        });
-      });
-    } else {
-      sub = WebListeners.newMessage.listen((tuple) {
-        if (tuple.item2?.guid == controller.chat.guid && (dateCreated == null || tuple.item1.dateCreated!.isAfter(dateCreated!))) {
-          cachedLatestMessage = tuple.item1;
-          setState(() {
-            dateCreated = tuple.item1.dateCreated;
-          });
-          cachedLatestMessageGuid = tuple.item1.guid;
-        }
-      });
-    }
-  }
-
-  @override
-  void dispose() {
-    sub.cancel();
-    super.dispose();
-  }
-
+class _MaterialTrailingState extends CustomState<MaterialTrailing, void, ConversationTileController>
+    with TrailingStateMixin<MaterialTrailing> {
   @override
   Widget build(BuildContext context) {
+    final chatState = ChatStateScope.of(context);
     return Padding(
       padding: const EdgeInsets.only(right: 3),
       child: Obx(() {
-        final unread = GlobalChatService.unreadState(controller.chat.guid).value;
-        final muteType = GlobalChatService.muteState(controller.chat.guid).value;
-
-        String indicatorText = "";
-        if (ss.settings.statusIndicatorsOnChats.value && (cachedLatestMessage?.isFromMe ?? false) && !controller.chat.isGroup) {
-          Indicator show = cachedLatestMessage?.indicatorToShow ?? Indicator.NONE;
-          if (show != Indicator.NONE) {
-            indicatorText = show.name.toLowerCase().capitalizeFirst!;
-          }
-        }
-
+        final message = chatState.latestMessage.value;
+        final indicator = computeIndicatorText(chatState.latestMessageStatus.value, controller.chat.isGroup);
+        final hasError = (message?.error ?? 0) > 0;
+        final unread = chatState.hasUnreadMessage.value;
+        final muteType = chatState.muteType.value;
         return Column(
           crossAxisAlignment: CrossAxisAlignment.end,
           mainAxisAlignment: MainAxisAlignment.center,
@@ -227,16 +173,16 @@ class _MaterialTrailingState extends CustomState<MaterialTrailing, void, Convers
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 Text(
-                  (cachedLatestMessage?.error ?? 0) > 0
+                  hasError
                       ? "Error"
-                      : "${indicatorText.isNotEmpty ? "$indicatorText\n" : ""}${buildChatListDateMaterial(dateCreated)}",
+                      : "${indicator.isNotEmpty ? "$indicator\n" : ""}${buildChatListDateMaterial(message?.dateCreated)}",
                   textAlign: TextAlign.right,
                   style: context.theme.textTheme.bodySmall!
                       .copyWith(
-                        color: (cachedLatestMessage?.error ?? 0) > 0
+                        color: hasError
                             ? context.theme.colorScheme.error
                             : controller.shouldHighlight.value || unread
-                                ? context.theme.colorScheme.onBackground
+                                ? context.theme.colorScheme.onSurface
                                 : context.theme.colorScheme.outline,
                         fontWeight: unread
                             ? FontWeight.w600
@@ -247,18 +193,6 @@ class _MaterialTrailingState extends CustomState<MaterialTrailing, void, Convers
                       .apply(fontSizeFactor: 1.1),
                   overflow: TextOverflow.clip,
                 ),
-                if (muteType != "mute" && unread) 
-                  Padding(
-                    padding: const EdgeInsets.only(left: 8.0),
-                    child: Container(
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: context.theme.colorScheme.primary,
-                      ),
-                    ),
-                  )
               ],
             ),
             const SizedBox(height: 5),
@@ -267,33 +201,45 @@ class _MaterialTrailingState extends CustomState<MaterialTrailing, void, Convers
               mainAxisAlignment: MainAxisAlignment.end,
               mainAxisSize: MainAxisSize.min,
               children: [
-                if (controller.chat.isPinned!) Icon(Icons.push_pin_outlined, size: 15, color: context.theme.colorScheme.outline),
+                if (chatState.isPinned.value)
+                  Icon(Icons.push_pin_outlined, size: 18, color: context.theme.colorScheme.outline),
+                if (muteType != "mute" && unread) ...[
+                  if (chatState.isPinned.value) const SizedBox(width: 5),
+                  Container(
+                    width: 13,
+                    height: 13,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: context.theme.colorScheme.primary,
+                    ),
+                  ),
+                ],
+                if (muteType == "mute") const SizedBox(width: 5),
                 if (muteType == "mute")
-                  const SizedBox(width: 5),
-                if (muteType == "mute")
-                  Obx(() => Icon(
-                        Icons.notifications_off_outlined,
-                        color: controller.shouldHighlight.value || unread ? context.theme.colorScheme.primary : context.theme.colorScheme.outline,
-                        size: 15,
-                      )),
+                  Icon(
+                    Icons.notifications_off_outlined,
+                    color: controller.shouldHighlight.value || unread
+                        ? context.theme.colorScheme.primary
+                        : context.theme.colorScheme.outline,
+                    size: 18,
+                  ),
               ],
             ),
           ],
         );
-    })
+      }),
     );
   }
 }
 
 class UnreadIcon extends CustomStateful<ConversationTileController> {
-  const UnreadIcon({Key? key, required super.parentController});
+  const UnreadIcon({super.key, required super.parentController});
 
   @override
   State<StatefulWidget> createState() => _UnreadIconState();
 }
 
 class _UnreadIconState extends CustomState<UnreadIcon, void, ConversationTileController> {
-
   @override
   void initState() {
     super.initState();
@@ -306,17 +252,17 @@ class _UnreadIconState extends CustomState<UnreadIcon, void, ConversationTileCon
   @override
   Widget build(BuildContext context) {
     return Obx(() => Padding(
-      padding: const EdgeInsets.only(left: 5.0, right: 5.0),
-      child: (GlobalChatService.unreadState(controller.chat.guid).value)
-          ? Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(35),
-                color: context.theme.colorScheme.primary,
-              ),
-              width: 10,
-              height: 10,
-            )
-          : const SizedBox(width: 10),
-    ));
+          padding: const EdgeInsets.only(left: 5.0, right: 5.0),
+          child: (ChatsSvc.getChatState(controller.chat.guid)?.hasUnreadMessage.value ?? false)
+              ? Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(35),
+                    color: context.theme.colorScheme.primary,
+                  ),
+                  width: 10,
+                  height: 10,
+                )
+              : const SizedBox(width: 10),
+        ));
   }
 }

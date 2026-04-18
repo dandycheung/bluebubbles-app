@@ -1,7 +1,5 @@
 import 'package:adaptive_theme/adaptive_theme.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
-import 'package:bluebubbles/helpers/types/constants.dart';
-import 'package:bluebubbles/helpers/ui/theme_helpers.dart';
 import 'package:bluebubbles/app/components/custom/custom_bouncing_scroll_physics.dart';
 import 'package:bluebubbles/database/models.dart';
 import 'package:bluebubbles/services/services.dart';
@@ -13,12 +11,14 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart' hide GetStringUtils;
 import 'package:material_color_utilities/material_color_utilities.dart' as mui_utils;
 import 'package:simple_animations/simple_animations.dart';
-import 'package:tuple/tuple.dart';
+import 'package:bluebubbles/models/models.dart' show ThemePair;
 import 'package:universal_io/io.dart';
+import 'package:get_it/get_it.dart';
 
-ThemesService ts = Get.isRegistered<ThemesService>() ? Get.find<ThemesService>() : Get.put(ThemesService());
+// ignore: non_constant_identifier_names
+ThemesService get ThemeSvc => GetIt.I<ThemesService>();
 
-class ThemesService extends GetxService {
+class ThemesService {
   mui_utils.CorePalette? monetPalette;
   Color? desktopAccentColor;
 
@@ -33,13 +33,22 @@ class ThemesService extends GetxService {
     if (kIsDesktop) {
       desktopAccentColor = await DynamicColorPlugin.getAccentColor();
     }
+
+    // Re-save preset themes so any stale DB values (e.g. old surfaceContainerHighest)
+    // are always overwritten with the current static definitions.
+    if (!kIsWeb) {
+      for (final preset in defaultThemes) {
+        preset.save(updateIfNotAbsent: true);
+      }
+    }
   }
 
-  final oledDarkTheme = FlexColorScheme(
+  static final oledDarkTheme = FlexColorScheme(
     textTheme: Typography.englishLike2021.merge(Typography.whiteMountainView),
     colorScheme: ColorScheme.fromSeed(
       seedColor: Colors.blue,
-      background: Colors.black,
+      surface: Colors.black,
+      surfaceContainerHighest: HexColor("323332"),
       error: Colors.red,
       brightness: Brightness.dark,
     ),
@@ -55,23 +64,21 @@ class ThemesService extends GetxService {
     ),
     BubbleText(
       bubbleText: Typography.englishLike2021.bodyMedium!.copyWith(
-        fontSize: 15,
+        fontSize: ThemeStruct.defaultTextSizes["bubbleText"],
         height: Typography.englishLike2021.bodyMedium!.height! * 0.85,
         color: Colors.white,
       ),
     ),
   ]);
 
-  final nordDarkTheme = FlexColorScheme(
+  static final nordDarkTheme = FlexColorScheme(
     textTheme: Typography.englishLike2021.merge(Typography.whiteMountainView),
     colorScheme: ColorScheme.fromSwatch(
       primarySwatch: createMaterialColor(HexColor("5E81AC")),
       accentColor: HexColor("88C0D0"),
-      backgroundColor: HexColor("3B4252"),
-      cardColor: HexColor("4C566A"),
-      errorColor: Colors.red,
       brightness: Brightness.dark,
     ).copyWith(
+      surface: HexColor("3B4252"),
       primaryContainer: HexColor("49688e"),
       outline: Colors.grey,
     ),
@@ -79,40 +86,49 @@ class ThemesService extends GetxService {
   ).toTheme.copyWith(splashFactory: InkSparkle.splashFactory, extensions: [
     BubbleText(
       bubbleText: Typography.englishLike2021.bodyMedium!.copyWith(
-        fontSize: 15,
+        fontSize: ThemeStruct.defaultTextSizes["bubbleText"],
         height: Typography.englishLike2021.bodyMedium!.height! * 0.85,
       ),
     ),
   ]);
 
-  final whiteLightTheme = FlexColorScheme(
-    textTheme: Typography.englishLike2021.merge(Typography.blackMountainView),
-    colorScheme: ColorScheme.fromSeed(
-      seedColor: Colors.blue,
-      background: Colors.white,
-      surfaceVariant: HexColor('F3F3F6'),
-      error: Colors.red,
-      brightness: Brightness.light,
-    ),
-    useMaterial3: true,
-  ).toTheme.copyWith(splashFactory: InkSparkle.splashFactory, extensions: [
-    BubbleColors(
-      iMessageBubbleColor: HexColor("1982FC"),
-      oniMessageBubbleColor: Colors.white,
-      smsBubbleColor: HexColor("43CC47"),
-      onSmsBubbleColor: Colors.white,
-      receivedBubbleColor: HexColor("e9e9e8"),
-      onReceivedBubbleColor: Colors.black,
-    ),
-    BubbleText(
-      bubbleText: Typography.englishLike2021.bodyMedium!.copyWith(
-        fontSize: 15,
-        height: Typography.englishLike2021.bodyMedium!.height! * 0.85,
+  static final whiteLightTheme = () {
+    final base = FlexColorScheme(
+      textTheme: Typography.englishLike2021.merge(Typography.blackMountainView),
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: Colors.blue,
+        surface: Colors.white,
+        error: Colors.red,
+        brightness: Brightness.light,
       ),
-    ),
-  ]);
+      useMaterial3: true,
+    ).toTheme;
+    return base.copyWith(
+      splashFactory: InkSparkle.splashFactory,
+      colorScheme: base.colorScheme.copyWith(
+        surface: Colors.white,
+        surfaceContainerHighest: HexColor('F2F2F6'),
+      ),
+      extensions: [
+        BubbleColors(
+          iMessageBubbleColor: HexColor("1982FC"),
+          oniMessageBubbleColor: Colors.white,
+          smsBubbleColor: HexColor("43CC47"),
+          onSmsBubbleColor: Colors.white,
+          receivedBubbleColor: HexColor("e9e9ea"),
+          onReceivedBubbleColor: Colors.black,
+        ),
+        BubbleText(
+          bubbleText: Typography.englishLike2021.bodyMedium!.copyWith(
+            fontSize: ThemeStruct.defaultTextSizes["bubbleText"],
+            height: Typography.englishLike2021.bodyMedium!.height! * 0.85,
+          ),
+        ),
+      ],
+    );
+  }();
 
-  List<ThemeStruct> get defaultThemes => [
+  static List<ThemeStruct> get defaultThemes => [
         ThemeStruct(name: "OLED Dark", themeData: oledDarkTheme),
         ThemeStruct(name: "Bright White", themeData: whiteLightTheme),
         ThemeStruct(name: "Nord Theme", themeData: nordDarkTheme),
@@ -131,7 +147,7 @@ class ThemesService extends GetxService {
                             extensions: [
                           BubbleText(
                             bubbleText: Typography.englishLike2021.bodyMedium!.copyWith(
-                              fontSize: 15,
+                              fontSize: ThemeStruct.defaultTextSizes["bubbleText"],
                               height: Typography.englishLike2021.bodyMedium!.height! * 0.85,
                             ),
                           ),
@@ -147,7 +163,7 @@ class ThemesService extends GetxService {
                             extensions: [
                           BubbleText(
                             bubbleText: Typography.englishLike2021.bodyMedium!.copyWith(
-                              fontSize: 15,
+                              fontSize: ThemeStruct.defaultTextSizes["bubbleText"],
                               height: Typography.englishLike2021.bodyMedium!.height! * 0.85,
                             ),
                           ),
@@ -157,10 +173,10 @@ class ThemesService extends GetxService {
             .flattened,
       ];
 
-  Skins get skin => ss.settings.skin.value;
+  Skins get skin => SettingsSvc.settings.skin.value;
 
   ScrollPhysics get scrollPhysics {
-    if (ss.settings.skin.value == Skins.iOS) {
+    if (SettingsSvc.settings.skin.value == Skins.iOS) {
       return const AlwaysScrollableScrollPhysics(
         parent: CustomBouncingScrollPhysics(),
       );
@@ -171,7 +187,7 @@ class ThemesService extends GetxService {
     }
   }
 
-  bool get isFullMonet => ss.settings.monetTheming.value == Monet.full;
+  bool get isFullMonet => SettingsSvc.settings.monetTheming.value == Monet.full;
 
   bool inDarkMode(BuildContext context) => (AdaptiveTheme.of(context).mode == AdaptiveThemeMode.dark ||
       (AdaptiveTheme.of(context).mode == AdaptiveThemeMode.system &&
@@ -210,9 +226,9 @@ class ThemesService extends GetxService {
     ThemeData light = (lightOverride ?? ThemeStruct.getLightTheme()).data;
     ThemeData dark = (darkOverride ?? ThemeStruct.getDarkTheme()).data;
 
-    final tuple = getStructsFromData(light, dark);
-    light = tuple.item1;
-    dark = tuple.item2;
+    final pair = getStructsFromData(light, dark);
+    light = pair.light;
+    dark = pair.dark;
 
     AdaptiveTheme.of(context).setTheme(
       light: light,
@@ -220,32 +236,32 @@ class ThemesService extends GetxService {
     );
   }
 
-  Tuple2 getStructsFromData(ThemeData light, ThemeData dark) {
+  ThemePair getStructsFromData(ThemeData light, ThemeData dark) {
     return Platform.isWindows ? _applyWindowsAccent(light, dark) : _applyMonet(light, dark);
   }
 
   Future<ThemeStruct> revertToPreviousDarkTheme() async {
     List<ThemeStruct> allThemes = ThemeStruct.getThemes();
-    final darkName = ss.prefs.getString("previous-dark");
+    final darkName = PrefsSvc.i.getString("previous-dark");
     ThemeStruct? previous = allThemes.firstWhereOrNull((e) => e.name == darkName);
 
     previous ??= defaultThemes.firstWhere((element) => element.name == "OLED Dark");
 
     // Remove the previous flags
-    await ss.prefs.remove("previous-dark");
+    await PrefsSvc.i.remove("previous-dark");
 
     return previous;
   }
 
   Future<ThemeStruct> revertToPreviousLightTheme() async {
     List<ThemeStruct> allThemes = ThemeStruct.getThemes();
-    final lightName = ss.prefs.getString("previous-light");
+    final lightName = PrefsSvc.i.getString("previous-light");
     ThemeStruct? previous = allThemes.firstWhereOrNull((e) => e.name == lightName);
 
     previous ??= defaultThemes.firstWhere((element) => element.name == "Bright White");
 
     // Remove the previous flags
-    await ss.prefs.remove("previous-light");
+    await PrefsSvc.i.remove("previous-light");
 
     return previous;
   }
@@ -253,14 +269,14 @@ class ThemesService extends GetxService {
   Future<void> changeTheme(BuildContext context, {ThemeStruct? light, ThemeStruct? dark}) async {
     light?.save();
     dark?.save();
-    if (light != null) await ss.prefs.setString("selected-light", light.name);
-    if (dark != null) await ss.prefs.setString("selected-dark", dark.name);
+    if (light != null) await PrefsSvc.i.setString("selected-light", light.name);
+    if (dark != null) await PrefsSvc.i.setString("selected-dark", dark.name);
 
     _loadTheme(context);
   }
 
-  Tuple2<ThemeData, ThemeData> _applyMonet(ThemeData light, ThemeData dark) {
-    if (ss.settings.monetTheming.value == Monet.harmonize && monetPalette != null) {
+  ThemePair _applyMonet(ThemeData light, ThemeData dark) {
+    if (SettingsSvc.settings.monetTheming.value == Monet.harmonize && monetPalette != null) {
       light = light.copyWith(
         colorScheme: light.colorScheme.copyWith(
           primary: Color(monetPalette!.primary.get(40)),
@@ -282,8 +298,6 @@ class ThemesService extends GetxService {
           onError: light.colorScheme.onError.harmonizeWith(Color(monetPalette!.error.get(100))),
           errorContainer: light.colorScheme.errorContainer.harmonizeWith(Color(monetPalette!.error.get(90))),
           onErrorContainer: light.colorScheme.onErrorContainer.harmonizeWith(Color(monetPalette!.error.get(10))),
-          background: light.colorScheme.background.harmonizeWith(Color(monetPalette!.neutral.get(99))),
-          onBackground: light.colorScheme.onBackground.harmonizeWith(Color(monetPalette!.neutral.get(10))),
           surface: light.colorScheme.surface.harmonizeWith(Color(monetPalette!.neutral.get(99))),
           onSurface: light.colorScheme.onSurface.harmonizeWith(Color(monetPalette!.neutral.get(10))),
           surfaceVariant: light.colorScheme.surfaceVariant.harmonizeWith(Color(monetPalette!.neutralVariant.get(90))),
@@ -318,8 +332,6 @@ class ThemesService extends GetxService {
           onError: dark.colorScheme.onError.harmonizeWith(Color(monetPalette!.error.get(20))),
           errorContainer: dark.colorScheme.errorContainer.harmonizeWith(Color(monetPalette!.error.get(30))),
           onErrorContainer: dark.colorScheme.onErrorContainer.harmonizeWith(Color(monetPalette!.error.get(80))),
-          background: dark.colorScheme.background.harmonizeWith(Color(monetPalette!.neutral.get(10))),
-          onBackground: dark.colorScheme.onBackground.harmonizeWith(Color(monetPalette!.neutral.get(90))),
           surface: dark.colorScheme.surface.harmonizeWith(Color(monetPalette!.neutral.get(10))),
           onSurface: dark.colorScheme.onSurface.harmonizeWith(Color(monetPalette!.neutral.get(90))),
           surfaceVariant: dark.colorScheme.surfaceVariant.harmonizeWith(Color(monetPalette!.neutralVariant.get(30))),
@@ -353,8 +365,6 @@ class ThemesService extends GetxService {
           onError: Color(monetPalette!.error.get(100)),
           errorContainer: Color(monetPalette!.error.get(90)),
           onErrorContainer: Color(monetPalette!.error.get(10)),
-          background: Color(monetPalette!.neutral.get(99)),
-          onBackground: Color(monetPalette!.neutral.get(10)),
           surface: Color(monetPalette!.neutral.get(99)),
           onSurface: Color(monetPalette!.neutral.get(10)),
           surfaceVariant: Color(monetPalette!.neutralVariant.get(90)),
@@ -386,8 +396,6 @@ class ThemesService extends GetxService {
           onError: Color(monetPalette!.error.get(20)),
           errorContainer: Color(monetPalette!.error.get(30)),
           onErrorContainer: Color(monetPalette!.error.get(80)),
-          background: Color(monetPalette!.neutral.get(10)),
-          onBackground: Color(monetPalette!.neutral.get(90)),
           surface: Color(monetPalette!.neutral.get(10)),
           onSurface: Color(monetPalette!.neutral.get(90)),
           surfaceVariant: Color(monetPalette!.neutralVariant.get(30)),
@@ -402,15 +410,15 @@ class ThemesService extends GetxService {
         ),
       );
     }
-    return Tuple2(light, dark);
+    return ThemePair(light: light, dark: dark);
   }
 
-  Tuple2<ThemeData, ThemeData> _applyWindowsAccent(ThemeData light, ThemeData dark) {
-    if (desktopAccentColor == null || !ss.settings.useDesktopAccent.value) {
-      return Tuple2(light, dark);
+  ThemePair _applyWindowsAccent(ThemeData light, ThemeData dark) {
+    if (desktopAccentColor == null || !SettingsSvc.settings.useDesktopAccent.value) {
+      return ThemePair(light: light, dark: dark);
     }
 
-    CorePalette palette = CorePalette.of(desktopAccentColor!.value);
+    CorePalette palette = CorePalette.of(desktopAccentColor!.toARGB32());
 
     light = light.copyWith(
       colorScheme: light.colorScheme.copyWith(
@@ -430,8 +438,6 @@ class ThemesService extends GetxService {
         onError: light.colorScheme.onError.harmonizeWith(Color(palette.error.get(100))),
         errorContainer: light.colorScheme.errorContainer.harmonizeWith(Color(palette.error.get(90))),
         onErrorContainer: light.colorScheme.onErrorContainer.harmonizeWith(Color(palette.error.get(10))),
-        background: light.colorScheme.background.harmonizeWith(Color(palette.neutral.get(99))),
-        onBackground: light.colorScheme.onBackground.harmonizeWith(Color(palette.neutral.get(10))),
         surface: light.colorScheme.surface.harmonizeWith(Color(palette.neutral.get(99))),
         onSurface: light.colorScheme.onSurface.harmonizeWith(Color(palette.neutral.get(10))),
         surfaceVariant: light.colorScheme.surfaceVariant.harmonizeWith(Color(palette.neutralVariant.get(90))),
@@ -463,8 +469,6 @@ class ThemesService extends GetxService {
         onError: dark.colorScheme.onError.harmonizeWith(Color(palette.error.get(20))),
         errorContainer: dark.colorScheme.errorContainer.harmonizeWith(Color(palette.error.get(30))),
         onErrorContainer: dark.colorScheme.onErrorContainer.harmonizeWith(Color(palette.error.get(80))),
-        background: dark.colorScheme.background.harmonizeWith(Color(palette.neutral.get(10))),
-        onBackground: dark.colorScheme.onBackground.harmonizeWith(Color(palette.neutral.get(90))),
         surface: dark.colorScheme.surface.harmonizeWith(Color(palette.neutral.get(10))),
         onSurface: dark.colorScheme.onSurface.harmonizeWith(Color(palette.neutral.get(90))),
         surfaceVariant: dark.colorScheme.surfaceVariant.harmonizeWith(Color(palette.neutralVariant.get(30))),
@@ -478,6 +482,6 @@ class ThemesService extends GetxService {
         scrim: dark.colorScheme.outlineVariant.harmonizeWith(Color(palette.neutral.get(0))),
       ),
     );
-    return Tuple2(light, dark);
+    return ThemePair(light: light, dark: dark);
   }
 }

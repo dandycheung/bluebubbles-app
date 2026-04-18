@@ -38,9 +38,9 @@ class Mentionable {
 class SpellCheckTextEditingController extends TextEditingController {
   SpellCheckTextEditingController({super.text, this.focusNode}) {
     assert(focusNode != null || !(kIsDesktop || kIsWeb));
-    _languageCheckService =
-        DebounceLangToolService(LangToolService(LanguageToolClient(language: ss.settings.spellcheckLanguage.value)),
-            const Duration(milliseconds: 500));
+    _languageCheckService = DebounceLangToolService(
+        LangToolService(LanguageToolClient(language: SettingsSvc.settings.spellcheckLanguage.value)),
+        const Duration(milliseconds: 1000));
     _processMistakes(text);
   }
 
@@ -74,7 +74,20 @@ class SpellCheckTextEditingController extends TextEditingController {
     String newText = newValue.text;
     int newOffset = newValue.selection.start;
 
-    if (ss.settings.replaceEmoticonsWithEmoji.value) {
+    // OPTIMIZATION: Skip processing if only selection changed (cursor moved, no text change)
+    if (origText == text && origOffset != selection.start) {
+      // Only selection changed, skip all text processing
+      if (kIsDesktop || kIsWeb) {
+        _handleSelectionChange(newValue.selection);
+        // Only remove tooltip when selection changes
+        _mistakeTooltip?.remove();
+        _mistakeTooltip = null;
+      }
+      super.value = newValue;
+      return;
+    }
+
+    if (SettingsSvc.settings.replaceEmoticonsWithEmoji.value) {
       List<(int, int)> offsetsAndDifferences;
       (newText, offsetsAndDifferences) = replaceEmoticons(newText);
 
@@ -110,9 +123,10 @@ class SpellCheckTextEditingController extends TextEditingController {
     }
 
     if (kIsDesktop || kIsWeb) {
-      _handleTextChange(newValue.text);
-      _mistakeTooltip?.remove();
-      _mistakeTooltip = null;
+      // Only process text change if text actually changed
+      if (newValue.text != text) {
+        _handleTextChange(newValue.text);
+      }
     }
 
     super.value = newValue;
@@ -172,7 +186,7 @@ class SpellCheckTextEditingController extends TextEditingController {
   }
 
   Future<void> _processMistakes(String newText) async {
-    if (!ss.settings.spellcheck.value || newText.isEmpty) {
+    if (!SettingsSvc.settings.spellcheck.value || newText.isEmpty) {
       _mistakes.clear();
       _mistakeTooltip?.remove();
       _mistakeTooltip = null;
@@ -183,7 +197,7 @@ class SpellCheckTextEditingController extends TextEditingController {
     _mistakes = filteredMistakes.toList();
 
     final mistakesWrapper = await _latestResponseService.processLatestOperation(
-          () => _languageCheckService.findMistakes(newText),
+      () => _languageCheckService.findMistakes(newText),
     );
     if (mistakesWrapper == null || !mistakesWrapper.hasResult) return;
 
@@ -205,13 +219,13 @@ class SpellCheckTextEditingController extends TextEditingController {
 
       newMistake = isSelectionRangeEmpty
           ? _adjustMistakeOffsetWithCaretCursor(
-        mistake: mistake,
-        lengthDiscrepancy: lengthDiscrepancy,
-      )
+              mistake: mistake,
+              lengthDiscrepancy: lengthDiscrepancy,
+            )
           : _adjustMistakeOffsetWithSelectionRange(
-        mistake: mistake,
-        lengthDiscrepancy: lengthDiscrepancy,
-      );
+              mistake: mistake,
+              lengthDiscrepancy: lengthDiscrepancy,
+            );
 
       if (newMistake != null) yield newMistake;
     }
@@ -281,67 +295,66 @@ class SpellCheckTextEditingController extends TextEditingController {
     final Color color = _getMistakeColor(mistake.type);
     Iterable<String> replacements = mistake.replacements.take(15);
     return OverlayEntry(
-      builder: (context) =>
-          Positioned(
-            left: offset.dx - 100,
-            width: 200,
-            bottom: (context.height - offset.dy) ~/ 60 * 60 + 60,
-            child: Center(
-              child: Container(
-                decoration: BoxDecoration(
-                  color: context.theme.colorScheme.properSurface,
-                  borderRadius: BorderRadius.circular(8.0),
-                ),
-                padding: const EdgeInsets.all(8.0),
-                child: Material(
-                  color: Colors.transparent,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(mistake.type.value.capitalizeFirst!,
-                          style: context.textTheme.titleSmall!.copyWith(color: color)),
-                      Text(
-                        "\"$mistakeText\"",
-                        style: context.textTheme.bodySmall!.copyWith(color: context.theme.colorScheme.outline),
-                      ),
-                      const SizedBox(height: 8.0),
-                      replacements.isEmpty
-                          ? Text(
-                        "No Replacements",
-                        style: context.textTheme.bodySmall!.copyWith(color: context.theme.colorScheme.outline),
-                      )
-                          : Wrap(
-                        alignment: WrapAlignment.center,
-                        spacing: 4.0,
-                        runSpacing: 4.0,
-                        children: List.generate(replacements.length, (index) {
-                          final replacement = mistake.replacements[index];
-                          return InkWell(
-                            borderRadius: BorderRadius.circular(8.0),
-                            hoverColor: color.withValues(alpha: 0.2),
-                            onTapDown: (_) {
-                              replaceMistake(mistake, replacement);
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.all(4.0),
-                              decoration: BoxDecoration(
-                                border: Border.all(color: context.theme.colorScheme.outline),
-                                borderRadius: BorderRadius.circular(8.0),
-                              ),
-                              child: Padding(
-                                padding: const EdgeInsets.all(4.0),
-                                child: Text(replacement, style: context.textTheme.bodySmall),
-                              ),
-                            ),
-                          );
-                        }),
-                      ),
-                    ],
+      builder: (context) => Positioned(
+        left: offset.dx - 100,
+        width: 200,
+        bottom: (context.height - offset.dy) ~/ 60 * 60 + 60,
+        child: Center(
+          child: Container(
+            decoration: BoxDecoration(
+              color: context.theme.colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(8.0),
+            ),
+            padding: const EdgeInsets.all(8.0),
+            child: Material(
+              color: Colors.transparent,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(mistake.type.value.capitalizeFirst!,
+                      style: context.textTheme.titleSmall!.copyWith(color: color)),
+                  Text(
+                    "\"$mistakeText\"",
+                    style: context.textTheme.bodySmall!.copyWith(color: context.theme.colorScheme.outline),
                   ),
-                ),
+                  const SizedBox(height: 8.0),
+                  replacements.isEmpty
+                      ? Text(
+                          "No Replacements",
+                          style: context.textTheme.bodySmall!.copyWith(color: context.theme.colorScheme.outline),
+                        )
+                      : Wrap(
+                          alignment: WrapAlignment.center,
+                          spacing: 4.0,
+                          runSpacing: 4.0,
+                          children: List.generate(replacements.length, (index) {
+                            final replacement = mistake.replacements[index];
+                            return InkWell(
+                              borderRadius: BorderRadius.circular(8.0),
+                              hoverColor: color.withValues(alpha: 0.2),
+                              onTapDown: (_) {
+                                replaceMistake(mistake, replacement);
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.all(4.0),
+                                decoration: BoxDecoration(
+                                  border: Border.all(color: context.theme.colorScheme.outline),
+                                  borderRadius: BorderRadius.circular(8.0),
+                                ),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(4.0),
+                                  child: Text(replacement, style: context.textTheme.bodySmall),
+                                ),
+                              ),
+                            );
+                          }),
+                        ),
+                ],
               ),
             ),
           ),
+        ),
+      ),
     );
   }
 
@@ -378,7 +391,9 @@ class SpellCheckTextEditingController extends TextEditingController {
 
           final prevMistakeEnd = i == 0 ? 0 : mistakes[i - 1].endOffset - offset;
           final leadingNonMistakeText = chunk.substring(prevMistakeEnd, mistakeStart);
-          if (leadingNonMistakeText.isNotEmpty) spans.add(TextSpan(text: leadingNonMistakeText, style: style));
+          if (leadingNonMistakeText.isNotEmpty) {
+            spans.addAll(buildAppleEmojiTextSpans(text: leadingNonMistakeText, style: style));
+          }
 
           spans.add(
             TextSpan(
@@ -388,8 +403,11 @@ class SpellCheckTextEditingController extends TextEditingController {
                 if (_mistakeTooltip != null) {
                   _mistakeTooltip!.remove();
                 }
-                _mistakeTooltip = _createTooltip(context,
-                    Offset(event.position.dx - ns.widthChatListLeft(context), event.position.dy), mistake, mistakeText);
+                _mistakeTooltip = _createTooltip(
+                    context,
+                    Offset(event.position.dx - NavigationSvc.widthChatListLeft(context), event.position.dy),
+                    mistake,
+                    mistakeText);
                 Overlay.of(context).insert(_mistakeTooltip!);
               },
             ),
@@ -398,13 +416,45 @@ class SpellCheckTextEditingController extends TextEditingController {
           if (i == mistakes.length - 1) {
             final nextMistakeStart = i == mistakes.length - 1 ? chunk.length : mistakes[i + 1].offset - offset;
             final trailingNonMistakeText = chunk.substring(mistakeEnd, nextMistakeStart);
-            if (trailingNonMistakeText.isNotEmpty) spans.add(TextSpan(text: trailingNonMistakeText, style: style));
+            if (trailingNonMistakeText.isNotEmpty) {
+              spans.addAll(buildAppleEmojiTextSpans(text: trailingNonMistakeText, style: style));
+            }
           }
         }
         return TextSpan(children: spans);
       }
     }
-    return TextSpan(text: chunk, style: style);
+
+    return TextSpan(children: buildAppleEmojiTextSpans(text: chunk, style: style));
+  }
+
+  List<InlineSpan> buildAppleEmojiTextSpans({required String text, required TextStyle? style}) {
+    // OPTIMIZATION: Early exit if font doesn't exist to avoid regex processing
+    if (!FilesystemSvc.fontExistsOnDisk.value) return [TextSpan(text: text, style: style)];
+
+    // OPTIMIZATION: Cache regex matches to avoid recomputation on every render
+    final emojiMatches = emojiRegex.allMatches(text);
+    if (emojiMatches.isEmpty) return [TextSpan(text: text, style: style)];
+
+    List<InlineSpan> spans = [];
+    int lastIndex = 0;
+    for (final match in emojiMatches) {
+      if (match.start > lastIndex) {
+        spans.add(TextSpan(text: text.substring(lastIndex, match.start), style: style));
+      }
+      spans.add(
+        TextSpan(
+            text: match.group(0),
+            style:
+                style?.copyWith(fontFamily: "Apple Color Emoji") ?? const TextStyle(fontFamily: "Apple Color Emoji")),
+      );
+      lastIndex = match.end;
+    }
+    if (lastIndex < text.length) {
+      spans.add(TextSpan(text: text.substring(lastIndex), style: style));
+    }
+
+    return spans;
   }
 
   @override
@@ -583,10 +633,7 @@ class MentionTextEditingController extends SpellCheckTextEditingController {
     int mentionIndexLength = 0;
     return TextSpan(
       children: textSplit.mapIndexed((idx, word) {
-        int offset = textSplit
-            .slice(0, idx)
-            .join("")
-            .length;
+        int offset = textSplit.slice(0, idx).join("").length;
 
         if (word == escapingChar) flag = !flag;
         int? index = flag ? int.tryParse(word) : null;
@@ -595,6 +642,7 @@ class MentionTextEditingController extends SpellCheckTextEditingController {
           mentionIndexLength = "$index".length;
           // Mandatory WidgetSpan so that it takes the appropriate char number.
           return WidgetSpan(
+            alignment: PlaceholderAlignment.middle,
             child: Listener(
               onPointerDown: (PointerDownEvent e) {
                 if (selection.isCollapsed && e.buttons == 2) {
@@ -604,18 +652,17 @@ class MentionTextEditingController extends SpellCheckTextEditingController {
               },
               child: ShaderMask(
                 blendMode: BlendMode.srcIn,
-                shaderCallback: (bounds) =>
-                    LinearGradient(
-                      colors: <Color>[
-                        context.theme.colorScheme.primary.darkenPercent(20),
-                        context.theme.colorScheme.primary.lightenPercent(20)
-                      ],
-                    ).createShader(
-                      Rect.fromLTWH(0, 0, bounds.width, bounds.height),
-                    ),
+                shaderCallback: (bounds) => LinearGradient(
+                  colors: <Color>[
+                    context.theme.colorScheme.primary.darkenPercent(20),
+                    context.theme.colorScheme.primary.lightenPercent(20)
+                  ],
+                ).createShader(
+                  Rect.fromLTWH(0, 0, bounds.width, bounds.height),
+                ),
                 child: Text(
                   mention.displayName,
-                  style: style!.copyWith(fontWeight: FontWeight.bold).apply(heightFactor: 1.1),
+                  style: style!.copyWith(fontWeight: FontWeight.bold),
                 ),
               ),
             ),

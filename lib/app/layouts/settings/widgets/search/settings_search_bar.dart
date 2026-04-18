@@ -56,51 +56,51 @@ class _SettingsSearchBarState extends State<SettingsSearchBar> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       child: widget.iOS
           ? SettingsSearchBariOS(
-        // use cupertino search bar if iOS style
-        controller: _controller,
-        focusNode: _focusNode,
-        onChanged: _onSearchChanged,
-      )
+              // use cupertino search bar if iOS style
+              controller: _controller,
+              focusNode: _focusNode,
+              onChanged: _onSearchChanged,
+            )
           : SearchBar(
-        // material themed search bar
-        controller: _controller,
-        focusNode: _focusNode,
-        hintText: 'Search Settings',
-        hintStyle: MaterialStateProperty.all(
-          TextStyle(
-            color: Theme.of(context).brightness == Brightness.dark
-                ? Colors.white.withOpacity(0.5)
-                : Colors.black.withOpacity(0.5),
-          ),
-        ),
-        padding: const WidgetStatePropertyAll<EdgeInsets>(
-          EdgeInsets.symmetric(horizontal: 16.0),
-        ),
-        elevation: const MaterialStatePropertyAll(1),
-        onChanged: _onSearchChanged,
-        leading: const Icon(Icons.search),
-        trailing: <Widget>[
-          if (searchValue.isNotEmpty)
-            Tooltip(
-              message: 'Clear search',
-              child: IconButton(
-                onPressed: () {
-                  _debounceTimer?.cancel();
-                  setState(() {
-                    searchValue = '';
-                    _controller.text = '';
-                    _focusNode.unfocus();
-                  });
-                  widget.onChanged?.call('');
-                },
-                icon: const Icon(Icons.clear),
+              // material themed search bar
+              controller: _controller,
+              focusNode: _focusNode,
+              hintText: 'Search Settings',
+              hintStyle: MaterialStateProperty.all(
+                TextStyle(
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white.withOpacity(0.5)
+                      : Colors.black.withOpacity(0.5),
+                ),
               ),
+              padding: const WidgetStatePropertyAll<EdgeInsets>(
+                EdgeInsets.symmetric(horizontal: 16.0),
+              ),
+              elevation: const MaterialStatePropertyAll(1),
+              onChanged: _onSearchChanged,
+              leading: const Icon(Icons.search),
+              trailing: <Widget>[
+                if (searchValue.isNotEmpty)
+                  Tooltip(
+                    message: 'Clear search',
+                    child: IconButton(
+                      onPressed: () {
+                        _debounceTimer?.cancel();
+                        setState(() {
+                          searchValue = '';
+                          _controller.text = '';
+                          _focusNode.unfocus();
+                        });
+                        widget.onChanged?.call('');
+                      },
+                      icon: const Icon(Icons.clear),
+                    ),
+                  ),
+              ],
             ),
-        ],
-      ),
     );
   }
 }

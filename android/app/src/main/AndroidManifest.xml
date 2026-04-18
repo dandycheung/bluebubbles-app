@@ -41,7 +41,7 @@
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29"/>
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29" tools:replace="android:maxSdkVersion"/>
 
     <!-- Features -->
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
@@ -241,6 +241,10 @@
 
             <meta-data
                 android:name="io.flutter.embedding.android.EnableImpeller"
+                android:value="false" />
+
+            <meta-data
+                android:name="io.flutter.embedding.android.DisableMergedPlatformUIThread"
                 android:value="false" />
         </activity>
 

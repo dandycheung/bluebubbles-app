@@ -42,11 +42,6 @@ pubspeck.lock
 
 #objectbox
 .dart_tool/*
-!.dart_tool/build
-.dart_tool/build/entrypoint
-.dart_tool/build/*/error_cache/**
-.dart_tool/build/generated
-!.dart_tool/build/generated/*/*.info
 
 #private keys
 *.env
