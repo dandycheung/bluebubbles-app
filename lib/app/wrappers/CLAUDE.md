@@ -7,7 +7,6 @@ Pick the right base for every stateful widget:
 | Class | Use when |
 |-------|----------|
 | `CustomStateful<T>` + `CustomState<T, R, S>` | Widget owns or shares a `StatefulController` |
-| `OptimizedState<T>` | Stateful widget with no controller; needs frame-aware `setState` |
 | `StatelessWidget` | No state |
 
 See `.claude/rules/frontend.md` for full controller tagging, `forceDelete`, and `Obx` rules.
