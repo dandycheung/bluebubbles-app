@@ -514,12 +514,6 @@ class _ServerCredentialsState extends State<ServerCredentials> with ThemeHelpers
                                             minimumSize: WidgetStateProperty.all(const Size(30, 30)),
                                           ),
                                           onPressed: () async {
-                                            SettingsSvc.settings.customHeaders.value = {};
-                                            HttpSvc.updateHeaders();
-                                            connect(urlController.text, passwordController.text);
-                                          },
-                                          onLongPress: () async {
-                                            await showCustomHeadersDialog(context);
                                             connect(urlController.text, passwordController.text);
                                           },
                                           child: Row(
