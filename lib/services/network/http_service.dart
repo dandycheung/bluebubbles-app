@@ -78,13 +78,14 @@ class HttpService {
   }
 
   Map<String, String> get headers {
+    final extraHeaders = Map<String, String>.from(SettingsSvc.settings.customHeaders.value);
     if (SettingsSvc.settings.serverAddress.contains('ngrok')) {
-      SettingsSvc.settings.customHeaders.value.addAll({'ngrok-skip-browser-warning': 'true'});
+      extraHeaders['ngrok-skip-browser-warning'] = 'true';
     } else if (SettingsSvc.settings.serverAddress.contains('zrok')) {
-      SettingsSvc.settings.customHeaders.value.addAll({'skip_zrok_interstitial': 'true'});
+      extraHeaders['skip_zrok_interstitial'] = 'true';
     }
 
-    return SettingsSvc.settings.customHeaders.value;
+    return extraHeaders;
   }
 
   Future<void> init() async {

@@ -425,8 +425,10 @@ class Settings {
     SettingsSvc.settings.iCloudAccount.value = map['iCloudAccount'] ?? SettingsSvc.settings.iCloudAccount.value;
     SettingsSvc.settings.serverAddress.value = map['serverAddress'] ?? SettingsSvc.settings.serverAddress.value;
     SettingsSvc.settings.guidAuthKey.value = map['guidAuthKey'] ?? SettingsSvc.settings.guidAuthKey.value;
-    debugPrint('Updating custom headers from map: ${map['customHeaders']}');
-    SettingsSvc.settings.customHeaders.value = _processCustomHeaders(map['customHeaders']);
+    if (map.containsKey('customHeaders')) {
+      debugPrint('Updating custom headers from map: ${map['customHeaders']}');
+      SettingsSvc.settings.customHeaders.value = _processCustomHeaders(map['customHeaders']);
+    }
     SettingsSvc.settings.finishedSetup.value = map['finishedSetup'] ?? SettingsSvc.settings.finishedSetup.value;
     SettingsSvc.settings.reachedConversationList.value =
         map['reachedConversationList'] ?? SettingsSvc.settings.reachedConversationList.value;
