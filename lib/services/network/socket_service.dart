@@ -34,6 +34,7 @@ class SocketService {
 
   InternetConnection? internetConnection;
   StreamSubscription<InternetStatus>? internetConnectionListener;
+  StreamSubscription? _connectivitySubscription;
 
   String get serverAddress => HttpSvc.origin;
   String get password => SettingsSvc.settings.guidAuthKey.value;
@@ -43,7 +44,7 @@ class SocketService {
     startSocket();
 
     if (!kIsDesktop || !Platform.isWindows) {
-      Connectivity().onConnectivityChanged.listen((event) {
+      _connectivitySubscription = Connectivity().onConnectivityChanged.listen((event) {
         if (!event.contains(ConnectivityResult.wifi) &&
             !event.contains(ConnectivityResult.ethernet) &&
             HttpSvc.originOverride != null) {
@@ -85,7 +86,13 @@ class SocketService {
         .setHttpClientAdapter(WebsocketAdapter())
         // Disable so that we can create the listeners first
         .disableAutoConnect()
-        .enableReconnection();
+        .enableReconnection()
+        // Allow socket.io to make a few quick retries before we take over via
+        // _handleReconnectFailed. Without a finite limit, onReconnectFailed
+        // never fires and our restart+URL-refresh logic never runs.
+        .setReconnectionAttempts(3)
+        .setReconnectionDelay(1000)
+        .setReconnectionDelayMax(5000);
     socket = io(serverAddress, options.build());
 
     socket?.onConnect((data) => handleStatusUpdate(SocketState.connected, data));
@@ -97,7 +104,7 @@ class SocketService {
 
     socket?.onConnectError((data) => handleStatusUpdate(SocketState.error, data));
     socket?.onReconnectError((data) => handleStatusUpdate(SocketState.error, data));
-    socket?.onReconnectFailed((data) => handleStatusUpdate(SocketState.error, data));
+    socket?.onReconnectFailed((data) => _handleReconnectFailed(data));
     socket?.onError((data) => handleStatusUpdate(SocketState.error, data));
 
     // custom events
@@ -161,7 +168,10 @@ class SocketService {
 
   void closeSocket() {
     if (isNullOrEmpty(serverAddress)) return;
+    _reconnectTimer?.cancel();
+    _reconnectTimer = null;
     internetConnectionListener?.cancel();
+    _connectivitySubscription?.cancel();
     socket?.dispose();
     state.value = SocketState.disconnected;
   }
@@ -178,9 +188,10 @@ class SocketService {
   }
 
   Future<Map<String, dynamic>> sendMessage(String event, Map<String, dynamic> message) {
-    Completer<Map<String, dynamic>> completer = Completer();
+    if (socket == null) return Future.error(StateError('Socket not connected'));
+    final completer = Completer<Map<String, dynamic>>();
 
-    socket?.emitWithAck(event, message, ack: (response) {
+    socket!.emitWithAck(event, message, ack: (response) {
       if (response['encrypted'] == true) {
         response['data'] = jsonDecode(decryptAESCryptoJS(response['data'], password));
       }
@@ -190,7 +201,10 @@ class SocketService {
       }
     });
 
-    return completer.future;
+    return completer.future.timeout(
+      const Duration(seconds: 30),
+      onTimeout: () => Future.error(TimeoutException('Socket message timed out', const Duration(seconds: 30))),
+    );
   }
 
   void handleStatusUpdate(SocketState status, dynamic data) {
@@ -234,32 +248,31 @@ class SocketService {
         Logger.error("Socket error connecting to $serverAddress: $errorDetails");
         lastError.value = errorDetails;
         state.value = SocketState.error;
-
-        // Only set up reconnect timer if one doesn't already exist
-        if (_reconnectTimer == null || !_reconnectTimer!.isActive) {
-          Logger.info("Scheduling reconnect attempt in 5 seconds...");
-          _reconnectTimer = Timer(const Duration(seconds: 5), () async {
-            if (state.value == SocketState.connected) {
-              Logger.info("Already connected, skipping reconnect");
-              return;
-            }
-
-            Logger.info("Attempting to fetch new URL and restart socket...");
-            String? newUrl = await fdb.fetchNewUrl();
-            if (newUrl != null && newUrl != serverAddress) {
-              Logger.info("Server URL changed from $serverAddress to $newUrl");
-            }
-
-            restartSocket();
-
-            if (state.value == SocketState.connected) return;
-
-            if (!SettingsSvc.settings.keepAppAlive.value) {
-              NotificationsSvc.createSocketError();
-            }
-          });
-        }
     }
+  }
+
+  /// Called when socket.io exhausts all reconnect attempts. Schedules a
+  /// restart after a short delay so we can refresh the server URL first.
+  void _handleReconnectFailed(dynamic data) {
+    Logger.warn("Socket exhausted reconnect attempts — scheduling restart");
+    handleStatusUpdate(SocketState.error, data);
+
+    if (_reconnectTimer != null && _reconnectTimer!.isActive) return;
+    _reconnectTimer = Timer(const Duration(seconds: 5), () async {
+      if (state.value == SocketState.connected) return;
+
+      Logger.info("Attempting to fetch new URL and restart socket...");
+      final String? newUrl = await fdb.fetchNewUrl();
+      if (newUrl != null && newUrl != serverAddress) {
+        Logger.info("Server URL changed from $serverAddress to $newUrl");
+      }
+
+      restartSocket();
+
+      if (!SettingsSvc.settings.keepAppAlive.value) {
+        NotificationsSvc.createSocketError();
+      }
+    });
   }
 
   void handleSocketException(SocketException e) {
