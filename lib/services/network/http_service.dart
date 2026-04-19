@@ -1186,10 +1186,6 @@ class HttpService {
       fontDownloadTotalSize.value = null;
 
       return Response(requestOptions: RequestOptions(path: ''));
-    }).whenComplete(() {
-      downloadingFont.value = false;
-      fontDownloadProgress.value = null;
-      fontDownloadTotalSize.value = null;
     });
 
     if (response.statusCode == 200) {
@@ -1211,6 +1207,13 @@ class HttpService {
         showSnackbar("Error", "Failed to load font! Error: ${e.toString()}");
       }
     }
+
+    // Reset download state after all processing (HTTP download + file write) is complete.
+    // This keeps downloadingFont = true during file write, preventing the user from
+    // re-tapping the tile and starting a duplicate download.
+    downloadingFont.value = false;
+    fontDownloadProgress.value = null;
+    fontDownloadTotalSize.value = null;
   }
 
   // The following methods are for Firebase only
