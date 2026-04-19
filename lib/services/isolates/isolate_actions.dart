@@ -10,6 +10,7 @@ import 'package:bluebubbles/services/backend/actions/server_actions.dart';
 import 'package:bluebubbles/services/backend/actions/sync_actions.dart';
 import 'package:bluebubbles/services/backend/actions/test_actions.dart';
 import 'package:bluebubbles/services/isolates/global_isolate.dart';
+import 'package:bluebubbles/services/network/http_service.dart';
 
 class IsolateActons {
   static final Map<IsolateRequestType, IsolateAction> actions = {
@@ -97,6 +98,11 @@ class IsolateActons {
     IsolateRequestType.findOneAttachmentAsync: AttachmentActions.findOneAttachmentAsync,
     IsolateRequestType.findAttachmentsAsync: AttachmentActions.findAttachmentsAsync,
     IsolateRequestType.deleteAttachmentAsync: AttachmentActions.deleteAttachmentAsync,
+
+    // Network
+    IsolateRequestType.setOriginOverride: (data) async {
+      HttpSvc.originOverride = data as String?;
+    },
 
     // Sync
     IsolateRequestType.performIncrementalSync: SyncActions.performIncrementalSync,

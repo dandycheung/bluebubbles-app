@@ -22,6 +22,7 @@ class GlobalIsolate {
   bool _isRunning = false;
   bool _isStarting = false;
   Completer<void> _startCompleter = Completer<void>();
+  final List<Future<void> Function()> _onStartedCallbacks = [];
 
   /// Timer for tracking isolate inactivity
   Timer? _idleTimer;
@@ -42,6 +43,13 @@ class GlobalIsolate {
 
   /// Whether the isolate is currently running
   bool get isRunning => _isRunning;
+
+  /// Register a callback to be fired every time the isolate successfully starts
+  /// (including restarts after idle timeout). Use this to re-sync runtime state
+  /// such as [HttpSvc.originOverride] that is not persisted to disk.
+  void addStartedCallback(Future<void> Function() callback) {
+    _onStartedCallbacks.add(callback);
+  }
 
   /// The name used for registering the isolate port
   /// Can be overridden by subclasses to have unique ports
@@ -137,6 +145,11 @@ class GlobalIsolate {
 
       if (!_startCompleter.isCompleted) {
         _startCompleter.complete();
+      }
+
+      // Fire started callbacks (e.g. to re-sync origin override after idle restart)
+      for (final cb in List.from(_onStartedCallbacks)) {
+        unawaited(cb());
       }
     } catch (e) {
       if (!_startCompleter.isCompleted) {
@@ -614,6 +627,9 @@ enum IsolateRequestType {
   findOneAttachmentAsync,
   findAttachmentsAsync,
   deleteAttachmentAsync,
+
+  // Network actions
+  setOriginOverride,
 
   // Sync actions
   performIncrementalSync,

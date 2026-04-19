@@ -1,10 +1,10 @@
 import 'dart:async';
 
 import 'package:bluebubbles/helpers/helpers.dart';
+import 'package:bluebubbles/services/isolates/global_isolate.dart';
 import 'package:bluebubbles/services/services.dart';
 import 'package:bluebubbles/utils/logger/logger.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:network_info_plus/network_info_plus.dart';
 import 'package:network_tools/network_tools.dart'
@@ -13,14 +13,13 @@ import 'package:network_tools/network_tools.dart'
 class NetworkTasks {
   static Future<void>? _configureNetworkToolsFuture;
 
+  /// Isolates that should receive [HttpSvc.originOverride] syncs.
+  /// Populated via [registerIsolate] — no hardcoded types here.
+  static final List<GlobalIsolate> _isolateRegistry = [];
+
   static Future<void> onConnect() async {
     if (!SettingsSvc.settings.finishedSetup.value) return;
     Logger.info('[NetworkTasks] Handling onConnect tasks. Finished Setup: ${SettingsSvc.settings.finishedSetup.value}');
-
-    // scan if server is on localhost
-    if (!kIsWeb && SettingsSvc.settings.localhostPort.value != null) {
-      detectLocalhost();
-    }
 
     if (kIsWeb) {
       if (ChatsSvc.isEmpty) {
@@ -31,124 +30,124 @@ class NetworkTasks {
   }
 
   static Future<void> detectLocalhost({bool createSnackbar = false}) async {
-    if (SettingsSvc.settings.localhostPort.value == null || kIsWeb) {
+    final port = SettingsSvc.settings.localhostPort.value;
+    if (port == null || kIsWeb) {
       HttpSvc.originOverride = null;
       return;
     }
 
-    List<ConnectivityResult> status = await (Connectivity().checkConnectivity());
+    final status = await Connectivity().checkConnectivity();
     if (!status.contains(ConnectivityResult.wifi) && !status.contains(ConnectivityResult.ethernet)) {
       HttpSvc.originOverride = null;
       return;
     }
 
-    final schemes = ['https', 'http'];
+    // Reset any stale local override so serverInfo() queries the remote server
+    // for fresh local IPs, and so the port-scan fallback isn't skipped if the
+    // serverInfo call fails.
+    HttpSvc.originOverride = null;
 
+    // Phase 1: try the known local IPs reported by the server.
     try {
-      await HttpSvc.serverInfo().then((response) async {
-        List<String> localIpv4s = ((response.data?['data']?['local_ipv4s'] ?? []) as List).cast<String>();
-        List<String> localIpv6s = ((response.data?['data']?['local_ipv6s'] ?? []) as List).cast<String>();
-        String? address;
-        if (SettingsSvc.settings.useLocalIpv6.value) {
-          for (String ip in localIpv6s) {
-            for (String scheme in schemes) {
-              String addr = "$scheme://[$ip]:${SettingsSvc.settings.localhostPort.value!}";
-              try {
-                Response response = await HttpSvc.ping(customUrl: addr);
-                if (response.data.toString().contains("pong")) {
-                  address = addr;
-                  break;
-                }
-              } catch (ex) {
-                Logger.debug('Failed to connect to localhost addres: $addr');
-              }
-            }
-            if (address != null) break;
-          }
-        }
-        if (address == null) {
-          for (String ip in localIpv4s) {
-            for (String scheme in schemes) {
-              String addr = "$scheme://$ip:${SettingsSvc.settings.localhostPort.value!}";
-              try {
-                final response = await HttpSvc.ping(customUrl: addr);
-                if (response.data.toString().contains("pong")) {
-                  address = addr;
-                  break;
-                }
-              } catch (ex) {
-                Logger.debug('Failed to connect to localhost addres: $addr');
-              }
-            }
-            if (address != null) break;
-          }
-        }
+      final response = await HttpSvc.serverInfo();
+      final data = response.data?['data'];
+      final localIpv4s = ((data?['local_ipv4s'] ?? []) as List).cast<String>();
+      final localIpv6s = ((data?['local_ipv6s'] ?? []) as List).cast<String>();
 
-        if (address != null) {
-          Logger.debug('Localhost Detected. Connected to $address');
-          if (createSnackbar) {
-            showSnackbar('Localhost Detected', 'Connected to $address');
-          }
+      // IPv6 addresses need brackets in URLs: [::1]
+      final candidates = [
+        if (SettingsSvc.settings.useLocalIpv6.value) ...localIpv6s.map((ip) => '[$ip]'),
+        ...localIpv4s,
+      ];
 
-          HttpSvc.originOverride = address;
-        } else {
-          HttpSvc.originOverride = null;
-        }
-      });
-    } catch (_) {}
+      HttpSvc.originOverride = await _probeAddresses(candidates, port);
+    } catch (e) {
+      Logger.warn('Could not fetch server info for localhost detection: $e', tag: 'NetworkTasks');
+    }
 
-    if (HttpSvc.originOverride != null) return;
+    if (HttpSvc.originOverride != null) {
+      Logger.debug('Localhost detected at ${HttpSvc.originOverride}', tag: 'NetworkTasks');
+      if (createSnackbar) showSnackbar('Localhost Detected', 'Connected to ${HttpSvc.originOverride}');
+      syncOriginOverrideToIsolate();
+      return;
+    }
 
-    // This was moved from main.dart to here because this is the only place we use it.
-    // This will also make an API call to a github file containing a mapping of MAC addresses
-    // to vendor information. That info is used to display metadata about an ActiveHost found
-    // on the network via a port scan. We don't want that API call to happen on first-boot, nor
-    // do we need it to.
+    // Phase 2: fall back to a subnet port scan.
+    // configureNetworkTools is cached because it makes an external API call to
+    // fetch MAC vendor data. We don't want that on first boot.
     _configureNetworkToolsFuture ??= configureNetworkTools(FilesystemSvc.appDocDir.path, enableDebugging: kDebugMode);
-
     await _configureNetworkToolsFuture;
 
-    Logger.debug("Falling back to port scanning");
+    Logger.debug('Falling back to port scanning', tag: 'NetworkTasks');
     final wifiIP = await NetworkInfo().getWifiIP();
-    if (wifiIP != null) {
-      final stream = HostScannerService.instance.scanDevicesForSinglePort(
-        wifiIP.substring(0, wifiIP.lastIndexOf('.')),
-        int.parse(SettingsSvc.settings.localhostPort.value!),
-      );
-      Set<ActiveHost> hosts = {};
-      stream.listen((host) {
-        hosts.add(host);
-      }, onDone: () async {
-        String? address;
-        for (ActiveHost h in hosts) {
-          for (String scheme in schemes) {
-            String addr = "$scheme://${h.address}:${SettingsSvc.settings.localhostPort.value!}";
-            try {
-              Response response = await HttpSvc.ping(customUrl: addr);
-              if (response.data.toString().contains("pong")) {
-                address = addr;
-                break;
-              }
-            } catch (ex) {
-              Logger.debug('Failed to connect to localhost addres: $addr');
-            }
-          }
-          if (address != null) break;
-        }
-        if (address != null) {
-          if (createSnackbar) {
-            showSnackbar('Localhost Detected', 'Connected to $address');
-          }
-
-          HttpSvc.originOverride = address;
-        } else {
-          HttpSvc.originOverride = null;
-        }
-      }, onError: (_, __) {
-        HttpSvc.originOverride = null;
-      });
-    } else {
+    if (wifiIP == null) {
       HttpSvc.originOverride = null;
+      return;
     }
+
+    final subnet = wifiIP.substring(0, wifiIP.lastIndexOf('.'));
+    final hosts = <ActiveHost>{};
+    final completer = Completer<void>();
+    HostScannerService.instance.scanDevicesForSinglePort(subnet, int.parse(port)).listen(
+      (host) => hosts.add(host),
+      onDone: () async {
+        HttpSvc.originOverride = await _probeAddresses(hosts.map((h) => h.address).toList(), port);
+        if (createSnackbar && HttpSvc.originOverride != null) {
+          showSnackbar('Localhost Detected', 'Connected to ${HttpSvc.originOverride}');
+        }
+        completer.complete();
+      },
+      onError: (_, __) {
+        HttpSvc.originOverride = null;
+        completer.complete();
+      },
+    );
+    await completer.future;
+    syncOriginOverrideToIsolate();
+  }
+
+  /// Broadcasts the current [HttpSvc.originOverride] to [isolate], or — when
+  /// called with no argument — to every registered isolate that is currently
+  /// running (dormant isolates with idleTimeout=zero are skipped).
+  static void syncOriginOverrideToIsolate([GlobalIsolate? isolate]) {
+    if (kIsWeb) return;
+    if (isolate != null) {
+      isolate.broadcast(IsolateRequestType.setOriginOverride, HttpSvc.originOverride);
+      return;
+    }
+    for (final candidate in _isolateRegistry) {
+      if (candidate.isRunning) {
+        candidate.broadcast(IsolateRequestType.setOriginOverride, HttpSvc.originOverride);
+      }
+    }
+  }
+
+  /// Registers [isolate] to receive [HttpSvc.originOverride] syncs.
+  /// Also wires up a started callback so the override is re-synced
+  /// automatically whenever the isolate (re)starts after an idle timeout.
+  static void registerIsolate(GlobalIsolate isolate) {
+    _isolateRegistry.add(isolate);
+    isolate.addStartedCallback(() async {
+      isolate.broadcast(IsolateRequestType.setOriginOverride, HttpSvc.originOverride);
+    });
+  }
+
+  /// Probes [ips] on [port] with https then http, returning the first address
+  /// that responds with "pong", or null if none respond.
+  ///
+  /// IPv6 addresses must already be bracket-formatted, e.g. `[::1]`.
+  static Future<String?> _probeAddresses(List<String> ips, String port) async {
+    for (final ip in ips) {
+      for (final scheme in ['https', 'http']) {
+        final addr = '$scheme://$ip:$port';
+        try {
+          final response = await HttpSvc.ping(customUrl: addr);
+          if (response.data.toString().contains('pong')) return addr;
+        } catch (_) {
+          Logger.debug('Failed to connect to local address: $addr', tag: 'NetworkTasks');
+        }
+      }
+    }
+    return null;
   }
 }
