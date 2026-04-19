@@ -171,13 +171,22 @@ class _AttachmentPickerState extends State<AttachmentPicker> with ThemeHelpers {
                   scrollDirection: Axis.horizontal,
                   slivers: <Widget>[
                     // Camera and Video buttons
-                    _buildActionButtons(context),
+                    SliverPadding(
+                      padding: const EdgeInsets.only(bottom: 5),
+                      sliver: _buildActionButtons(context),
+                    ),
                     const SliverPadding(padding: EdgeInsets.only(left: 5, right: 5)),
                     // Files, Location, Schedule, Handwriten buttons
-                    _buildFeatureButtons(context),
+                    SliverPadding(
+                      padding: const EdgeInsets.only(bottom: 5),
+                      sliver: _buildFeatureButtons(context),
+                    ),
                     const SliverPadding(padding: EdgeInsets.only(left: 5, right: 5)),
                     // Image grid
-                    _buildImageGrid(),
+                    SliverPadding(
+                      padding: const EdgeInsets.only(bottom: 5),
+                      sliver: _buildImageGrid(),
+                    ),
                   ],
                 ),
               ),
