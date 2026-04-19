@@ -55,7 +55,7 @@ class BBAnnotatedRegion extends StatelessWidget {
       return AnnotatedRegion<SystemUiOverlayStyle>(
         value: SystemUiOverlayStyle(
           systemNavigationBarColor:
-              systemNavigationBarColor ?? (immersiveMode ? Colors.transparent : colorScheme.background),
+              systemNavigationBarColor ?? (immersiveMode ? Colors.transparent : colorScheme.surface),
           systemNavigationBarIconBrightness: systemNavigationBarIconBrightness ?? brightness.opposite,
           statusBarColor: statusBarColor ?? Colors.transparent,
           statusBarIconBrightness: statusBarIconBrightness ?? brightness.opposite,

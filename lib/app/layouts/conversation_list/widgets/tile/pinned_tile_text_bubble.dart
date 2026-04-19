@@ -28,7 +28,8 @@ class PinnedTileTextBubbleState extends CustomState<PinnedTileTextBubble, void, 
 
   Chat get chat => widget.chat;
   double get size => widget.size;
-  bool get showTail => !chat.isGroup;
+  // Groups always place the tail on the left (pointing toward the sender icon).
+  bool get effectiveLeftSide => chat.isGroup ? true : leftSide;
 
   @override
   void initState() {
@@ -40,9 +41,10 @@ class PinnedTileTextBubbleState extends CustomState<PinnedTileTextBubble, void, 
   }
 
   List<Color> getBubbleColors(Message? lastMessage) {
+    // Default to the received-bubble color (same as text_bubble.dart for incoming messages).
     List<Color> bubbleColors = [
-      context.theme.colorScheme.bubble(context, chat.isIMessage),
-      context.theme.colorScheme.bubble(context, chat.isIMessage)
+      context.theme.colorScheme.surfaceContainerHighest,
+      context.theme.colorScheme.surfaceContainerHighest,
     ];
     if (lastMessage == null) return bubbleColors;
     if (!SettingsSvc.settings.colorfulAvatars.value &&
@@ -74,67 +76,82 @@ class PinnedTileTextBubbleState extends CustomState<PinnedTileTextBubble, void, 
         return const SizedBox.shrink();
       }
 
-      final background = getBubbleColors(lastMessage).first.withValues(alpha: 0.7);
+      final background = getBubbleColors(lastMessage).first.withValues(alpha: 0.95);
       return Align(
-        alignment: showTail
-            ? leftSide
-                ? Alignment.centerLeft
-                : Alignment.centerRight
-            : Alignment.center,
+        // Groups: bubble grows up from its Positioned anchor → top-left align.
+        // DMs: center the bubble on the appropriate side.
+        alignment:
+            chat.isGroup ? Alignment.topLeft : (effectiveLeftSide ? Alignment.centerLeft : Alignment.centerRight),
         child: Padding(
           padding: EdgeInsets.only(
-            left: showTail
-                ? leftSide
-                    ? size * 0.06
-                    : size * 0.02
-                : size * 0.04,
-            right: showTail
-                ? leftSide
-                    ? size * 0.02
-                    : size * 0.06
-                : size * 0.04,
+            left: effectiveLeftSide ? size * 0.06 : size * 0.02,
+            right: effectiveLeftSide ? size * 0.02 : size * 0.06,
           ),
           child: Stack(
             clipBehavior: Clip.none,
             children: <Widget>[
-              if (showTail)
-                Positioned(
-                  top: -size * 0.08,
-                  right: leftSide ? null : size * 0.05,
-                  left: leftSide ? size * 0.05 : null,
-                  child: CustomPaint(
-                    size: Size(size * 0.21, size * 0.105),
-                    painter: TailPainter(leftSide: leftSide, background: background),
-                  ),
-                ),
               ConstrainedBox(
-                constraints: BoxConstraints(minWidth: showTail ? size * 0.3 : 0),
-                child: ClipRRect(
-                  clipBehavior: Clip.antiAlias,
-                  borderRadius: BorderRadius.circular(size * 0.125),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 2, sigmaY: 2),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 3.0,
-                        horizontal: 6.0,
+                constraints: BoxConstraints(minWidth: size * 0.3),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(size * 0.125),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.15),
+                        blurRadius: 8,
+                        spreadRadius: 2,
+                        offset: const Offset(0, 2),
                       ),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(size * 0.125),
-                        color: background,
-                      ),
-                      child: Text(
-                        subtitle,
-                        overflow: TextOverflow.ellipsis,
-                        maxLines: clampDouble((size ~/ 30).toDouble(), 1, 3).toInt(),
-                        textAlign: TextAlign.center,
-                        style: context.theme.textTheme.bodySmall!.copyWith(
-                            fontSize: (size / 10).clamp(context.theme.textTheme.bodySmall!.fontSize!, double.infinity),
-                            color: context.theme.colorScheme
-                                .onBubble(context, chat.isIMessage)
-                                .withValues(alpha: SettingsSvc.settings.colorfulBubbles.value ? 1 : 0.85)),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    clipBehavior: Clip.antiAlias,
+                    borderRadius: BorderRadius.circular(size * 0.125),
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 2, sigmaY: 2),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 3.0,
+                          horizontal: 6.0,
+                        ),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(size * 0.125),
+                          color: background,
+                        ),
+                        child: Text(
+                          subtitle,
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: clampDouble((size ~/ 30).toDouble(), 1, 2).toInt(),
+                          textAlign: TextAlign.center,
+                          style: context.theme.textTheme.bodySmall!.copyWith(
+                            fontSize: (size / 12).clamp(
+                              context.theme.textTheme.bodySmall!.fontSize! * 0.85,
+                              double.infinity,
+                            ),
+                            color: SettingsSvc.settings.colorfulBubbles.value
+                                ? getBubbleColors(lastMessage).first.oppositeLightenOrDarken(75)
+                                : context.theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
                       ),
                     ),
+                  ),
+                ),
+              ),
+              // Tail renders after the bubble so it paints above the shadow.
+              Positioned(
+                bottom: -size * 0.06,
+                right: effectiveLeftSide ? null : size * 0.05,
+                left: effectiveLeftSide ? size * 0.05 : null,
+                child: Transform.scale(
+                  // scaleY: -1 flips the tail to point downward (it's below the bubble).
+                  // scaleX: -1 additionally mirrors horizontally for groups so the
+                  // tail points left toward the sender icon.
+                  scaleX: chat.isGroup ? -1 : 1,
+                  scaleY: -1,
+                  child: CustomPaint(
+                    size: Size(size * 0.15, size * 0.075),
+                    painter: TailPainter(leftSide: effectiveLeftSide, background: background),
                   ),
                 ),
               ),

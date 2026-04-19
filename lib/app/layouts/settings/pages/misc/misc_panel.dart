@@ -103,7 +103,7 @@ class _MiscPanelState extends State<MiscPanel> with ThemeHelpers {
                                         ]),
                                     ],
                                     style: context.theme.textTheme.bodySmall!
-                                        .copyWith(color: context.theme.colorScheme.properOnSurface),
+                                        .copyWith(color: context.theme.colorScheme.onSurfaceVariant),
                                   ),
                                 ),
                               ));
@@ -229,7 +229,6 @@ class _MiscPanelState extends State<MiscPanel> with ThemeHelpers {
                         title: "API Timeout Duration",
                         subtitle:
                             "Controls the duration (in seconds) until a network request will time out.\nIncrease this setting if you have poor connection.",
-                        isThreeLine: true,
                         leading: const SettingsLeadingIcon(
                             iosIcon: CupertinoIcons.stopwatch, materialIcon: Icons.timer, containerColor: Colors.red),
                         trailing: SettingsSvc.settings.apiTimeout.value != 30000
@@ -238,7 +237,7 @@ class _MiscPanelState extends State<MiscPanel> with ThemeHelpers {
                                   SettingsSvc.settings.apiTimeout.value = 30000;
                                   await SettingsSvc.settings.saveOneAsync('apiTimeout');
                                 },
-                                child: const Text("Reset to Default"),
+                                child: const Text("Reset"),
                               )
                             : null,
                       )),
@@ -265,7 +264,7 @@ class _MiscPanelState extends State<MiscPanel> with ThemeHelpers {
                     child: Obx(() => Text(
                           "Note: Attachment uploads will timeout after ${SettingsSvc.settings.apiTimeout.value ~/ 1000 * 12} seconds",
                           style: context.theme.textTheme.bodySmall!
-                              .copyWith(color: context.theme.colorScheme.properOnSurface),
+                              .copyWith(color: context.theme.colorScheme.onSurfaceVariant),
                         )),
                   ),
                   const SettingsDivider(padding: EdgeInsets.zero),

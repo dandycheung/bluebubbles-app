@@ -7,8 +7,10 @@ import 'package:bluebubbles/app/layouts/conversation_list/pages/conversation_lis
 import 'package:bluebubbles/app/layouts/conversation_list/widgets/tile/conversation_tile.dart';
 import 'package:bluebubbles/app/layouts/conversation_list/widgets/tile/pinned_tile_text_bubble.dart';
 import 'package:bluebubbles/app/layouts/conversation_view/widgets/message/reaction/reaction.dart';
+import 'package:bluebubbles/app/layouts/conversation_view/widgets/message/reaction/reaction_clipper.dart';
 import 'package:bluebubbles/app/wrappers/stateful_boilerplate.dart';
 import 'package:bluebubbles/app/components/avatars/contact_avatar_group_widget.dart';
+import 'package:bluebubbles/app/components/avatars/contact_avatar_widget.dart';
 import 'package:bluebubbles/database/models.dart';
 import 'package:bluebubbles/services/services.dart';
 import 'package:flutter/cupertino.dart';
@@ -16,10 +18,13 @@ import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 
 class PinnedConversationTile extends CustomStateful<ConversationTileController> {
+  final double avatarSize;
+
   PinnedConversationTile({
     super.key,
     required Chat chat,
     required ConversationListController controller,
+    required this.avatarSize,
   }) : super(
             parentController: Get.isRegistered<ConversationTileController>(tag: chat.guid)
                 ? Get.find<ConversationTileController>(tag: chat.guid)
@@ -65,7 +70,7 @@ class _PinnedConversationTileState extends CustomState<PinnedConversationTile, v
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(left: 4, right: 4, top: 1, bottom: 3),
+      margin: const EdgeInsets.only(left: 4, right: 4, top: 1),
       child: MouseRegion(
         onEnter: (event) => controller.hoverHighlight.value = true,
         onExit: (event) => controller.hoverHighlight.value = false,
@@ -95,11 +100,11 @@ class _PinnedConversationTileState extends CustomState<PinnedConversationTile, v
               ),
               decoration: BoxDecoration(
                 color: controller.shouldPartialHighlight.value
-                    ? context.theme.colorScheme.properSurface.lightenOrDarken(10)
+                    ? context.theme.colorScheme.surfaceContainerHighest.lightenOrDarken(10)
                     : controller.shouldHighlight.value
                         ? context.theme.colorScheme.bubble(context, controller.chat.isIMessage)
                         : controller.hoverHighlight.value
-                            ? context.theme.colorScheme.properSurface
+                            ? context.theme.colorScheme.surfaceContainerHighest
                             : null,
                 borderRadius: BorderRadius.circular(controller.shouldHighlight.value ||
                         controller.shouldPartialHighlight.value ||
@@ -107,56 +112,59 @@ class _PinnedConversationTileState extends CustomState<PinnedConversationTile, v
                     ? 8
                     : 0),
               ),
-              child: LayoutBuilder(
-                builder: (BuildContext context, BoxConstraints constraints) {
-                  // Great math right here
-                  final availableWidth = constraints.maxWidth;
-                  final colCount = kIsDesktop
-                      ? SettingsSvc.settings.pinColumnsLandscape.value
-                      : SettingsSvc.settings.pinColumnsPortrait.value;
-                  final spaceBetween = (colCount - 1) * 30;
-                  final maxWidth = max(((availableWidth - spaceBetween) / colCount).floorToDouble(), 0).toDouble();
-
-                  return ConstrainedBox(
-                    constraints: BoxConstraints(
-                      maxWidth: maxWidth,
-                    ),
-                    child: Stack(
-                      clipBehavior: Clip.none,
-                      alignment: Alignment.center,
-                      children: <Widget>[
-                        Column(
-                          children: [
-                            Stack(
-                              clipBehavior: Clip.none,
-                              children: <Widget>[
-                                ContactAvatarGroupWidget(
-                                  chat: controller.chat,
-                                  size: maxWidth,
-                                  editable: false,
-                                ),
-                                UnreadIcon(width: maxWidth, parentController: controller),
-                                MuteIcon(width: maxWidth, parentController: controller),
-                                PinnedIndicators(width: maxWidth, controller: controller),
-                              ],
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: widget.avatarSize),
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  alignment: Alignment.center,
+                  children: <Widget>[
+                    Column(
+                      children: [
+                        Stack(
+                          clipBehavior: Clip.none,
+                          children: <Widget>[
+                            ContactAvatarGroupWidget(
+                              chat: controller.chat,
+                              size: widget.avatarSize,
+                              editable: false,
                             ),
-                            ChatTitle(width: maxWidth, parentController: controller),
+                            MuteIcon(width: widget.avatarSize, parentController: controller),
+                            PinnedIndicators(width: widget.avatarSize, controller: controller),
+                            // SenderIcon is inside the avatar Stack so its Positioned
+                            // coordinates are unambiguously relative to the avatar bounds.
+                            SenderIcon(width: widget.avatarSize, parentController: controller),
+                            ReactionIcon(width: widget.avatarSize, parentController: controller),
+                            // Group bubble: anchored so its bottom aligns with the
+                            // sender avatar bottom (senderSize=0.25w, top=0.375w, bottom=0.625w).
+                            if (controller.chat.isGroup)
+                              Positioned(
+                                bottom: widget.avatarSize * 0.575,
+                                left: widget.avatarSize * 0.05,
+                                width: widget.avatarSize * 1.15,
+                                child: PinnedTileTextBubble(
+                                  chat: controller.chat,
+                                  size: widget.avatarSize,
+                                  parentController: controller,
+                                ),
+                              ),
                           ],
                         ),
-                        ReactionIcon(width: maxWidth, parentController: controller),
-                        Positioned(
-                          bottom: context.textTheme.bodyMedium!.fontSize! * 3,
-                          width: maxWidth,
-                          child: PinnedTileTextBubble(
-                            chat: controller.chat,
-                            size: maxWidth,
-                            parentController: controller,
-                          ),
-                        ),
+                        ChatTitle(width: widget.avatarSize, parentController: controller),
                       ],
                     ),
-                  );
-                },
+                    // DM bubble: wider than the avatar so the bubble has room to grow.
+                    if (!controller.chat.isGroup)
+                      Positioned(
+                        top: 0,
+                        width: widget.avatarSize * 1.35,
+                        child: PinnedTileTextBubble(
+                          chat: controller.chat,
+                          size: widget.avatarSize,
+                          parentController: controller,
+                        ),
+                      ),
+                  ],
+                ),
               ),
             );
           }),
@@ -281,9 +289,7 @@ class _ChatTitleState extends CustomState<ChatTitle, void, ConversationTileContr
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.symmetric(
-        vertical: widget.width * 0.075,
-      ),
+      padding: const EdgeInsets.only(top: 6, bottom: 4),
       child: Obx(() {
         final isPinned = controller.chatState?.isPinned.value ?? controller.chat.isPinned ?? false;
         final style = context.theme.textTheme.bodyMedium!.apply(
@@ -296,25 +302,50 @@ class _ChatTitleState extends CustomState<ChatTitle, void, ConversationTileContr
         // Get title from ChatState - it handles all title logic including redacted mode
         final chatState = ChatsSvc.getChatState(controller.chat.guid);
         final _title = chatState?.title.value ?? controller.chat.getTitle();
+        final unread = chatState?.hasUnreadMessage.value ?? false;
+
+        // Reserve equal horizontal space on both sides so the text stays
+        // visually centered while the dot floats to its left.
+        const double dotSize = 10.0;
+        const double dotHSpace = dotSize + 6.0;
 
         return SizedBox(
-          height: style.height! * style.fontSize! * 2,
+          height: style.height! * style.fontSize!,
           child: OverflowBox(
-            maxWidth: widget.width + 16,
-            child: Align(
-              alignment: Alignment.center,
-              child: RichText(
-                text: TextSpan(
-                  children: MessageHelper.buildEmojiText(
-                    _title,
-                    style,
-                  ),
-                  style: style,
+            maxWidth: widget.width + 40,
+            alignment: Alignment.topCenter,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                SizedBox(
+                  width: dotHSpace,
+                  child: unread
+                      ? Center(
+                          child: Container(
+                            width: dotSize,
+                            height: dotSize,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: context.theme.colorScheme.primary,
+                            ),
+                          ),
+                        )
+                      : null,
                 ),
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                maxLines: 2,
-              ),
+                Flexible(
+                  child: RichText(
+                    text: TextSpan(
+                      children: MessageHelper.buildEmojiText(_title, style),
+                      style: style,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                  ),
+                ),
+                // Mirror slot keeps text optically centered
+                const SizedBox(width: dotHSpace),
+              ],
             ),
           ),
         );
@@ -360,7 +391,7 @@ class PinnedIndicators extends StatelessWidget {
             width: width * 0.27,
             height: width * 0.27,
             decoration: BoxDecoration(
-              border: Border.all(color: context.theme.colorScheme.background, width: 1),
+              border: Border.all(color: context.theme.colorScheme.surface, width: 1),
               borderRadius: BorderRadius.circular(30),
               color: context.theme.colorScheme.tertiaryContainer,
             ),
@@ -415,17 +446,87 @@ class _ReactionIconState extends CustomState<ReactionIcon, void, ConversationTil
       final isNotFromMe = latestMsg.isFromMe == false;
 
       return unread && isReaction && isNotFromMe
-          ? Positioned(
-              top: -sqrt(widget.width / 2) + widget.width * 0.05,
-              right: -sqrt(widget.width / 2) + widget.width * 0.025,
-              child: ReactionWidget(
-                reaction: latestMsg,
-                // Pass the chat GUID explicitly so ReactionWidget can locate the
-                // correct MessagesService instead of falling back to activeChat.
-                chatGuid: controller.chat.guid,
-              ),
-            )
+          ? controller.chat.isGroup
+              // Groups: same anchor as the text bubble — bottom of sender avatar,
+              // left edge of avatar area, growing rightward.
+              ? Positioned(
+                  bottom: widget.width * 0.575,
+                  left: widget.width * 0.05,
+                  child: ReactionWidget(
+                    reaction: latestMsg,
+                    chatGuid: controller.chat.guid,
+                    tailDirection: ReactionTailDirection.left,
+                  ),
+                )
+              // DMs: top-right of the avatar.
+              : Positioned(
+                  top: -sqrt(widget.width / 2) + widget.width * 0.05,
+                  right: -sqrt(widget.width / 2) + widget.width * 0.025,
+                  child: ReactionWidget(
+                    reaction: latestMsg,
+                    chatGuid: controller.chat.guid,
+                    tailDirection: ReactionTailDirection.left,
+                  ),
+                )
           : const SizedBox.shrink();
+    });
+  }
+}
+
+class SenderIcon extends CustomStateful<ConversationTileController> {
+  const SenderIcon({super.key, required this.width, required super.parentController});
+
+  final double width;
+
+  @override
+  State<StatefulWidget> createState() => _SenderIconState();
+}
+
+class _SenderIconState extends CustomState<SenderIcon, void, ConversationTileController> {
+  @override
+  void initState() {
+    super.initState();
+    tag = "${controller.chat.guid}-pinned";
+    forceDelete = false;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!controller.chat.isGroup) return const SizedBox.shrink();
+
+    return Obx(() {
+      final chatState = ChatsSvc.getChatState(controller.chat.guid);
+      final unread = chatState?.hasUnreadMessage.value ?? false;
+      final lastMessage = chatState?.latestMessage.value;
+
+      if (!unread || lastMessage == null || lastMessage.isFromMe == true) {
+        return const SizedBox.shrink();
+      }
+
+      final sender = lastMessage.handleRelation.target;
+      if (sender == null) return const SizedBox.shrink();
+
+      final double senderSize = widget.width * 0.25;
+
+      return Positioned(
+        top: (widget.width - senderSize) / 2,
+        left: -senderSize / 2,
+        child: Container(
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: context.theme.colorScheme.surface,
+              width: 1.5,
+            ),
+          ),
+          child: ContactAvatarWidget(
+            handle: sender,
+            size: senderSize,
+            editable: false,
+            borderThickness: 0,
+          ),
+        ),
+      );
     });
   }
 }

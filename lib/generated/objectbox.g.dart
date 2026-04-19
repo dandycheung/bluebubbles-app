@@ -476,7 +476,7 @@ final _entities = <obx_int.ModelEntity>[
   obx_int.ModelEntity(
     id: const obx_int.IdUid(13, 4148278195232901830),
     name: 'Message',
-    lastPropertyId: const obx_int.IdUid(52, 5891619424061212086),
+    lastPropertyId: const obx_int.IdUid(53, 8594929698222481068),
     flags: 0,
     properties: <obx_int.ModelProperty>[
       obx_int.ModelProperty(
@@ -735,6 +735,12 @@ final _entities = <obx_int.ModelEntity>[
         id: const obx_int.IdUid(52, 5891619424061212086),
         name: 'errorMessage',
         type: 9,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(53, 8594929698222481068),
+        name: 'hasEffectPlayed',
+        type: 1,
         flags: 0,
       ),
     ],
@@ -1709,7 +1715,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
         final dbPayloadDataOffset = object.dbPayloadData == null ? null : fbb.writeString(object.dbPayloadData!);
         final dbMetadataOffset = object.dbMetadata == null ? null : fbb.writeString(object.dbMetadata!);
         final errorMessageOffset = object.errorMessage == null ? null : fbb.writeString(object.errorMessage!);
-        fbb.startTable(53);
+        fbb.startTable(54);
         fbb.addInt64(0, object.id ?? 0);
         fbb.addInt64(1, object.originalROWID);
         fbb.addOffset(2, guidOffset);
@@ -1752,6 +1758,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
         fbb.addBool(49, object.isDelivered);
         fbb.addInt64(50, object.handleRelation.targetId);
         fbb.addOffset(51, errorMessageOffset);
+        fbb.addBool(52, object.hasEffectPlayed);
         fbb.finish(fbb.endTable());
         return object.id ?? 0;
       },
@@ -1845,6 +1852,12 @@ obx_int.ModelDefinition getObjectBoxModel() {
           40,
         );
         final datePlayedParam = datePlayedValue == null ? null : DateTime.fromMillisecondsSinceEpoch(datePlayedValue);
+        final hasEffectPlayedParam = const fb.BoolReader().vTableGet(
+          buffer,
+          rootOffset,
+          108,
+          false,
+        );
         final itemTypeParam = const fb.Int64Reader().vTableGetNullable(
           buffer,
           rootOffset,
@@ -1933,6 +1946,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
           isFromMe: isFromMeParam,
           hasDdResults: hasDdResultsParam,
           datePlayed: datePlayedParam,
+          hasEffectPlayed: hasEffectPlayedParam,
           itemType: itemTypeParam,
           groupTitle: groupTitleParam,
           groupActionType: groupActionTypeParam,
@@ -2811,6 +2825,11 @@ class Message_ {
   /// See [Message.errorMessage].
   static final errorMessage = obx.QueryStringProperty<Message>(
     _entities[5].properties[41],
+  );
+
+  /// See [Message.hasEffectPlayed].
+  static final hasEffectPlayed = obx.QueryBooleanProperty<Message>(
+    _entities[5].properties[42],
   );
 
   /// see [Message.dbAttachments]

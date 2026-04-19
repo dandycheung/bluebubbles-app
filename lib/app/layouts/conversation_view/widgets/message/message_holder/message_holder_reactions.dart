@@ -46,32 +46,37 @@ class ReactionObserver extends StatelessWidget {
   }
 }
 
-/// Isolated widget for sticker display
+/// Isolated widget for sticker display.
+/// Uses its own [Obx] so sticker rebuilds are decoupled from the outer
+/// message-holder [Obx] (which tracks isSending, isFromMe, parts, etc.).
 class StickerObserver extends StatelessWidget {
   const StickerObserver({
     super.key,
     required this.messageParts,
-    required this.stickers,
     required this.part,
     required this.cvController,
   });
 
   final List<MessagePart> messageParts;
-  final List<Message> stickers;
   final MessagePart part;
   final ConversationViewController cvController;
 
   @override
   Widget build(BuildContext context) {
-    final stickersForPart =
-        messageParts.length == 1 ? stickers : stickers.where((s) => (s.associatedMessagePart ?? 0) == part.part);
+    final state = MessageStateScope.of(context);
+    return Obx(() {
+      final allStickers = state.associatedMessages.where((e) => e.associatedMessageType == "sticker").toList();
+      final stickersForPart = messageParts.length == 1
+          ? allStickers
+          : allStickers.where((s) => (s.associatedMessagePart ?? 0) == part.part).toList();
 
-    if (stickersForPart.isEmpty) return const SizedBox.shrink();
+      if (stickersForPart.isEmpty) return const SizedBox.shrink();
 
-    return StickerHolder(
-      stickerMessages: stickersForPart,
-      controller: cvController,
-    );
+      return StickerHolder(
+        stickerMessages: stickersForPart,
+        controller: cvController,
+      );
+    });
   }
 }
 

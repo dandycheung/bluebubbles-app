@@ -6,7 +6,7 @@
 
 | File | Purpose |
 |------|---------|
-| `message_holder.dart` | Main widget (612 lines); full layout composition |
+| `../message_holder.dart` | Main widget; lives one level up in `widgets/message/` |
 | `message_holder_wrappers.dart` | `SelectModeWrapper` — Obx wrapper for selection-mode checkbox visibility |
 | `message_holder_reactions.dart` | `ReactionObserver`, `StickerObserver` — isolated Obx scopes for reactions and sticker overlays |
 | `message_holder_timestamps.dart` | `SamsungTimestampObserver` — Samsung-only always-visible timestamp widget |
@@ -44,7 +44,7 @@ DeliveredIndicator                ← bottom-right (sent/delivered/read)
 - `showSender` — true if group chat, different sender from previous message, and within 30-min window
 - `canSwipeToReply` — requires Private API enabled + Big Sur sync; false for temp/error messages
 - `replyTo` — fetches reply target from `MessagesService.struct`
-- `messageParts` — `List<MessagePart>` from `MessageWidgetController.parts`
+- `messageParts` — `List<MessagePart>` from `MessageState.parts`
 
 ## Reactivity
 
@@ -52,25 +52,22 @@ The main `Obx()` observes `MessageState`: `isSending`, `isFromMe`, `associatedMe
 
 Smaller inner widgets use their own `Obx()` scopes to avoid rebuilding the whole holder on narrow state changes (e.g., only reactions changed).
 
-## Controller Pattern
+## Widget Pattern
+
+`MessageHolder` is a plain `StatefulWidget`. It receives a `MessageState ms` directly as a constructor parameter.
 
 ```dart
-class MessageHolder extends CustomStateful<MessageWidgetController> {
-  MessageHolder({...}) : super(
-    parentController: MessagesSvc(cvController.chat.guid)
-        .getOrCreateController(message),  // tag = message.guid
-  );
+class MessageHolder extends StatefulWidget {
+  final MessageState ms; // pre-created by MessagesService
+  ...
 }
 
-class _MessageHolderState extends CustomState<...> {
-  @override
-  void initState() {
-    forceDelete = false;  // list owns lifecycle; don't destroy on scroll
-  }
+class _MessageHolderState extends State<MessageHolder> with ThemeHelpers {
+  MessageState get controller => widget.ms;
 }
 ```
 
-Per-part UI data (reply offsets, animation keys) are stored as `_MessageHolderState` instance lists — not in the controller — to keep controller logic clean.
+Per-part UI data (reply offsets, animation keys) are stored as `_MessageHolderState` instance lists — not in the state object — to keep `MessageState` clean.
 
 ## Skin Branching
 

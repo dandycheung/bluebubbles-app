@@ -95,7 +95,7 @@ class _TabletModeWrapperState extends State<TabletModeWrapper> with ThemeHelpers
                             child: GestureDetector(
                               behavior: HitTestBehavior.translucent,
                               child: Container(
-                                color: context.theme.colorScheme.properSurface,
+                                color: context.theme.colorScheme.surfaceContainerHighest,
                                 width: widget.dividerWidth,
                                 height: constraints.maxHeight,
                                 child: Column(
@@ -107,7 +107,7 @@ class _TabletModeWrapperState extends State<TabletModeWrapper> with ThemeHelpers
                                         width: 4,
                                         decoration: BoxDecoration(
                                           borderRadius: BorderRadius.circular(25),
-                                          color: context.theme.colorScheme.properOnSurface,
+                                          color: context.theme.colorScheme.onSurfaceVariant,
                                         )),
                                     const SizedBox(height: 20),
                                     Container(
@@ -115,7 +115,7 @@ class _TabletModeWrapperState extends State<TabletModeWrapper> with ThemeHelpers
                                         width: 4,
                                         decoration: BoxDecoration(
                                           borderRadius: BorderRadius.circular(25),
-                                          color: context.theme.colorScheme.properOnSurface,
+                                          color: context.theme.colorScheme.onSurfaceVariant,
                                         )),
                                     const SizedBox(height: 20),
                                     Container(
@@ -123,7 +123,7 @@ class _TabletModeWrapperState extends State<TabletModeWrapper> with ThemeHelpers
                                         width: 4,
                                         decoration: BoxDecoration(
                                           borderRadius: BorderRadius.circular(25),
-                                          color: context.theme.colorScheme.properOnSurface,
+                                          color: context.theme.colorScheme.onSurfaceVariant,
                                         )),
                                   ],
                                 ),
@@ -138,7 +138,7 @@ class _TabletModeWrapperState extends State<TabletModeWrapper> with ThemeHelpers
                         : Container(
                             width: widget.dividerWidth,
                             height: constraints.maxHeight,
-                            color: context.theme.colorScheme.properSurface),
+                            color: context.theme.colorScheme.surfaceContainerHighest),
                     SizedBox(
                       width: _width2,
                       child: widget.right,

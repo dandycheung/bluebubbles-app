@@ -183,7 +183,7 @@ class _AvatarCropState extends State<AvatarCrop> with ThemeHelpers {
                             child: buildProgressIndicator(context),
                           ),
                         ),
-                        backgroundColor: context.theme.colorScheme.properSurface,
+                        backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
                       ),
                       barrierDismissible: false,
                     );
@@ -215,7 +215,7 @@ class _AvatarCropState extends State<AvatarCrop> with ThemeHelpers {
             child: buildProgressIndicator(context),
           ),
         ),
-        backgroundColor: context.theme.colorScheme.properSurface,
+        backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
       ),
       barrierDismissible: false,
     );

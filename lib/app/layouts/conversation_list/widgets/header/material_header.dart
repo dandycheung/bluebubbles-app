@@ -1,4 +1,3 @@
-import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/app/layouts/conversation_list/pages/conversation_list.dart';
 import 'package:bluebubbles/app/layouts/conversation_list/widgets/header/header_widgets.dart';
 import 'package:bluebubbles/app/layouts/conversation_list/pages/search/search_view.dart';
@@ -30,7 +29,7 @@ class _MaterialHeaderState extends CustomState<MaterialHeader, void, Conversatio
               height: controller.selectedChats.isEmpty ? 100 : null,
               width: NavigationSvc.width(context),
               color: SettingsSvc.settings.windowEffect.value == WindowEffect.disabled
-                  ? context.theme.colorScheme.properSurface
+                  ? context.theme.colorScheme.surfaceContainerHighest
                   : Colors.transparent,
             )),
         AnimatedSwitcher(
@@ -42,12 +41,12 @@ class _MaterialHeaderState extends CustomState<MaterialHeader, void, Conversatio
                     return Container(
                       decoration: BoxDecoration(
                         color: !NavigationSvc.isAvatarOnly(context) && !showArchived && !showUnknown
-                            ? context.theme.colorScheme.properSurface.withValues(
+                            ? context.theme.colorScheme.surfaceContainerHighest.withValues(
                                 alpha: SettingsSvc.settings.windowEffect.value == WindowEffect.disabled ? 1 : 0.7)
                             : Colors.transparent,
                       ),
                       child: Padding(
-                        padding: const EdgeInsets.only(left: 5.0, top: 5.0, bottom: 5.0),
+                        padding: const EdgeInsets.only(left: 5.0, top: 6.0, bottom: 6.0),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.start,
                           children: [
@@ -60,13 +59,13 @@ class _MaterialHeaderState extends CustomState<MaterialHeader, void, Conversatio
                               ),
                             if (!NavigationSvc.isAvatarOnly(context))
                               Padding(
-                                padding: const EdgeInsets.only(left: 18, right: 20),
+                                padding: const EdgeInsets.only(left: 18, right: 10),
                                 child: (!showArchived && !showUnknown)
                                     ? SvgPicture.asset('assets/icon/bb-icon.svg',
                                         width: 26,
                                         height: 26,
                                         colorFilter: ColorFilter.mode(
-                                            context.theme.colorScheme.properOnSurface, BlendMode.srcIn))
+                                            context.theme.colorScheme.onSurfaceVariant, BlendMode.srcIn))
                                     : IconButton(
                                         onPressed: () async {
                                           Navigator.of(context).pop();
@@ -74,11 +73,11 @@ class _MaterialHeaderState extends CustomState<MaterialHeader, void, Conversatio
                                         padding: EdgeInsets.zero,
                                         icon: Icon(
                                           Icons.arrow_back,
-                                          color: context.theme.colorScheme.properOnSurface,
+                                          color: context.theme.colorScheme.onSurfaceVariant,
                                         ),
                                       ),
                               ),
-                            if (!NavigationSvc.isAvatarOnly(context)) HeaderText(controller: controller, fontSize: 20),
+                            if (!NavigationSvc.isAvatarOnly(context)) HeaderText(controller: controller, fontSize: 18),
                             if (!NavigationSvc.isAvatarOnly(context) && !showArchived && !showUnknown)
                               Expanded(
                                 child: Row(
@@ -91,7 +90,7 @@ class _MaterialHeaderState extends CustomState<MaterialHeader, void, Conversatio
                                       },
                                       icon: Icon(
                                         Icons.camera_alt_outlined,
-                                        color: context.theme.colorScheme.properOnSurface,
+                                        color: context.theme.colorScheme.onSurfaceVariant,
                                       ),
                                     ),
                                     Padding(
@@ -105,7 +104,7 @@ class _MaterialHeaderState extends CustomState<MaterialHeader, void, Conversatio
                                           },
                                           icon: Icon(
                                             Icons.search_rounded,
-                                            color: context.theme.colorScheme.properOnSurface,
+                                            color: context.theme.colorScheme.onSurfaceVariant,
                                           ),
                                         )),
                                     const OverflowMenu(),

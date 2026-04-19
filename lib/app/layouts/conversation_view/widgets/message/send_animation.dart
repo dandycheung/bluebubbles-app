@@ -28,19 +28,69 @@ class _SendAnimationState extends CustomState<SendAnimation, SendData, Conversat
   Message? message;
   Tween<double> tween = Tween<double>(begin: 1, end: 0);
   Control control = Control.stop;
-  double textFieldSize = 0;
 
+  // The padding applied to the ConversationTextField (bottom: 10 + top: 10) plus
+  // the visual gap between the text field top edge and the bottom of the message list.
+  static const double _textFieldVerticalPadding = 17.5;
+
+  // Fixed height of the TypingIndicatorRow when visible.
+  static const double _typingIndicatorHeight = 50.0;
+
+  // Live measurement of the text field's current rendered height.
+  double get textFieldSize =>
+      (controller.textFieldKey.currentContext?.findRenderObject() as RenderBox?)?.size.height ?? 0;
+
+  // Height of the focus-info widget (NotificationsSilencedBanner) above the text field.
   double get focusInfoSize =>
       (controller.focusInfoKey.currentContext?.findRenderObject() as RenderBox?)?.size.height ?? 0;
+
+  // Extra vertical offset that differs between the iOS skin and Material/Samsung skins.
+  double get _platformVerticalOffset => iOS ? 1.0 : 18.5;
+
+  // Offset for typing indicator when it is visible.
+  double get _typingIndicatorOffset => controller.showTypingIndicator.value ? _typingIndicatorHeight : 0;
+
+  // Total bottom offset for the AnimatedPositioned — how far above the bottom
+  // of the Stack the animation bubble should land at the end of its travel.
+  double get _animationBottomOffset =>
+      textFieldSize + focusInfoSize + _textFieldVerticalPadding + _typingIndicatorOffset + _platformVerticalOffset;
 
   @override
   void initState() {
     super.initState();
     controller.sendFunc = send;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final box = controller.textFieldKey.currentContext?.findRenderObject() as RenderBox?;
-      textFieldSize = box?.size.height ?? 0;
-    });
+
+    // If ChatCreator pre-queued a send before navigating here, fire it now.
+    //
+    // We wait on messagesViewReady instead of a bare addPostFrameCallback so
+    // that the send only fires after MessagesView has *fully* initialised —
+    // handlers registered AND _listKey recreated (async loadChunk path).
+    // Without this wait the sendAnimation's addPostFrameCallback can fire
+    // between the _listKey recreation and the following setState flush, so
+    // handleNewMessage's insertItem call finds a null currentState and silently
+    // no-ops, causing the sent message to never appear in the list.
+    if (controller.pendingSend != null) {
+      final pendingData = controller.pendingSend!;
+      controller.pendingSend = null;
+      controller.messagesViewReady.then((_) {
+        if (!mounted) return;
+        WidgetsBinding.instance.addPostFrameCallback((_) async {
+          // Some extra time to ensure the list is fully ready and the insertItem
+          // call in handleNewMessage doesn't find a null currentState and no-op,
+          // causing the sent message to never appear in the list.
+          await Future.delayed(const Duration(milliseconds: 250));
+          if (!mounted) return;
+          await send(pendingData);
+
+          // Clear the text field and attachments now that the send has been queued,
+          // mirroring what ConversationTextField.sendMessage() does for normal sends.
+          controller.pickedAttachments.clear();
+          controller.textController.clear();
+          controller.subjectTextController.clear();
+          controller.replyToMessage = null;
+        });
+      });
+    }
   }
 
   Future<void> send(SendData data) async {
@@ -197,14 +247,12 @@ class _SendAnimationState extends CustomState<SendAnimation, SendData, Conversat
     final messageBoxSize = NavigationSvc.width(context) - buttonSize;
     return AnimatedPositioned(
       duration: Duration(milliseconds: message != null ? duration : 0),
-      bottom: message != null
-          ? textFieldSize + focusInfoSize + 17.5 + (controller.showTypingIndicator.value ? 50 : 0) + (!iOS ? 15 : 0)
-          : 0,
-      right: samsung ? -37.5 : 5,
+      bottom: message != null ? _animationBottomOffset : 0,
+      right: samsung ? -38 : (iOS ? -5.0 : 5.0),
       curve: curve,
       onEnd: () async {
         if (message != null) {
-          await Future.delayed(const Duration(milliseconds: 100));
+          await Future.delayed(const Duration(milliseconds: 200));
           setState(() {
             tween = Tween<double>(begin: 1, end: 0);
             control = Control.stop;
@@ -237,10 +285,10 @@ class _SendAnimationState extends CustomState<SendAnimation, SendData, Conversat
                       constraints: BoxConstraints(
                         maxWidth: max(messageBoxSize * exp, typicalWidth),
                         minWidth: messageBoxSize * exp,
-                        minHeight: 40,
+                        minHeight: 36,
                       ),
                       color: !message!.isBigEmoji ? context.theme.colorScheme.primary.darkenAmount(0.2) : null,
-                      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15).add(EdgeInsets.only(
+                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 15).add(EdgeInsets.only(
                           left: message!.isFromMe! || message!.isBigEmoji ? 0 : 10,
                           right: message!.isFromMe! && !message!.isBigEmoji ? 10 : 0)),
                       child: Align(
@@ -254,7 +302,7 @@ class _SendAnimationState extends CustomState<SendAnimation, SendData, Conversat
                             text: TextSpan(
                               children: buildMessageSpans(context,
                                   MessagePart(part: 0, text: message!.text, subject: message!.subject), message!,
-                                  colorOverride: Color.lerp(context.theme.colorScheme.properOnSurface,
+                                  colorOverride: Color.lerp(context.theme.colorScheme.onSurfaceVariant,
                                       context.theme.colorScheme.onPrimary, 1 - value)),
                             ),
                           ),

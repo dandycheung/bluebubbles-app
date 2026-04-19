@@ -41,7 +41,7 @@ void showAddressPicker(ContactV2? contact, Handle handle, BuildContext context,
         context: context,
         builder: (BuildContext context) {
           return AlertDialog(
-              backgroundColor: context.theme.colorScheme.properSurface,
+              backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
               title: Text("Select Address", style: context.theme.textTheme.titleLarge),
               content: ObxValue<Rx<bool>>(
                 (data) => Column(
@@ -100,8 +100,8 @@ void showAddressPicker(ContactV2? contact, Handle handle, BuildContext context,
                     ),
                     Text(
                       "Long press the ${isEmail ? "email" : "call"} button to reset your default selection",
-                      style:
-                          context.theme.textTheme.bodySmall!.copyWith(color: context.theme.colorScheme.properOnSurface),
+                      style: context.theme.textTheme.bodySmall!
+                          .copyWith(color: context.theme.colorScheme.onSurfaceVariant),
                     ),
                   ],
                 ),

@@ -86,7 +86,7 @@ class PlayPauseButton extends StatelessWidget {
                   height: 75,
                   width: 75,
                   decoration: BoxDecoration(
-                    color: context.theme.colorScheme.background.withValues(alpha: 0.5),
+                    color: context.theme.colorScheme.surface.withValues(alpha: 0.5),
                     borderRadius: BorderRadius.circular(40),
                   ),
                   clipBehavior: Clip.antiAlias,
@@ -159,7 +159,7 @@ class MuteButton extends StatelessWidget {
                       height: 30,
                       width: 30,
                       decoration: BoxDecoration(
-                        color: context.theme.colorScheme.background.withValues(alpha: 0.5),
+                        color: context.theme.colorScheme.surface.withValues(alpha: 0.5),
                         borderRadius: BorderRadius.circular(40),
                       ),
                       padding: const EdgeInsets.all(5),
@@ -532,7 +532,7 @@ class FullscreenButton extends StatelessWidget {
               height: 30,
               width: 30,
               decoration: BoxDecoration(
-                color: context.theme.colorScheme.background.withValues(alpha: 0.5),
+                color: context.theme.colorScheme.surface.withValues(alpha: 0.5),
                 borderRadius: BorderRadius.circular(40),
               ),
               padding: const EdgeInsets.all(5),

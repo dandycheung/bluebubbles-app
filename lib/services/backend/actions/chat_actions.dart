@@ -8,13 +8,13 @@ import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 
 class ChatActions {
-  static Future<void> clearNotificationForChat(Map<String, dynamic> data) async {
+  static Future<void> clearNotificationForChat(dynamic data) async {
     final chatId = data['chatId'] as int;
 
     await MethodChannelSvc.invokeMethod("delete-notification", {"notification_id": chatId, "tag": "new_message"});
   }
 
-  static Future<void> markChatReadUnread(Map<String, dynamic> data) async {
+  static Future<void> markChatReadUnread(dynamic data) async {
     final chatGuid = data['chatGuid'] as String;
     final markAsRead = data['markAsRead'] as bool;
     final shouldMarkOnServer = data['shouldMarkOnServer'] as bool;
@@ -28,7 +28,7 @@ class ChatActions {
     }
   }
 
-  static Future<int?> saveChat(Map<String, dynamic> data) async {
+  static Future<int?> saveChat(dynamic data) async {
     final guid = data['guid'] as String;
     final updateFlags = data['updateFlags'] as Map<String, bool>;
     final chatData = data['chatData'] as Map<String, dynamic>;
@@ -110,7 +110,7 @@ class ChatActions {
     });
   }
 
-  static Future<void> deleteChat(Map<String, dynamic> data) async {
+  static Future<void> deleteChat(dynamic data) async {
     final chatId = data['chatId'] as int;
     final messageIds = (data['messageIds'] as List).cast<int>();
     final handleIds = (data['handleIds'] as List? ?? []).cast<int>();
@@ -129,7 +129,7 @@ class ChatActions {
     });
   }
 
-  static Future<void> softDeleteChat(Map<String, dynamic> data) async {
+  static Future<void> softDeleteChat(dynamic data) async {
     final chatData = data['chatData'] as Map<String, dynamic>;
     final inputChat = Chat.fromMap(chatData);
 
@@ -150,7 +150,7 @@ class ChatActions {
     });
   }
 
-  static Future<void> unDeleteChat(Map<String, dynamic> data) async {
+  static Future<void> unDeleteChat(dynamic data) async {
     final chatData = data['chatData'] as Map<String, dynamic>;
     final inputChat = Chat.fromMap(chatData);
 
@@ -170,7 +170,7 @@ class ChatActions {
     });
   }
 
-  static Future<Map<String, dynamic>> addMessageToChat(Map<String, dynamic> data) async {
+  static Future<Map<String, dynamic>> addMessageToChat(dynamic data) async {
     final messageData = data['messageData'] as Map<String, dynamic>;
     final chatData = data['chatData'] as Map<String, dynamic>;
     final latestMessageData = data['latestMessageData'] as Map<String, dynamic>;
@@ -330,7 +330,7 @@ class ChatActions {
     });
   }
 
-  static Future<List<int>> loadSupplementalData(Map<String, dynamic> data) async {
+  static Future<List<int>> loadSupplementalData(dynamic data) async {
     final messageGuids = (data['messageGuids'] as List).cast<String>();
 
     return Database.runInTransaction(TxMode.read, () {
@@ -348,7 +348,7 @@ class ChatActions {
     });
   }
 
-  static Future<List<int>> syncLatestMessages(Map<String, dynamic> data) async {
+  static Future<List<int>> syncLatestMessages(dynamic data) async {
     final chatGuids = (data['chatGuids'] as List).cast<String>();
     final toggleUnread = data['toggleUnread'] as bool;
 
@@ -441,7 +441,7 @@ class ChatActions {
     return didUpdate;
   }
 
-  static Future<Map<String, dynamic>> bulkSyncChats(Map<String, dynamic> data) async {
+  static Future<Map<String, dynamic>> bulkSyncChats(dynamic data) async {
     final chatsData = (data['chatsData'] as List).cast<Map<String, dynamic>>();
     final inputChats = chatsData.map((e) => Chat.fromMap(e)).toList();
 
@@ -547,8 +547,18 @@ class ChatActions {
       for (final inputChat in inputChats) {
         final existing = existingChatsMap[inputChat.guid];
 
-        // Don't sync specific fields because they
+        // Use existing DB record as the base so that user-local fields
+        // (pin, archive, mute, custom avatar, etc.) are preserved.
         Chat chatToSave = existing ?? inputChat;
+
+        // Apply server-controlled fields onto the existing record so that
+        // changes originating on the server (e.g. a group name change) are
+        // persisted.  User-preference fields are intentionally left alone.
+        if (existing != null) {
+          if (!chatToSave.lockChatName) {
+            chatToSave.displayName = inputChat.displayName;
+          }
+        }
 
         // Prepare handles to link (collect them for later)
         final handlesToLink = <Handle>[];
@@ -611,7 +621,7 @@ class ChatActions {
     return {'chatIds': chatIds, 'affectedHandleIds': affectedHandleIds};
   }
 
-  static Future<List<int>> getMessagesAsync(Map<String, dynamic> data) async {
+  static Future<List<int>> getMessagesAsync(dynamic data) async {
     final chatId = data['chatId'] as int;
     final participantsData = (data['participantsData'] as List).cast<Map<String, dynamic>>();
     final offset = data['offset'] as int? ?? 0;
@@ -676,7 +686,7 @@ class ChatActions {
     });
   }
 
-  static Future<List<int>> bulkSyncMessages(Map<String, dynamic> data) async {
+  static Future<List<int>> bulkSyncMessages(dynamic data) async {
     final chatData = data['chatData'] as Map<String, dynamic>;
     final messagesData = (data['messagesData'] as List).cast<Map<String, dynamic>>();
 
@@ -873,7 +883,7 @@ class ChatActions {
     return messages;
   }
 
-  static Future<List<int>> getParticipantsAsync(Map<String, dynamic> data) async {
+  static Future<List<int>> getParticipantsAsync(dynamic data) async {
     final chatId = data['chatId'] as int;
 
     return Database.runInTransaction(TxMode.read, () {
@@ -888,7 +898,7 @@ class ChatActions {
     });
   }
 
-  static Future<void> clearTranscriptAsync(Map<String, dynamic> data) async {
+  static Future<void> clearTranscriptAsync(dynamic data) async {
     final chatId = data['chatId'] as int;
 
     Database.runInTransaction(TxMode.write, () {
@@ -906,7 +916,7 @@ class ChatActions {
     });
   }
 
-  static Future<List<int>> getChatsAsync(Map<String, dynamic> data) async {
+  static Future<List<int>> getChatsAsync(dynamic data) async {
     final limit = data['limit'] as int? ?? 15;
     final offset = data['offset'] as int? ?? 0;
     final ids = (data['ids'] as List?)?.cast<int>() ?? const <int>[];

@@ -16,6 +16,7 @@ class SyncService {
   int numberOfMessagesPerPage = 25;
   bool skipEmptyChats = true;
   bool saveToDownloads = false;
+  bool syncGroupChatIcons = false;
   int? syncTimeFilter;
   final RxBool isIncrementalSyncing = false.obs;
 
@@ -27,6 +28,7 @@ class SyncService {
         messageCount: numberOfMessagesPerPage.toInt(),
         skipEmptyChats: skipEmptyChats,
         saveLogs: saveToDownloads,
+        syncGroupChatIcons: syncGroupChatIcons,
         syncTimeFilter: syncTimeFilter);
   }
 

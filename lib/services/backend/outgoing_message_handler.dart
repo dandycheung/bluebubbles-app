@@ -564,6 +564,14 @@ class OutgoingMessageHandler {
         await Message.replaceMessage(tempGuid, m);
         if (Get.isRegistered<MessagesService>(tag: c.guid)) {
           MessagesSvc(c.guid).updateMessage(m, oldGuid: tempGuid);
+          // Reactions are stored in the parent's associatedMessages list rather
+          // than as top-level entries in the struct/messageStates map, so
+          // updateMessage above is a no-op for them.  Explicitly update the
+          // parent's associatedMessages so the error state propagates to the UI.
+          if (r != null && m.associatedMessageGuid != null) {
+            final parentState = MessagesSvc(c.guid).getMessageStateIfExists(m.associatedMessageGuid!);
+            parentState?.updateAssociatedMessageInternal(m, tempGuid: tempGuid);
+          }
         }
       },
     );

@@ -81,6 +81,23 @@ class _TextFieldSuffixState extends State<TextFieldSuffix> with ThemeHelpers {
         // Only show the send button when there is actually content to send;
         // otherwise the button is hidden entirely to avoid a no-op tap.
         if (isChatCreator) {
+          // When a controller is present (existing chat resolved), use Obx to
+          // reactively watch pickedAttachments and respect alwaysShowSend.
+          if (widget.controller != null) {
+            return Obx(() {
+              final hasAttachments = widget.controller!.pickedAttachments.isNotEmpty;
+              final canSend = alwaysShowSend || hasText || hasAttachments || widget.hasInitialAttachments;
+              if (!canSend) return const SizedBox.shrink();
+              return Padding(
+                padding: const EdgeInsets.all(3.0),
+                child: SendButton(
+                  sendMessage: widget.sendMessage,
+                  onLongPress: () {},
+                ),
+              );
+            });
+          }
+          // No controller — check static values only.
           final canSendInCreator = hasText || widget.hasInitialAttachments;
           if (!canSendInCreator) return const SizedBox.shrink();
           return Padding(
@@ -203,15 +220,17 @@ class _RecordingButton extends StatelessWidget {
             : !isChatCreator && !showRecording
                 ? CupertinoIconWrapper(
                     icon: Icon(
-                      isIOS ? CupertinoIcons.waveform : Icons.mic_none,
-                      color: isIOS ? context.theme.colorScheme.outline : context.theme.colorScheme.properOnSurface,
-                      size: isIOS ? 24 : 20,
+                      isIOS ? CupertinoIcons.mic_fill : Icons.mic_none,
+                      color: isIOS
+                          ? context.theme.colorScheme.outline.withValues(alpha: 0.5)
+                          : context.theme.colorScheme.onSurfaceVariant,
+                      size: 20,
                     ),
                   )
                 : CupertinoIconWrapper(
                     icon: Icon(
                       isIOS ? CupertinoIcons.stop_fill : Icons.stop_circle,
-                      color: isIOS ? context.theme.colorScheme.primary : context.theme.colorScheme.properOnSurface,
+                      color: isIOS ? context.theme.colorScheme.primary : context.theme.colorScheme.onSurfaceVariant,
                       size: 15,
                     ),
                   ),
@@ -268,7 +287,7 @@ class _RecordingButton extends StatelessWidget {
               barrierDismissible: false,
               builder: (BuildContext context) {
                 return AlertDialog(
-                  backgroundColor: context.theme.colorScheme.properSurface,
+                  backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
                   title: Text("Send it?", style: context.theme.textTheme.titleLarge),
                   content: Column(
                     mainAxisSize: MainAxisSize.min,

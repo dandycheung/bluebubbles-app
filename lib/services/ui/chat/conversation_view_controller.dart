@@ -6,7 +6,6 @@ import 'package:bluebubbles/app/wrappers/stateful_boilerplate.dart';
 import 'package:bluebubbles/database/models.dart';
 import 'package:bluebubbles/services/backend/interfaces/prefs_interface.dart';
 import 'package:bluebubbles/services/services.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_keyboard_visibility/flutter_keyboard_visibility.dart';
 import 'package:get/get.dart';
@@ -42,7 +41,6 @@ class ConversationViewController extends StatefulController with GetSingleTicker
   }
 
   // caching items
-  final Map<String, Map<String, Uint8List>> stickerData = {};
   final Map<String, Metadata> legacyUrlPreviews = {};
   final Map<String, VideoController> videoPlayers = {};
   final Map<String, PlayerController> audioPlayers = {};
@@ -105,6 +103,36 @@ class ConversationViewController extends StatefulController with GetSingleTicker
   Timer? _scrollDownDebounce;
   Future<void> Function(SendData)? sendFunc;
 
+  /// When set, [_SendAnimationState] will auto-fire this send as soon as it
+  /// registers [sendFunc] (i.e. immediately after the widget is built).
+  /// Used by ChatCreator to pre-queue a send before navigating to ConversationView.
+  SendData? pendingSend;
+
+  /// Completer that resolves once [MessagesView] has finished setting up its
+  /// handlers AND its list key (both sync and async loadChunk paths).
+  ///
+  /// [SendAnimation] waits on this before firing a [pendingSend] so that
+  /// [handleNewMessage] → [_listKey.currentState?.insertItem] is guaranteed
+  /// to find a mounted [SliverAnimatedList], preventing the silent no-op race.
+  Completer<void> _messagesViewReady = Completer<void>();
+
+  /// Called by [MessagesView] once its handlers and list key are fully set up.
+  void markMessagesViewReady() {
+    if (!_messagesViewReady.isCompleted) {
+      _messagesViewReady.complete();
+    }
+  }
+
+  /// Called by [MessagesView.dispose] so that the next visit starts fresh.
+  void resetMessagesViewReady() {
+    if (_messagesViewReady.isCompleted) {
+      _messagesViewReady = Completer<void>();
+    }
+  }
+
+  /// Future that resolves once [MessagesView] has fully initialized.
+  Future<void> get messagesViewReady => _messagesViewReady.future;
+
   @override
   void onInit() {
     super.onInit();
@@ -112,13 +140,13 @@ class ConversationViewController extends StatefulController with GetSingleTicker
     textController.mentionables = mentionables;
     KeyboardVisibilityController().onChange.listen((bool visible) async {
       keyboardOpen = visible;
-      if (scrollController.hasClients) {
+      if (scrollController.hasClients && scrollController.positions.length == 1) {
         _keyboardOffset = scrollController.offset;
       }
     });
 
     scrollController.addListener(() {
-      if (!scrollController.hasClients) return;
+      if (!scrollController.hasClients || scrollController.positions.length != 1) return;
       if (keyboardOpen &&
           SettingsSvc.settings.hideKeyboardOnScroll.value &&
           scrollController.offset > _keyboardOffset + 100) {
@@ -185,7 +213,7 @@ class ConversationViewController extends StatefulController with GetSingleTicker
   }
 
   Future<void> send(SendData data) async {
-    sendFunc?.call(data);
+    await sendFunc?.call(data);
   }
 
   bool isSelected(String guid) {

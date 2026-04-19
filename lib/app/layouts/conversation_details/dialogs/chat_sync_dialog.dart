@@ -87,7 +87,7 @@ class _ChatSyncDialogState extends State<ChatSyncDialog> {
                 ),
               ),
             ),
-      backgroundColor: context.theme.colorScheme.properSurface,
+      backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
       actions: [
         TextButton(
           onPressed: () {

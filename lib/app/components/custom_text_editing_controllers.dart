@@ -302,7 +302,7 @@ class SpellCheckTextEditingController extends TextEditingController {
         child: Center(
           child: Container(
             decoration: BoxDecoration(
-              color: context.theme.colorScheme.properSurface,
+              color: context.theme.colorScheme.surfaceContainerHighest,
               borderRadius: BorderRadius.circular(8.0),
             ),
             padding: const EdgeInsets.all(8.0),
@@ -642,6 +642,7 @@ class MentionTextEditingController extends SpellCheckTextEditingController {
           mentionIndexLength = "$index".length;
           // Mandatory WidgetSpan so that it takes the appropriate char number.
           return WidgetSpan(
+            alignment: PlaceholderAlignment.middle,
             child: Listener(
               onPointerDown: (PointerDownEvent e) {
                 if (selection.isCollapsed && e.buttons == 2) {
@@ -661,7 +662,7 @@ class MentionTextEditingController extends SpellCheckTextEditingController {
                 ),
                 child: Text(
                   mention.displayName,
-                  style: style!.copyWith(fontWeight: FontWeight.bold).apply(heightFactor: 1.1),
+                  style: style!.copyWith(fontWeight: FontWeight.bold),
                 ),
               ),
             ),

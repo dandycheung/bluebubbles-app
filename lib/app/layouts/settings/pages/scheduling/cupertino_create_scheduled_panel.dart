@@ -37,7 +37,7 @@ class _CupertinoCreateScheduledMessageState extends State<CupertinoCreateSchedul
       context: context,
       builder: (ctx) => Container(
         height: 300,
-        color: ctx.theme.colorScheme.properSurface,
+        color: ctx.theme.colorScheme.surfaceContainerHighest,
         child: Column(
           children: [
             Row(

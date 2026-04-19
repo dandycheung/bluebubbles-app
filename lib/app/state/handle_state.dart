@@ -1,4 +1,5 @@
 import 'package:bluebubbles/database/models.dart';
+import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/services/services.dart';
 import 'package:faker/faker.dart';
 import 'package:flutter/foundation.dart';
@@ -89,7 +90,10 @@ class HandleState {
       final firstNative = h.contactsV2.where((c) => c.isNative).firstOrNull;
       return firstNative?.nickname ?? firstNative?.displayName ?? h.contactsV2.first.computedDisplayName;
     }
-    return h.address.contains("@") ? h.address : (h.formattedAddress ?? h.address);
+
+    // Formatted address should be filled out by the bulk sync chats process. However, if somehow
+    // it isn't, we can format it on-demand here for display purposes.
+    return h.address.contains("@") ? h.address : (h.formattedAddress ?? formatPhoneNumber(h.address));
   }
 
   static String _computeReactionDisplayName(Handle h) {
@@ -106,15 +110,18 @@ class HandleState {
 
   static String? _computeInitials(Handle h) {
     if (h.address.startsWith("urn:biz")) return null;
-    if (!kIsWeb && h.contactsV2.isNotEmpty) {
+    if (!kIsWeb) {
+      // If there is no linked contact, don't derive initials from a phone
+      // number or raw address — leave the avatar initial empty instead.
+      if (h.contactsV2.isEmpty) return null;
       final v2Initials = h.contactsV2.first.initials;
       if (v2Initials != null) return v2Initials;
     }
     final name = _computeDisplayName(h);
     final parts = name.trim().split(RegExp(r'[ \-_]'));
-    if (parts.length == 1) return parts[0].isEmpty ? null : parts[0].substring(0, 1);
-    final first = parts.first.isEmpty ? '' : parts.first.substring(0, 1);
-    final last = parts.last.isEmpty ? '' : parts.last.substring(0, 1);
+    if (parts.length == 1) return parts[0].isEmpty ? null : parts[0].substring(0, 1).toUpperCase();
+    final first = parts.first.isEmpty ? '' : parts.first.substring(0, 1).toUpperCase();
+    final last = parts.last.isEmpty ? '' : parts.last.substring(0, 1).toUpperCase();
     return (first + last).isEmpty ? null : first + last;
   }
 

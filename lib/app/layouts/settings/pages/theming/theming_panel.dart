@@ -5,7 +5,7 @@ import 'package:bluebubbles/utils/window_effects.dart';
 import 'package:bluebubbles/app/layouts/settings/pages/theming/avatar/custom_avatar_color_panel.dart';
 import 'package:bluebubbles/app/layouts/settings/pages/theming/avatar/custom_avatar_panel.dart';
 import 'package:bluebubbles/app/layouts/settings/widgets/settings_widgets.dart';
-import 'package:bluebubbles/app/layouts/settings/pages/theming/advanced/advanced_theming_panel.dart';
+import 'package:bluebubbles/app/layouts/settings/pages/theming/theme_studio/theme_studio_panel.dart';
 import 'package:bluebubbles/app/wrappers/stateful_boilerplate.dart';
 import 'package:bluebubbles/database/models.dart';
 import 'package:bluebubbles/services/services.dart';
@@ -80,7 +80,7 @@ class _ThemingPanelState extends CustomState<ThemingPanel, void, ThemingPanelCon
                     if (!kIsWeb) const SettingsDivider(padding: EdgeInsets.only(left: 16.0)),
                     if (!kIsWeb)
                       SettingsTile(
-                        title: "Advanced Theming",
+                        title: "Theme Studio",
                         subtitle:
                             "Customize app colors and font sizes with custom themes\n${ThemeStruct.getLightTheme().name}   |   ${ThemeStruct.getDarkTheme().name}",
                         trailing: const NextButton(),
@@ -88,7 +88,7 @@ class _ThemingPanelState extends CustomState<ThemingPanel, void, ThemingPanelCon
                         onTap: () async {
                           Navigator.of(context).push(
                             CupertinoPageRoute(
-                              builder: (context) => const AdvancedThemingPanel(),
+                              builder: (context) => ThemeStudioPanel(),
                             ),
                           );
                         },
@@ -208,7 +208,7 @@ class _ThemingPanelState extends CustomState<ThemingPanel, void, ThemingPanelCon
                                 WindowEffects.defaultOpacity(dark: true);
                           }
                           await PrefsSvc.i.setString('window-effect', effect.toString());
-                          await WindowEffects.setEffect(color: context.theme.colorScheme.background);
+                          await WindowEffects.setEffect(color: context.theme.colorScheme.surface);
                           await SettingsSvc.settings.saveManyAsync(
                               ['windowEffect', 'windowEffectCustomOpacityLight', 'windowEffectCustomOpacityDark']);
                         },
@@ -227,7 +227,7 @@ class _ThemingPanelState extends CustomState<ThemingPanel, void, ThemingPanelCon
                           )),
                     Obx(() {
                       if (WindowEffects.dependsOnColor() &&
-                          !WindowEffects.isDark(color: context.theme.colorScheme.background)) {
+                          !WindowEffects.isDark(color: context.theme.colorScheme.surface)) {
                         return SettingsTile(
                           title: "Background Opacity (Light)",
                           trailing: SettingsSvc.settings.windowEffectCustomOpacityLight.value !=
@@ -247,7 +247,7 @@ class _ThemingPanelState extends CustomState<ThemingPanel, void, ThemingPanelCon
                     }),
                     Obx(() {
                       if (WindowEffects.dependsOnColor() &&
-                          !WindowEffects.isDark(color: context.theme.colorScheme.background)) {
+                          !WindowEffects.isDark(color: context.theme.colorScheme.surface)) {
                         return SettingsSlider(
                           startingVal: SettingsSvc.settings.windowEffectCustomOpacityLight.value,
                           max: 1,
@@ -264,7 +264,7 @@ class _ThemingPanelState extends CustomState<ThemingPanel, void, ThemingPanelCon
                     }),
                     Obx(() {
                       if (WindowEffects.dependsOnColor() &&
-                          WindowEffects.isDark(color: context.theme.colorScheme.background)) {
+                          WindowEffects.isDark(color: context.theme.colorScheme.surface)) {
                         return SettingsTile(
                           title: "Background Opacity (Dark)",
                           trailing: SettingsSvc.settings.windowEffectCustomOpacityDark.value !=
@@ -284,7 +284,7 @@ class _ThemingPanelState extends CustomState<ThemingPanel, void, ThemingPanelCon
                     }),
                     Obx(() {
                       if (WindowEffects.dependsOnColor() &&
-                          WindowEffects.isDark(color: context.theme.colorScheme.background)) {
+                          WindowEffects.isDark(color: context.theme.colorScheme.surface)) {
                         return SettingsSlider(
                           startingVal: SettingsSvc.settings.windowEffectCustomOpacityDark.value,
                           max: 1,
@@ -417,17 +417,24 @@ class _ThemingPanelState extends CustomState<ThemingPanel, void, ThemingPanelCon
                             "Note: Requires full notification access. Enabling this option will set a custom Music Theme as the selected theme. Media art with mostly blacks or whites may not produce any change in theming.",
                       ),
                     if (!kIsWeb && !kIsDesktop) const SettingsDivider(padding: EdgeInsets.only(left: 16.0)),
-                    Obx(() => SettingsSwitch(
-                          onChanged: (bool val) async {
-                            SettingsSvc.settings.colorfulAvatars.value = val;
-                            await SettingsSvc.settings.saveOneAsync('colorfulAvatars');
-                          },
-                          initialVal: SettingsSvc.settings.colorfulAvatars.value,
-                          title: "Colorful Avatars",
-                          backgroundColor: tileColor,
-                          subtitle: "Gives letter avatars a splash of color",
-                        )),
-                    const SettingsDivider(padding: EdgeInsets.only(left: 16.0)),
+                    Obx(() {
+                      if (SettingsSvc.settings.skin.value != Skins.iOS) return const SizedBox.shrink();
+                      return Column(
+                        children: [
+                          SettingsSwitch(
+                            onChanged: (bool val) async {
+                              SettingsSvc.settings.colorfulAvatars.value = val;
+                              await SettingsSvc.settings.saveOneAsync('colorfulAvatars');
+                            },
+                            initialVal: SettingsSvc.settings.colorfulAvatars.value,
+                            title: "Colorful Avatars",
+                            backgroundColor: tileColor,
+                            subtitle: "Gives letter avatars a splash of color",
+                          ),
+                          const SettingsDivider(padding: EdgeInsets.only(left: 16.0)),
+                        ],
+                      );
+                    }),
                     Obx(() => SettingsSwitch(
                           onChanged: (bool val) async {
                             SettingsSvc.settings.colorfulBubbles.value = val;
@@ -537,7 +544,7 @@ class _ThemingPanelState extends CustomState<ThemingPanel, void, ThemingPanelCon
                             showDialog(
                               context: context,
                               builder: (context) => AlertDialog(
-                                backgroundColor: context.theme.colorScheme.properSurface,
+                                backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
                                 title: Text("Downloading font file...", style: context.theme.textTheme.titleLarge),
                                 content: Column(
                                     mainAxisAlignment: MainAxisAlignment.center,
@@ -642,7 +649,7 @@ class _ThemingPanelState extends CustomState<ThemingPanel, void, ThemingPanelCon
         context: context,
         builder: (context) => AlertDialog(
               title: Text("Monet Theming Info", style: context.theme.textTheme.titleLarge),
-              backgroundColor: context.theme.colorScheme.properSurface,
+              backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
               content: Text(
                 "Harmonize - Overwrites primary color and blends remainder of colors with the current theme colors\r\n"
                 "Full - Overwrites primary, background, and accent colors, along with other minor colors.\r\n",

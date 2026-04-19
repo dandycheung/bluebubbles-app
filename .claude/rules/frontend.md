@@ -19,9 +19,6 @@ class _MyWidgetState extends CustomState<MyWidget, void, MyController> {
 }
 ```
 
-**Without a controller → use `OptimizedState`**
-- Provides frame-aware `setState()` to avoid jank; don't call raw `setState()` in these classes.
-
 **Plain stateless widget** → use `StatelessWidget` as normal. No special base needed.
 
 ## Controller Lifecycle

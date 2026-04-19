@@ -3,7 +3,7 @@ import 'package:bluebubbles/database/models.dart';
 import 'package:bluebubbles/models/models.dart' show HandleLookupKey;
 
 class HandleActions {
-  static Future<int> saveHandleAsync(Map<String, dynamic> data) async {
+  static Future<int> saveHandleAsync(dynamic data) async {
     final handleData = data['handleData'] as Map<String, dynamic>;
     final updateColor = data['updateColor'] as bool;
     final matchOnOriginalROWID = data['matchOnOriginalROWID'] as bool;
@@ -38,7 +38,7 @@ class HandleActions {
     });
   }
 
-  static Future<List<int>> bulkSaveHandlesAsync(Map<String, dynamic> data) async {
+  static Future<List<int>> bulkSaveHandlesAsync(dynamic data) async {
     final handlesData = (data['handlesData'] as List).cast<Map<String, dynamic>>();
     final matchOnOriginalROWID = data['matchOnOriginalROWID'] as bool;
 
@@ -73,7 +73,7 @@ class HandleActions {
     });
   }
 
-  static Future<int?> findOneHandleAsync(Map<String, dynamic> data) async {
+  static Future<int?> findOneHandleAsync(dynamic data) async {
     final id = data['id'] as int?;
     final originalROWID = data['originalROWID'] as int?;
     final address = data['address'] as String?;
@@ -110,7 +110,7 @@ class HandleActions {
     });
   }
 
-  static Future<List<int>> findHandlesAsync(Map<String, dynamic> data) async {
+  static Future<List<int>> findHandlesAsync(dynamic data) async {
     return Database.runInTransaction(TxMode.read, () {
       final handleBox = Database.handles;
 

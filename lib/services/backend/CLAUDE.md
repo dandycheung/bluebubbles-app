@@ -24,5 +24,6 @@ Each resource has an interface and a concrete action file → `interfaces/CLAUDE
 - `settings/` — `SettingsService` + `SharedPreferencesService` → `settings/CLAUDE.md`
 - `notifications/notifications_service.dart` — local notification dispatch
 - `java_dart_interop/` — Android method channel bridge → `java_dart_interop/CLAUDE.md`
-- `lifecycle_service.dart` — foreground/background lifecycle
-- `filesystem_service.dart` — file I/O operations
+- `lifecycle/` — foreground/background lifecycle → `lifecycle/CLAUDE.md`
+- `filesystem/` — file I/O, attachment path resolution → `filesystem/CLAUDE.md`
+- `setup/` — first-run server connection orchestration → `setup/CLAUDE.md`

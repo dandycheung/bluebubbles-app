@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/database/models.dart';
 import 'package:bluebubbles/services/services.dart';
@@ -11,7 +12,7 @@ void showChangeName(Chat chat, String method, BuildContext context) {
       context: context,
       builder: (_) {
         return AlertDialog(
-          backgroundColor: context.theme.colorScheme.properSurface,
+          backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
           actions: [
             TextButton(
               child: Text("OK",
@@ -23,7 +24,7 @@ void showChangeName(Chat chat, String method, BuildContext context) {
                       context: context,
                       builder: (BuildContext context) {
                         return AlertDialog(
-                          backgroundColor: context.theme.colorScheme.properSurface,
+                          backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
                           title: Text(
                             controller.text.isEmpty ? "Removing name..." : "Changing name to ${controller.text}...",
                             style: context.theme.textTheme.titleLarge,
@@ -32,7 +33,7 @@ void showChangeName(Chat chat, String method, BuildContext context) {
                             height: 70,
                             child: Center(
                               child: CircularProgressIndicator(
-                                backgroundColor: context.theme.colorScheme.properSurface,
+                                backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
                                 valueColor: AlwaysStoppedAnimation<Color>(context.theme.colorScheme.primary),
                               ),
                             ),
@@ -43,7 +44,7 @@ void showChangeName(Chat chat, String method, BuildContext context) {
                   if (response.statusCode == 200) {
                     Navigator.of(context, rootNavigator: true).pop();
                     Navigator.of(context, rootNavigator: true).pop();
-                    chat.changeNameAsync(controller.text);
+                    unawaited(ChatsSvc.setChatDisplayName(chat, controller.text));
                     showSnackbar("Notice", "Updated name successfully!");
                   } else {
                     Navigator.of(context, rootNavigator: true).pop();
@@ -51,7 +52,7 @@ void showChangeName(Chat chat, String method, BuildContext context) {
                   }
                 } else {
                   Navigator.of(context, rootNavigator: true).pop();
-                  chat.changeNameAsync(controller.text);
+                  unawaited(ChatsSvc.setChatDisplayName(chat, controller.text));
                 }
               },
             ),

@@ -24,7 +24,7 @@ class _MaterialConversationListState extends State<MaterialConversationList> {
   bool get showArchived => widget.parentController.showArchivedChats;
   bool get showUnknown => widget.parentController.showUnknownSenders;
   Color get backgroundColor => SettingsSvc.settings.windowEffect.value == WindowEffect.disabled
-      ? context.theme.colorScheme.background
+      ? context.theme.colorScheme.surface
       : Colors.transparent;
   ConversationListController get controller => widget.parentController;
 
@@ -64,80 +64,92 @@ class _MaterialConversationListState extends State<MaterialConversationList> {
             preferredSize: const Size.fromHeight(60),
             child: MaterialHeader(parentController: controller),
           ),
-          backgroundColor: backgroundColor,
-          extendBodyBehindAppBar: true,
+          backgroundColor: SettingsSvc.settings.windowEffect.value == WindowEffect.disabled
+              ? context.theme.colorScheme.surfaceContainerHighest
+              : Colors.transparent,
+          extendBodyBehindAppBar: false,
           floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
           floatingActionButton: !showArchived && !showUnknown
               ? ConversationListFAB(parentController: controller)
               : const SizedBox.shrink(),
-          body: Obx(() {
-            // Force reactivity by accessing observable values first
-            final loaded = ChatsSvc.loadedFirstChatBatch.value;
-            // Observe chat list version to trigger rebuild when order changes
-            final _ = ChatsSvc.chatListVersion.value;
+          body: ClipRRect(
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(34),
+              topRight: Radius.circular(34),
+            ),
+            child: Container(
+              color: backgroundColor,
+              child: Obx(() {
+                // Force reactivity by accessing observable values first
+                final loaded = ChatsSvc.loadedFirstChatBatch.value;
+                // Observe chat list version to trigger rebuild when order changes
+                final _ = ChatsSvc.chatListVersion.value;
 
-            final _chats = ChatsSvc.getFilteredChats(
-              showArchived: showArchived,
-              showUnknown: showUnknown,
-            );
+                final _chats = ChatsSvc.getFilteredChats(
+                  showArchived: showArchived,
+                  showUnknown: showUnknown,
+                );
 
-            if (!loaded || _chats.isEmpty) {
-              return Center(
-                child: Padding(
-                  padding: const EdgeInsets.only(top: 100),
-                  child: Column(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Text(
-                          !loaded
-                              ? "Loading chats..."
-                              : showArchived
-                                  ? "You have no archived chats"
-                                  : showUnknown
-                                      ? "You have no messages from unknown senders :)"
-                                      : "You have no chats :(",
-                          style: context.theme.textTheme.labelLarge,
-                          textAlign: TextAlign.center,
-                        ),
+                if (!loaded || _chats.isEmpty) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 100),
+                      child: Column(
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Text(
+                              !loaded
+                                  ? "Loading chats..."
+                                  : showArchived
+                                      ? "You have no archived chats"
+                                      : showUnknown
+                                          ? "You have no messages from unknown senders :)"
+                                          : "You have no chats :(",
+                              style: context.theme.textTheme.labelLarge,
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                          if (!loaded) buildProgressIndicator(context, size: 15),
+                        ],
                       ),
-                      if (!loaded) buildProgressIndicator(context, size: 15),
-                    ],
-                  ),
-                ),
-              );
-            }
-
-            return NotificationListener(
-              onNotification: (notif) {
-                if (notif is ScrollStartNotification) {
-                  controller.materialScrollStartPosition = controller.materialScrollController.offset;
+                    ),
+                  );
                 }
-                return true;
-              },
-              child: ScrollbarWrapper(
-                showScrollbar: true,
-                controller: controller.materialScrollController,
-                child: Obx(() => ListView.builder(
-                      controller: controller.materialScrollController,
-                      physics: ThemeSwitcher.getScrollPhysics(),
-                      findChildIndexCallback: (key) => findChildIndexByKey(_chats, key, (item) => item.guid),
-                      itemBuilder: (context, index) {
-                        final chat = _chats[index];
-                        return Container(
-                            key: ValueKey(chat.guid),
-                            child: ListItem(
-                                chat: chat,
-                                controller: controller,
-                                update: () {
-                                  setState(() {});
-                                }));
-                      },
-                      itemCount: _chats.length,
-                    )),
-              ),
-            );
-          }),
+
+                return NotificationListener(
+                  onNotification: (notif) {
+                    if (notif is ScrollStartNotification) {
+                      controller.materialScrollStartPosition = controller.materialScrollController.offset;
+                    }
+                    return true;
+                  },
+                  child: ScrollbarWrapper(
+                    showScrollbar: true,
+                    controller: controller.materialScrollController,
+                    child: Obx(() => ListView.builder(
+                          controller: controller.materialScrollController,
+                          physics: ThemeSwitcher.getScrollPhysics(),
+                          padding: const EdgeInsets.only(top: 8),
+                          findChildIndexCallback: (key) => findChildIndexByKey(_chats, key, (item) => item.guid),
+                          itemBuilder: (context, index) {
+                            final chat = _chats[index];
+                            return Container(
+                                key: ValueKey(chat.guid),
+                                child: ListItem(
+                                    chat: chat,
+                                    controller: controller,
+                                    update: () {
+                                      setState(() {});
+                                    }));
+                          },
+                          itemCount: _chats.length,
+                        )),
+                  ),
+                );
+              }),
+            ),
+          ),
         ),
       ),
     );

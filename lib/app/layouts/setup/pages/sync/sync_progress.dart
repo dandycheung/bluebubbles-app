@@ -76,7 +76,7 @@ class _SyncProgressState extends State<SyncProgress> {
                           style: context.theme.textTheme.bodyLarge!
                               .apply(
                                 fontSizeDelta: 1.5,
-                                color: context.theme.colorScheme.onBackground,
+                                color: context.theme.colorScheme.onSurface,
                               )
                               .copyWith(height: 2),
                         )),
@@ -98,7 +98,8 @@ class _SyncProgressState extends State<SyncProgress> {
                       height: context.height * 1 / 3,
                       child: Container(
                         decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(25), color: context.theme.colorScheme.properSurface),
+                            borderRadius: BorderRadius.circular(25),
+                            color: context.theme.colorScheme.surfaceContainerHighest),
                         padding: const EdgeInsets.all(10),
                         child: Obx(() => ListView.builder(
                               physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
@@ -108,7 +109,7 @@ class _SyncProgressState extends State<SyncProgress> {
                                   log.message,
                                   style: TextStyle(
                                     color: log.level == LogLevel.INFO
-                                        ? context.theme.colorScheme.properOnSurface
+                                        ? context.theme.colorScheme.onSurfaceVariant
                                         : context.theme.colorScheme.error,
                                     fontSize: 10,
                                   ),
@@ -142,8 +143,8 @@ class _SyncProgressState extends State<SyncProgress> {
                               borderRadius: BorderRadius.circular(20.0),
                             ),
                           ),
-                          backgroundColor: WidgetStateProperty.all(context.theme.colorScheme.background),
-                          shadowColor: WidgetStateProperty.all(context.theme.colorScheme.background),
+                          backgroundColor: WidgetStateProperty.all(context.theme.colorScheme.surface),
+                          shadowColor: WidgetStateProperty.all(context.theme.colorScheme.surface),
                           maximumSize: WidgetStateProperty.all(Size(context.width * 2 / 3, 36)),
                           minimumSize: WidgetStateProperty.all(Size(context.width * 2 / 3, 36)),
                         ),
@@ -170,11 +171,11 @@ class _SyncProgressState extends State<SyncProgress> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.upload, color: context.theme.colorScheme.onBackground, size: 20),
+                            Icon(Icons.upload, color: context.theme.colorScheme.onSurface, size: 20),
                             const SizedBox(width: 10),
                             Text("Restore Backups",
                                 style: context.theme.textTheme.bodyLarge!
-                                    .apply(fontSizeFactor: 1.1, color: context.theme.colorScheme.onBackground)),
+                                    .apply(fontSizeFactor: 1.1, color: context.theme.colorScheme.onSurface)),
                           ],
                         ),
                       ),

@@ -35,8 +35,8 @@ class _AdvancedThemingTileState extends State<AdvancedThemingTile> {
               child: Container(
                 decoration: widget.colorEntry.primary.value.computeDifference(
                             ThemeSvc.inDarkMode(context) || SettingsSvc.settings.skin.value == Skins.Samsung
-                                ? context.theme.colorScheme.background
-                                : context.theme.colorScheme.properSurface) <
+                                ? context.theme.colorScheme.surface
+                                : context.theme.colorScheme.surfaceContainerHighest) <
                         15
                     ? BoxDecoration(
                         border: Border.all(width: 0.5, color: context.theme.colorScheme.outline),
@@ -100,7 +100,7 @@ class _AdvancedThemingTileState extends State<AdvancedThemingTile> {
                             "Info - ${widget.colorEntry.primary.key} ${widget.colorEntry.textColor != null ? "/ ${widget.colorEntry.textColor!.key}" : ""}",
                             style: context.theme.textTheme.titleLarge,
                           ),
-                          backgroundColor: context.theme.colorScheme.properSurface,
+                          backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
                           content: Padding(
                             padding: const EdgeInsets.all(8.0),
                             child: Text(

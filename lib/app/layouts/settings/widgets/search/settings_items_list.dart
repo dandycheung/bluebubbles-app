@@ -200,7 +200,7 @@ List<Widget> buildSettingItemList({
         searchTags: [
           "Dark Mode",
           "Light Mode",
-          "Advanced Theming",
+          "Theme Studio",
           "Tablet Mode",
           "Immersive Mode",
           "Material You",
@@ -734,9 +734,13 @@ List<Widget> buildSettingItemList({
             child: SettingsTile(
               backgroundColor: tileColor,
               onTap: () async {
+                BuildContext? dialogCtx;
+
                 void closeDialog() {
                   Get.closeAllSnackbars();
-                  Navigator.of(context).pop();
+                  if (dialogCtx != null) {
+                    Navigator.of(dialogCtx!).pop();
+                  }
                   Future.delayed(const Duration(milliseconds: 400), () {
                     progress.value = null;
                     totalSize.value = null;
@@ -745,12 +749,15 @@ List<Widget> buildSettingItemList({
 
                 showDialog(
                   context: context,
-                  builder: (context) => ContactUploadProgress(
-                    progress: progress,
-                    totalSize: totalSize,
-                    uploadingContacts: uploadingContacts,
-                    onClose: closeDialog,
-                  ),
+                  builder: (dialogContext) {
+                    dialogCtx = dialogContext;
+                    return ContactUploadProgress(
+                      progress: progress,
+                      totalSize: totalSize,
+                      uploadingContacts: uploadingContacts,
+                      onClose: closeDialog,
+                    );
+                  },
                 );
 
                 final contacts = <Map<String, dynamic>>[];
@@ -903,7 +910,7 @@ List<Widget> buildSettingItemList({
                         "This will remove all attachments from this app. Recent attachments will be automatically re-downloaded when you enter a chat. This will not delete attachments from your server.",
                         style: context.theme.textTheme.bodyLarge,
                       ),
-                      backgroundColor: context.theme.colorScheme.properSurface,
+                      backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
                       actions: <Widget>[
                         TextButton(
                           child: Text("No",
@@ -957,7 +964,7 @@ List<Widget> buildSettingItemList({
                         "This will delete all app data, including your settings, messages, attachments, and more. This action cannot be undone. It is recommended that you take a backup of your settings before proceeding. This will also close the app once the process is complete.",
                         style: context.theme.textTheme.bodyLarge,
                       ),
-                      backgroundColor: context.theme.colorScheme.properSurface,
+                      backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
                       actions: <Widget>[
                         TextButton(
                           child: Text("No",

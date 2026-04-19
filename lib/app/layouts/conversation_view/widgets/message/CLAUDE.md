@@ -15,7 +15,7 @@ A message renders as a composition of specialized sub-widgets.
 | `popup/` | Long-press context menu / action sheet | → CLAUDE.md inside |
 | `interactive/` | Apple Pay, Game Pigeon, URL previews, maps, embedded media | → CLAUDE.md inside |
 | `chat_event/` | System messages (member added, subject changed) | |
-| `effects/` | Send effect overlays (balloon, confetti, etc.) | |
+| `effects/` | Send effect overlays (balloon, confetti, etc.) | → CLAUDE.md inside |
 | `misc/` | Message editing, selection, swipe-to-reply dispatcher | → CLAUDE.md inside |
 | `parts/` | Per-part-type renderers (a message can have multiple parts) | |
 | `shared/` | Shared utilities across message widgets | |

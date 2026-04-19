@@ -73,7 +73,7 @@ class _ReplyContent extends StatelessWidget {
       final isIOS = SettingsSvc.settings.skin.value == Skins.iOS;
 
       return Container(
-        color: context.theme.colorScheme.properSurface,
+        color: context.theme.colorScheme.surfaceContainerHighest,
         padding: EdgeInsets.only(left: !isIOS ? 20.0 : 0, right: isIOS ? 8.0 : 0),
         child: Row(
           children: [
@@ -125,7 +125,7 @@ class _CloseButton extends StatelessWidget {
       ),
       icon: Icon(
         icon,
-        color: context.theme.colorScheme.properOnSurface,
+        color: context.theme.colorScheme.onSurfaceVariant,
         size: 17,
       ),
       onPressed: onPressed,
@@ -187,7 +187,7 @@ class _ReplyText extends StatelessWidget {
           )),
       ]),
       style: context.textTheme.labelLarge!.copyWith(
-        color: context.theme.colorScheme.properOnSurface,
+        color: context.theme.colorScheme.onSurfaceVariant,
       ),
       maxLines: isIOS ? 1 : 2,
       overflow: TextOverflow.ellipsis,

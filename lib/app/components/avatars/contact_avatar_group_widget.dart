@@ -38,9 +38,21 @@ class ContactAvatarGroupWidget extends StatelessWidget {
   final bool editable;
 
   static final _materialGeneration = <int, List<dynamic>>{
-    2: [24.5 / 40, 10.5 / 40, <Alignment>[Alignment.topRight, Alignment.bottomLeft]],
-    3: [21.5 / 40, 9 / 40, <Alignment>[Alignment.bottomRight, Alignment.bottomLeft, Alignment.topCenter]],
-    4: [1 / 2, 8.7 / 40, <Alignment>[Alignment.bottomRight, Alignment.bottomLeft, Alignment.topLeft, Alignment.topRight]],
+    2: [
+      24.5 / 40,
+      10.5 / 40,
+      <Alignment>[Alignment.topRight, Alignment.bottomLeft]
+    ],
+    3: [
+      21.5 / 40,
+      9 / 40,
+      <Alignment>[Alignment.bottomRight, Alignment.bottomLeft, Alignment.topCenter]
+    ],
+    4: [
+      1 / 2,
+      8.7 / 40,
+      <Alignment>[Alignment.bottomRight, Alignment.bottomLeft, Alignment.topLeft, Alignment.topRight]
+    ],
   };
 
   List<Handle> _sortedHandles(List<Handle> handles) {
@@ -109,7 +121,7 @@ class ContactAvatarGroupWidget extends StatelessWidget {
                       height: avatarSize,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(avatarSize / 2),
-                        color: context.theme.colorScheme.properSurface,
+                        color: context.theme.colorScheme.surfaceContainerHighest,
                       ),
                     ),
                     ...List.generate(
@@ -142,13 +154,13 @@ class ContactAvatarGroupWidget extends StatelessWidget {
                                   height: tileSize,
                                   decoration: BoxDecoration(
                                       shape: BoxShape.circle,
-                                      color: context.theme.colorScheme.properSurface.withValues(alpha: 0.8),
+                                      color: context.theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.8),
                                       border: Border.all(
-                                          color: context.theme.colorScheme.background, width: avatarSize * 0.01)),
+                                          color: context.theme.colorScheme.surface, width: avatarSize * 0.01)),
                                   child: Icon(
                                     skin == Skins.iOS ? CupertinoIcons.group_solid : Icons.people,
                                     size: tileSize * 0.65,
-                                    color: context.theme.colorScheme.properOnSurface.withValues(alpha: 0.8),
+                                    color: context.theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
                                   ),
                                 ),
                               ),

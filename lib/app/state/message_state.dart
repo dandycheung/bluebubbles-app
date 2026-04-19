@@ -5,7 +5,6 @@ import 'package:bluebubbles/app/state/handle_state.dart';
 import 'package:bluebubbles/app/wrappers/stateful_boilerplate.dart';
 import 'package:bluebubbles/database/models.dart';
 import 'package:bluebubbles/services/services.dart';
-import 'package:bluebubbles/utils/logger/logger.dart';
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
@@ -76,6 +75,11 @@ class MessageState extends StatefulController {
   /// the animation has been kicked off so it can be retriggered later.
   final RxnInt playEffectPart = RxnInt(null);
 
+  /// Whether the bubble effect for this message has already been auto-played
+  /// once. Prevents the animation from firing again on subsequent renders.
+  /// Manual replay via the replay button always works regardless of this flag.
+  final RxBool hasEffectPlayed;
+
   /// Increment to trigger a re-download of all attachments in this message.
   /// [AttachmentHolder] registers `ever()` on this key to call _loadContent().
   final RxInt attachmentRefreshKey = 0.obs;
@@ -128,9 +132,7 @@ class MessageState extends StatefulController {
   /// even for outgoing group-event messages).
   String get senderDisplayName {
     if (isFromMe.value || sender == null) return 'You';
-    return sender?.displayName.value
-        ?? message.handleRelation.target?.displayName
-        ?? 'Unknown';
+    return sender?.displayName.value ?? message.handleRelation.target?.displayName ?? 'Unknown';
   }
 
   /// Adjacent messages for layout context (set by MessageHolder in initState)
@@ -174,7 +176,8 @@ class MessageState extends StatefulController {
         hasError = (message.error > 0).obs,
         isSending = (message.guid?.startsWith('temp') == true && message.error == 0).obs,
         isSent = (!(message.guid?.startsWith('temp') ?? false)).obs,
-        isReaction = (message.associatedMessageGuid != null).obs {
+        isReaction = (message.associatedMessageGuid != null).obs,
+        hasEffectPlayed = message.hasEffectPlayed.obs {
     // Create AttachmentState for every attachment already on the message.
     for (final attachment in message.dbAttachments) {
       if (attachment.guid != null) {
@@ -211,6 +214,16 @@ class MessageState extends StatefulController {
   void triggerBubbleEffect(int part) {
     if (playEffectPart.value == part) playEffectPart.value = null;
     playEffectPart.value = part;
+  }
+
+  /// Marks this message's bubble effect as having been played once.
+  /// Persists the flag to the database so it survives app restarts.
+  /// Only called after an auto-triggered animation completes — manual
+  /// replays do not call this.
+  void markEffectPlayed() {
+    if (hasEffectPlayed.value) return;
+    hasEffectPlayed.value = true;
+    message.setEffectPlayed();
   }
 
   /// Returns the [AttachmentState] for [attachmentGuid], or `null` if none

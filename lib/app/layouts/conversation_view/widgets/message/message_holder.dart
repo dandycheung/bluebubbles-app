@@ -170,11 +170,7 @@ class _MessageHolderState extends State<MessageHolder> with ThemeHelpers {
 
         // Use MessageState observables for proper reactivity
         final isTempMessage = controller.isSending.value;
-        final isFromMe = controller.isFromMe.value;
-        final associatedMessages = controller.associatedMessages;
-
-        // Cache stickers filtering
-        final stickers = associatedMessages.where((e) => e.associatedMessageType == "sticker").toList();
+        final isFromMe = controller.message.isFromMe!;
 
         return AnimatedPadding(
           duration: const Duration(milliseconds: 100),
@@ -229,7 +225,7 @@ class _MessageHolderState extends State<MessageHolder> with ThemeHelpers {
                                         decoration: replyTo!.isFromMe == message.isFromMe
                                             ? ReplyLineDecoration(
                                                 isFromMe: message.isFromMe!,
-                                                color: context.theme.colorScheme.properSurface,
+                                                color: context.theme.colorScheme.surfaceContainerHighest,
                                                 connectUpper: false,
                                                 connectLower: true,
                                                 context: context,
@@ -260,7 +256,7 @@ class _MessageHolderState extends State<MessageHolder> with ThemeHelpers {
                                               width: double.infinity,
                                               child: CustomPaint(
                                                 painter: _ReplyLinePainter(
-                                                  color: context.theme.colorScheme.properSurface,
+                                                  color: context.theme.colorScheme.surfaceContainerHighest,
                                                   isFromMe: message.isFromMe!,
                                                 ),
                                                 child: MessageSender(olderMessage: olderMessage),
@@ -274,7 +270,7 @@ class _MessageHolderState extends State<MessageHolder> with ThemeHelpers {
                                           width: double.infinity,
                                           child: CustomPaint(
                                             painter: _ReplyLinePainter(
-                                              color: context.theme.colorScheme.properSurface,
+                                              color: context.theme.colorScheme.surfaceContainerHighest,
                                               isFromMe: message.isFromMe!,
                                             ),
                                             child: ReactionSpacing(
@@ -339,7 +335,7 @@ class _MessageHolderState extends State<MessageHolder> with ThemeHelpers {
                                                           newerMessage != null))
                                               ? ReplyLineDecoration(
                                                   isFromMe: message.isFromMe!,
-                                                  color: context.theme.colorScheme.properSurface,
+                                                  color: context.theme.colorScheme.surfaceContainerHighest,
                                                   connectUpper: message.connectToUpper(),
                                                   connectLower:
                                                       newerMessage != null && message.connectToLower(newerMessage!),
@@ -404,89 +400,104 @@ class _MessageHolderState extends State<MessageHolder> with ThemeHelpers {
                                                             ),
                                                           ),
                                                         Stack(
-                                                          alignment: Alignment.center,
+                                                          alignment:
+                                                              isFromMe ? Alignment.centerRight : Alignment.centerLeft,
                                                           fit: StackFit.loose,
                                                           clipBehavior: Clip.none,
                                                           children: [
-                                                            // actual message content
-                                                            BubbleEffects(
-                                                              part: index,
-                                                              globalKey: keys.length > index ? keys[index] : null,
-                                                              showTail: message.showTail(newerMessage) &&
-                                                                  e.part == controller.parts.length - 1,
-                                                              child: MessagePopupHolder(
-                                                                key: keys.length > index ? keys[index] : null,
-                                                                controller: controller,
-                                                                cvController: widget.cvController,
-                                                                part: e,
-                                                                isEditing: isEditing(e.part),
-                                                                child: SwipeToReplyWrapper(
-                                                                  enabled: canSwipeToReply && !isEditing(e.part),
-                                                                  partIndex: index,
-                                                                  replyOffset: replyOffsets[index],
-                                                                  cvController: widget.cvController,
-                                                                  child: ClipPath(
-                                                                    clipper: TailClipper(
-                                                                      isFromMe: message.isFromMe!,
-                                                                      showTail: message.showTail(newerMessage) &&
-                                                                          e.part == controller.parts.length - 1,
-                                                                      connectLower: iOS
-                                                                          ? false
-                                                                          : (e.part != 0 &&
-                                                                                  e.part !=
-                                                                                      controller.parts.length - 1) ||
-                                                                              (e.part == 0 &&
-                                                                                  controller.parts.length > 1),
-                                                                      connectUpper: iOS ? false : e.part != 0,
-                                                                    ),
-                                                                    child: Stack(
-                                                                      alignment: Alignment.centerRight,
-                                                                      children: [
-                                                                        MessagePartContent(
-                                                                          messagePart: e,
+                                                            // Inner Stack: bubble + reactions, sized by the bubble alone
+                                                            // so reactions are always anchored to the bubble edge
+                                                            Stack(
+                                                              alignment: isFromMe
+                                                                  ? Alignment.centerRight
+                                                                  : Alignment.centerLeft,
+                                                              fit: StackFit.loose,
+                                                              clipBehavior: Clip.none,
+                                                              children: [
+                                                                // actual message content
+                                                                BubbleEffects(
+                                                                  part: index,
+                                                                  globalKey: keys.length > index ? keys[index] : null,
+                                                                  showTail: message.showTail(newerMessage) &&
+                                                                      e.part == controller.parts.length - 1,
+                                                                  child: MessagePopupHolder(
+                                                                    key: keys.length > index ? keys[index] : null,
+                                                                    controller: controller,
+                                                                    cvController: widget.cvController,
+                                                                    part: e,
+                                                                    isEditing: isEditing(e.part),
+                                                                    child: SwipeToReplyWrapper(
+                                                                      enabled: canSwipeToReply && !isEditing(e.part),
+                                                                      partIndex: index,
+                                                                      replyOffset: replyOffsets[index],
+                                                                      cvController: widget.cvController,
+                                                                      child: ClipPath(
+                                                                        clipper: TailClipper(
+                                                                          isFromMe: message.isFromMe!,
+                                                                          showTail: message.showTail(newerMessage) &&
+                                                                              e.part == controller.parts.length - 1,
+                                                                          connectLower: iOS
+                                                                              ? false
+                                                                              : (e.part != 0 &&
+                                                                                      e.part !=
+                                                                                          controller.parts.length -
+                                                                                              1) ||
+                                                                                  (e.part == 0 &&
+                                                                                      controller.parts.length > 1),
+                                                                          connectUpper: iOS ? false : e.part != 0,
                                                                         ),
-                                                                        if (message.isFromMe!)
-                                                                          Obx(() {
-                                                                            final editStuff = widget
-                                                                                .cvController.editing
-                                                                                .firstWhereOrNull((e2) =>
-                                                                                    e2.message.guid == message.guid! &&
-                                                                                    e2.part.part == e.part);
-                                                                            return AnimatedSize(
-                                                                                duration:
-                                                                                    const Duration(milliseconds: 250),
-                                                                                alignment: Alignment.centerRight,
-                                                                                curve: Curves.easeOutBack,
-                                                                                child: editStuff == null
-                                                                                    ? const SizedBox.shrink()
-                                                                                    : MessageEditField(
-                                                                                        part: e.part,
-                                                                                        editController:
-                                                                                            editStuff.controller,
-                                                                                        cvController:
-                                                                                            widget.cvController,
-                                                                                        onComplete: completeEdit,
-                                                                                      ));
-                                                                          }),
-                                                                      ],
+                                                                        child: Stack(
+                                                                          alignment: Alignment.centerRight,
+                                                                          children: [
+                                                                            MessagePartContent(
+                                                                              messagePart: e,
+                                                                            ),
+                                                                            if (message.isFromMe!)
+                                                                              Obx(() {
+                                                                                final editStuff = widget
+                                                                                    .cvController.editing
+                                                                                    .firstWhereOrNull((e2) =>
+                                                                                        e2.message.guid ==
+                                                                                            message.guid! &&
+                                                                                        e2.part.part == e.part);
+                                                                                return AnimatedSize(
+                                                                                    duration: const Duration(
+                                                                                        milliseconds: 250),
+                                                                                    alignment: Alignment.centerRight,
+                                                                                    curve: Curves.easeOutBack,
+                                                                                    child: editStuff == null
+                                                                                        ? const SizedBox.shrink()
+                                                                                        : MessageEditField(
+                                                                                            part: e.part,
+                                                                                            editController:
+                                                                                                editStuff.controller,
+                                                                                            cvController:
+                                                                                                widget.cvController,
+                                                                                            onComplete: completeEdit,
+                                                                                          ));
+                                                                              }),
+                                                                          ],
+                                                                        ),
+                                                                      ),
                                                                     ),
                                                                   ),
                                                                 ),
-                                                              ),
+                                                                // Reactions are in the inner Stack so they are always
+                                                                // positioned relative to the bubble, not the sticker
+                                                                MessageReactions(
+                                                                  messageParts: messageParts,
+                                                                  part: e,
+                                                                  chatGuid: chat.guid,
+                                                                  reactionsForPart: reactionsForPart,
+                                                                ),
+                                                              ],
                                                             ),
-                                                            // show stickers on top
+                                                            // Stickers are in the outer Stack so they contribute to
+                                                            // the message holder's size but don't affect bubble alignment
                                                             StickerObserver(
                                                               messageParts: messageParts,
-                                                              stickers: stickers,
                                                               part: e,
                                                               cvController: widget.cvController,
-                                                            ),
-                                                            // show reactions on top
-                                                            MessageReactions(
-                                                              messageParts: messageParts,
-                                                              part: e,
-                                                              chatGuid: chat.guid,
-                                                              reactionsForPart: reactionsForPart,
                                                             ),
                                                           ],
                                                         ),

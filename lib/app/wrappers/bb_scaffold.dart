@@ -2,7 +2,6 @@ import 'package:bluebubbles/app/wrappers/bb_annotated_region.dart';
 import 'package:bluebubbles/services/services.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_acrylic/window_effect.dart';
-import 'package:get/get.dart';
 
 /// BlueBubbles standardized Scaffold wrapper
 ///
@@ -102,34 +101,35 @@ class BBScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Obx(() {
-      final effectiveBackgroundColor = backgroundColor ??
-          (SettingsSvc.settings.windowEffect.value != WindowEffect.disabled
-              ? Colors.transparent
-              : Theme.of(context).colorScheme.background);
+    // Wrapping this in Obx may cause issues, so removingit for now.
+    // If we need to react to changes in settings, this needs to come from the "top down",
+    // instead of going through GetX's reactive system here.
+    final effectiveBackgroundColor = backgroundColor ??
+        (SettingsSvc.settings.windowEffect.value != WindowEffect.disabled
+            ? Colors.transparent
+            : Theme.of(context).colorScheme.surface);
 
-      return BBAnnotatedRegion(
-        statusBarIconBrightness: statusBarIconBrightness,
-        systemNavigationBarIconBrightness: systemNavigationBarIconBrightness,
-        systemNavigationBarColor: systemNavigationBarColor,
-        statusBarColor: statusBarColor,
-        child: Scaffold(
-          backgroundColor: effectiveBackgroundColor,
-          appBar: appBar,
-          body: body,
-          floatingActionButton: floatingActionButton,
-          floatingActionButtonLocation: floatingActionButtonLocation,
-          bottomNavigationBar: bottomNavigationBar,
-          drawer: drawer,
-          endDrawer: endDrawer,
-          bottomSheet: bottomSheet,
-          extendBodyBehindAppBar: extendBodyBehindAppBar,
-          extendBody: extendBody,
-          resizeToAvoidBottomInset: resizeToAvoidBottomInset,
-          persistentFooterButtons: persistentFooterButtons,
-          persistentFooterAlignment: persistentFooterAlignment ?? AlignmentDirectional.centerEnd,
-        ),
-      );
-    });
+    return BBAnnotatedRegion(
+      statusBarIconBrightness: statusBarIconBrightness,
+      systemNavigationBarIconBrightness: systemNavigationBarIconBrightness,
+      systemNavigationBarColor: systemNavigationBarColor,
+      statusBarColor: statusBarColor,
+      child: Scaffold(
+        backgroundColor: effectiveBackgroundColor,
+        appBar: appBar,
+        body: body,
+        floatingActionButton: floatingActionButton,
+        floatingActionButtonLocation: floatingActionButtonLocation,
+        bottomNavigationBar: bottomNavigationBar,
+        drawer: drawer,
+        endDrawer: endDrawer,
+        bottomSheet: bottomSheet,
+        extendBodyBehindAppBar: extendBodyBehindAppBar,
+        extendBody: extendBody,
+        resizeToAvoidBottomInset: resizeToAvoidBottomInset,
+        persistentFooterButtons: persistentFooterButtons,
+        persistentFooterAlignment: persistentFooterAlignment ?? AlignmentDirectional.centerEnd,
+      ),
+    );
   }
 }

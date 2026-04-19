@@ -7,8 +7,7 @@ Handles messages with Apple payload data: URL previews, Apple Pay, Game Pigeon i
 | File | Purpose |
 |------|---------|
 | `interactive_holder.dart` | **Entry point** — routes on `message.payloadData` type |
-| `url_preview.dart` | Link previews (current implementation) |
-| `url_preview.legacy.dart` | Legacy URL preview fallback for older server versions |
+| `url_preview.dart` | Link previews |
 | `apple_pay.dart` | Apple Pay request / confirmation UI |
 | `game_pigeon.dart` | Game Pigeon game invitation card |
 | `embedded_media.dart` | Maps, Apple Music, iBooks, and other embedded content types |

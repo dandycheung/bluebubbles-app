@@ -56,7 +56,7 @@ class _SamsungConversationTileState extends CustomState<SamsungConversationTile,
                         parentController: controller,
                         style: context.theme.textTheme.bodyMedium!.copyWith(
                           color: controller.shouldHighlight.value
-                              ? context.theme.colorScheme.onBackground
+                              ? context.theme.colorScheme.onSurface
                               : context.theme.colorScheme.outline,
                           height: 1.5,
                         ),
@@ -77,11 +77,11 @@ class _SamsungConversationTileState extends CustomState<SamsungConversationTile,
             color: controller.isSelected
                 ? context.theme.colorScheme.primaryContainer.withValues(alpha: 0.5)
                 : shouldPartialHighlight
-                    ? context.theme.colorScheme.properSurface
+                    ? context.theme.colorScheme.surfaceContainerHighest
                     : shouldHighlight
                         ? context.theme.colorScheme.primaryContainer
                         : hoverHighlight
-                            ? context.theme.colorScheme.properSurface.withValues(alpha: 0.5)
+                            ? context.theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5)
                             : null,
           ),
           duration: const Duration(milliseconds: 100),
@@ -140,7 +140,7 @@ class _SamsungTrailingState extends CustomState<SamsungTrailing, void, Conversat
                     color: hasError
                         ? context.theme.colorScheme.error
                         : controller.shouldHighlight.value || unread
-                            ? context.theme.colorScheme.onBackground
+                            ? context.theme.colorScheme.onSurface
                             : context.theme.colorScheme.outline,
                     fontWeight: controller.shouldHighlight.value ? FontWeight.w500 : null,
                   ),
@@ -154,7 +154,7 @@ class _SamsungTrailingState extends CustomState<SamsungTrailing, void, Conversat
                   Icon(
                     Icons.notifications_off,
                     color: controller.shouldHighlight.value || unread
-                        ? context.theme.colorScheme.onBackground
+                        ? context.theme.colorScheme.onSurface
                         : context.theme.colorScheme.outline,
                     size: 16,
                   ),

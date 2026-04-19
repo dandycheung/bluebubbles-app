@@ -418,7 +418,7 @@ class SettingsService {
     showDialog(
       context: Get.context!,
       builder: (context) => AlertDialog(
-        backgroundColor: context.theme.colorScheme.properSurface,
+        backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
         title: Text("Server Update Check", style: context.theme.textTheme.titleLarge),
         content: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -525,7 +525,7 @@ class SettingsService {
     showDialog(
       context: Get.context!,
       builder: (context) => AlertDialog(
-        backgroundColor: context.theme.colorScheme.properSurface,
+        backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
         title: Text("App Update Check", style: context.theme.textTheme.titleLarge),
         content: Column(
           mainAxisAlignment: MainAxisAlignment.center,

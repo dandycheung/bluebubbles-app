@@ -55,7 +55,7 @@ class _CupertinoConversationTileState extends CustomState<CupertinoConversationT
             dense: SettingsSvc.settings.denseChatTiles.value,
             contentPadding: const EdgeInsets.only(left: 0),
             visualDensity: SettingsSvc.settings.denseChatTiles.value ? VisualDensity.compact : null,
-            minVerticalPadding: SettingsSvc.settings.denseChatTiles.value ? 7.5 : 10,
+            minVerticalPadding: 6,
             horizontalTitleGap: 10,
             title: Row(
               children: [
@@ -99,11 +99,11 @@ class _CupertinoConversationTileState extends CustomState<CupertinoConversationT
           duration: const Duration(milliseconds: 100),
           decoration: BoxDecoration(
             color: controller.shouldPartialHighlight.value
-                ? context.theme.colorScheme.properSurface.lightenOrDarken(10)
+                ? context.theme.colorScheme.surfaceContainerHighest.lightenOrDarken(10)
                 : controller.shouldHighlight.value
                     ? context.theme.colorScheme.bubble(context, controller.chat.isIMessage)
                     : controller.hoverHighlight.value
-                        ? context.theme.colorScheme.properSurface.withValues(alpha: 0.5)
+                        ? context.theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5)
                         : null,
             borderRadius: BorderRadius.circular(controller.shouldHighlight.value ||
                     controller.shouldPartialHighlight.value ||
@@ -169,32 +169,40 @@ class _CupertinoTrailingState extends CustomState<CupertinoTrailing, void, Conve
                         ? context.theme.colorScheme.error
                         : controller.shouldHighlight.value
                             ? context.theme.colorScheme.onBubble(context, controller.chat.isIMessage)
-                            : context.theme.colorScheme.outline,
+                            : context.theme.colorScheme.outline.withValues(alpha: 0.75),
                     fontWeight: controller.shouldHighlight.value ? FontWeight.w500 : null,
                   )
-                  .apply(fontSizeFactor: 1.1),
+                  .apply(fontSizeFactor: 1.15),
               overflow: TextOverflow.clip,
             ),
-            Column(
-              mainAxisSize: MainAxisSize.min,
+            const SizedBox(width: 8),
+            Stack(
+              clipBehavior: Clip.none,
+              alignment: Alignment.topCenter,
               children: [
-                Icon(
-                  CupertinoIcons.forward,
-                  color: controller.shouldHighlight.value
-                      ? context.theme.colorScheme.onBubble(context, controller.chat.isIMessage)
-                      : context.theme.colorScheme.outline,
-                  size: 15,
+                Padding(
+                  padding: const EdgeInsets.only(top: 1),
+                  child: Icon(
+                    CupertinoIcons.forward,
+                    color: controller.shouldHighlight.value
+                        ? context.theme.colorScheme.onBubble(context, controller.chat.isIMessage)
+                        : context.theme.colorScheme.outline.withValues(alpha: 0.75),
+                    size: 16,
+                  ),
                 ),
                 if (chatState.muteType.value == "mute")
-                  Padding(
-                      padding: const EdgeInsets.only(top: 5.0),
-                      child: Icon(
-                        CupertinoIcons.bell_slash_fill,
-                        color: controller.shouldHighlight.value
-                            ? context.theme.colorScheme.onBubble(context, controller.chat.isIMessage)
-                            : context.theme.colorScheme.outline,
-                        size: 12,
-                      ))
+                  Positioned(
+                    top: 22,
+                    left: 0,
+                    right: 0,
+                    child: Icon(
+                      CupertinoIcons.bell_slash_fill,
+                      color: controller.shouldHighlight.value
+                          ? context.theme.colorScheme.onBubble(context, controller.chat.isIMessage)
+                          : context.theme.colorScheme.outline.withValues(alpha: 0.85),
+                      size: 12,
+                    ),
+                  ),
               ],
             ),
           ],
@@ -224,7 +232,7 @@ class _UnreadIconState extends CustomState<UnreadIcon, void, ConversationTileCon
   @override
   Widget build(BuildContext context) {
     return Padding(
-        padding: const EdgeInsets.only(left: 5.0, right: 5.0),
+        padding: const EdgeInsets.only(left: 8.0, right: 6.0),
         child: Obx(
           () => (ChatsSvc.getChatState(controller.chat.guid)?.hasUnreadMessage.value ?? false)
               ? Container(
@@ -232,10 +240,10 @@ class _UnreadIconState extends CustomState<UnreadIcon, void, ConversationTileCon
                     borderRadius: BorderRadius.circular(35),
                     color: context.theme.colorScheme.primary,
                   ),
-                  width: 10,
-                  height: 10,
+                  width: 12,
+                  height: 12,
                 )
-              : const SizedBox(width: 10),
+              : const SizedBox(width: 12),
         ));
   }
 }

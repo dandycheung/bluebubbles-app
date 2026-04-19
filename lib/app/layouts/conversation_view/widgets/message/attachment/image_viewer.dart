@@ -143,7 +143,7 @@ class _ImageViewerState extends State<ImageViewer> with AutomaticKeepAliveClient
                 return Container(
                   width: displayWidth,
                   height: displayHeight,
-                  color: context.theme.colorScheme.properSurface.withOpacity(0.3),
+                  color: context.theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
                   child: Center(
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
@@ -170,14 +170,14 @@ class _ImageViewerState extends State<ImageViewer> with AutomaticKeepAliveClient
                                   "Image Stacktrace",
                                   style: context.theme.textTheme.titleLarge,
                                 ),
-                                backgroundColor: context.theme.colorScheme.properSurface,
+                                backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
                                 content: SizedBox(
                                   width: NavigationSvc.width(context) * 3 / 5,
                                   height: context.height * 1 / 4,
                                   child: Container(
                                     padding: const EdgeInsets.all(10.0),
                                     decoration: BoxDecoration(
-                                        color: context.theme.colorScheme.background,
+                                        color: context.theme.colorScheme.surface,
                                         borderRadius: const BorderRadius.all(Radius.circular(10))),
                                     child: SingleChildScrollView(
                                       child: SelectableText(
@@ -231,7 +231,7 @@ class _ImageViewerState extends State<ImageViewer> with AutomaticKeepAliveClient
             return Container(
               width: displayWidth,
               height: displayHeight,
-              color: context.theme.colorScheme.properSurface.withOpacity(0.3),
+              color: context.theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
               child: Center(
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
@@ -273,7 +273,7 @@ class _ImageViewerState extends State<ImageViewer> with AutomaticKeepAliveClient
                     return Container(
                       width: displayWidth,
                       height: displayHeight,
-                      color: context.theme.colorScheme.properSurface.withOpacity(0.3),
+                      color: context.theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
                       child: Center(
                         child: CircularProgressIndicator(
                           strokeWidth: 2,

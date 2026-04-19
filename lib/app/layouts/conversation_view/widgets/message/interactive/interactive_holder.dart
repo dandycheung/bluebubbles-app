@@ -81,11 +81,15 @@ class _InteractiveHolderState extends State<InteractiveHolder> with AutomaticKee
                   : TailPainter(
                       isFromMe: message.isFromMe!,
                       showTail: false,
-                      color: context.theme.colorScheme.properSurface,
+                      color: (context.theme.extensions[BubbleColors] as BubbleColors?)?.receivedBubbleColor ??
+                          context.theme.colorScheme.surfaceContainerHighest,
                       width: 1.5,
                     ),
               child: Ink(
-                color: iOS ? context.theme.colorScheme.properSurface : null,
+                color: iOS
+                    ? ((context.theme.extensions[BubbleColors] as BubbleColors?)?.receivedBubbleColor ??
+                        context.theme.colorScheme.surfaceContainerHighest)
+                    : null,
                 child: ConstrainedBox(
                   constraints: BoxConstraints(
                     maxWidth: NavigationSvc.width(context) * (NavigationSvc.isTabletMode(context) ? 0.5 : 0.6),

@@ -410,7 +410,8 @@ class _DesktopPanelState extends State<DesktopPanel> with ThemeHelpers {
 
                                                   Color color = selected
                                                       ? context.theme.colorScheme.primary
-                                                      : context.theme.colorScheme.properSurface.lightenOrDarken(10);
+                                                      : context.theme.colorScheme.surfaceContainerHighest
+                                                          .lightenOrDarken(10);
 
                                                   return MouseRegion(
                                                     cursor: hardDisabled

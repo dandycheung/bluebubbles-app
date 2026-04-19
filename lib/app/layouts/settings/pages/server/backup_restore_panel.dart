@@ -93,7 +93,7 @@ class _BackupRestorePanelState extends State<BackupRestorePanel> with ThemeHelpe
         context: context,
         builder: (BuildContext context) {
           return AlertDialog(
-            backgroundColor: context.theme.colorScheme.properSurface,
+            backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
             title: Text(
               "Choose Backup Location",
               style: context.theme.textTheme.titleLarge,
@@ -131,7 +131,7 @@ class _BackupRestorePanelState extends State<BackupRestorePanel> with ThemeHelpe
             actions: [
               IconButton(
                 icon: Icon(iOS ? CupertinoIcons.arrow_counterclockwise : Icons.refresh,
-                    color: context.theme.colorScheme.onBackground),
+                    color: context.theme.colorScheme.onSurface),
                 onPressed: () {
                   fetching.value = true;
                   settings.clear();
@@ -283,14 +283,14 @@ class _BackupRestorePanelState extends State<BackupRestorePanel> with ThemeHelpe
                                           "Settings Data",
                                           style: context.theme.textTheme.titleLarge,
                                         ),
-                                        backgroundColor: context.theme.colorScheme.properSurface,
+                                        backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
                                         content: SizedBox(
                                           width: NavigationSvc.width(context) * 3 / 5,
                                           height: context.height * 1 / 4,
                                           child: Container(
                                             padding: const EdgeInsets.all(10.0),
                                             decoration: BoxDecoration(
-                                                color: context.theme.colorScheme.background,
+                                                color: context.theme.colorScheme.surface,
                                                 borderRadius: const BorderRadius.all(Radius.circular(10))),
                                             child: SingleChildScrollView(
                                               child: SelectableText(
@@ -454,7 +454,7 @@ class _BackupRestorePanelState extends State<BackupRestorePanel> with ThemeHelpe
                                         "Settings Backup Creation",
                                         style: context.theme.textTheme.titleLarge,
                                       ),
-                                      backgroundColor: context.theme.colorScheme.properSurface,
+                                      backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
                                       content: Column(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
@@ -738,14 +738,14 @@ class _BackupRestorePanelState extends State<BackupRestorePanel> with ThemeHelpe
                                           "Theme Data",
                                           style: context.theme.textTheme.titleLarge,
                                         ),
-                                        backgroundColor: context.theme.colorScheme.properSurface,
+                                        backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
                                         content: SizedBox(
                                           width: NavigationSvc.width(context) * 3 / 5,
                                           height: context.height * 1 / 4,
                                           child: Container(
                                             padding: const EdgeInsets.all(10.0),
                                             decoration: BoxDecoration(
-                                                color: context.theme.colorScheme.background,
+                                                color: context.theme.colorScheme.surface,
                                                 borderRadius: const BorderRadius.all(Radius.circular(10))),
                                             child: SingleChildScrollView(
                                               child: SelectableText(

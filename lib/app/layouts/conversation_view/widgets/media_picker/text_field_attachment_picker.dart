@@ -38,6 +38,7 @@ class AttachmentPicker extends StatefulWidget {
 class _AttachmentPickerState extends State<AttachmentPicker> with ThemeHelpers {
   List<AssetEntity> _images = <AssetEntity>[];
   bool _isLoadingImages = false;
+  bool _permissionDenied = false;
 
   ConversationViewController get controller => widget.controller;
 
@@ -60,9 +61,10 @@ class _AttachmentPickerState extends State<AttachmentPicker> with ThemeHelpers {
 
       final PermissionState ps = await PhotoManager.requestPermissionExtend();
       if (!ps.hasAccess) {
-        showSnackbar("Error", "Storage permission not granted!");
+        if (mounted) setState(() => _permissionDenied = true);
         return;
       }
+      if (mounted && _permissionDenied) setState(() => _permissionDenied = false);
 
       List<AssetPathEntity> list = await PhotoManager.getAssetPathList(
         onlyAll: true,
@@ -232,12 +234,100 @@ class _AttachmentPickerState extends State<AttachmentPicker> with ThemeHelpers {
     );
   }
 
+  Widget _buildStatusSliver({
+    required IconData icon,
+    required String message,
+    required String buttonLabel,
+    required VoidCallback onPressed,
+  }) {
+    return SliverToBoxAdapter(
+      child: SizedBox(
+        width: 280,
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, size: 36, color: context.theme.colorScheme.outline),
+                const SizedBox(height: 8),
+                Text(
+                  message,
+                  textAlign: TextAlign.center,
+                  style: context.theme.textTheme.bodySmall!.copyWith(
+                    color: context.theme.colorScheme.outline,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    backgroundColor: context.theme.colorScheme.primary,
+                    foregroundColor: context.theme.colorScheme.onPrimary,
+                  ),
+                  onPressed: onPressed,
+                  child: Text(buttonLabel),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildImageGrid() {
     if (_isLoadingImages) {
       return const SliverToBoxAdapter(
-        child: Center(
-          child: CupertinoActivityIndicator(),
+        // Explicit width so the item occupies space in the horizontal CustomScrollView.
+        child: SizedBox(
+          width: 280,
+          child: Center(child: CupertinoActivityIndicator()),
         ),
+      );
+    }
+
+    if (_permissionDenied) {
+      return _buildStatusSliver(
+        icon: Icons.photo_library_outlined,
+        message: "Photo access is required to browse your gallery.",
+        buttonLabel: "Grant Access",
+        onPressed: () async {
+          final ps = await PhotoManager.requestPermissionExtend();
+          if (ps.hasAccess) {
+            await getAttachments();
+          } else {
+            await openAppSettings();
+          }
+        },
+      );
+    }
+
+    // Access was granted but no photos came back. This reliably covers:
+    // - Limited access with no photos selected (photo_manager collapses
+    //   PermissionState back to 'authorized' after presentLimited(), so
+    //   ps.isLimited is not trustworthy post-flow)
+    // - Fully authorized but genuinely empty library
+    if (_images.isEmpty) {
+      // PhotoManager.presentLimited() is broken on Android — it silently does
+      // nothing on most devices (known upstream issue #1357). On Android, direct
+      // the user to App Settings where they can update their photo selection.
+      // On iOS, presentLimited() works correctly.
+      final isAndroid = !kIsWeb && Platform.isAndroid;
+      return _buildStatusSliver(
+        icon: Icons.photo_library_outlined,
+        message: isAndroid
+            ? "No photos are accessible. Tap below to open Settings and update your photo access."
+            : "No photos are accessible. Tap below to choose which photos this app can access.",
+        buttonLabel: isAndroid ? "Open Settings" : "Select Photos",
+        onPressed: () async {
+          if (isAndroid) {
+            await openAppSettings();
+          } else {
+            await PhotoManager.presentLimited();
+          }
+          await getAttachments();
+        },
       );
     }
 
@@ -302,7 +392,7 @@ class _ActionButton extends StatelessWidget {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(10),
         ),
-        backgroundColor: context.theme.colorScheme.properSurface,
+        backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
       ),
       onPressed: onPressed,
       child: Column(
@@ -310,12 +400,12 @@ class _ActionButton extends StatelessWidget {
         children: <Widget>[
           Icon(
             icon,
-            color: context.theme.colorScheme.properOnSurface,
+            color: context.theme.colorScheme.onSurfaceVariant,
           ),
           const SizedBox(height: 8.0),
           Text(
             label,
-            style: context.theme.textTheme.labelLarge!.copyWith(color: context.theme.colorScheme.properOnSurface),
+            style: context.theme.textTheme.labelLarge!.copyWith(color: context.theme.colorScheme.onSurfaceVariant),
           ),
         ],
       ),
@@ -525,7 +615,7 @@ class _FeatureButton extends StatelessWidget {
                 },
               ),
             ],
-            backgroundColor: context.theme.colorScheme.properSurface,
+            backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
           );
         },
       );
@@ -540,7 +630,7 @@ class _FeatureButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(10),
         ),
         padding: const EdgeInsets.symmetric(vertical: 5),
-        backgroundColor: context.theme.colorScheme.properSurface,
+        backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
       ),
       onPressed: () => handlePress(context),
       child: Column(
@@ -548,12 +638,12 @@ class _FeatureButton extends StatelessWidget {
         children: <Widget>[
           Icon(
             getIcon(),
-            color: context.theme.colorScheme.properOnSurface,
+            color: context.theme.colorScheme.onSurfaceVariant,
           ),
           const SizedBox(height: 8.0),
           Text(
             getText(),
-            style: context.theme.textTheme.labelLarge!.copyWith(color: context.theme.colorScheme.properOnSurface),
+            style: context.theme.textTheme.labelLarge!.copyWith(color: context.theme.colorScheme.onSurfaceVariant),
           ),
         ],
       ),

@@ -44,6 +44,13 @@ class IncrementalSyncManager extends SyncManager {
   // can hydrate Message objects and update ChatState subtitles.
   Map<String, int> latestMessageIdPerChat = {};
 
+  // Tracks the latest group-photo-change message per chat across all sync pages.
+  // isGroupPhotoChanged (groupActionType == 1) → photo changed.
+  // isGroupPhotoRemoved (groupActionType == 2) → photo removed.
+  // We keep only the latest (highest dateCreated) so that if multiple photo
+  // changes arrive in the same sync the most-recent action wins.
+  Map<String, ({DateTime? dateCreated, int groupActionType})> latestPhotoChangePerChat = {};
+
   // A flag telling the "complete" function to save the timestamp/row ID markers.
   bool saveMarker;
 
@@ -244,6 +251,12 @@ class IncrementalSyncManager extends SyncManager {
     // Enumerate the chats into cache
     Map<String, Chat> chatCache = {};
     Map<String, List<Message>> messagesToSync = {};
+
+    // Tracks the latest group-name-change per chat, keyed by chat GUID.
+    // We keep only the latest (highest dateCreated) so that if multiple name
+    // changes arrive in the same batch the most-recent one wins.
+    final Map<String, ({DateTime? dateCreated, String? groupTitle})> latestNameChangePerChat = {};
+
     for (var msgData in messages) {
       for (var chat in msgData['chats']) {
         if (!chatCache.containsKey(chat['guid'])) {
@@ -267,6 +280,28 @@ class IncrementalSyncManager extends SyncManager {
         if (msg.dateCreated != null && lastSyncedTimestamp == null ||
             msg.dateCreated!.millisecondsSinceEpoch > lastSyncedTimestamp!) {
           lastSyncedTimestamp = msg.dateCreated!.millisecondsSinceEpoch;
+        }
+
+        // Track the latest group-name-change message per chat.
+        if (msg.isNameChange) {
+          final chatGuid = chat['guid'] as String;
+          final existing = latestNameChangePerChat[chatGuid];
+          final msgDate = msg.dateCreated;
+          if (existing == null ||
+              (msgDate != null && existing.dateCreated != null && msgDate.isAfter(existing.dateCreated!))) {
+            latestNameChangePerChat[chatGuid] = (dateCreated: msgDate, groupTitle: msg.groupTitle);
+          }
+        }
+
+        // Track the latest group-photo-change message per chat.
+        if (msg.isGroupPhotoEvent) {
+          final chatGuid = chat['guid'] as String;
+          final existing = latestPhotoChangePerChat[chatGuid];
+          final msgDate = msg.dateCreated;
+          if (existing == null ||
+              (msgDate != null && existing.dateCreated != null && msgDate.isAfter(existing.dateCreated!))) {
+            latestPhotoChangePerChat[chatGuid] = (dateCreated: msgDate, groupActionType: msg.groupActionType ?? 0);
+          }
         }
       }
     }
@@ -296,6 +331,19 @@ class IncrementalSyncManager extends SyncManager {
         } catch (ex) {
           Logger.warn("Failed to fetch participants for chat $chatGuid", error: ex, tag: tag);
         }
+      }
+    }
+
+    // Apply the authoritative group name from group-name-change messages.
+    // groupTitle on the message IS the name the chat was changed to, so it is
+    // more reliable than whatever displayName happened to be embedded in the
+    // first message's chat object.  We apply it here (after any participant
+    // fetches that may have replaced chatCache entries) so that bulkSyncChats
+    // receives the correct displayName and writes it to the DB.
+    for (final entry in latestNameChangePerChat.entries) {
+      final chat = chatCache[entry.key];
+      if (chat != null) {
+        chat.displayName = entry.value.groupTitle;
       }
     }
 
@@ -377,6 +425,22 @@ class IncrementalSyncManager extends SyncManager {
     for (var chat in syncedChats.values) {
       chat.dbLatestMessage;
       ChatsSvc.updateChat(chat, override: true);
+    }
+
+    // Apply group photo changes detected during the sync.
+    // Each entry holds the most-recent photo-event action for that chat; we
+    // re-fetch the icon from the server for changes, or clear it for removals.
+    for (final entry in latestPhotoChangePerChat.entries) {
+      final chat = syncedChats[entry.key];
+      if (chat == null) continue;
+      if (entry.value.groupActionType == 2) {
+        // Photo explicitly removed — clear without an HTTP round-trip.
+        await ChatsSvc.setChatCustomAvatarPath(chat, null);
+      } else {
+        // Photo added/changed — pull latest icon from server, then refresh state.
+        await Chat.getIcon(chat, force: true);
+        ChatsSvc.updateChat(chat, override: true);
+      }
     }
 
     // Call this first so listeners can react before any

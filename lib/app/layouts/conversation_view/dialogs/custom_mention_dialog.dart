@@ -52,7 +52,7 @@ Future<String?> showCustomMentionDialog(BuildContext context, Mentionable? menti
             },
           ),
           title: Text("Custom Mention", style: context.theme.textTheme.titleLarge),
-          backgroundColor: context.theme.colorScheme.properSurface,
+          backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
         );
       });
   return changed;

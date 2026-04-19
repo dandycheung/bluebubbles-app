@@ -53,7 +53,7 @@ void showAddParticipant(BuildContext context, Chat chat) {
                     context: context,
                     builder: (context) => AlertDialog(
                           title: Text("Pick Contact", style: context.theme.textTheme.titleLarge),
-                          backgroundColor: context.theme.colorScheme.properSurface,
+                          backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
                           content: SingleChildScrollView(
                             child: SizedBox(
                               width: double.maxFinite,
@@ -114,7 +114,7 @@ void showAddParticipant(BuildContext context, Chat chat) {
                     context: context,
                     builder: (BuildContext context) {
                       return AlertDialog(
-                        backgroundColor: context.theme.colorScheme.properSurface,
+                        backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
                         title: Text(
                           "Adding ${participantController.text}...",
                           style: context.theme.textTheme.titleLarge,
@@ -123,7 +123,7 @@ void showAddParticipant(BuildContext context, Chat chat) {
                           height: 70,
                           child: Center(
                             child: CircularProgressIndicator(
-                              backgroundColor: context.theme.colorScheme.properSurface,
+                              backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
                               valueColor: AlwaysStoppedAnimation<Color>(context.theme.colorScheme.primary),
                             ),
                           ),
@@ -161,7 +161,7 @@ void showAddParticipant(BuildContext context, Chat chat) {
             autofillHints: [AutofillHints.telephoneNumber, AutofillHints.email],
           ),
           title: Text("Add Participant", style: context.theme.textTheme.titleLarge),
-          backgroundColor: context.theme.colorScheme.properSurface,
+          backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
         );
       });
 }

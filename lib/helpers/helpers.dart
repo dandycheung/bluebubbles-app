@@ -3,6 +3,7 @@ export 'network/metadata_helper.dart';
 export 'network/network_error_handler.dart';
 export 'network/network_helpers.dart';
 export 'network/network_tasks.dart';
+export 'types/classes/chat_service_type.dart';
 export 'types/extensions/extensions.dart';
 export 'types/helpers/contact_helpers.dart';
 export 'types/helpers/date_helpers.dart';

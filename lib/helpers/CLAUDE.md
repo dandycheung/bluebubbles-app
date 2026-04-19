@@ -4,7 +4,7 @@ Import via barrel: `package:bluebubbles/helpers/helpers.dart` (re-exports everyt
 
 ## UI Helpers (`ui/`) → `ui/CLAUDE.md`
 - `ui_helpers.dart` — general UI utilities (back button, safe area, etc.)
-- `theme_helpers.dart` — `ThemeHelpers` mixin; mixed into `CustomState` and `OptimizedState`; provides `iOS`, `material`, `samsung` skin booleans
+- `theme_helpers.dart` — `ThemeHelpers` mixin; mixed into `CustomState`; provides `iOS`, `material`, `samsung` skin booleans
 - `message_widget_helpers.dart` — message-specific UI utilities
 - `reaction_helpers.dart` — tapback emoji display helpers
 - `attributed_body_helpers.dart` — renders `AttributedBody` rich text (bold, italic, mention, link)

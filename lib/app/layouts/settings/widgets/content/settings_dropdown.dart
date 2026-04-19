@@ -60,9 +60,9 @@ class SettingsOptions<T extends Object> extends StatelessWidget {
         ),
       );
     }
-    Color surfaceColor = context.theme.colorScheme.properSurface;
+    Color surfaceColor = context.theme.colorScheme.surfaceContainerHighest;
     if (SettingsSvc.settings.skin.value == Skins.Material &&
-        surfaceColor.computeDifference(context.theme.colorScheme.background) < 15) {
+        surfaceColor.computeDifference(context.theme.colorScheme.surface) < 15) {
       surfaceColor = context.theme.colorScheme.surfaceVariant;
     }
     return Container(
@@ -89,7 +89,7 @@ class SettingsOptions<T extends Object> extends StatelessWidget {
                             child: Text(
                               subtitle ?? "",
                               style: context.theme.textTheme.bodySmall!
-                                  .copyWith(color: context.theme.colorScheme.properOnSurface),
+                                  .copyWith(color: context.theme.colorScheme.onSurfaceVariant),
                             ),
                           )
                         : const SizedBox.shrink(),

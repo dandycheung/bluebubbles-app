@@ -1,5 +1,4 @@
 import 'package:bluebubbles/app/layouts/setup/dialogs/failed_to_connect_dialog.dart';
-import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/services/services.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -46,7 +45,7 @@ class _ConnectingDialogState extends State<ConnectingDialog> {
             "Connecting...",
             style: context.theme.textTheme.titleLarge,
           ),
-          backgroundColor: context.theme.colorScheme.properSurface,
+          backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
           content: LinearProgressIndicator(
             backgroundColor: context.theme.colorScheme.outline,
             valueColor: AlwaysStoppedAnimation<Color>(context.theme.colorScheme.primary),

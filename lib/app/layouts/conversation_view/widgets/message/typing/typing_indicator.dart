@@ -36,7 +36,7 @@ class _TypingIndicatorState extends State<TypingIndicator> with ThemeHelpers {
                   child: Container(
                     height: 50,
                     width: 80,
-                    color: context.theme.colorScheme.properSurface,
+                    color: context.theme.colorScheme.surfaceContainerHighest,
                     child: const Stack(
                       alignment: Alignment.center,
                       children: [
@@ -125,8 +125,8 @@ class _AnimatedDotState extends State<AnimatedDot> with SingleTickerProviderStat
           return Container(
             decoration: BoxDecoration(
               color: ThemeSvc.inDarkMode(context)
-                  ? context.theme.colorScheme.properSurface.lightenPercent(amt)
-                  : context.theme.colorScheme.properSurface.darkenPercent(amt),
+                  ? context.theme.colorScheme.surfaceContainerHighest.lightenPercent(amt)
+                  : context.theme.colorScheme.surfaceContainerHighest.darkenPercent(amt),
               shape: BoxShape.circle,
             ),
             width: 10,
@@ -144,7 +144,7 @@ class _AnimatedDotState extends State<AnimatedDot> with SingleTickerProviderStat
                 bottom: (math.sin(animation.value + (widget.index) * math.pi / 4).abs() * 20).clamp(1, 20).toDouble()),
             child: Container(
               decoration: BoxDecoration(
-                color: context.theme.colorScheme.properSurface,
+                color: context.theme.colorScheme.surfaceContainerHighest,
                 shape: BoxShape.circle,
               ),
               width: 4,

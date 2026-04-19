@@ -378,7 +378,7 @@
     },
     {
       "id": "13:4148278195232901830",
-      "lastPropertyId": "52:5891619424061212086",
+      "lastPropertyId": "53:8594929698222481068",
       "name": "Message",
       "properties": [
         {
@@ -601,6 +601,11 @@
           "id": "52:5891619424061212086",
           "name": "errorMessage",
           "type": 9
+        },
+        {
+          "id": "53:8594929698222481068",
+          "name": "hasEffectPlayed",
+          "type": 1
         }
       ],
       "relations": []

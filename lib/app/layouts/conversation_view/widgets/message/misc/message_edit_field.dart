@@ -80,7 +80,7 @@ class MessageEditField extends StatelessWidget {
             decoration: BoxDecoration(
               color: !message.isBigEmoji
                   ? context.theme.colorScheme.primary.darkenAmount(isTempMessage ? 0.2 : 0)
-                  : context.theme.colorScheme.background,
+                  : context.theme.colorScheme.surface,
             ),
             constraints: BoxConstraints(
               maxWidth: NavigationSvc.width(context) * 0.75 - 40,

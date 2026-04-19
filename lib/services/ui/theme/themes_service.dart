@@ -33,13 +33,22 @@ class ThemesService {
     if (kIsDesktop) {
       desktopAccentColor = await DynamicColorPlugin.getAccentColor();
     }
+
+    // Re-save preset themes so any stale DB values (e.g. old surfaceContainerHighest)
+    // are always overwritten with the current static definitions.
+    if (!kIsWeb) {
+      for (final preset in defaultThemes) {
+        preset.save(updateIfNotAbsent: true);
+      }
+    }
   }
 
   static final oledDarkTheme = FlexColorScheme(
     textTheme: Typography.englishLike2021.merge(Typography.whiteMountainView),
     colorScheme: ColorScheme.fromSeed(
       seedColor: Colors.blue,
-      background: Colors.black,
+      surface: Colors.black,
+      surfaceContainerHighest: HexColor("323332"),
       error: Colors.red,
       brightness: Brightness.dark,
     ),
@@ -55,7 +64,7 @@ class ThemesService {
     ),
     BubbleText(
       bubbleText: Typography.englishLike2021.bodyMedium!.copyWith(
-        fontSize: 15,
+        fontSize: ThemeStruct.defaultTextSizes["bubbleText"],
         height: Typography.englishLike2021.bodyMedium!.height! * 0.85,
         color: Colors.white,
       ),
@@ -67,11 +76,9 @@ class ThemesService {
     colorScheme: ColorScheme.fromSwatch(
       primarySwatch: createMaterialColor(HexColor("5E81AC")),
       accentColor: HexColor("88C0D0"),
-      backgroundColor: HexColor("3B4252"),
-      cardColor: HexColor("4C566A"),
-      errorColor: Colors.red,
       brightness: Brightness.dark,
     ).copyWith(
+      surface: HexColor("3B4252"),
       primaryContainer: HexColor("49688e"),
       outline: Colors.grey,
     ),
@@ -79,38 +86,47 @@ class ThemesService {
   ).toTheme.copyWith(splashFactory: InkSparkle.splashFactory, extensions: [
     BubbleText(
       bubbleText: Typography.englishLike2021.bodyMedium!.copyWith(
-        fontSize: 15,
+        fontSize: ThemeStruct.defaultTextSizes["bubbleText"],
         height: Typography.englishLike2021.bodyMedium!.height! * 0.85,
       ),
     ),
   ]);
 
-  static final whiteLightTheme = FlexColorScheme(
-    textTheme: Typography.englishLike2021.merge(Typography.blackMountainView),
-    colorScheme: ColorScheme.fromSeed(
-      seedColor: Colors.blue,
-      background: Colors.white,
-      surfaceVariant: HexColor('F3F3F6'),
-      error: Colors.red,
-      brightness: Brightness.light,
-    ),
-    useMaterial3: true,
-  ).toTheme.copyWith(splashFactory: InkSparkle.splashFactory, extensions: [
-    BubbleColors(
-      iMessageBubbleColor: HexColor("1982FC"),
-      oniMessageBubbleColor: Colors.white,
-      smsBubbleColor: HexColor("43CC47"),
-      onSmsBubbleColor: Colors.white,
-      receivedBubbleColor: HexColor("e9e9e8"),
-      onReceivedBubbleColor: Colors.black,
-    ),
-    BubbleText(
-      bubbleText: Typography.englishLike2021.bodyMedium!.copyWith(
-        fontSize: 15,
-        height: Typography.englishLike2021.bodyMedium!.height! * 0.85,
+  static final whiteLightTheme = () {
+    final base = FlexColorScheme(
+      textTheme: Typography.englishLike2021.merge(Typography.blackMountainView),
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: Colors.blue,
+        surface: Colors.white,
+        error: Colors.red,
+        brightness: Brightness.light,
       ),
-    ),
-  ]);
+      useMaterial3: true,
+    ).toTheme;
+    return base.copyWith(
+      splashFactory: InkSparkle.splashFactory,
+      colorScheme: base.colorScheme.copyWith(
+        surface: Colors.white,
+        surfaceContainerHighest: HexColor('F2F2F6'),
+      ),
+      extensions: [
+        BubbleColors(
+          iMessageBubbleColor: HexColor("1982FC"),
+          oniMessageBubbleColor: Colors.white,
+          smsBubbleColor: HexColor("43CC47"),
+          onSmsBubbleColor: Colors.white,
+          receivedBubbleColor: HexColor("e9e9ea"),
+          onReceivedBubbleColor: Colors.black,
+        ),
+        BubbleText(
+          bubbleText: Typography.englishLike2021.bodyMedium!.copyWith(
+            fontSize: ThemeStruct.defaultTextSizes["bubbleText"],
+            height: Typography.englishLike2021.bodyMedium!.height! * 0.85,
+          ),
+        ),
+      ],
+    );
+  }();
 
   static List<ThemeStruct> get defaultThemes => [
         ThemeStruct(name: "OLED Dark", themeData: oledDarkTheme),
@@ -131,7 +147,7 @@ class ThemesService {
                             extensions: [
                           BubbleText(
                             bubbleText: Typography.englishLike2021.bodyMedium!.copyWith(
-                              fontSize: 15,
+                              fontSize: ThemeStruct.defaultTextSizes["bubbleText"],
                               height: Typography.englishLike2021.bodyMedium!.height! * 0.85,
                             ),
                           ),
@@ -147,7 +163,7 @@ class ThemesService {
                             extensions: [
                           BubbleText(
                             bubbleText: Typography.englishLike2021.bodyMedium!.copyWith(
-                              fontSize: 15,
+                              fontSize: ThemeStruct.defaultTextSizes["bubbleText"],
                               height: Typography.englishLike2021.bodyMedium!.height! * 0.85,
                             ),
                           ),
@@ -282,8 +298,6 @@ class ThemesService {
           onError: light.colorScheme.onError.harmonizeWith(Color(monetPalette!.error.get(100))),
           errorContainer: light.colorScheme.errorContainer.harmonizeWith(Color(monetPalette!.error.get(90))),
           onErrorContainer: light.colorScheme.onErrorContainer.harmonizeWith(Color(monetPalette!.error.get(10))),
-          background: light.colorScheme.background.harmonizeWith(Color(monetPalette!.neutral.get(99))),
-          onBackground: light.colorScheme.onBackground.harmonizeWith(Color(monetPalette!.neutral.get(10))),
           surface: light.colorScheme.surface.harmonizeWith(Color(monetPalette!.neutral.get(99))),
           onSurface: light.colorScheme.onSurface.harmonizeWith(Color(monetPalette!.neutral.get(10))),
           surfaceVariant: light.colorScheme.surfaceVariant.harmonizeWith(Color(monetPalette!.neutralVariant.get(90))),
@@ -318,8 +332,6 @@ class ThemesService {
           onError: dark.colorScheme.onError.harmonizeWith(Color(monetPalette!.error.get(20))),
           errorContainer: dark.colorScheme.errorContainer.harmonizeWith(Color(monetPalette!.error.get(30))),
           onErrorContainer: dark.colorScheme.onErrorContainer.harmonizeWith(Color(monetPalette!.error.get(80))),
-          background: dark.colorScheme.background.harmonizeWith(Color(monetPalette!.neutral.get(10))),
-          onBackground: dark.colorScheme.onBackground.harmonizeWith(Color(monetPalette!.neutral.get(90))),
           surface: dark.colorScheme.surface.harmonizeWith(Color(monetPalette!.neutral.get(10))),
           onSurface: dark.colorScheme.onSurface.harmonizeWith(Color(monetPalette!.neutral.get(90))),
           surfaceVariant: dark.colorScheme.surfaceVariant.harmonizeWith(Color(monetPalette!.neutralVariant.get(30))),
@@ -353,8 +365,6 @@ class ThemesService {
           onError: Color(monetPalette!.error.get(100)),
           errorContainer: Color(monetPalette!.error.get(90)),
           onErrorContainer: Color(monetPalette!.error.get(10)),
-          background: Color(monetPalette!.neutral.get(99)),
-          onBackground: Color(monetPalette!.neutral.get(10)),
           surface: Color(monetPalette!.neutral.get(99)),
           onSurface: Color(monetPalette!.neutral.get(10)),
           surfaceVariant: Color(monetPalette!.neutralVariant.get(90)),
@@ -386,8 +396,6 @@ class ThemesService {
           onError: Color(monetPalette!.error.get(20)),
           errorContainer: Color(monetPalette!.error.get(30)),
           onErrorContainer: Color(monetPalette!.error.get(80)),
-          background: Color(monetPalette!.neutral.get(10)),
-          onBackground: Color(monetPalette!.neutral.get(90)),
           surface: Color(monetPalette!.neutral.get(10)),
           onSurface: Color(monetPalette!.neutral.get(90)),
           surfaceVariant: Color(monetPalette!.neutralVariant.get(30)),
@@ -430,8 +438,6 @@ class ThemesService {
         onError: light.colorScheme.onError.harmonizeWith(Color(palette.error.get(100))),
         errorContainer: light.colorScheme.errorContainer.harmonizeWith(Color(palette.error.get(90))),
         onErrorContainer: light.colorScheme.onErrorContainer.harmonizeWith(Color(palette.error.get(10))),
-        background: light.colorScheme.background.harmonizeWith(Color(palette.neutral.get(99))),
-        onBackground: light.colorScheme.onBackground.harmonizeWith(Color(palette.neutral.get(10))),
         surface: light.colorScheme.surface.harmonizeWith(Color(palette.neutral.get(99))),
         onSurface: light.colorScheme.onSurface.harmonizeWith(Color(palette.neutral.get(10))),
         surfaceVariant: light.colorScheme.surfaceVariant.harmonizeWith(Color(palette.neutralVariant.get(90))),
@@ -463,8 +469,6 @@ class ThemesService {
         onError: dark.colorScheme.onError.harmonizeWith(Color(palette.error.get(20))),
         errorContainer: dark.colorScheme.errorContainer.harmonizeWith(Color(palette.error.get(30))),
         onErrorContainer: dark.colorScheme.onErrorContainer.harmonizeWith(Color(palette.error.get(80))),
-        background: dark.colorScheme.background.harmonizeWith(Color(palette.neutral.get(10))),
-        onBackground: dark.colorScheme.onBackground.harmonizeWith(Color(palette.neutral.get(90))),
         surface: dark.colorScheme.surface.harmonizeWith(Color(palette.neutral.get(10))),
         onSurface: dark.colorScheme.onSurface.harmonizeWith(Color(palette.neutral.get(90))),
         surfaceVariant: dark.colorScheme.surfaceVariant.harmonizeWith(Color(palette.neutralVariant.get(30))),

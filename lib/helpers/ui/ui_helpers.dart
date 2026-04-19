@@ -113,8 +113,8 @@ Widget buildProgressIndicator(BuildContext context, {double size = 20, double st
   return SettingsSvc.settings.skin.value == Skins.iOS
       ? Theme(
           data: ThemeData(
-            cupertinoOverrideTheme: CupertinoThemeData(
-                brightness: ThemeData.estimateBrightnessForColor(context.theme.colorScheme.background)),
+            cupertinoOverrideTheme:
+                CupertinoThemeData(brightness: ThemeData.estimateBrightnessForColor(context.theme.colorScheme.surface)),
           ),
           child: CupertinoActivityIndicator(
             radius: size / 2,
@@ -139,7 +139,7 @@ Future<void> showConversationTileMenu(
   bool ios = SettingsSvc.settings.skin.value == Skins.iOS;
   HapticFeedback.mediumImpact();
   await showMenu(
-    color: context.theme.colorScheme.properSurface,
+    color: context.theme.colorScheme.surfaceContainerHighest,
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ios ? 10 : 0)),
     context: context,
     position: RelativeRect.fromLTRB(
@@ -168,12 +168,12 @@ Future<void> showConversationTileMenu(
                       chat.isPinned!
                           ? (ios ? CupertinoIcons.pin_slash : Icons.star_outline)
                           : (ios ? CupertinoIcons.pin : Icons.star),
-                      color: context.theme.colorScheme.properOnSurface,
+                      color: context.theme.colorScheme.onSurfaceVariant,
                     ),
                   ),
                   Text(
                     chat.isPinned! ? "Unpin" : "Pin",
-                    style: textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.properOnSurface),
+                    style: textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.onSurfaceVariant),
                   ),
                 ],
               ),
@@ -199,11 +199,11 @@ Future<void> showConversationTileMenu(
                       chat.muteType == "mute"
                           ? (ios ? CupertinoIcons.bell : Icons.notifications_active)
                           : (ios ? CupertinoIcons.bell_slash : Icons.notifications_off),
-                      color: context.theme.colorScheme.properOnSurface,
+                      color: context.theme.colorScheme.onSurfaceVariant,
                     ),
                   ),
                   Text(chat.muteType == "mute" ? 'Show Alerts' : 'Hide Alerts',
-                      style: textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.properOnSurface)),
+                      style: textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.onSurfaceVariant)),
                 ],
               ),
             ),
@@ -232,11 +232,11 @@ Future<void> showConversationTileMenu(
                     chat.hasUnreadMessage!
                         ? (ios ? CupertinoIcons.person_crop_circle_badge_xmark : Icons.mark_chat_unread)
                         : (ios ? CupertinoIcons.person_crop_circle_badge_checkmark : Icons.mark_chat_read),
-                    color: context.theme.colorScheme.properOnSurface,
+                    color: context.theme.colorScheme.onSurfaceVariant,
                   ),
                 ),
                 Text(chat.hasUnreadMessage! ? 'Mark Read' : 'Mark Unread',
-                    style: textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.properOnSurface)),
+                    style: textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.onSurfaceVariant)),
               ],
             ),
           ),
@@ -261,12 +261,12 @@ Future<void> showConversationTileMenu(
                       chat.isArchived!
                           ? (ios ? CupertinoIcons.tray_arrow_up : Icons.unarchive)
                           : (ios ? CupertinoIcons.tray_arrow_down : Icons.archive),
-                      color: context.theme.colorScheme.properOnSurface,
+                      color: context.theme.colorScheme.onSurfaceVariant,
                     ),
                   ),
                   Text(
                     chat.isArchived! ? 'Unarchive' : 'Archive',
-                    style: textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.properOnSurface),
+                    style: textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.onSurfaceVariant),
                   ),
                 ],
               ),
@@ -291,7 +291,7 @@ Future<void> showConversationTileMenu(
                     ),
                     content: Text("This chat will be deleted from this device only",
                         style: context.theme.textTheme.bodyLarge),
-                    backgroundColor: context.theme.colorScheme.properSurface,
+                    backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
                     actions: <Widget>[
                       TextButton(
                         child: Text("No",
@@ -324,12 +324,12 @@ Future<void> showConversationTileMenu(
                     padding: const EdgeInsets.only(right: 10),
                     child: Icon(
                       Icons.delete_forever_outlined,
-                      color: context.theme.colorScheme.properOnSurface,
+                      color: context.theme.colorScheme.onSurfaceVariant,
                     ),
                   ),
                   Text(
                     'Delete',
-                    style: textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.properOnSurface),
+                    style: textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.onSurfaceVariant),
                   ),
                 ],
               ),
@@ -545,7 +545,7 @@ Future<void> paintGroupAvatar({
     return;
   }
 
-  Color bgColor = theme.colorScheme.properSurface;
+  Color bgColor = theme.colorScheme.surfaceContainerHighest;
   if (kIsDesktop && systemDark && SettingsSvc.settings.useDesktopAccent.value) {
     bgColor = ThemeSvc.desktopAccentColor ?? bgColor;
   }
@@ -571,7 +571,7 @@ Future<void> paintGroupAvatar({
     if (index == maxAvatars - 1 && participants.length > maxAvatars) {
       Paint paint = Paint();
       paint.isAntiAlias = true;
-      paint.color = theme.colorScheme.properSurface.withValues(alpha: 0.8);
+      paint.color = theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.8);
       Offset _offset = Offset(left + realSize * 0.5, top + realSize * 0.5);
       double radius = realSize * 0.5;
       canvas.drawCircle(_offset, radius, paint);
@@ -586,14 +586,13 @@ Future<void> paintGroupAvatar({
             style: TextStyle(
                 fontSize: adjustedWidth * 0.3,
                 fontFamily: icon.fontFamily,
-                color: theme.colorScheme.properOnSurface.withValues(alpha: 0.8)))
+                color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.8)))
         ..layout()
         ..paint(canvas, Offset(left + realSize * 0.25, top + realSize * 0.25));
     } else {
       Paint paint = Paint()
-        ..color = SettingsSvc.settings.skin.value == Skins.Samsung
-            ? theme.colorScheme.secondary
-            : theme.colorScheme.background;
+        ..color =
+            SettingsSvc.settings.skin.value == Skins.Samsung ? theme.colorScheme.secondary : theme.colorScheme.surface;
       canvas.drawCircle(Offset(left + realSize * 0.5, top + realSize * 0.5), realSize * 0.5, paint);
       await paintAvatar(
         handle: participants[index],
@@ -651,12 +650,12 @@ Future<void> paintAvatar(
   paint.isAntiAlias = true;
   paint.shader =
       ui.Gradient.linear(Offset(dx + size * 0.5, dy + size * 0.5), Offset(size.toDouble(), size.toDouble()), [
-    !SettingsSvc.settings.colorfulAvatars.value
+    !SettingsSvc.settings.colorfulAvatars.value && SettingsSvc.settings.skin.value == Skins.iOS
         ? HexColor("928E8E")
         : colors.isNotEmpty
             ? colors[1]
             : HexColor("928E8E"),
-    !SettingsSvc.settings.colorfulAvatars.value
+    !SettingsSvc.settings.colorfulAvatars.value && SettingsSvc.settings.skin.value == Skins.iOS
         ? HexColor("686868")
         : colors.isNotEmpty
             ? colors[0]
@@ -747,7 +746,7 @@ AlertDialog areYouSure(BuildContext context,
       style: context.theme.textTheme.titleLarge,
     ),
     content: content,
-    backgroundColor: context.theme.colorScheme.properSurface,
+    backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
     actions: <Widget>[
       TextButton(
         child: Text("No", style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.primary)),

@@ -29,6 +29,11 @@ IntentsService get IntentsSvc => GetIt.I<IntentsService>();
 class IntentsService {
   late final StreamSubscription sub;
 
+  /// When a notification tap triggers navigation to a specific chat, this is
+  /// set synchronously (before any async gap) so that [onAppResume] can skip
+  /// marking the previously-active chat as read while the redirect is pending.
+  String? pendingOpenChatGuid;
+
   Future<void> init() async {
     if (kIsWeb || kIsDesktop) return;
 
@@ -120,7 +125,7 @@ class IntentsService {
           context: Get.context!,
           builder: (BuildContext context) {
             return AlertDialog(
-              backgroundColor: context.theme.colorScheme.properSurface,
+              backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
               title: Text(
                 "Generating link for call...",
                 style: context.theme.textTheme.titleLarge,
@@ -129,7 +134,7 @@ class IntentsService {
                 height: 70,
                 child: Center(
                   child: CircularProgressIndicator(
-                    backgroundColor: context.theme.colorScheme.properSurface,
+                    backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
                     valueColor: AlwaysStoppedAnimation<Color>(context.theme.colorScheme.primary),
                   ),
                 ),
@@ -218,15 +223,22 @@ class IntentsService {
       }
 
       if (!chatIsOpen) {
+        // Mark the navigation as pending BEFORE any await so that onAppResume,
+        // which fires while we are suspended at waitForUI / Future.delayed, can
+        // see that we are about to switch chats and must not mark the current
+        // active chat as read prematurely.
+        pendingOpenChatGuid = guid;
         Logger.debug("Navigating to conversation view...", tag: "IntentsService");
         await StartupTasks.waitForUI();
-        await Future.delayed(const Duration(seconds: 1));
+
+        // Pre-populate text/attachments on the controller before navigating so
+        // the ConversationView text field is pre-filled on first build.
+        setPickedAttachments();
+        pendingOpenChatGuid = null;
+
         await NavigationSvc.pushAndRemoveUntil(
           Get.context!,
-          ConversationView(
-            chat: chat,
-            onInit: () => setPickedAttachments(),
-          ),
+          ConversationView(chat: chat),
           (route) => route.isFirst,
         );
       } else {

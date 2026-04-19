@@ -2,7 +2,6 @@ import 'package:bluebubbles/app/state/message_state_scope.dart';
 import 'package:bluebubbles/app/layouts/conversation_view/widgets/message/reply/reply_bubble.dart';
 import 'package:bluebubbles/app/layouts/conversation_view/widgets/message/reply/reply_line_painter.dart';
 import 'package:bluebubbles/app/state/chat_state_scope.dart';
-import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/database/models.dart';
 import 'package:bluebubbles/services/services.dart';
 import 'package:flutter/material.dart';
@@ -56,7 +55,7 @@ class ReplyBubbleSection extends StatelessWidget {
       return DecoratedBox(
         decoration: ReplyLineDecoration(
           isFromMe: message.isFromMe!,
-          color: context.theme.colorScheme.properSurface,
+          color: context.theme.colorScheme.surfaceContainerHighest,
           connectUpper: false,
           connectLower: false,
           context: context,
@@ -76,7 +75,7 @@ class ReplyBubbleSection extends StatelessWidget {
         child: DecoratedBox(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(25),
-            border: Border.fromBorderSide(BorderSide(color: context.theme.colorScheme.properSurface)),
+            border: Border.fromBorderSide(BorderSide(color: context.theme.colorScheme.surfaceContainerHighest)),
           ),
           child: replyBubble,
         ),

@@ -234,28 +234,82 @@ class _ChatSubtitleState extends CustomState<ChatSubtitle, void, ConversationTil
       final chatState = ChatsSvc.getChatState(controller.chat.guid);
       final latestMessage = chatState?.latestMessage.value;
       final isFromMe = latestMessage?.isFromMe ?? false;
-      final isDelivered = controller.chat.isGroup ||
-          !isFromMe ||
-          latestMessage?.dateDelivered != null ||
-          latestMessage?.dateRead != null;
+      final isDelivered =
+          controller.chat.isGroup || !isFromMe || latestMessage?.isDelivered == true || latestMessage?.dateRead != null;
 
       // subtitle.value is already contact-info-free when redacted mode is on
       // (ChatState.redactContactInfo / updateChatLatestMessage ensure this).
       final String _subtitle = chatState?.subtitle.value ?? '';
 
-      return RichText(
-        text: TextSpan(
+      // Draft detection — show "Draft: ..." when there is staged text or attachments.
+      final draftText = chatState?.textFieldText.value ?? '';
+      final hasDraftText = draftText.isNotEmpty;
+      final hasDraftAttachments = chatState?.textFieldAttachments.isNotEmpty ?? false;
+      final hasDraft = hasDraftText || hasDraftAttachments;
+
+      final maxLines = SettingsSvc.settings.denseChatTiles.value ? 1 : 2;
+      final lineHeight = (widget.style.fontSize ?? 14) * (widget.style.height ?? 1.5);
+
+      // For material DMs with a message from me, show a delivery check icon
+      // instead of italic styling — mirrors the Google Messages visual pattern.
+      // Suppress when showing a draft so the layout stays clean.
+      final showDeliveryIcon = material && isFromMe && !controller.chat.isGroup && !hasDraft;
+      final isMonet = SettingsSvc.settings.monetTheming.value != Monet.none;
+      final iconColor = isMonet ? context.theme.colorScheme.primary : context.theme.colorScheme.outline;
+
+      final TextSpan subtitleSpan;
+      if (hasDraft) {
+        final draftBody = hasDraftText ? draftText : 'Attachment';
+        subtitleSpan = TextSpan(children: [
+          TextSpan(
+            text: 'Draft: ',
+            style: widget.style.copyWith(
+              color: context.theme.colorScheme.error,
+              fontStyle: FontStyle.normal,
+            ),
+          ),
+          ...MessageHelper.buildEmojiText(draftBody, widget.style),
+        ]);
+      } else {
+        subtitleSpan = TextSpan(
           children: MessageHelper.buildEmojiText(
             "${!iOS && isFromMe ? "You: " : ""}$_subtitle",
-            widget.style.copyWith(fontStyle: !iOS && !isDelivered ? FontStyle.italic : null),
+            widget.style.copyWith(fontStyle: !iOS && !material && !isDelivered ? FontStyle.italic : null),
           ),
-        ),
+        );
+      }
+
+      final richText = RichText(
+        text: subtitleSpan,
         overflow: TextOverflow.ellipsis,
-        maxLines: SettingsSvc.settings.denseChatTiles.value
-            ? 1
-            : material
-                ? 3
-                : 2,
+        maxLines: maxLines,
+      );
+
+      return Padding(
+        padding: const EdgeInsets.only(right: 10),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: lineHeight * (material ? 1 : maxLines)),
+          child: showDeliveryIcon
+              ? Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: EdgeInsets.only(
+                          right: 4, top: ((widget.style.fontSize ?? 14) * (widget.style.height ?? 1.5) - 14) / 2),
+                      child: Opacity(
+                        opacity: isDelivered ? 1.0 : 0.35,
+                        child: Icon(
+                          Icons.check_circle_outline,
+                          size: 14,
+                          color: iconColor,
+                        ),
+                      ),
+                    ),
+                    Expanded(child: richText),
+                  ],
+                )
+              : richText,
+        ),
       );
     });
   }
@@ -292,19 +346,19 @@ class ChatLeadingState extends State<ChatLeading> with ThemeHelpers {
                           borderRadius: BorderRadius.circular(30),
                           color: context.theme.colorScheme.primary,
                         ),
-                        width: 40,
-                        height: 40,
+                        width: SettingsSvc.settings.denseChatTiles.value ? 36 : (material ? 50 : 45),
+                        height: SettingsSvc.settings.denseChatTiles.value ? 36 : (material ? 50 : 45),
                         child: Center(
                           child: Icon(
                             Icons.check,
                             color: context.theme.colorScheme.onPrimary,
-                            size: 20,
+                            size: 26,
                           ),
                         ),
                       )
                     : ContactAvatarGroupWidget(
                         chat: widget.controller.chat,
-                        size: 40,
+                        size: SettingsSvc.settings.denseChatTiles.value ? 36 : (material ? 50 : 45),
                         editable: false,
                       ),
               ),

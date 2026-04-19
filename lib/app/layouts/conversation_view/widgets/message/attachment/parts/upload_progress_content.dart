@@ -29,7 +29,7 @@ class UploadProgressContent extends StatelessWidget {
     final isFromMe = MessageStateScope.of(context).isFromMe.value;
     if (previewFile != null && attachment.mimeStart == "image" && !SettingsSvc.settings.highPerfMode.value) {
       return Container(
-        color: context.theme.colorScheme.properSurface,
+        color: context.theme.colorScheme.surfaceContainerHighest,
         child: ImageViewer(
           file: previewFile,
           attachment: attachment,
@@ -38,10 +38,7 @@ class UploadProgressContent extends StatelessWidget {
         ),
       );
     }
-    if (previewFile != null &&
-        (attachment.mimeStart == "video" || attachment.mimeType == "audio/mp4") &&
-        !SettingsSvc.settings.highPerfMode.value &&
-        !isSnap) {
+    if (previewFile != null && attachment.mimeStart == "video" && !SettingsSvc.settings.highPerfMode.value && !isSnap) {
       return VideoPlayer(
         attachment: attachment,
         file: previewFile,
@@ -50,7 +47,7 @@ class UploadProgressContent extends StatelessWidget {
       );
     }
     return Container(
-      color: context.theme.colorScheme.properSurface,
+      color: context.theme.colorScheme.surfaceContainerHighest,
       child: OtherFileRow(attachment: attachment, file: previewFile),
     );
   }
@@ -66,7 +63,7 @@ class UploadProgressContent extends StatelessWidget {
         // Subtle tint over the preview while uploading.
         Positioned.fill(
           child: Container(
-            color: context.theme.colorScheme.properSurface.withValues(alpha: 0.2),
+            color: context.theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.2),
           ),
         ),
         // Top-left: circular cancel / waiting chip — styled like the Live photo tag.

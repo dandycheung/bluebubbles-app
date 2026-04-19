@@ -23,14 +23,12 @@ class ConversationView extends StatefulWidget {
     this.customService,
     this.initialScrollToGuid,
     this.fromChatCreator = false,
-    this.onInit,
   });
 
   final Chat chat;
   final MessagesService? customService;
   final String? initialScrollToGuid;
   final bool fromChatCreator;
-  final void Function()? onInit;
 
   @override
   ConversationViewState createState() => ConversationViewState();
@@ -54,10 +52,6 @@ class ConversationViewState extends State<ConversationView> with ThemeHelpers<Co
     ChatsSvc.setActiveChatSync(chat);
     ChatsSvc.activeChat!.controller = controller;
     Logger.debug("Conversation View initialized for ${chat.guid}");
-
-    if (widget.onInit != null) {
-      Future.delayed(Duration.zero, widget.onInit!);
-    }
 
     controller.loadReplyToMessageState(); // P224b
 
@@ -116,12 +110,10 @@ class ConversationViewState extends State<ConversationView> with ThemeHelpers<Co
     // Cache theme values to avoid repeated lookups
     final theme = context.theme;
     final colorScheme = theme.colorScheme;
-    final monetTheming = SettingsSvc.settings.monetTheming.value;
     final windowEffect = SettingsSvc.settings.windowEffect.value;
     final avatarScale = SettingsSvc.settings.avatarScale.value;
     final bubbleColor = colorScheme.bubble(context, chat.isIMessage);
     final onBubbleColor = colorScheme.onBubble(context, chat.isIMessage);
-    final bubbleColorsExt = theme.extensions[BubbleColors] as BubbleColors?;
 
     final chatState = ChatsSvc.getOrCreateChatState(chat);
     return ChatStateScope(
@@ -134,8 +126,6 @@ class ConversationViewState extends State<ConversationView> with ThemeHelpers<Co
               colorScheme: colorScheme.copyWith(
                 primary: bubbleColor,
                 onPrimary: onBubbleColor,
-                surface: monetTheming == Monet.full ? null : bubbleColorsExt?.receivedBubbleColor,
-                onSurface: monetTheming == Monet.full ? null : bubbleColorsExt?.onReceivedBubbleColor,
               ),
             ),
             child: PopScope(
@@ -163,11 +153,11 @@ class ConversationViewState extends State<ConversationView> with ThemeHelpers<Co
                 top: false,
                 bottom: false,
                 child: Scaffold(
-                  backgroundColor: windowEffect != WindowEffect.disabled ? Colors.transparent : colorScheme.background,
+                  backgroundColor: windowEffect != WindowEffect.disabled ? Colors.transparent : colorScheme.surface,
                   extendBodyBehindAppBar: true,
                   appBar: PreferredSize(
                       preferredSize: Size(
-                          NavigationSvc.width(context),
+                          double.infinity, // width is ignored by Scaffold; avoid MediaQuery.of subscription
                           (kIsDesktop ? (!iOS ? 25 : 5) : 0) +
                               90 * (iOS ? avatarScale : 0) +
                               (!iOS ? kToolbarHeight : 0)),
@@ -179,7 +169,9 @@ class ConversationViewState extends State<ConversationView> with ThemeHelpers<Co
                     child: GradientBackground(
                       controller: controller,
                       child: SizedBox(
-                        height: context.height,
+                        // sizeOf only rebuilds on screen size changes (rotation), not on
+                        // keyboard viewInsets animation frames which change viewInsets.bottom
+                        height: MediaQuery.sizeOf(context).height,
                         child: Stack(
                           clipBehavior: Clip.none,
                           children: [

@@ -3,7 +3,7 @@ import 'package:bluebubbles/services/backend/settings/settings_service.dart';
 import 'package:bluebubbles/database/global/settings.dart';
 
 class PrefsActions {
-  static Future<void> saveReplyToMessageState(Map<String, dynamic> data) async {
+  static Future<void> saveReplyToMessageState(dynamic data) async {
     final chatGuid = data['chatGuid'] as String;
     final messageGuid = data['messageGuid'] as String?;
     final messagePart = data['messagePart'] as int?;
@@ -17,7 +17,7 @@ class PrefsActions {
     }
   }
 
-  static Future<Map<String, dynamic>?> loadReplyToMessageState(Map<String, dynamic> data) async {
+  static Future<Map<String, dynamic>?> loadReplyToMessageState(dynamic data) async {
     final chatGuid = data['chatGuid'] as String;
 
     final messageGuid = PrefsSvc.i.getString('replyToMessage_$chatGuid');
@@ -33,7 +33,7 @@ class PrefsActions {
     return null;
   }
 
-  static Future<void> syncAllSettings(Map<String, dynamic> data) async {
+  static Future<void> syncAllSettings(dynamic data) async {
     final settingsData = data['settings'] as Map<String, dynamic>;
 
     // Directly update the isolate's settings by creating a new Settings instance from the map
@@ -44,7 +44,7 @@ class PrefsActions {
     SettingsSvc.settings = newSettings;
   }
 
-  static Future<void> syncSettings(Map<String, dynamic> data) async {
+  static Future<void> syncSettings(dynamic data) async {
     Settings.updateFromMap(data);
   }
 }

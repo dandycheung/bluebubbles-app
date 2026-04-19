@@ -153,6 +153,8 @@ class Chat {
       lockChatName: json["lockChatName"] ?? false,
       lockChatIcon: json["lockChatIcon"] ?? false,
       lastReadMessageGuid: json["lastReadMessageGuid"],
+      textFieldText: json["textFieldText"],
+      textFieldAttachments: (json["textFieldAttachments"] as List?)?.cast<String>() ?? const [],
     );
   }
 
@@ -724,7 +726,8 @@ class Chat {
 
     return (await ChatInterface.bulkSyncChats(
       chatsData: chats.map((e) => e.toMap()).toList(),
-    )).chats;
+    ))
+        .chats;
   }
 
   static Future<List<Message>> bulkSyncMessages(Chat chat, List<Message> messages) async {
@@ -757,13 +760,17 @@ class Chat {
     );
   }
 
-  bool get isTextForwarding => guid.startsWith("SMS");
+  /// The messaging service this chat belongs to, derived from the GUID prefix.
+  ChatServiceType get service => ChatServiceType.fromGuid(guid);
 
-  bool get isSMS => false;
+  bool get isTextForwarding => service == ChatServiceType.sms;
 
-  bool get isIMessage => !isTextForwarding && !isSMS;
+  bool get isSMS => service == ChatServiceType.sms;
 
-  bool get isGroup => handles.length > 1 || style == 43;
+  bool get isIMessage => service == ChatServiceType.iMessage;
+
+  // Check style first so handles isn't required to be evaluated, which will incur a DB lookup.
+  bool get isGroup => style == 43 || handles.length > 1;
 
   Chat merge(Chat other) {
     id ??= other.id;
@@ -834,14 +841,8 @@ class Chat {
       }
     } else {
       Logger.debug("Got chat icon for chat ${c.getTitle()}");
-      File file = File(
-          "${FilesystemSvc.avatarsPath}/${FilesystemService.sanitizeGuid(c.guid)}/avatar-${response.data.length}.jpg");
-      if (!(await file.exists())) {
-        await file.create(recursive: true);
-      }
-      if (c.customAvatarPath != null) {
-        await file.delete();
-      }
+      final file = File(FilesystemSvc.chatAvatarPath(c.guid));
+      await file.create(recursive: true);
       await file.writeAsBytes(response.data);
       c.customAvatarPath = file.path;
       await c.saveAsync(updateCustomAvatarPath: true);
@@ -871,6 +872,8 @@ class Chat {
       "lockChatName": lockChatName,
       "lockChatIcon": lockChatIcon,
       "lastReadMessageGuid": lastReadMessageGuid,
+      "textFieldText": textFieldText,
+      "textFieldAttachments": textFieldAttachments,
     };
   }
 }

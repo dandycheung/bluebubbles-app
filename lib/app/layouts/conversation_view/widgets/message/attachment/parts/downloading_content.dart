@@ -52,18 +52,18 @@ class DownloadingContent extends StatelessWidget {
                             ? const CupertinoActivityIndicator(radius: 7)
                             : CircularProgressIndicator(
                                 strokeWidth: 1.5,
-                                valueColor: AlwaysStoppedAnimation(context.theme.colorScheme.properOnSurface),
+                                valueColor: AlwaysStoppedAnimation(context.theme.colorScheme.onSurfaceVariant),
                               ))
                         : isQueued
                             ? Icon(
                                 isiOS ? CupertinoIcons.clock : Icons.schedule,
                                 size: 14,
-                                color: context.theme.colorScheme.properOnSurface,
+                                color: context.theme.colorScheme.onSurfaceVariant,
                               )
                             : CircleProgressBar(
                                 value: downloadController.progress.value?.toDouble() ?? 0,
                                 backgroundColor: context.theme.colorScheme.outline,
-                                foregroundColor: context.theme.colorScheme.properOnSurface,
+                                foregroundColor: context.theme.colorScheme.onSurfaceVariant,
                                 strokeWidth: 1.5,
                               ),
               ),
@@ -78,7 +78,7 @@ class DownloadingContent extends StatelessWidget {
                               ? 'Queued'
                               : 'Downloading',
                   style: context.theme.textTheme.bodySmall!.copyWith(
-                    color: isError ? context.theme.colorScheme.error : context.theme.colorScheme.properOnSurface,
+                    color: isError ? context.theme.colorScheme.error : context.theme.colorScheme.onSurfaceVariant,
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -112,7 +112,7 @@ class DownloadingContent extends StatelessWidget {
                   Icon(
                     getAttachmentIcon(mimeType),
                     size: 52,
-                    color: context.theme.colorScheme.properOnSurface,
+                    color: context.theme.colorScheme.onSurfaceVariant,
                   ),
                   // File size (shown when known)
                   if (fileSize != null)
@@ -121,7 +121,7 @@ class DownloadingContent extends StatelessWidget {
                       child: Text(
                         fileSize,
                         style: context.theme.textTheme.bodySmall!.copyWith(
-                          color: context.theme.colorScheme.properOnSurface.withValues(alpha: 0.6),
+                          color: context.theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
                         ),
                       ),
                     ),
@@ -135,7 +135,7 @@ class DownloadingContent extends StatelessWidget {
                                 ? 'Queued'
                                 : 'Downloading...',
                     style: context.theme.textTheme.bodySmall!.copyWith(
-                      color: isError ? context.theme.colorScheme.error : context.theme.colorScheme.properOnSurface,
+                      color: isError ? context.theme.colorScheme.error : context.theme.colorScheme.onSurfaceVariant,
                     ),
                   ),
                 ],
@@ -160,18 +160,18 @@ class DownloadingContent extends StatelessWidget {
                           ? const CupertinoActivityIndicator(radius: 7)
                           : CircularProgressIndicator(
                               strokeWidth: 1.5,
-                              valueColor: AlwaysStoppedAnimation(context.theme.colorScheme.properOnSurface),
+                              valueColor: AlwaysStoppedAnimation(context.theme.colorScheme.onSurfaceVariant),
                             ))
                       : isQueued
                           ? Icon(
                               isiOS ? CupertinoIcons.clock : Icons.schedule,
                               size: 14,
-                              color: context.theme.colorScheme.properOnSurface,
+                              color: context.theme.colorScheme.onSurfaceVariant,
                             )
                           : CircleProgressBar(
                               value: downloadController.progress.value?.toDouble() ?? 0,
                               backgroundColor: context.theme.colorScheme.outline,
-                              foregroundColor: context.theme.colorScheme.properOnSurface,
+                              foregroundColor: context.theme.colorScheme.onSurfaceVariant,
                               strokeWidth: 1.5,
                             ),
             ),

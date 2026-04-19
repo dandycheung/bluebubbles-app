@@ -87,7 +87,7 @@ class _SettingsPageState extends State<SettingsPage> with ThemeHelpers {
               GoBackIntent: GoBackAction(context),
             },
             child: Obx(() => Container(
-                  color: context.theme.colorScheme.background.themeOpacity(context),
+                  color: context.theme.colorScheme.surface.themeOpacity(context),
                   child: TabletModeWrapper(
                     initialRatio: 0.4,
                     minRatio: kIsDesktop || kIsWeb ? 0.2 : 0.33,

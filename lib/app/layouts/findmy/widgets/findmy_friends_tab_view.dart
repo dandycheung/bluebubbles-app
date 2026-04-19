@@ -22,7 +22,7 @@ class FindMyFriendsTabView extends StatelessWidget {
           if (controller.friendsWithLocation.isNotEmpty)
             SettingsHeader(
               iosSubtitle: context.theme.textTheme.labelLarge!.copyWith(
-                color: context.theme.colorScheme.onBackground.withOpacity(0.6),
+                color: context.theme.colorScheme.onSurface.withOpacity(0.6),
                 fontWeight: FontWeight.w300,
               ),
               materialSubtitle: context.theme.textTheme.labelLarge!.copyWith(

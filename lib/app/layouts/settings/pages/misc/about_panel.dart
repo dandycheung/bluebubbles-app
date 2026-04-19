@@ -130,7 +130,7 @@ class _AboutPanelState extends State<AboutPanel> with ThemeHelpers {
                                   ),
                                 ),
                               ),
-                              backgroundColor: context.theme.colorScheme.background,
+                              backgroundColor: context.theme.colorScheme.surface,
                               appBar: AppBar(
                                 toolbarHeight: 50,
                                 elevation: 0,
@@ -179,7 +179,7 @@ class _AboutPanelState extends State<AboutPanel> with ThemeHelpers {
                               style: context.theme.textTheme.titleLarge,
                               textAlign: TextAlign.center,
                             ),
-                            backgroundColor: context.theme.colorScheme.properSurface,
+                            backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
                             content: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: devs.entries
@@ -231,7 +231,7 @@ class _AboutPanelState extends State<AboutPanel> with ThemeHelpers {
                                 return AlertDialog(
                                   title: Text('Keyboard Shortcuts', style: context.theme.textTheme.titleLarge),
                                   scrollable: true,
-                                  backgroundColor: context.theme.colorScheme.properSurface,
+                                  backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
                                   content: SizedBox(
                                     height: MediaQuery.of(context).size.height / 2,
                                     child: SingleChildScrollView(
@@ -400,7 +400,7 @@ class _AboutPanelState extends State<AboutPanel> with ThemeHelpers {
                                       ),
                                     ),
                                     scrollable: true,
-                                    backgroundColor: context.theme.colorScheme.properSurface,
+                                    backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
                                     content: ListBody(
                                       children: <Widget>[
                                         Row(

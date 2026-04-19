@@ -19,7 +19,7 @@ class NotificationSettingsDialog extends StatelessWidget {
           title: Text(chat.muteType == "mute" ? "Unmute" : "Mute", style: context.theme.textTheme.bodyLarge),
           subtitle: Text(
             "Completely ${chat.muteType == "mute" ? "unmute" : "mute"} this chat",
-            style: context.theme.textTheme.bodySmall!.copyWith(color: context.theme.colorScheme.properOnSurface),
+            style: context.theme.textTheme.bodySmall!.copyWith(color: context.theme.colorScheme.onSurfaceVariant),
           ),
           onTap: () async {
             Navigator.of(context, rootNavigator: true).pop();
@@ -34,7 +34,7 @@ class NotificationSettingsDialog extends StatelessWidget {
             title: Text("Mute Individuals", style: context.theme.textTheme.bodyLarge),
             subtitle: Text(
               "Mute certain individuals in this chat",
-              style: context.theme.textTheme.bodySmall!.copyWith(color: context.theme.colorScheme.properOnSurface),
+              style: context.theme.textTheme.bodySmall!.copyWith(color: context.theme.colorScheme.onSurfaceVariant),
             ),
             onTap: () async {
               Navigator.of(context, rootNavigator: true).pop();
@@ -44,7 +44,7 @@ class NotificationSettingsDialog extends StatelessWidget {
                   context: context,
                   builder: (context) => AlertDialog(
                         title: Text("Mute Individuals", style: context.theme.textTheme.titleLarge),
-                        backgroundColor: context.theme.colorScheme.properSurface,
+                        backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
                         content: SingleChildScrollView(
                           child: SizedBox(
                             width: double.maxFinite,
@@ -122,7 +122,7 @@ class NotificationSettingsDialog extends StatelessWidget {
               style: context.theme.textTheme.bodyLarge),
           subtitle: Text(
             chat.muteType == "temporary_mute" && shouldMuteDateTime(chat.muteArgs) ? "" : "Mute this chat temporarily",
-            style: context.theme.textTheme.bodySmall!.copyWith(color: context.theme.colorScheme.properOnSurface),
+            style: context.theme.textTheme.bodySmall!.copyWith(color: context.theme.colorScheme.onSurfaceVariant),
           ),
           onTap: () async {
             if (shouldMuteDateTime(chat.muteArgs)) {
@@ -157,7 +157,7 @@ class NotificationSettingsDialog extends StatelessWidget {
           title: Text("Text Detection", style: context.theme.textTheme.bodyLarge),
           subtitle: Text(
             "Completely mute this chat, except when a message contains certain text",
-            style: context.theme.textTheme.bodySmall!.copyWith(color: context.theme.colorScheme.properOnSurface),
+            style: context.theme.textTheme.bodySmall!.copyWith(color: context.theme.colorScheme.onSurfaceVariant),
           ),
           onTap: () async {
             final TextEditingController controller = TextEditingController();
@@ -179,7 +179,7 @@ class NotificationSettingsDialog extends StatelessWidget {
           title: Text("Reset chat-specific settings", style: context.theme.textTheme.bodyLarge),
           subtitle: Text(
             "Delete your custom settings",
-            style: context.theme.textTheme.bodySmall!.copyWith(color: context.theme.colorScheme.properOnSurface),
+            style: context.theme.textTheme.bodySmall!.copyWith(color: context.theme.colorScheme.onSurfaceVariant),
           ),
           onTap: () async {
             ChatsSvc.setChatMuted(chat, false);
@@ -192,7 +192,7 @@ class NotificationSettingsDialog extends StatelessWidget {
           },
         ),
       ]),
-      backgroundColor: context.theme.colorScheme.properSurface,
+      backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
     );
   }
 
@@ -212,7 +212,7 @@ class TextDetectionDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: Text("Text detection", style: context.theme.textTheme.titleLarge),
-      backgroundColor: context.theme.colorScheme.properSurface,
+      backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
       content: Column(mainAxisSize: MainAxisSize.min, children: [
         Padding(
           padding: const EdgeInsets.all(8.0),

@@ -146,10 +146,10 @@ class _EmojiSuggestions extends StatelessWidget {
           decoration: BoxDecoration(
             border: isIOS
                 ? null
-                : Border.fromBorderSide(BorderSide(
-                    color: context.theme.colorScheme.background, strokeAlign: BorderSide.strokeAlignOutside)),
+                : Border.fromBorderSide(
+                    BorderSide(color: context.theme.colorScheme.surface, strokeAlign: BorderSide.strokeAlignOutside)),
             borderRadius: BorderRadius.circular(20),
-            color: context.theme.colorScheme.properSurface,
+            color: context.theme.colorScheme.surfaceContainerHighest,
           ),
           clipBehavior: Clip.antiAlias,
           child: Scrollbar(
@@ -190,7 +190,7 @@ class _EmojiSuggestions extends StatelessWidget {
                     child: ListTile(
                       mouseCursor: MouseCursor.defer,
                       dense: true,
-                      selectedTileColor: context.theme.colorScheme.properSurface.oppositeLightenOrDarken(20),
+                      selectedTileColor: context.theme.colorScheme.surfaceContainerHighest.oppositeLightenOrDarken(20),
                       selected: controller.emojiSelectedIndex.value == index,
                       title: Row(
                         children: <Widget>[
@@ -240,10 +240,10 @@ class _MentionSuggestions extends StatelessWidget {
           decoration: BoxDecoration(
             border: isIOS
                 ? null
-                : Border.fromBorderSide(BorderSide(
-                    color: context.theme.colorScheme.background, strokeAlign: BorderSide.strokeAlignOutside)),
+                : Border.fromBorderSide(
+                    BorderSide(color: context.theme.colorScheme.surface, strokeAlign: BorderSide.strokeAlignOutside)),
             borderRadius: BorderRadius.circular(20),
-            color: context.theme.colorScheme.properSurface,
+            color: context.theme.colorScheme.surfaceContainerHighest,
           ),
           clipBehavior: Clip.antiAlias,
           child: Scrollbar(
@@ -277,7 +277,7 @@ class _MentionSuggestions extends StatelessWidget {
                     child: ListTile(
                       mouseCursor: MouseCursor.defer,
                       dense: true,
-                      selectedTileColor: context.theme.colorScheme.properSurface.oppositeLightenOrDarken(20),
+                      selectedTileColor: context.theme.colorScheme.surfaceContainerHighest.oppositeLightenOrDarken(20),
                       selected: controller.mentionSelectedIndex.value == index,
                       title: Row(
                         mainAxisSize: MainAxisSize.min,

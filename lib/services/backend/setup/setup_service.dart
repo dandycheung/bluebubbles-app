@@ -7,11 +7,12 @@ import 'package:get/get.dart';
 SetupService setup = Get.isRegistered<SetupService>() ? Get.find<SetupService>() : Get.put(SetupService());
 
 class SetupService extends GetxService {
-  Future<void> startSetup(
-      int numberOfMessagesPerPage, bool skipEmptyChats, bool saveToDownloads, int? syncTimeFilter) async {
+  Future<void> startSetup(int numberOfMessagesPerPage, bool skipEmptyChats, bool saveToDownloads,
+      bool syncGroupChatIcons, int? syncTimeFilter) async {
     SyncSvc.numberOfMessagesPerPage = numberOfMessagesPerPage;
     SyncSvc.skipEmptyChats = skipEmptyChats;
     SyncSvc.saveToDownloads = saveToDownloads;
+    SyncSvc.syncGroupChatIcons = syncGroupChatIcons;
     SyncSvc.syncTimeFilter = syncTimeFilter;
 
     SyncSvc.initFullSync();

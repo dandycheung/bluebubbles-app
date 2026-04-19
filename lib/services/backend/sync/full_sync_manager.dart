@@ -22,6 +22,7 @@ class FullSyncManager extends SyncManager {
   int messagesSynced = 0;
 
   bool skipEmptyChats;
+  bool syncGroupChatIcons;
   int? syncTimeFilter;
   String? origin;
 
@@ -30,6 +31,7 @@ class FullSyncManager extends SyncManager {
       this.messageCount = 25,
       this.skipEmptyChats = true,
       bool saveLogs = false,
+      this.syncGroupChatIcons = false,
       this.syncTimeFilter,
       String? origin})
       : super("Full", saveLogs: saveLogs);
@@ -125,6 +127,11 @@ class FullSyncManager extends SyncManager {
               // Asyncronously save the messages
               List<Message> insertedMessages = await Message.bulkSaveNewMessages(chat, newMessages);
               messagesSynced += insertedMessages.length;
+
+              // Fetch group chat icon if available.
+              if (syncGroupChatIcons && chat.isGroup) {
+                await Chat.getIcon(chat).catchError((_) {});
+              }
 
               // Increment how many chats we've synced, then set the progress
               completedChats += 1;

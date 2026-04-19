@@ -77,12 +77,12 @@ class HttpService {
 
   Map<String, String> get headers {
     if (SettingsSvc.settings.serverAddress.contains('ngrok')) {
-      SettingsSvc.settings.customHeaders.addAll({'ngrok-skip-browser-warning': 'true'});
+      SettingsSvc.settings.customHeaders.value.addAll({'ngrok-skip-browser-warning': 'true'});
     } else if (SettingsSvc.settings.serverAddress.contains('zrok')) {
-      SettingsSvc.settings.customHeaders.addAll({'skip_zrok_interstitial': 'true'});
+      SettingsSvc.settings.customHeaders.value.addAll({'skip_zrok_interstitial': 'true'});
     }
 
-    return SettingsSvc.settings.customHeaders;
+    return SettingsSvc.settings.customHeaders.value;
   }
 
   void init() {

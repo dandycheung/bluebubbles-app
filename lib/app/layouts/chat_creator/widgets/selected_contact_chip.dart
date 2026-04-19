@@ -21,11 +21,11 @@ class SelectedContactChip extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 2.5),
       child: Obx(() => Material(
-            color: contact.iMessage.value == true
+            color: contact.serviceType.value == ChatServiceType.iMessage
                 ? context.theme.colorScheme.bubble(context, true).withValues(alpha: 0.2)
-                : contact.iMessage.value == false
+                : contact.serviceType.value == ChatServiceType.sms
                     ? context.theme.colorScheme.bubble(context, false).withValues(alpha: 0.2)
-                    : context.theme.colorScheme.properSurface,
+                    : context.theme.colorScheme.surfaceContainerHighest,
             borderRadius: BorderRadius.circular(5),
             clipBehavior: Clip.antiAlias,
             child: InkWell(
@@ -36,13 +36,16 @@ class SelectedContactChip extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
-                    Text(contact.displayName,
+                    Text(
+                        contact.displayName.isPhoneNumber
+                            ? formatPhoneNumber(contact.displayName)
+                            : contact.displayName,
                         style: context.theme.textTheme.bodyMedium!.copyWith(
-                          color: contact.iMessage.value == true
+                          color: contact.serviceType.value == ChatServiceType.iMessage
                               ? context.theme.colorScheme.bubble(context, true)
-                              : contact.iMessage.value == false
+                              : contact.serviceType.value == ChatServiceType.sms
                                   ? context.theme.colorScheme.bubble(context, false)
-                                  : context.theme.colorScheme.properOnSurface,
+                                  : context.theme.colorScheme.onSurfaceVariant,
                         )),
                     const SizedBox(width: 5.0),
                     Icon(

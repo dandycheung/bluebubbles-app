@@ -124,16 +124,25 @@ class ConversationTextFieldState extends CustomState<ConversationTextField, void
   }
 
   void getTextDraft({String? text}) {
-    // Only change the text if the incoming text is different.
-    final incomingText = text ?? chat.textFieldText;
+    // Skip restoring a draft when navigating from the chat creator — the send path
+    // clears both the text controller and the persisted draft before navigating, so
+    // any non-empty value here would be a stale artifact on the CVC's chat object.
+    if (controller.fromChatCreator) return;
+    // Read from ChatState — it is the source of truth and is always up-to-date,
+    // even before the async DB write from a previous session has completed.
+    final incomingText = text ?? ChatsSvc.getChatState(chatGuid)?.textFieldText.value ?? chat.textFieldText;
     if (incomingText != null && incomingText.isNotEmpty && incomingText != controller.textController.text) {
       controller.textController.text = incomingText;
     }
   }
 
   Future<void> getAttachmentDrafts({List<String> attachments = const []}) async {
-    // Only change the attachments if the incoming attachments are different.
-    final incomingAttachments = attachments.isEmpty ? chat.textFieldAttachments : attachments;
+    // Read from ChatState — it is the source of truth and is always up-to-date.
+    // Fall back to chat.textFieldAttachments for the first load after a cold start
+    // (before ChatState has been updated by any setChatTextFieldAttachments call).
+    final incomingAttachments = attachments.isNotEmpty
+        ? attachments
+        : (ChatsSvc.getChatState(chatGuid)?.textFieldAttachments.toList() ?? chat.textFieldAttachments);
     final currentPicked = controller.pickedAttachments.map((element) => element.path).toList();
     if (incomingAttachments.any((element) => !currentPicked.contains(element))) {
       controller.pickedAttachments.clear();
@@ -163,10 +172,10 @@ class ConversationTextFieldState extends CustomState<ConversationTextField, void
 
   void textListener(bool subject) {
     // OPTIMIZATION: Debounce draft saving to avoid database writes on every keystroke
-    if (!subject && controller.textController.text.trim().isNotEmpty) {
+    if (!subject) {
       localController.debounceDraftSave?.cancel();
       localController.debounceDraftSave = Timer(const Duration(milliseconds: 500), () {
-        chat.textFieldText = controller.textController.text;
+        unawaited(ChatsSvc.setChatTextFieldText(chat, controller.textController.text));
       });
     }
 
@@ -302,13 +311,11 @@ class ConversationTextFieldState extends CustomState<ConversationTextField, void
 
   @override
   void dispose() {
-    if (controller.textController.text.trim().isNotEmpty) {
-      chat.textFieldText = controller.textController.text;
-    } else {
-      chat.textFieldText = "";
-    }
-    chat.textFieldAttachments = controller.pickedAttachments.where((e) => e.path != null).map((e) => e.path!).toList();
-    chat.saveAsync(updateTextFieldText: true, updateTextFieldAttachments: true);
+    final draftText = controller.textController.text.trim().isNotEmpty ? controller.textController.text : '';
+    final draftAttachments = controller.pickedAttachments.where((e) => e.path != null).map((e) => e.path!).toList();
+    // Update ChatState synchronously and fire DB save in the background.
+    unawaited(ChatsSvc.setChatTextFieldText(chat, draftText));
+    unawaited(ChatsSvc.setChatTextFieldAttachments(chat, draftAttachments));
 
     controller.focusNode.dispose();
     controller.subjectFocusNode.dispose();
@@ -336,7 +343,7 @@ class ConversationTextFieldState extends CustomState<ConversationTextField, void
         context: context,
         builder: (BuildContext context) {
           return AlertDialog(
-            backgroundColor: context.theme.colorScheme.properSurface,
+            backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
             title: Text(
               "Scheduling message...",
               style: context.theme.textTheme.titleLarge,
@@ -345,7 +352,7 @@ class ConversationTextFieldState extends CustomState<ConversationTextField, void
               height: 70,
               child: Center(
                 child: CircularProgressIndicator(
-                  backgroundColor: context.theme.colorScheme.properSurface,
+                  backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
                   valueColor: AlwaysStoppedAnimation<Color>(context.theme.colorScheme.primary),
                 ),
               ),
@@ -409,11 +416,9 @@ class ConversationTextFieldState extends CustomState<ConversationTextField, void
     controller.replyToMessage = null;
     controller.scheduledDate.value = null;
     localController.debounceTyping = null;
-    // Remove the saved text field draft
-    if ((chat.textFieldText ?? "").isNotEmpty) {
-      chat.textFieldText = "";
-      chat.saveAsync(updateTextFieldText: true);
-    }
+    // Clear the draft now that the message has been sent.
+    unawaited(ChatsSvc.setChatTextFieldText(chat, ''));
+    unawaited(ChatsSvc.setChatTextFieldAttachments(chat, []));
   }
 
   Future<void> openFullCamera({String type = 'camera'}) async {
@@ -466,102 +471,92 @@ class ConversationTextFieldState extends CustomState<ConversationTextField, void
           mainAxisSize: MainAxisSize.min,
           children: [
             Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-              if (!kIsWeb && iOS && Platform.isAndroid)
-                GestureDetector(
-                  onLongPress: () {
-                    openFullCamera(type: 'video');
-                  },
+              Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
                   child: IconButton(
-                      padding: const EdgeInsets.only(left: 10),
-                      icon: Icon(
-                        CupertinoIcons.camera_fill,
-                        color: context.theme.colorScheme.outline,
-                        size: 28,
-                      ),
-                      visualDensity: VisualDensity.compact,
-                      onPressed: () {
-                        openFullCamera();
-                      }),
-                ),
-              IconButton(
-                icon: Icon(
-                  iOS
-                      ? CupertinoIcons.add_circled_solid
-                      : material
-                          ? Icons.add_circle_outline
-                          : Icons.add,
-                  color: context.theme.colorScheme.outline,
-                  size: 28,
-                ),
-                visualDensity: Platform.isAndroid ? VisualDensity.compact : null,
-                onPressed: () async {
-                  if (kIsDesktop) {
-                    final res = await FilePicker.platform.pickFiles(withReadStream: true, allowMultiple: true);
-                    if (res == null || res.files.isEmpty || res.files.first.readStream == null) return;
+                    style: IconButton.styleFrom(
+                      backgroundColor: context.theme.colorScheme.outline.withValues(alpha: 0.2),
+                      shape: const CircleBorder(),
+                      padding: EdgeInsets.zero,
+                      minimumSize: const Size(36, 36),
+                      fixedSize: const Size(36, 36),
+                    ),
+                    icon: Icon(
+                      Icons.add,
+                      color: context.theme.colorScheme.outline,
+                      size: 22,
+                    ),
+                    visualDensity: Platform.isAndroid ? VisualDensity.compact : null,
+                    onPressed: () async {
+                      if (kIsDesktop) {
+                        final res = await FilePicker.platform.pickFiles(withReadStream: true, allowMultiple: true);
+                        if (res == null || res.files.isEmpty || res.files.first.readStream == null) return;
 
-                    for (pf.PlatformFile e in res.files) {
-                      if (e.size / 1024000 > 1000) {
-                        showSnackbar("Error", "This file is over 1 GB! Please compress it before sending.");
-                        continue;
+                        for (pf.PlatformFile e in res.files) {
+                          if (e.size / 1024000 > 1000) {
+                            showSnackbar("Error", "This file is over 1 GB! Please compress it before sending.");
+                            continue;
+                          }
+                          controller.pickedAttachments.add(PlatformFile(
+                            path: e.path,
+                            name: e.name,
+                            size: e.size,
+                            bytes: await readByteStream(e.readStream!),
+                          ));
+                        }
+                      } else if (kIsWeb) {
+                        showDialog(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                                  title: Text("What would you like to do?", style: context.theme.textTheme.titleLarge),
+                                  content: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: <Widget>[
+                                        ListTile(
+                                          title: Text("Upload file", style: Theme.of(context).textTheme.bodyLarge),
+                                          onTap: () async {
+                                            final res = await FilePicker.platform
+                                                .pickFiles(withData: true, allowMultiple: true);
+                                            if (res == null || res.files.isEmpty || res.files.first.bytes == null) {
+                                              return;
+                                            }
+
+                                            for (pf.PlatformFile e in res.files) {
+                                              if (e.size / 1024000 > 1000) {
+                                                showSnackbar("Error",
+                                                    "This file is over 1 GB! Please compress it before sending.");
+                                                continue;
+                                              }
+                                              controller.pickedAttachments.add(PlatformFile(
+                                                path: null,
+                                                name: e.name,
+                                                size: e.size,
+                                                bytes: e.bytes!,
+                                              ));
+                                            }
+                                            Get.back();
+                                          },
+                                        ),
+                                        ListTile(
+                                          title: Text("Send location", style: Theme.of(context).textTheme.bodyLarge),
+                                          onTap: () async {
+                                            Share.location(chat);
+                                            Get.back();
+                                          },
+                                        ),
+                                      ]),
+                                  backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
+                                ));
+                      } else {
+                        if (!showAttachmentPicker) {
+                          controller.focusNode.unfocus();
+                          controller.subjectFocusNode.unfocus();
+                        }
+                        localController.showAttachmentPickerLocal.value = !showAttachmentPicker;
                       }
-                      controller.pickedAttachments.add(PlatformFile(
-                        path: e.path,
-                        name: e.name,
-                        size: e.size,
-                        bytes: await readByteStream(e.readStream!),
-                      ));
-                    }
-                  } else if (kIsWeb) {
-                    showDialog(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                              title: Text("What would you like to do?", style: context.theme.textTheme.titleLarge),
-                              content: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: <Widget>[
-                                    ListTile(
-                                      title: Text("Upload file", style: Theme.of(context).textTheme.bodyLarge),
-                                      onTap: () async {
-                                        final res =
-                                            await FilePicker.platform.pickFiles(withData: true, allowMultiple: true);
-                                        if (res == null || res.files.isEmpty || res.files.first.bytes == null) return;
-
-                                        for (pf.PlatformFile e in res.files) {
-                                          if (e.size / 1024000 > 1000) {
-                                            showSnackbar(
-                                                "Error", "This file is over 1 GB! Please compress it before sending.");
-                                            continue;
-                                          }
-                                          controller.pickedAttachments.add(PlatformFile(
-                                            path: null,
-                                            name: e.name,
-                                            size: e.size,
-                                            bytes: e.bytes!,
-                                          ));
-                                        }
-                                        Get.back();
-                                      },
-                                    ),
-                                    ListTile(
-                                      title: Text("Send location", style: Theme.of(context).textTheme.bodyLarge),
-                                      onTap: () async {
-                                        Share.location(chat);
-                                        Get.back();
-                                      },
-                                    ),
-                                  ]),
-                              backgroundColor: context.theme.colorScheme.properSurface,
-                            ));
-                  } else {
-                    if (!showAttachmentPicker) {
-                      controller.focusNode.unfocus();
-                      controller.subjectFocusNode.unfocus();
-                    }
-                    localController.showAttachmentPickerLocal.value = !showAttachmentPicker;
-                  }
-                },
-              ),
+                    },
+                  )),
               if (!kIsWeb && !Platform.isAndroid)
                 IconButton(
                     icon: Icon(Icons.gif, color: context.theme.colorScheme.outline, size: 28),
@@ -616,11 +611,12 @@ class ConversationTextFieldState extends CustomState<ConversationTextField, void
                           ),
                         ),
                         style: TenorStyle(
-                          color: context.theme.colorScheme.properSurface,
+                          color: context.theme.colorScheme.surfaceContainerHighest,
                           attributionStyle: TenorAttributionStyle(brightnes: context.theme.brightness),
                           tabBarStyle: TenorTabBarStyle(
                             decoration: BoxDecoration(
-                                color: context.theme.colorScheme.properSurface, borderRadius: BorderRadius.circular(8)),
+                                color: context.theme.colorScheme.surfaceContainerHighest,
+                                borderRadius: BorderRadius.circular(8)),
                             indicator: BoxDecoration(
                               color: context.theme.colorScheme.primary,
                               borderRadius: BorderRadius.circular(8),
@@ -711,7 +707,7 @@ class ConversationTextFieldState extends CustomState<ConversationTextField, void
                                                         width: 1,
                                                       )),
                                                       borderRadius: BorderRadius.circular(20),
-                                                      color: context.theme.colorScheme.properSurface,
+                                                      color: context.theme.colorScheme.surfaceContainerHighest,
                                                     ),
                                                     child: Center(
                                                       child: AnimatedOpacity(
@@ -735,6 +731,7 @@ class ConversationTextFieldState extends CustomState<ConversationTextField, void
                   ],
                 ),
               ),
+              if (iOS) const SizedBox(width: 10),
               if (samsung)
                 Padding(
                   padding: const EdgeInsets.only(right: 5.0),
@@ -747,16 +744,22 @@ class ConversationTextFieldState extends CustomState<ConversationTextField, void
                   ),
                 ),
             ]),
-            AnimatedSize(
-              duration: const Duration(milliseconds: 250),
-              curve: Curves.easeIn,
-              alignment: Alignment.bottomCenter,
-              child: !showAttachmentPicker
-                  ? SizedBox(width: NavigationSvc.width(context))
-                  : AttachmentPicker(
-                      controller: controller,
-                    ),
-            ),
+            Builder(builder: (context) {
+              // Capture width outside the Obx lambda so the reactive builder does not
+              // register a MediaQuery.of dependency and rebuild on keyboard animation frames.
+              // sizeOf only notifies on actual display-size changes (rotation / resize).
+              final pickerWidth = MediaQuery.sizeOf(context).width;
+              return Obx(() => AnimatedSize(
+                    duration: const Duration(milliseconds: 250),
+                    curve: Curves.easeIn,
+                    alignment: Alignment.bottomCenter,
+                    child: !showAttachmentPicker
+                        ? SizedBox(width: pickerWidth)
+                        : AttachmentPicker(
+                            controller: controller,
+                          ),
+                  ));
+            }),
             AnimatedSize(
               duration: const Duration(milliseconds: 250),
               curve: Curves.easeIn,
@@ -871,6 +874,7 @@ class TextFieldComponent extends StatefulWidget {
     this.focusNode,
     this.initialAttachments = const [],
     this.alwaysShowSend = false,
+    this.hideMediaPicker = false,
   });
 
   final SpellCheckTextEditingController? subjectTextController;
@@ -886,12 +890,16 @@ class TextFieldComponent extends StatefulWidget {
   /// Used by the chat creator when an existing chat has been resolved.
   final bool alwaysShowSend;
 
+  /// When true, the camera, attachment picker, and GIF icons are hidden.
+  /// Used by the chat creator when no existing chat has been matched yet.
+  final bool hideMediaPicker;
+
   @override
   State<StatefulWidget> createState() => TextFieldComponentState();
 }
 
 class TextFieldComponentState extends State<TextFieldComponent> {
-  late final ConversationViewController? controller;
+  late ConversationViewController? controller;
   late final FocusNode? focusNode;
   late final RecorderController? recorderController;
   late final List<PlatformFile> initialAttachments;
@@ -933,7 +941,17 @@ class TextFieldComponentState extends State<TextFieldComponent> {
     super.dispose();
   }
 
+  @override
+  void didUpdateWidget(TextFieldComponent old) {
+    super.didUpdateWidget(old);
+    if (widget.controller != old.controller) {
+      controller = widget.controller;
+    }
+  }
+
   bool get iOS => SettingsSvc.settings.skin.value == Skins.iOS;
+
+  bool get material => SettingsSvc.settings.skin.value == Skins.Material;
 
   bool get samsung => SettingsSvc.settings.skin.value == Skins.Samsung;
 
@@ -941,11 +959,55 @@ class TextFieldComponentState extends State<TextFieldComponent> {
 
   bool get isChatCreator => focusNode != null;
 
+  bool _showAttachmentPickerLocal = false;
+
+  Future<void> _openCamera({String type = 'camera'}) async {
+    bool granted = (await Permission.camera.request()).isGranted;
+    if (!granted) {
+      showSnackbar("Error", "Camera access was denied!");
+      return;
+    }
+
+    if (type == 'video') {
+      final micGranted = (await Permission.microphone.request()).isGranted;
+      if (!micGranted) {
+        showSnackbar("Error", "Microphone access was denied!");
+        return;
+      }
+    }
+
+    final XFile? file;
+    if (Platform.isAndroid && !kIsWeb) {
+      file = await Navigator.of(context).push<XFile?>(
+        MaterialPageRoute(
+          builder: (_) => CameraScreen(initialMode: type == 'video' ? 'video' : 'photo'),
+        ),
+      );
+    } else if (type == 'camera') {
+      file = await ImagePicker().pickImage(source: ImageSource.camera);
+    } else {
+      file = await ImagePicker().pickVideo(source: ImageSource.camera);
+    }
+
+    if (file != null) {
+      controller!.pickedAttachments.add(PlatformFile(
+        path: file.path,
+        name: file.path.split('/').last,
+        size: await file.length(),
+        bytes: await file.readAsBytes(),
+      ));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final txtController = controller?.textController ?? textController;
     final subjController = controller?.subjectTextController ?? subjectTextController;
-    return Focus(
+    final showIcons = isChatCreator && !widget.hideMediaPicker && controller != null;
+    // Captured here because contextMenuBuilder receives its own `context` that shadows this
+    // one and may not have the dark theme properly applied (it's a detached overlay context).
+    final outerTheme = Theme.of(context);
+    Widget textInput = Focus(
       onKeyEvent: (_, ev) => handleKey(_, ev, context, isChatCreator),
       child: Padding(
         padding: const EdgeInsets.only(right: 5.0),
@@ -953,18 +1015,26 @@ class TextFieldComponentState extends State<TextFieldComponent> {
             valueListenable: isRecordingNotifier,
             builder: (context, isRecording, child) {
               return Container(
-                decoration: iOS
+                // Border is placed in the foregroundDecoration so it paints on top of
+                // child content (ReplyHolder, attachments, etc.) and remains visible
+                // at all corners instead of being covered by opaque children.
+                foregroundDecoration: iOS
                     ? BoxDecoration(
                         border: Border.fromBorderSide(BorderSide(
                           color: (isRecording & iOS)
                               ? context.theme.colorScheme.primary.withValues(alpha: 1.0)
-                              : context.theme.colorScheme.properSurface,
-                          width: 1.5,
+                              : context.theme.colorScheme.outlineVariant.withValues(alpha: 0.25),
+                          width: 1,
                         )),
                         borderRadius: BorderRadius.circular(20),
                       )
+                    : null,
+                decoration: iOS
+                    ? const BoxDecoration(
+                        borderRadius: BorderRadius.all(Radius.circular(20)),
+                      )
                     : BoxDecoration(
-                        color: context.theme.colorScheme.properSurface,
+                        color: context.theme.colorScheme.surfaceContainerHighest,
                         borderRadius: BorderRadius.circular(20),
                       ),
                 clipBehavior: Clip.antiAlias,
@@ -991,7 +1061,7 @@ class TextFieldComponentState extends State<TextFieldComponent> {
                             return Divider(
                               height: 1.5,
                               thickness: 1.5,
-                              color: context.theme.colorScheme.properSurface,
+                              color: context.theme.colorScheme.surfaceContainerHighest,
                             );
                           }
                           return const SizedBox.shrink();
@@ -1048,7 +1118,7 @@ class TextFieldComponentState extends State<TextFieldComponent> {
                           height: 1.5,
                           thickness: 1.5,
                           indent: 10,
-                          color: context.theme.colorScheme.properSurface,
+                          color: context.theme.colorScheme.surfaceContainerHighest,
                         ),
                       TextField(
                         textCapitalization: TextCapitalization.sentences,
@@ -1117,7 +1187,7 @@ class TextFieldComponentState extends State<TextFieldComponent> {
                           final selected = editableTextState.textEditingValue.text.substring(
                               (start - 1).clamp(0, text.length), (end + 1).clamp(min(1, text.length), text.length));
 
-                          return AdaptiveTextSelectionToolbar.editableText(
+                          final toolbar = AdaptiveTextSelectionToolbar.editableText(
                             editableTextState: editableTextState,
                           )..buttonItems?.addAllIf(
                               MentionTextEditingController.escapingRegex.allMatches(selected).length == 1,
@@ -1183,6 +1253,19 @@ class TextFieldComponentState extends State<TextFieldComponent> {
                                 ),
                               ],
                             );
+
+                          // Use outerTheme (captured from the real build context) because the
+                          // contextMenuBuilder's own `context` parameter shadows the build context
+                          // and may not have the dark theme applied (it's a detached overlay context).
+                          return Theme(
+                            data: outerTheme.copyWith(
+                              cardColor: outerTheme.colorScheme.surfaceContainerHighest,
+                              colorScheme: outerTheme.colorScheme.copyWith(
+                                surface: outerTheme.colorScheme.surfaceContainerHighest,
+                              ),
+                            ),
+                            child: toolbar,
+                          );
                         },
                         onTap: () {
                           HapticFeedback.selectionClick();
@@ -1201,6 +1284,70 @@ class TextFieldComponentState extends State<TextFieldComponent> {
               );
             }),
       ),
+    );
+    if (!showIcons) return textInput;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+          if (!kIsWeb && iOS && Platform.isAndroid)
+            GestureDetector(
+              onLongPress: () {
+                _openCamera(type: 'video');
+              },
+              child: IconButton(
+                padding: const EdgeInsets.only(left: 10),
+                icon: Icon(CupertinoIcons.camera_fill, color: context.theme.colorScheme.outline, size: 28),
+                visualDensity: VisualDensity.compact,
+                onPressed: () {
+                  _openCamera();
+                },
+              ),
+            ),
+          IconButton(
+            icon: Icon(
+              iOS
+                  ? CupertinoIcons.add_circled_solid
+                  : material
+                      ? Icons.add_circle_outline
+                      : Icons.add,
+              color: context.theme.colorScheme.outline,
+              size: 28,
+            ),
+            visualDensity: Platform.isAndroid ? VisualDensity.compact : null,
+            onPressed: () async {
+              if (kIsDesktop) {
+                final res = await FilePicker.platform.pickFiles(withReadStream: true, allowMultiple: true);
+                if (res == null || res.files.isEmpty || res.files.first.readStream == null) return;
+                for (pf.PlatformFile e in res.files) {
+                  if (e.size / 1024000 > 1000) {
+                    showSnackbar("Error", "This file is over 1 GB! Please compress it before sending.");
+                    continue;
+                  }
+                  controller!.pickedAttachments.add(PlatformFile(
+                    path: e.path,
+                    name: e.name,
+                    size: e.size,
+                    bytes: await readByteStream(e.readStream!),
+                  ));
+                }
+              } else {
+                if (!_showAttachmentPickerLocal) FocusScope.of(context).unfocus();
+                setState(() => _showAttachmentPickerLocal = !_showAttachmentPickerLocal);
+              }
+            },
+          ),
+          Expanded(child: textInput),
+        ]),
+        AnimatedSize(
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeIn,
+          alignment: Alignment.bottomCenter,
+          child: _showAttachmentPickerLocal
+              ? AttachmentPicker(controller: controller!)
+              : SizedBox(width: NavigationSvc.width(context)),
+        ),
+      ],
     );
   }
 
@@ -1305,7 +1452,9 @@ class TextFieldComponentState extends State<TextFieldComponent> {
     }
 
     if (isChatCreator) {
-      if (ev.logicalKey == LogicalKeyboardKey.enter && !HardwareKeyboard.instance.isShiftPressed) {
+      if ((kIsDesktop || kIsWeb) &&
+          ev.logicalKey == LogicalKeyboardKey.enter &&
+          !HardwareKeyboard.instance.isShiftPressed) {
         sendMessage();
         return KeyEventResult.handled;
       }

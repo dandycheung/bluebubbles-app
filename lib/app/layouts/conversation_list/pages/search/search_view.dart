@@ -67,7 +67,7 @@ class SearchViewState extends State<SearchView> with ThemeHelpers {
   final Rx<DateTime?> sinceDate = Rx<DateTime?>(null);
 
   Color get backgroundColor => SettingsSvc.settings.windowEffect.value == WindowEffect.disabled
-      ? context.theme.colorScheme.background
+      ? context.theme.colorScheme.surface
       : Colors.transparent;
 
   @override
@@ -267,7 +267,7 @@ class SearchViewState extends State<SearchView> with ThemeHelpers {
                               child: Text(
                             "Enter at least 3 characters to begin a search",
                             style: context.theme.textTheme.bodySmall!
-                                .copyWith(color: context.theme.colorScheme.properOnSurface),
+                                .copyWith(color: context.theme.colorScheme.onSurfaceVariant),
                           )),
                         ],
                       ),
@@ -315,7 +315,7 @@ class SearchViewState extends State<SearchView> with ThemeHelpers {
                                             data: ThemeData(
                                               cupertinoOverrideTheme: CupertinoThemeData(
                                                   brightness: ThemeData.estimateBrightnessForColor(
-                                                      context.theme.colorScheme.background)),
+                                                      context.theme.colorScheme.surface)),
                                             ),
                                             child: const CupertinoActivityIndicator(),
                                           )
@@ -488,7 +488,7 @@ class SearchViewState extends State<SearchView> with ThemeHelpers {
                             border: !SettingsSvc.settings.hideDividers.value
                                 ? Border(
                                     bottom: BorderSide(
-                                      color: context.theme.colorScheme.background.oppositeLightenOrDarken(15),
+                                      color: context.theme.colorScheme.surface.oppositeLightenOrDarken(15),
                                       width: 0.5,
                                     ),
                                   )

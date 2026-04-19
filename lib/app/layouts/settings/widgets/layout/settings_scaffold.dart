@@ -21,6 +21,7 @@ class SettingsScaffold extends StatelessWidget {
   final Widget? stickyPrefix;
   final Widget? stickySuffix;
   final Widget? fab;
+  final Widget? leading;
 
   SettingsScaffold({
     super.key,
@@ -35,6 +36,7 @@ class SettingsScaffold extends StatelessWidget {
     this.stickyPrefix,
     this.stickySuffix,
     this.fab,
+    this.leading,
   });
 
   bool get extend => actions.isNotEmpty && kIsDesktop;
@@ -56,7 +58,7 @@ class SettingsScaffold extends StatelessWidget {
                   elevation: 0,
                   scrolledUnderElevation: 3,
                   surfaceTintColor: context.theme.colorScheme.primary,
-                  leading: buildBackButton(context),
+                  leading: leading ?? buildBackButton(context),
                   backgroundColor: headerColor,
                   centerTitle: SettingsSvc.settings.skin.value == Skins.iOS,
                   title: Text(
@@ -120,7 +122,7 @@ class SettingsScaffold extends StatelessWidget {
                                       child: Center(
                                           child: Text(title,
                                               style: context.theme.textTheme.displaySmall!
-                                                  .copyWith(color: context.theme.colorScheme.onBackground),
+                                                  .copyWith(color: context.theme.colorScheme.onSurface),
                                               textAlign: TextAlign.center)),
                                     ),
                                     FadeTransition(
@@ -151,7 +153,7 @@ class SettingsScaffold extends StatelessWidget {
                                           height: 50,
                                           child: Align(
                                             alignment: Alignment.centerLeft,
-                                            child: buildBackButton(context),
+                                            child: leading ?? buildBackButton(context),
                                           ),
                                         ),
                                       ),

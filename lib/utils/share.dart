@@ -37,7 +37,7 @@ class Share {
       await showDialog(
           context: Get.context!,
           builder: (context) => AlertDialog(
-                backgroundColor: Get.theme.colorScheme.properSurface,
+                backgroundColor: Get.theme.colorScheme.surfaceContainerHighest,
                 title: Text(
                   "Location Services",
                   style: Get.textTheme.titleLarge,
@@ -81,7 +81,7 @@ class Share {
         await showDialog(
             context: Get.context!,
             builder: (context) => AlertDialog(
-                  backgroundColor: Get.theme.colorScheme.properSurface,
+                  backgroundColor: Get.theme.colorScheme.surfaceContainerHighest,
                   title: Text("Location Permission", style: Get.textTheme.titleLarge),
                   content: Text(
                     "BlueBubbles needs the Location permission to send Locations",
@@ -146,14 +146,14 @@ class Share {
               if (url == null) {
                 return AbsorbPointer(
                   child: AlertDialog(
-                    backgroundColor: Get.theme.colorScheme.properSurface,
+                    backgroundColor: Get.theme.colorScheme.surfaceContainerHighest,
                     title: Text("Loading Location...", style: Get.textTheme.titleLarge),
                     content: buildProgressIndicator(context),
                   ),
                 );
               }
               return AlertDialog(
-                backgroundColor: Get.theme.colorScheme.properSurface,
+                backgroundColor: Get.theme.colorScheme.surfaceContainerHighest,
                 title: Text("Send Location?", style: Get.textTheme.titleLarge),
                 content: SizedBox(
                   width: 150,

@@ -22,7 +22,7 @@ class SyncSettings extends StatelessWidget {
       customMiddle: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(25),
-          color: context.theme.colorScheme.properSurface,
+          color: context.theme.colorScheme.surfaceContainerHighest,
         ),
         child: Column(
           children: [
@@ -30,7 +30,7 @@ class SyncSettings extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 25, horizontal: 8),
               child: Text(
                 "Sync Options",
-                style: context.theme.textTheme.titleLarge!.copyWith(color: context.theme.colorScheme.properOnSurface),
+                style: context.theme.textTheme.titleLarge!.copyWith(color: context.theme.colorScheme.onSurfaceVariant),
                 textAlign: TextAlign.center,
               ),
             ),
@@ -47,7 +47,7 @@ class SyncSettings extends StatelessWidget {
                   Text(
                     "Skip empty chats",
                     style: context.theme.textTheme.bodyLarge!
-                        .copyWith(color: context.theme.colorScheme.properOnSurface)
+                        .copyWith(color: context.theme.colorScheme.onSurfaceVariant)
                         .copyWith(height: 1.5),
                     textAlign: TextAlign.center,
                   ),
@@ -61,6 +61,41 @@ class SyncSettings extends StatelessWidget {
                 ],
               ),
             ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 40.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    mainAxisSize: MainAxisSize.max,
+                    children: [
+                      Text(
+                        "Sync group chat icons",
+                        style: context.theme.textTheme.bodyLarge!
+                            .copyWith(color: context.theme.colorScheme.onSurfaceVariant)
+                            .copyWith(height: 1.5),
+                        textAlign: TextAlign.center,
+                      ),
+                      StatefulSwitch(
+                        parentController: controller,
+                        initial: controller.syncGroupChatIcons,
+                        update: (newVal) {
+                          controller.syncGroupChatIcons = newVal;
+                        },
+                      ),
+                    ],
+                  ),
+                  Text(
+                    "Note: Syncing group chat icons can significantly increase the time it takes to sync chats.",
+                    style: context.theme.textTheme.bodySmall!.copyWith(
+                      color: context.theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                ],
+              ),
+            ),
             if (!kIsWeb)
               Padding(
                 padding: const EdgeInsets.only(left: 40.0, right: 40.0, bottom: 20),
@@ -71,7 +106,7 @@ class SyncSettings extends StatelessWidget {
                     Text(
                       "Save sync log to downloads",
                       style: context.theme.textTheme.bodyLarge!
-                          .copyWith(color: context.theme.colorScheme.properOnSurface)
+                          .copyWith(color: context.theme.colorScheme.onSurfaceVariant)
                           .copyWith(height: 1.5),
                       textAlign: TextAlign.center,
                     ),
@@ -113,12 +148,14 @@ class SyncSettings extends StatelessWidget {
             final numberOfMessagesPerPage = controller.numberToDownload.clamp(1, double.infinity).toInt();
             final skipEmptyChats = controller.skipEmptyChats;
             final saveToDownloads = controller.saveToDownloads;
+            final syncGroupChatIcons = controller.syncGroupChatIcons;
             final syncTimeFilter = controller.syncTimeFilter;
 
             // Init the full sync first so when we go to the next page,
             // the manager is already created.
             // Don't await or else the page won't change.
-            setup.startSetup(numberOfMessagesPerPage, skipEmptyChats, saveToDownloads, syncTimeFilter);
+            setup.startSetup(
+                numberOfMessagesPerPage, skipEmptyChats, saveToDownloads, syncGroupChatIcons, syncTimeFilter);
 
             controller.pageController.nextPage(
               duration: const Duration(milliseconds: 300),
@@ -216,7 +253,7 @@ class _NumberOfMessagesSliderState extends CustomState<NumberOfMessagesSlider, i
           child: Text(
             "Number of Messages to Sync Per Chat: $numberOfMessages",
             style: context.theme.textTheme.bodyLarge!
-                .copyWith(color: context.theme.colorScheme.properOnSurface)
+                .copyWith(color: context.theme.colorScheme.onSurfaceVariant)
                 .copyWith(height: 1.5),
             textAlign: TextAlign.center,
           ),
@@ -311,7 +348,7 @@ class _TimeFilterDropdownState extends CustomState<TimeFilterDropdown, int?, Set
             child: Text(
               "Sync Active Chats Within",
               style: context.theme.textTheme.bodyLarge!
-                  .copyWith(color: context.theme.colorScheme.properOnSurface)
+                  .copyWith(color: context.theme.colorScheme.onSurfaceVariant)
                   .copyWith(height: 1.5),
               textAlign: TextAlign.left,
             ),
@@ -319,13 +356,13 @@ class _TimeFilterDropdownState extends CustomState<TimeFilterDropdown, int?, Set
           const SizedBox(width: 10),
           DropdownButton<int?>(
             value: selectedValue,
-            dropdownColor: context.theme.colorScheme.properSurface,
+            dropdownColor: context.theme.colorScheme.surfaceContainerHighest,
             items: timeOptions.entries.map((entry) {
               return DropdownMenuItem<int?>(
                 value: entry.value,
                 child: Text(
                   entry.key,
-                  style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.properOnSurface),
+                  style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.onSurfaceVariant),
                 ),
               );
             }).toList(),

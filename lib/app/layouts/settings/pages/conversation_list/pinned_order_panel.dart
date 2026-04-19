@@ -19,13 +19,13 @@ class PinnedOrderPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final Rx<Color> _backgroundColor = (kIsDesktop && SettingsSvc.settings.windowEffect.value == WindowEffect.disabled
             ? Colors.transparent
-            : context.theme.colorScheme.background)
+            : context.theme.colorScheme.surface)
         .obs;
     final ScrollController scrollController = ScrollController();
 
     if (kIsDesktop) {
       SettingsSvc.settings.windowEffect.listen((WindowEffect effect) => _backgroundColor.value =
-          effect != WindowEffect.disabled ? Colors.transparent : context.theme.colorScheme.background);
+          effect != WindowEffect.disabled ? Colors.transparent : context.theme.colorScheme.surface);
     }
     return BBAnnotatedRegion(
       child: Obx(
@@ -38,7 +38,7 @@ class PinnedOrderPanel extends StatelessWidget {
                 filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
                 child: AppBar(
                   systemOverlayStyle:
-                      ThemeData.estimateBrightnessForColor(context.theme.colorScheme.background) == Brightness.dark
+                      ThemeData.estimateBrightnessForColor(context.theme.colorScheme.surface) == Brightness.dark
                           ? SystemUiOverlayStyle.light
                           : SystemUiOverlayStyle.dark,
                   toolbarHeight: kIsDesktop ? 80 : 50,

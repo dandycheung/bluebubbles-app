@@ -260,6 +260,11 @@ class ChatsService {
     loadedAllChats.complete();
     Logger.info("Finished fetching chats (${chatStates.length}).", tag: "ChatBloc");
 
+    // Calculate initial unread count now that all chat states are populated.
+    // The listener only fires on changes, so we need an explicit call here to
+    // seed the badge with the correct value before any message is received.
+    _recalculateUnreadCount();
+
     // Initialize watchers AFTER loading all chats to avoid duplicates
     initDbWatchers();
 
@@ -477,12 +482,14 @@ class ChatsService {
     if (state != null) {
       final currentLatestMessage = state.latestMessage.value;
       final currentPinIndex = state.pinIndex.value;
+      final currentIsPinned = state.isPinned.value;
 
       // Check if sort-order-relevant fields have changed
       final latestMessageChanged = updated.latestMessage.guid != currentLatestMessage?.guid ||
           updated.latestMessage.dateCreated != currentLatestMessage?.dateCreated;
       final pinIndexChanged = updated.pinIndex != currentPinIndex;
-      final sortOrderChanged = latestMessageChanged || pinIndexChanged;
+      final isPinnedChanged = (updated.isPinned ?? false) != currentIsPinned;
+      final sortOrderChanged = latestMessageChanged || pinIndexChanged || isPinnedChanged;
 
       if (updated != state.chat || override) {
         state.updateFromChat(updated);
@@ -617,10 +624,7 @@ class ChatsService {
     if (withLastMessage) withQuery.add("lastmessage");
 
     final response = await HttpSvc.singleChat(chatGuid, withQuery: withQuery.join(",")).catchError((err, stack) {
-      if (err is! Response) {
-        Logger.error("Failed to fetch chat metadata!", error: err, trace: stack, tag: "Fetch-Chat");
-        return err;
-      }
+      Logger.error("Failed to fetch chat metadata!", error: err, trace: stack, tag: "Fetch-Chat");
       return Response(requestOptions: RequestOptions(path: ''));
     });
 
@@ -647,10 +651,7 @@ class ChatsService {
     final response = await HttpSvc.chats(
             withQuery: withQuery, offset: offset, limit: limit, sort: withLastMessage ? "lastmessage" : null)
         .catchError((err, stack) {
-      if (err is! Response) {
-        Logger.error("Failed to fetch chat metadata!", error: err, trace: stack, tag: "Fetch-Chat");
-        return err;
-      }
+      Logger.error("Failed to fetch chats!", error: err, trace: stack, tag: "Fetch-Chat");
       return Response(requestOptions: RequestOptions(path: ''));
     });
 
@@ -810,10 +811,15 @@ class ChatsService {
       await Future.delayed(const Duration(milliseconds: 500));
     }
 
-    // Collect handle IDs before deleting the chat (handles are lazy-loaded via ToMany)
-    final handleIds = deleteHandles
-        ? chat.handles.map((e) => e.id).whereType<int>().toList()
-        : <int>[];
+    // Collect handle IDs before deleting the chat (handles are lazy-loaded via ToMany).
+    // Only include handles that are not shared with any other chat — if a handle
+    // participates in multiple chats, removing it would break those other chats.
+    List<int> handleIds = <int>[];
+    if (deleteHandles) {
+      final otherChats = allChats.where((c) => c.guid != chat.guid).toList();
+      final otherHandleIds = otherChats.expand((c) => c.handles).map((h) => h.id).whereType<int>().toSet();
+      handleIds = chat.handles.map((e) => e.id).whereType<int>().where((id) => !otherHandleIds.contains(id)).toList();
+    }
 
     // Perform the actual DB deletion
     List<Message> messages = Chat.getMessages(chat);
@@ -859,6 +865,10 @@ class ChatsService {
 
     // Update service state
     updateChat(chat);
+
+    // Pin status changes the filtered list (pinned vs non-pinned), so we must
+    // explicitly trigger a list version update so all conversation list views re-filter.
+    _scheduleListVersionUpdate(immediate: true);
 
     return chat;
   }
@@ -1095,10 +1105,11 @@ class ChatsService {
     // Update Chat model (use state.chat if available, otherwise use passed in chat)
     final chatToUpdate = state?.chat ?? chat;
     chatToUpdate.displayName = value;
-    await chatToUpdate.saveAsync(updateDisplayName: true);
 
-    // Update state if available
+    // Update state eagerly so the UI reflects the change immediately
     state?.updateDisplayNameInternal(value);
+
+    await chatToUpdate.saveAsync(updateDisplayName: true);
   }
 
   /// Set chat custom avatar path
@@ -1167,33 +1178,37 @@ class ChatsService {
   }
 
   /// Set chat text field text
+  /// ChatState is updated synchronously and is the source of truth for the UI.
+  /// The DB write is fire-and-forget so callers never need to await this.
   Future<void> setChatTextFieldText(Chat chat, String? value) async {
     final state = getChatState(chat.guid);
 
     if (state != null && state.textFieldText.value == value) return;
 
-    // Update Chat model (use state.chat if available, otherwise use passed in chat)
+    // Update ChatState first — this is the source of truth for the text field UI.
+    state?.updateTextFieldTextInternal(value);
+
+    // Persist to the chat model and DB asynchronously (fire-and-forget).
     final chatToUpdate = state?.chat ?? chat;
     chatToUpdate.textFieldText = value;
-    await chatToUpdate.saveAsync(updateTextFieldText: true);
-
-    // Update state if available
-    state?.updateTextFieldTextInternal(value);
+    unawaited(chatToUpdate.saveAsync(updateTextFieldText: true));
   }
 
   /// Set chat text field attachments
+  /// ChatState is updated synchronously and is the source of truth for the UI.
+  /// The DB write is fire-and-forget so callers never need to await this.
   Future<void> setChatTextFieldAttachments(Chat chat, List<String> value) async {
     final state = getChatState(chat.guid);
 
     if (state != null && listEquals(state.textFieldAttachments, value)) return;
 
-    // Update Chat model (use state.chat if available, otherwise use passed in chat)
+    // Update ChatState first — this is the source of truth for the text field UI.
+    state?.updateTextFieldAttachmentsInternal(value);
+
+    // Persist to the chat model and DB asynchronously (fire-and-forget).
     final chatToUpdate = state?.chat ?? chat;
     chatToUpdate.textFieldAttachments = value;
-    await chatToUpdate.saveAsync(updateTextFieldAttachments: true);
-
-    // Update state if available
-    state?.updateTextFieldAttachmentsInternal(value);
+    unawaited(chatToUpdate.saveAsync(updateTextFieldAttachments: true));
   }
 
   // ========== End Chat Property Setters ==========

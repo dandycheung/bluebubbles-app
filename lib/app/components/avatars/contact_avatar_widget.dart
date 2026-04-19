@@ -57,7 +57,8 @@ class _ContactAvatarWidgetState extends State<ContactAvatarWidget> with ThemeHel
   }
 
   void onAvatarTap() async {
-    if (!SettingsSvc.settings.colorfulAvatars.value && !SettingsSvc.settings.colorfulBubbles.value) return;
+    final isIOS = SettingsSvc.settings.skin.value == Skins.iOS;
+    if (isIOS && !SettingsSvc.settings.colorfulAvatars.value && !SettingsSvc.settings.colorfulBubbles.value) return;
 
     bool didReset = false;
     final Color color = await showColorPickerDialog(
@@ -119,8 +120,9 @@ class _ContactAvatarWidgetState extends State<ContactAvatarWidget> with ThemeHel
 
   @override
   Widget build(BuildContext context) {
-    final tileColor =
-        ThemeSvc.inDarkMode(context) ? context.theme.colorScheme.properSurface : context.theme.colorScheme.background;
+    final tileColor = ThemeSvc.inDarkMode(context)
+        ? context.theme.colorScheme.surfaceContainerHighest
+        : context.theme.colorScheme.surface;
 
     // Build once with all reactive values in outer Obx
     return Obx(() {
@@ -136,7 +138,9 @@ class _ContactAvatarWidgetState extends State<ContactAvatarWidget> with ThemeHel
       final hideContactInfo = SettingsSvc.settings.redactedMode.value && SettingsSvc.settings.hideContactInfo.value;
       final genAvatars = SettingsSvc.settings.redactedMode.value && SettingsSvc.settings.generateFakeAvatars.value;
       final iOS = SettingsSvc.settings.skin.value == Skins.iOS;
-      final colorfulAvatars = SettingsSvc.settings.colorfulAvatars.value;
+      final colorfulAvatars = !iOS ||
+          SettingsSvc.settings.colorfulAvatars.value ||
+          (SettingsSvc.settings.skin.value == Skins.Material && SettingsSvc.settings.monetTheming.value != Monet.none);
       final userAvatarPath = SettingsSvc.settings.userAvatarPath.value;
 
       return MouseRegion(
@@ -167,15 +171,19 @@ class _ContactAvatarWidgetState extends State<ContactAvatarWidget> with ThemeHel
                 begin: AlignmentDirectional.topStart,
                 end: AlignmentDirectional.bottomEnd,
                 colors: [
-                  !colorfulAvatars ? HexColor("928E8E") : (iOS ? colors[1] : colors[0]),
-                  !colorfulAvatars ? HexColor("686868") : colors[0]
+                  !colorfulAvatars
+                      ? (ThemeSvc.inDarkMode(context) ? HexColor("8A8686") : HexColor("B8B4B4"))
+                      : (iOS ? colors[1] : colors[0]),
+                  !colorfulAvatars
+                      ? (ThemeSvc.inDarkMode(context) ? HexColor("6B6868") : HexColor("928E8E"))
+                      : colors[0],
                 ],
                 stops: [0.3, 0.9],
               ),
               border: Border.all(
                   color: iOS || SettingsSvc.settings.skin.value == Skins.Samsung
                       ? tileColor
-                      : context.theme.colorScheme.background,
+                      : context.theme.colorScheme.surface,
                   width: widget.borderThickness,
                   strokeAlign: BorderSide.strokeAlignOutside),
               shape: BoxShape.circle,
@@ -208,19 +216,28 @@ class _ContactAvatarWidgetState extends State<ContactAvatarWidget> with ThemeHel
                       // If file doesn't exist, show initials instead
                       String? initials = cachedInitials?.substring(0, iOS ? null : 1);
                       if (!isNullOrEmpty(initials)) {
-                        return Text(
-                          initials!,
-                          key: Key("$keyPrefix-avatar-text"),
-                          style: TextStyle(
-                            fontSize: (widget.fontSize ?? 18).roundToDouble() * (material ? 1.25 : 1),
-                            color: material ? context.theme.colorScheme.background : Colors.white,
+                        return SizedBox(
+                          width: size,
+                          child: Text(
+                            initials!,
+                            key: Key("$keyPrefix-avatar-text"),
+                            style: TextStyle(
+                              fontSize: size * 0.5,
+                              height: 1.0,
+                              leadingDistribution: TextLeadingDistribution.even,
+                              color: material ? context.theme.colorScheme.surface : Colors.white,
+                            ),
+                            textAlign: TextAlign.center,
+                            textHeightBehavior: const TextHeightBehavior(
+                              applyHeightToFirstAscent: false,
+                              applyHeightToLastDescent: false,
+                            ),
                           ),
-                          textAlign: TextAlign.center,
                         );
                       }
                       return Icon(
                         iOS ? CupertinoIcons.person_fill : Icons.person,
-                        color: material ? context.theme.colorScheme.background : Colors.white,
+                        color: material ? context.theme.colorScheme.surface : Colors.white,
                         size: size / 2 * (material ? 1.25 : 1),
                       );
                     },
@@ -230,14 +247,23 @@ class _ContactAvatarWidgetState extends State<ContactAvatarWidget> with ThemeHel
                 // Use reactive initials from HandleState
                 String? initials = cachedInitials?.substring(0, iOS ? null : 1);
                 if (!isNullOrEmpty(initials) && !hideContactInfo && !genAvatars) {
-                  return Text(
-                    initials!,
-                    key: Key("$keyPrefix-avatar-text"),
-                    style: TextStyle(
-                      fontSize: (widget.fontSize ?? 18).roundToDouble() * (material ? 1.25 : 1),
-                      color: material ? context.theme.colorScheme.background : Colors.white,
+                  return SizedBox(
+                    width: size,
+                    child: Text(
+                      initials!,
+                      key: Key("$keyPrefix-avatar-text"),
+                      style: TextStyle(
+                        fontSize: size * 0.5,
+                        height: 1.0,
+                        leadingDistribution: TextLeadingDistribution.even,
+                        color: material ? context.theme.colorScheme.surface : Colors.white,
+                      ),
+                      textAlign: TextAlign.center,
+                      textHeightBehavior: const TextHeightBehavior(
+                        applyHeightToFirstAscent: false,
+                        applyHeightToLastDescent: false,
+                      ),
                     ),
-                    textAlign: TextAlign.center,
                   );
                 } else if (genAvatars && widget.handle?.fakeAvatar != null) {
                   return widget.handle!.fakeAvatar;
@@ -248,7 +274,7 @@ class _ContactAvatarWidgetState extends State<ContactAvatarWidget> with ThemeHel
                       padding: const EdgeInsets.only(left: 1),
                       child: Icon(
                         iOS ? CupertinoIcons.person_fill : Icons.person,
-                        color: material ? context.theme.colorScheme.background : Colors.white,
+                        color: material ? context.theme.colorScheme.surface : Colors.white,
                         key: Key("$keyPrefix-avatar-icon"),
                         size: size / 2 * (material ? 1.25 : 1),
                       ));

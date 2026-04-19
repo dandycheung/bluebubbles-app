@@ -279,7 +279,7 @@ class AttachmentsService extends GetxService {
               ),
               content: Text("This file already exists.\nAre you sure you want to overwrite it?",
                   style: context.theme.textTheme.bodyLarge),
-              backgroundColor: context.theme.colorScheme.properSurface,
+              backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
               actions: <Widget>[
                 TextButton(
                   child: Text("No",

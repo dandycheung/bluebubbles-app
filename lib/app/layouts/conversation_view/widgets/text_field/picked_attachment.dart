@@ -117,7 +117,7 @@ class _PickedAttachmentState extends State<PickedAttachment> with AutomaticKeepA
             child: OpenContainer(
                 tappable: false,
                 openColor: Colors.black,
-                closedColor: context.theme.colorScheme.background,
+                closedColor: context.theme.colorScheme.surface,
                 openBuilder: (_, closeContainer) {
                   // Use the full file path as transferName so getContent can locate
                   // the file on disk when bytes are not pre-loaded (e.g. gallery picker).
@@ -145,7 +145,7 @@ class _PickedAttachmentState extends State<PickedAttachment> with AutomaticKeepA
                         if (isEmpty)
                           Positioned.fill(
                             child: Container(
-                              color: context.theme.colorScheme.properSurface,
+                              color: context.theme.colorScheme.surfaceContainerHighest,
                               alignment: Alignment.center,
                               child: Padding(
                                 padding: const EdgeInsets.all(8.0),
@@ -178,9 +178,11 @@ class _PickedAttachmentState extends State<PickedAttachment> with AutomaticKeepA
                               onPressed: () {
                                 if (widget.controller != null) {
                                   widget.controller!.pickedAttachments.removeAt(widget.pickedAttachmentIndex);
-                                  widget.controller!.chat.textFieldAttachments
-                                      .removeWhere((e) => e == widget.data.path);
-                                  widget.controller!.chat.saveAsync(updateTextFieldAttachments: true);
+                                  final remaining = widget.controller!.pickedAttachments
+                                      .where((e) => e.path != null)
+                                      .map((e) => e.path!)
+                                      .toList();
+                                  unawaited(ChatsSvc.setChatTextFieldAttachments(widget.controller!.chat, remaining));
                                   // Don't request focus if attachment picker is open
                                   if (!widget.controller!.showAttachmentPicker) {
                                     widget.controller!.lastFocusedNode.requestFocus();
@@ -203,7 +205,7 @@ class _PickedAttachmentState extends State<PickedAttachment> with AutomaticKeepA
               child: TextButton(
                 style: TextButton.styleFrom(
                   backgroundColor: context.theme.colorScheme.secondary,
-                  shape: CircleBorder(side: BorderSide(color: context.theme.colorScheme.properSurface)),
+                  shape: CircleBorder(side: BorderSide(color: context.theme.colorScheme.surfaceContainerHighest)),
                   padding: const EdgeInsets.all(0),
                   maximumSize: const Size(25, 25),
                   minimumSize: const Size(25, 25),
@@ -211,7 +213,7 @@ class _PickedAttachmentState extends State<PickedAttachment> with AutomaticKeepA
                 ),
                 child: Icon(
                   Icons.close,
-                  color: context.theme.colorScheme.background,
+                  color: context.theme.colorScheme.surface,
                   size: 18,
                 ),
                 onPressed: () {

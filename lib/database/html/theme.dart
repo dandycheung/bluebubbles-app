@@ -119,8 +119,9 @@ class ThemeStruct {
             "onError": data.colorScheme.onError.toARGB32(),
             "errorContainer": data.colorScheme.errorContainer.toARGB32(),
             "onErrorContainer": data.colorScheme.onErrorContainer.toARGB32(),
-            "background": data.colorScheme.background.toARGB32(),
-            "onBackground": data.colorScheme.onBackground.toARGB32(),
+            // "background" kept as compat stub for older app versions reading this JSON
+            "background": data.colorScheme.surface.toARGB32(),
+            "onBackground": data.colorScheme.onSurface.toARGB32(),
             "surface": data.colorScheme.surface.toARGB32(),
             "onSurface": data.colorScheme.onSurface.toARGB32(),
             "surfaceVariant": data.colorScheme.surfaceVariant.toARGB32(),
@@ -201,10 +202,8 @@ class ThemeStruct {
             onError: Color(map["colorScheme"]["onError"]),
             errorContainer: Color(map["colorScheme"]["errorContainer"]),
             onErrorContainer: Color(map["colorScheme"]["onErrorContainer"]),
-            background: Color(map["colorScheme"]["background"]),
-            onBackground: Color(map["colorScheme"]["onBackground"]),
-            surface: Color(map["colorScheme"]["surface"]),
-            onSurface: Color(map["colorScheme"]["onSurface"]),
+            surface: Color(map["colorScheme"]["surface"] ?? map["colorScheme"]["background"]),
+            onSurface: Color(map["colorScheme"]["onSurface"] ?? map["colorScheme"]["onBackground"]),
             surfaceVariant: Color(map["colorScheme"]["surfaceVariant"]),
             onSurfaceVariant: Color(map["colorScheme"]["onSurfaceVariant"]),
             outline: Color(map["colorScheme"]["outline"]),
@@ -262,8 +261,6 @@ class ThemeStruct {
       "onError": finalData.colorScheme.onError,
       "errorContainer": finalData.colorScheme.errorContainer,
       "onErrorContainer": finalData.colorScheme.onErrorContainer,
-      "background": finalData.colorScheme.background,
-      "onBackground": finalData.colorScheme.onBackground,
       "surface": finalData.colorScheme.surface,
       "onSurface": finalData.colorScheme.onSurface,
       "surfaceVariant": finalData.colorScheme.surfaceVariant,
@@ -296,11 +293,8 @@ class ThemeStruct {
         "onError": "onError is used for any text or icon that is on top of an error colored element.",
         "errorContainer": "errorContainer is used on desktop as the hover color for the X button.",
         "onErrorContainer": "onErrorContainer is used on desktop as the icon color for the X button.",
-        "background": "background is the main background color of the app.",
-        "onBackground": "onBackground is used for any text or icon that is on top of a background colored element.",
-        "surface": "surface is an alternate background color of the app.",
-        "onSurface":
-            "onSurface is used for any text or icon that is on top of a surface colored element.\n\nNote: We use an algorithm internally to determine whether surface or surfaceVariant will be more visible on the background color.",
+        "surface": "surface is the main background color of the app.",
+        "onSurface": "onSurface is used for any text or icon that is on top of a surface colored element.",
         "surfaceVariant":
             "surfaceVariant is an alternate background color of the app. It is also used as the divider color between tiles in settings.",
         "onSurfaceVariant":
@@ -327,13 +321,13 @@ class ThemeStruct {
 
   /// Returns the default text sizes
   static Map<String, double> get defaultTextSizes => {
-        "titleLarge": 22,
-        "bodyLarge": 16,
-        "bodyMedium": 14,
-        "bodySmall": 12,
-        "labelLarge": 14,
-        "labelSmall": 11,
-        "bubbleText": 15,
+        "titleLarge": 22, // M3 default
+        "bodyLarge": 16, // M3 default
+        "bodyMedium": 14, // M3 default
+        "bodySmall": 12, // M3 default
+        "labelLarge": 14, // M3 default
+        "labelSmall": 11, // M3 default
+        "bubbleText": 15, // custom default
       };
 
   @override

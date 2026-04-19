@@ -127,7 +127,7 @@ class _ConversationPeekViewState extends State<ConversationPeekView>
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
                 child: Container(
-                  color: context.theme.colorScheme.properSurface.darkenPercent(30).withValues(alpha: 0.2),
+                  color: context.theme.colorScheme.surfaceContainerHighest.darkenPercent(30).withValues(alpha: 0.2),
                 ),
               ),
             ),
@@ -170,8 +170,8 @@ class _ConversationPeekViewState extends State<ConversationPeekView>
                             child: Container(
                               decoration: BoxDecoration(
                                 color: ThemeSvc.inDarkMode(context)
-                                    ? context.theme.colorScheme.properSurface.darkenPercent(30)
-                                    : context.theme.colorScheme.background,
+                                    ? context.theme.colorScheme.surfaceContainerHighest.darkenPercent(30)
+                                    : context.theme.colorScheme.surface,
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               width: min(context.width - 50, 500),
@@ -251,13 +251,13 @@ class _ConversationPeekViewState extends State<ConversationPeekView>
             dense: !kIsDesktop && !kIsWeb,
             title: Text(
               widget.chat.isPinned! ? "Unpin" : "Pin",
-              style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.properOnSurface),
+              style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.onSurfaceVariant),
             ),
             trailing: Icon(
                 widget.chat.isPinned!
                     ? (ios ? cupertino.CupertinoIcons.pin_slash : Icons.star_outline)
                     : (ios ? cupertino.CupertinoIcons.pin : Icons.star),
-                color: context.theme.colorScheme.properOnSurface),
+                color: context.theme.colorScheme.onSurfaceVariant),
           ),
         ),
       ),
@@ -278,13 +278,13 @@ class _ConversationPeekViewState extends State<ConversationPeekView>
             dense: !kIsDesktop && !kIsWeb,
             title: Text(
               widget.chat.muteType == "mute" ? 'Show Alerts' : 'Hide Alerts',
-              style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.properOnSurface),
+              style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.onSurfaceVariant),
             ),
             trailing: Icon(
                 widget.chat.muteType == "mute"
                     ? (ios ? cupertino.CupertinoIcons.bell : Icons.notifications_active)
                     : (ios ? cupertino.CupertinoIcons.bell_slash : Icons.notifications_off),
-                color: context.theme.colorScheme.properOnSurface),
+                color: context.theme.colorScheme.onSurfaceVariant),
           ),
         ),
       ),
@@ -305,13 +305,13 @@ class _ConversationPeekViewState extends State<ConversationPeekView>
             dense: !kIsDesktop && !kIsWeb,
             title: Text(
               widget.chat.hasUnreadMessage! ? 'Mark Read' : 'Mark Unread',
-              style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.properOnSurface),
+              style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.onSurfaceVariant),
             ),
             trailing: Icon(
                 widget.chat.hasUnreadMessage!
                     ? (ios ? cupertino.CupertinoIcons.person_crop_circle_badge_xmark : Icons.mark_chat_unread)
                     : (ios ? cupertino.CupertinoIcons.person_crop_circle_badge_checkmark : Icons.mark_chat_read),
-                color: context.theme.colorScheme.properOnSurface),
+                color: context.theme.colorScheme.onSurfaceVariant),
           ),
         ),
       ),
@@ -332,13 +332,13 @@ class _ConversationPeekViewState extends State<ConversationPeekView>
             dense: !kIsDesktop && !kIsWeb,
             title: Text(
               widget.chat.isArchived! ? 'Unarchive' : 'Archive',
-              style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.properOnSurface),
+              style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.onSurfaceVariant),
             ),
             trailing: Icon(
                 widget.chat.isArchived!
                     ? (ios ? cupertino.CupertinoIcons.tray_arrow_up : Icons.unarchive)
                     : (ios ? cupertino.CupertinoIcons.tray_arrow_down : Icons.archive),
-                color: context.theme.colorScheme.properOnSurface),
+                color: context.theme.colorScheme.onSurfaceVariant),
           ),
         ),
       ),
@@ -349,46 +349,48 @@ class _ConversationPeekViewState extends State<ConversationPeekView>
             await showDialog(
               barrierDismissible: false,
               context: context,
-              builder: (BuildContext context) {
+              builder: (BuildContext dialogContext) {
                 return AlertDialog(
                   title: Text(
                     "Are you sure?",
-                    style: context.theme.textTheme.titleLarge,
+                    style: dialogContext.theme.textTheme.titleLarge,
                   ),
-                  content:
-                      Text("This chat will be deleted from this device only", style: context.theme.textTheme.bodyLarge),
-                  backgroundColor: context.theme.colorScheme.properSurface,
+                  content: Text("This chat will be deleted from this device only",
+                      style: dialogContext.theme.textTheme.bodyLarge),
+                  backgroundColor: dialogContext.theme.colorScheme.surfaceContainerHighest,
                   actions: <Widget>[
                     TextButton(
                       child: Text("No",
-                          style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.primary)),
+                          style: dialogContext.theme.textTheme.bodyLarge!
+                              .copyWith(color: dialogContext.theme.colorScheme.primary)),
                       onPressed: () {
-                        popPeekView();
+                        Navigator.of(dialogContext).pop();
                       },
                     ),
                     TextButton(
                       child: Text("Yes",
-                          style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.primary)),
-                      onPressed: () async {
+                          style: dialogContext.theme.textTheme.bodyLarge!
+                              .copyWith(color: dialogContext.theme.colorScheme.primary)),
+                      onPressed: () {
                         ChatsSvc.removeChat(widget.chat);
                         ChatsSvc.softDeleteChat(widget.chat);
-                        popPeekView();
+                        Navigator.of(dialogContext).pop();
                       },
                     ),
                   ],
                 );
               },
             );
-            popPeekView();
+            if (mounted) popPeekView();
           },
           child: ListTile(
             mouseCursor: MouseCursor.defer,
             dense: !kIsDesktop && !kIsWeb,
             title: Text(
               'Delete',
-              style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.properOnSurface),
+              style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.onSurfaceVariant),
             ),
-            trailing: Icon(cupertino.CupertinoIcons.trash, color: context.theme.colorScheme.properOnSurface),
+            trailing: Icon(cupertino.CupertinoIcons.trash, color: context.theme.colorScheme.onSurfaceVariant),
           ),
         ),
       ),
@@ -400,8 +402,8 @@ class _ConversationPeekViewState extends State<ConversationPeekView>
         filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
         child: Container(
           color: (ThemeSvc.inDarkMode(context)
-                  ? context.theme.colorScheme.properSurface
-                  : context.theme.colorScheme.background)
+                  ? context.theme.colorScheme.surfaceContainerHighest
+                  : context.theme.colorScheme.surface)
               .withAlpha(150),
           width: maxMenuWidth,
           child:

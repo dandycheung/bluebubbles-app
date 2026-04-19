@@ -74,6 +74,18 @@ class GlobalIsolate {
       return _startCompleter.future;
     }
 
+    // Reset the completer if a previous startup attempt completed (successfully or with an
+    // error).  Without this, any concurrent caller that arrives while this new attempt is
+    // in-flight would receive the stale completed completer and immediately see the old
+    // error rather than waiting for the new startup to finish.
+    if (_startCompleter.isCompleted) {
+      _startCompleter = Completer<void>();
+    }
+
+    // Clear any stale SendPort left over from a previous failed/timed-out attempt so
+    // that _waitForSendPort does not complete prematurely on a dead port.
+    _sendPort = null;
+
     _isStarting = true;
 
     try {
@@ -103,11 +115,14 @@ class GlobalIsolate {
       IsolateNameServer.registerPortWithName(_receivePort!.sendPort, isolatePortName);
 
       Logger.debug('Starting $isolateDebugName...');
-      // Pass the RootIsolateToken from the main isolate so the spawned isolate can initialize BackgroundIsolateBinaryMessenger
+      // Pass only the ReceivePort's SendPort and the RootIsolateToken.
+      // The action map is NOT passed via args — each entry point resolves its own
+      // action map via the defaultActionMap parameter inside the spawned isolate,
+      // which avoids any cross-isolate serialisation of function closures/typedefs.
       final rootToken = RootIsolateToken.instance;
       _isolate = await Isolate.spawn(
         getIsolateEntryPoint as void Function(List<dynamic>),
-        [_receivePort!.sendPort, rootToken, getActionMap()],
+        [_receivePort!.sendPort, rootToken],
         debugName: isolateDebugName,
         onExit: _exitPort!.sendPort,
         onError: _errorPort!.sendPort,
@@ -142,6 +157,13 @@ class GlobalIsolate {
       if (_sendPort != null) {
         timer.cancel();
         completer.complete();
+      } else if (_isolate == null) {
+        // Isolate exited (or was killed) before it could send its SendPort — fail immediately
+        // rather than burning the full startupTimeout.
+        timer.cancel();
+        if (!completer.isCompleted) {
+          completer.completeError('Isolate exited before sending SendPort');
+        }
       } else if (DateTime.now().difference(startTime) > maxWaitTime) {
         timer.cancel();
         if (!completer.isCompleted) {
@@ -158,6 +180,7 @@ class GlobalIsolate {
       // Clean up the isolate if we failed to get the SendPort
       _isolate?.kill(priority: Isolate.immediate);
       _isolate = null;
+      _sendPort = null;
       _isRunning = false;
       rethrow;
     }
@@ -432,9 +455,11 @@ class GlobalIsolate {
 
   /// Handle isolate exit (called when exit port receives a message)
   void _handleIsolateExit() {
-    if (!_isRunning) return; // Already cleaned up
+    // Guard against double-cleanup but allow the startup case:
+    // during startup _isRunning is false, so the old guard would wrongly skip cleanup.
+    if (!_isRunning && !_isStarting) return;
 
-    Logger.warn('$isolateDebugName has exited');
+    Logger.warn('$isolateDebugName has exited unexpectedly (isRunning=$_isRunning, isStarting=$_isStarting)');
     _cleanupDeadIsolate();
   }
 
@@ -444,27 +469,36 @@ class GlobalIsolate {
 
   /// Get the action map for this isolate
   /// Override this in subclasses to provide a different action map
-  Map<IsolateRequestType, dynamic> getActionMap() => IsolateActons.actions;
+  Map<IsolateRequestType, IsolateAction> getActionMap() => IsolateActons.actions;
 
   /// Shared entry point logic for all isolates
   /// Accepts a custom initialization function to allow specialized isolates to load different services
   static Future<void> sharedIsolateEntryPoint(
     List<dynamic> args,
     Future<void> Function(RootIsolateToken?) initServices,
-    Map<IsolateRequestType, dynamic> defaultActionMap,
+    Map<IsolateRequestType, IsolateAction> defaultActionMap,
   ) async {
     final SendPort sendPort = args[0];
     final RootIsolateToken? rootIsolateToken = args.length > 1 ? args[1] : null;
-    final Map<IsolateRequestType, dynamic> actionMap = args.length > 2 ? args[2] : defaultActionMap;
+    // Use the action map supplied directly by the entry point (defaultActionMap).
+    // This intentionally ignores args[2] — the action map is never passed across the
+    // isolate boundary because serialising generic Map<K, typedef> values is fragile
+    // and has been observed to cause a TypeError in debug/JIT that kills the isolate
+    // before the SendPort handshake can complete.
+    final Map<IsolateRequestType, IsolateAction> actionMap = defaultActionMap;
 
-    await initServices(rootIsolateToken);
-
-    // Store the send port for event emission
+    // Store the send port for event emission (before initServices so events can fire during init)
     IsolateEventEmitter.setSendPort(sendPort);
 
-    // Create a receiver for the isolate
+    // Create a receiver for the isolate and send the SendPort back to the main isolate
+    // immediately, BEFORE initServices runs.  Any messages the main isolate sends while
+    // services are still initialising are buffered by ReceivePort and delivered once
+    // receivePort.listen() is called below.  This prevents the startupTimeout from firing
+    // when initServices is legitimately slow (e.g. JIT compilation in debug mode).
     final receivePort = ReceivePort();
     sendPort.send(receivePort.sendPort);
+
+    await initServices(rootIsolateToken);
 
     receivePort.listen((message) async {
       if (message is! Map<String, dynamic>) return;
@@ -476,56 +510,13 @@ class GlobalIsolate {
       Logger.debug('Received request: $type');
 
       try {
-        final action = actionMap[type];
+        final IsolateAction? action = actionMap[type];
         if (action == null) {
           throw Exception('Unknown request type: $type');
         }
 
-        // Check function signature using Function.toString() introspection
-        final functionStr = action.toString();
-        final isAsync = functionStr.contains('Future<');
-        final hasInput = !functionStr.contains('()') && !functionStr.contains('Function()');
-        final hasOutput = !functionStr.contains('void Function');
-
-        if (isAsync) {
-          if (!hasInput && hasOutput) {
-            // Future<T> Function()
-            final result = await action();
-            sendPort.send(IsolateResponse.success(uuid: uuid, data: result).toMap());
-          } else if (hasInput && !hasOutput) {
-            // Future<void> Function(T)
-            await action(data);
-            sendPort.send(IsolateResponse.success(uuid: uuid).toMap());
-          } else if (!hasInput && !hasOutput) {
-            // Future<void> Function()
-            await action();
-            sendPort.send(IsolateResponse.success(uuid: uuid).toMap());
-          } else {
-            // Future<R> Function(T)
-            final result = await action(data);
-            sendPort.send(IsolateResponse.success(uuid: uuid, data: result).toMap());
-          }
-        } else {
-          // Synchronous functions
-          if (!hasInput && hasOutput) {
-            // T Function()
-            final result = action();
-            sendPort.send(IsolateResponse.success(uuid: uuid, data: result).toMap());
-          } else if (hasInput && !hasOutput) {
-            // void Function(T)
-            action(data);
-            sendPort.send(IsolateResponse.success(uuid: uuid).toMap());
-          } else if (!hasInput && !hasOutput) {
-            // void Function()
-            action();
-            sendPort.send(IsolateResponse.success(uuid: uuid).toMap());
-          } else {
-            // R Function(T)
-            final result = action(data);
-            sendPort.send(IsolateResponse.success(uuid: uuid, data: result).toMap());
-          }
-        }
-
+        final result = await action(data);
+        sendPort.send(IsolateResponse.success(uuid: uuid, data: result).toMap());
         Logger.debug('Returning request: $type');
       } catch (e, s) {
         Logger.error('Error in isolate action: $e', trace: s);
@@ -547,6 +538,12 @@ class GlobalIsolate {
     );
   }
 }
+
+/// Standard signature for all isolate-dispatchable action functions.
+/// Every entry in the action map must conform to this type so that the
+/// dispatch path is a single `await action(data)` without any runtime
+/// string introspection.
+typedef IsolateAction = Future<dynamic> Function(dynamic);
 
 enum IsolateRequestType {
   // Test actions

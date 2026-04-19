@@ -46,7 +46,7 @@ class ManualMarkState extends State<ManualMark> with ThemeHelpers {
                           ? (iOS ? CupertinoIcons.app : Icons.mark_chat_read_outlined)
                           : (iOS ? CupertinoIcons.app_badge : Icons.mark_chat_unread_outlined),
               color: !iOS
-                  ? context.theme.colorScheme.onBackground
+                  ? context.theme.colorScheme.onSurface
                   : (!marked && !marking || widget.controller.inSelectMode.value)
                       ? context.theme.colorScheme.primary
                       : context.theme.colorScheme.outline,
@@ -87,7 +87,7 @@ class ManualMarkState extends State<ManualMark> with ThemeHelpers {
             IconButton(
               icon: Icon(
                 iOS ? CupertinoIcons.arrow_right : Icons.forward_outlined,
-                color: !iOS ? context.theme.colorScheme.onBackground : context.theme.colorScheme.primary,
+                color: !iOS ? context.theme.colorScheme.onSurface : context.theme.colorScheme.primary,
               ),
               onPressed: () async {
                 List<PlatformFile> attachments = [];

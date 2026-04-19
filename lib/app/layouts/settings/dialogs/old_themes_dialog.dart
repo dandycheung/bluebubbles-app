@@ -18,7 +18,7 @@ class OldThemesDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: Text("Old Themes", style: context.theme.textTheme.titleLarge),
-      backgroundColor: context.theme.colorScheme.properSurface,
+      backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
       content: SingleChildScrollView(
         child: SizedBox(
           width: double.maxFinite,
@@ -49,7 +49,7 @@ class OldThemesDialog extends StatelessWidget {
                               builder: (context) => AlertDialog(
                                     title: Text("${oldThemes[index].name ?? "Unknown Theme"} Colors",
                                         style: context.theme.textTheme.titleLarge),
-                                    backgroundColor: context.theme.colorScheme.properSurface,
+                                    backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
                                     content: SingleChildScrollView(
                                       child: SizedBox(
                                         width: double.maxFinite,

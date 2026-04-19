@@ -111,10 +111,10 @@ class FullscreenMediaHolderState extends State<FullscreenMediaHolder> with Theme
                             ? "Media"
                             : "${currentIndex + 1} of ${attachments.length}",
                         style: context.theme.textTheme.titleLarge!
-                            .copyWith(color: context.theme.colorScheme.properOnSurface)),
+                            .copyWith(color: context.theme.colorScheme.onSurfaceVariant)),
                     centerTitle: iOS,
                     iconTheme: IconThemeData(color: context.theme.colorScheme.primary),
-                    backgroundColor: context.theme.colorScheme.properSurface,
+                    backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
                     systemOverlayStyle: context.theme.colorScheme.brightness == Brightness.dark
                         ? SystemUiOverlayStyle.light
                         : SystemUiOverlayStyle.dark,
@@ -233,7 +233,7 @@ class FullscreenMediaHolderState extends State<FullscreenMediaHolder> with Theme
                             Text(
                               (_content.mimeType ?? ""),
                               style: context.theme.textTheme.bodyLarge!
-                                  .copyWith(color: context.theme.colorScheme.properOnSurface),
+                                  .copyWith(color: context.theme.colorScheme.onSurfaceVariant),
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -241,7 +241,7 @@ class FullscreenMediaHolderState extends State<FullscreenMediaHolder> with Theme
                             Text(
                               _content.getFriendlySize(),
                               style: context.theme.textTheme.bodyMedium!
-                                  .copyWith(color: context.theme.colorScheme.properOnSurface),
+                                  .copyWith(color: context.theme.colorScheme.onSurfaceVariant),
                               maxLines: 1,
                             ),
                           ],
@@ -285,7 +285,7 @@ class FullscreenMediaHolderState extends State<FullscreenMediaHolder> with Theme
                                                 : CircleProgressBar(
                                                     value: _content.progress.value?.toDouble() ?? 0,
                                                     backgroundColor: context.theme.colorScheme.outline,
-                                                    foregroundColor: context.theme.colorScheme.properOnSurface,
+                                                    foregroundColor: context.theme.colorScheme.onSurfaceVariant,
                                                   ),
                                   ),
                                 ),
@@ -299,7 +299,7 @@ class FullscreenMediaHolderState extends State<FullscreenMediaHolder> with Theme
                                               ? "Queued"
                                               : (_content.attachment.mimeType ?? ""),
                                   style: context.theme.textTheme.bodyLarge!
-                                      .copyWith(color: context.theme.colorScheme.properOnSurface),
+                                      .copyWith(color: context.theme.colorScheme.onSurfaceVariant),
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
                                 )

@@ -31,7 +31,7 @@ class _ChatInfoState extends State<ChatInfo> with ThemeHelpers {
         context: context,
         builder: (BuildContext context) {
           return AlertDialog(
-            backgroundColor: context.theme.colorScheme.properSurface,
+            backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
             title: Text(
               title,
               style: context.theme.textTheme.titleLarge,
@@ -88,7 +88,7 @@ class _ChatInfoState extends State<ChatInfo> with ThemeHelpers {
           context: context,
           builder: (BuildContext context) {
             return AlertDialog(
-              backgroundColor: context.theme.colorScheme.properSurface,
+              backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
               title: Text(
                 "Updating group photo...",
                 style: context.theme.textTheme.titleLarge,
@@ -97,7 +97,7 @@ class _ChatInfoState extends State<ChatInfo> with ThemeHelpers {
                 height: 70,
                 child: Center(
                   child: CircularProgressIndicator(
-                    backgroundColor: context.theme.colorScheme.properSurface,
+                    backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
                     valueColor: AlwaysStoppedAnimation<Color>(context.theme.colorScheme.primary),
                   ),
                 ),
@@ -183,7 +183,7 @@ class _ChatInfoState extends State<ChatInfo> with ThemeHelpers {
                               width: 30,
                               height: 30,
                               decoration: BoxDecoration(
-                                border: Border.all(color: context.theme.colorScheme.background, width: 1),
+                                border: Border.all(color: context.theme.colorScheme.surface, width: 1),
                                 shape: BoxShape.circle,
                                 color: context.theme.colorScheme.tertiaryContainer,
                               ),
@@ -202,26 +202,26 @@ class _ChatInfoState extends State<ChatInfo> with ThemeHelpers {
           ),
         if (iOS)
           Padding(
-            padding: const EdgeInsets.only(top: 12.0),
+            padding: const EdgeInsets.only(top: 12.0, left: 20.0, right: 20.0),
             child: Center(
-              child: RichText(
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                text: TextSpan(
-                  style: context.theme.textTheme.headlineMedium!.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: context.theme.colorScheme.onBackground,
-                  ),
-                  children: MessageHelper.buildEmojiText(
-                    chatState?.title.value ?? chat.getTitle(),
-                    context.theme.textTheme.headlineMedium!.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: context.theme.colorScheme.onBackground,
+              child: Obx(() => RichText(
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    text: TextSpan(
+                      style: context.theme.textTheme.headlineMedium!.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: context.theme.colorScheme.onSurface,
+                      ),
+                      children: MessageHelper.buildEmojiText(
+                        chatState?.title.value ?? chat.getTitle(),
+                        context.theme.textTheme.headlineMedium!.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: context.theme.colorScheme.onSurface,
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-              ),
+                  )),
             ),
           ),
         if (chat.isGroup && !iOS)
@@ -249,16 +249,16 @@ class _ChatInfoState extends State<ChatInfo> with ThemeHelpers {
                     showChangeName(chat, "private-api", context);
                   }
                 },
-                title: RichText(
-                  text: TextSpan(
-                    style: context.theme.textTheme.bodyLarge,
-                    children: MessageHelper.buildEmojiText(
-                      chatState?.title.value ?? chat.getTitle(),
-                      context.theme.textTheme.bodyLarge!,
-                    ),
-                  ),
-                ),
-                trailing: Icon(Icons.edit_outlined, color: context.theme.colorScheme.onBackground),
+                title: Obx(() => RichText(
+                      text: TextSpan(
+                        style: context.theme.textTheme.bodyLarge,
+                        children: MessageHelper.buildEmojiText(
+                          chatState?.title.value ?? chat.getTitle(),
+                          context.theme.textTheme.bodyLarge!,
+                        ),
+                      ),
+                    )),
+                trailing: Icon(Icons.edit_outlined, color: context.theme.colorScheme.onSurface),
               ),
             ),
           ),
@@ -273,7 +273,7 @@ class _ChatInfoState extends State<ChatInfo> with ThemeHelpers {
                   updatePhoto();
                 },
                 title: Text("Update group photo", style: context.theme.textTheme.bodyLarge!),
-                trailing: Icon(Icons.edit_outlined, color: context.theme.colorScheme.onBackground),
+                trailing: Icon(Icons.edit_outlined, color: context.theme.colorScheme.onSurface),
               ),
             ),
           ),

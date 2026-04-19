@@ -51,9 +51,10 @@ class CupertinoHeader extends StatelessWidget implements PreferredSizeWidget {
             children: [
               Container(
                 decoration: BoxDecoration(
-                  color: context.theme.colorScheme.properSurface.withValues(alpha: 0.7),
+                  color: context.theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.7),
                   border: Border(
-                    bottom: BorderSide(color: context.theme.colorScheme.properSurface.darkenAmount(0.25), width: 0.5),
+                    bottom:
+                        BorderSide(color: context.theme.colorScheme.outlineVariant.withValues(alpha: 0.25), width: 0.5),
                   ),
                 ),
                 child: Material(
@@ -269,37 +270,41 @@ class _ChatIconAndTitleState extends CustomState<_ChatIconAndTitle, void, Conver
       final _title = chatState.title.value ?? controller.chat.getTitle();
 
       final children = [
-        IgnorePointer(
+        const IgnorePointer(
           ignoring: true,
           child: ContactAvatarGroupWidget(
             size: 54,
           ),
         ),
         const SizedBox(height: 5, width: 5),
-        Row(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.center, children: [
-          ConstrainedBox(
-            constraints: BoxConstraints(
-              maxWidth: NavigationSvc.width(context) / 2.5,
-            ),
-            child: RichText(
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-              text: TextSpan(
-                style: context.theme.textTheme.bodyMedium,
-                children: MessageHelper.buildEmojiText(
-                  _title,
-                  context.theme.textTheme.bodyMedium!,
+        Row(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: NavigationSvc.width(context) / 2.5,
+                ),
+                child: RichText(
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  text: TextSpan(
+                    style: context.theme.textTheme.bodyMedium,
+                    children: MessageHelper.buildEmojiText(
+                      _title,
+                      context.theme.textTheme.bodyMedium!,
+                    ),
+                  ),
                 ),
               ),
-            ),
-          ),
-          Icon(
-            CupertinoIcons.chevron_right,
-            size: context.theme.textTheme.bodyMedium!.fontSize!,
-            color: context.theme.colorScheme.outline,
-          ),
-        ]),
+              Icon(
+                CupertinoIcons.chevron_right,
+                size: context.theme.textTheme.bodyMedium!.fontSize!,
+                color: context.theme.colorScheme.outline.withValues(alpha: 0.5),
+              ),
+            ]),
       ];
 
       if (context.orientation == Orientation.landscape && Platform.isAndroid) {

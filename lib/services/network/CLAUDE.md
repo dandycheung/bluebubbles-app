@@ -26,6 +26,6 @@ Attachment download state machine:
 - Concurrent download management
 - EXIF extraction and format conversion post-download
 
-## Firebase (`firebase/`)
+## Firebase (`firebase/`) → `firebase/CLAUDE.md`
 - `cloud_messaging_service.dart` — FCM device token registration (Android + Desktop)
 - `firebase_database_service.dart` — Firebase Dart client setup for Desktop/Web; config fetching with fallback URLs

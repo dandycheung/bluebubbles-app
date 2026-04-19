@@ -12,21 +12,28 @@ import 'package:bluebubbles/services/backend/actions/test_actions.dart';
 import 'package:bluebubbles/services/isolates/global_isolate.dart';
 
 class IsolateActons {
-  static final Map<IsolateRequestType, dynamic> actions = {
-    // Testing
-    IsolateRequestType.testReturnInput: TestActions.executeTestReturnInput,
-    IsolateRequestType.testPrintInput: TestActions.executeTestPrintInput,
-    IsolateRequestType.testThrowError: TestActions.executeTestThrowError,
+  static final Map<IsolateRequestType, IsolateAction> actions = {
+    // Testing — sync and/or fixed-type params, so wrap as async lambdas.
+    // NOTE: Sync functions and no-arg functions MUST be wrapped as async lambdas
+    // because IsolateAction = Future<dynamic> Function(dynamic).
+    // Async Future<void>/Future<T> functions can be referenced directly.
+    IsolateRequestType.testReturnInput: (data) async => TestActions.executeTestReturnInput(data as String),
+    IsolateRequestType.testPrintInput: (data) async {
+      TestActions.executeTestPrintInput(data as String);
+    },
+    IsolateRequestType.testThrowError: (data) async {
+      TestActions.executeTestThrowError(data as String);
+    },
 
-    // App
-    IsolateRequestType.checkForUpdate: AppActions.checkForUpdate,
+    // App — no-arg, wrap to accept and ignore the data param
+    IsolateRequestType.checkForUpdate: (_) => AppActions.checkForUpdate(),
 
-    // Server
-    IsolateRequestType.checkForServerUpdate: ServerActions.checkForServerUpdate,
-    IsolateRequestType.getServerDetails: ServerActions.getServerDetails,
+    // Server — no-arg, wrap to accept and ignore the data param
+    IsolateRequestType.checkForServerUpdate: (_) => ServerActions.checkForServerUpdate(),
+    IsolateRequestType.getServerDetails: (_) => ServerActions.getServerDetails(),
 
-    // Image
-    IsolateRequestType.convertImageToPng: ImageActions.convertToPng,
+    // Image — convertToPng is sync so wrap as async lambda
+    IsolateRequestType.convertImageToPng: (data) async => ImageActions.convertToPng(data as Map<String, dynamic>),
     IsolateRequestType.readExifData: ImageActions.readExifData,
     IsolateRequestType.getGifDimensions: ImageActions.getGifDimensions,
 
@@ -36,8 +43,8 @@ class IsolateActons {
     IsolateRequestType.syncAllSettings: PrefsActions.syncAllSettings,
     IsolateRequestType.syncSettings: PrefsActions.syncSettings,
 
-    // Messages
-    IsolateRequestType.getMessages: MessageActions.getMessages,
+    // Messages — getMessages is no-arg, wrap to accept and ignore the data param
+    IsolateRequestType.getMessages: (_) => MessageActions.getMessages(),
     IsolateRequestType.bulkSaveNewMessages: MessageActions.bulkSaveNewMessages,
     IsolateRequestType.bulkAddMessages: MessageActions.bulkAddMessages,
     IsolateRequestType.replaceMessage: MessageActions.replaceMessage,

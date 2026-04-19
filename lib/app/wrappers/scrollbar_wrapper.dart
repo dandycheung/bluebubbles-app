@@ -44,7 +44,7 @@ class ScrollbarWrapper extends StatelessWidget {
             mmbScrollConfig: MMBScrollConfig(
               customScrollCursor: DefaultCustomScrollCursor(
                 cursorColor: context.textTheme.labelLarge!.color!,
-                backgroundColor: context.theme.colorScheme.background,
+                backgroundColor: context.theme.colorScheme.surface,
                 borderColor: context.textTheme.headlineMedium!.color!,
               ),
               decelerationForce: reverse ? -1000.0 : 1000.0,
@@ -54,7 +54,7 @@ class ScrollbarWrapper extends StatelessWidget {
             child: showScrollbar
                 ? RawScrollbar(
                     controller: controller,
-                    thumbColor: context.theme.colorScheme.properOnSurface.withValues(alpha: 0.3),
+                    thumbColor: context.theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
                     thickness: 10,
                     radius: const Radius.circular(5),
                     child: ScrollConfiguration(

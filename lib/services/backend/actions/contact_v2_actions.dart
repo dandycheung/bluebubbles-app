@@ -633,7 +633,7 @@ class ContactV2Actions {
   }
 
   /// Uploads contacts to the server
-  static Future<void> uploadContacts(Map<String, dynamic> data) async {
+  static Future<void> uploadContacts(dynamic data) async {
     final contacts = data['contacts'] as List<Map<String, dynamic>>;
 
     try {

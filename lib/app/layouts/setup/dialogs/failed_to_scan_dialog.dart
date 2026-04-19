@@ -1,5 +1,4 @@
 import 'package:bluebubbles/app/wrappers/theme_switcher.dart';
-import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -21,7 +20,7 @@ class FailedToScanDialog extends StatelessWidget {
         title,
         style: context.theme.textTheme.titleLarge,
       ),
-      backgroundColor: context.theme.colorScheme.properSurface,
+      backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
       content: SingleChildScrollView(
         physics: ThemeSwitcher.getScrollPhysics(),
         child: Text(error, style: context.theme.textTheme.bodyLarge),

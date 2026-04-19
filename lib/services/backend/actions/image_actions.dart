@@ -33,7 +33,7 @@ class ImageActions {
   /// Reads EXIF data from an image file
   /// Input: Map with 'path' key containing file path
   /// Output: Map<String, String> with EXIF tag names and their printable values
-  static Future<Map<String, String>?> readExifData(Map<String, dynamic> input) async {
+  static Future<Map<String, String>?> readExifData(dynamic input) async {
     try {
       final path = input['path'] as String?;
       if (path == null || kIsWeb) {
@@ -64,7 +64,7 @@ class ImageActions {
   /// Reads GIF dimensions from a file without loading entire file into memory
   /// Input: Map with 'path' key containing file path
   /// Output: Map with 'width' and 'height' keys
-  static Future<Map<String, int>?> getGifDimensions(Map<String, dynamic> input) async {
+  static Future<Map<String, int>?> getGifDimensions(dynamic input) async {
     try {
       final path = input['path'] as String?;
       if (path == null || kIsWeb) {

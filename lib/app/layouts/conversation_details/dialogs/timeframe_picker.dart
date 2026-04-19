@@ -171,7 +171,7 @@ Future<DateTime?> showTimeframePicker(String title, BuildContext context,
                 child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20.0),
                     child: Column(mainAxisSize: MainAxisSize.min, children: selections)))),
-        backgroundColor: dialogContext.theme.colorScheme.properSurface,
+        backgroundColor: dialogContext.theme.colorScheme.surfaceContainerHighest,
       );
     },
   );

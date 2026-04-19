@@ -97,6 +97,10 @@ class MessagesViewState extends State<MessagesView> with MessagesServiceMixin, T
       _messages.sort(Message.sort);
       handlersInitialized = true;
 
+      // Notify SendAnimation that handlers + list key are ready so pendingSend
+      // fires after this frame rather than racing against loadChunk.
+      controller.markMessagesViewReady();
+
       // Trigger a rebuild to display the messages
       setState(() {});
     }
@@ -147,15 +151,25 @@ class MessagesViewState extends State<MessagesView> with MessagesServiceMixin, T
           _messages,
         );
 
-        // Load messages if needed (check service flag to avoid redundant loads)
-        if (!service.messagesLoaded) {
-          await service.loadChunk(0, controller);
+        // Load messages if needed (check service flag to avoid redundant loads).
+        // Wrap in try-catch: if loadChunk throws (e.g. server HTTP error for a
+        // brand-new chat), we must still initialise handlers and mark the view
+        // ready so pendingSend can fire and handleNewMessage works correctly.
+        try {
+          if (!service.messagesLoaded) {
+            await service.loadChunk(0, controller);
+          }
+        } catch (e, s) {
+          Logger.error('MessagesView: loadChunk failed, continuing with empty state',
+              error: e, trace: s, tag: 'MessagesView');
         }
 
         _messages = service.struct.messages;
         _messages.sort(Message.sort);
 
-        // Initialize the mixin's service reference and create controllers
+        // Initialize the mixin's service reference and create controllers.
+        // This MUST always run so _messageService is non-null when
+        // handleNewMessage → createStateForMessage is later called.
         initializeMessagesService(
           chat,
           _messages,
@@ -171,6 +185,10 @@ class MessagesViewState extends State<MessagesView> with MessagesServiceMixin, T
         _listKey = GlobalKey<SliverAnimatedListState>();
         handlersInitialized = true;
         setState(() {});
+
+        // Notify SendAnimation that handlers + list key are fully ready so that
+        // any pending send fires after the rebuilt SliverAnimatedList is mounted.
+        controller.markMessagesViewReady();
       }
 
       // If this is a search result, load surrounding context and scroll/highlight it
@@ -204,8 +222,22 @@ class MessagesViewState extends State<MessagesView> with MessagesServiceMixin, T
       chat.saveAsync(updateLastReadMessageGuid: true);
     }
 
-    // Don't force-delete customService (it may be reused), only force-delete regular singleton
-    disposeMessagesService(force: widget.customService == null);
+    // Reset the ready-signal so a future pendingSend on the same CVC starts fresh.
+    controller.resetMessagesViewReady();
+
+    // When a customService is provided it is shared with (or transferred to) the
+    // ConversationView we are navigating to.  Calling close() on it can delete
+    // it from GetX's registry when lastReloadedChat differs from the chat's tag
+    // (e.g. the user arrived from a different conversation).  That would cause
+    // prepMessage's Get.isRegistered guard to return false, silently skipping
+    // addNewMessage so the pending send never appears in the list — a bug that
+    // only surfaces in release/AOT mode where the dispose races the send.
+    // Solution: just detach our local reference and leave the service intact.
+    disposeMessagesService(
+      force: widget.customService == null,
+      onlyDetach: widget.customService != null,
+    );
+
     // Controllers are now disposed by MessagesService.onClose()
     _setStateDebouncer?.cancel();
     _listVersion.dispose();
@@ -332,10 +364,13 @@ class MessagesViewState extends State<MessagesView> with MessagesServiceMixin, T
       return true;
     }));
 
+    if (!mounted) return;
+
     if (noMoreMessages) {
       Logger.debug("loadNextChunk: No more messages available");
       fetching = false;
-      return setState(() {});
+      setState(() {});
+      return;
     }
 
     final oldLength = _messages.length;
@@ -359,7 +394,7 @@ class MessagesViewState extends State<MessagesView> with MessagesServiceMixin, T
 
     // Batch loading: recreate the list key to force rebuild without animation
     _listKey = GlobalKey<SliverAnimatedListState>();
-    setState(() {});
+    if (mounted) setState(() {});
   }
 
   void handleNewMessage(Message message) async {
@@ -378,6 +413,8 @@ class MessagesViewState extends State<MessagesView> with MessagesServiceMixin, T
       return;
     }
 
+    // Capture before adding so we know whether a rebuild is needed to hide the loader.
+    final wasEmpty = _messages.isEmpty;
     _messages.add(message);
     _messages.sort(Message.sort);
     final insertIndex = _messages.indexOf(message);
@@ -400,6 +437,12 @@ class MessagesViewState extends State<MessagesView> with MessagesServiceMixin, T
 
     // Update version tracker
     _listVersion.value++;
+
+    // When the first message arrives via socket into an empty view, the
+    // "Loading surrounding message context..." SliverToBoxAdapter won't
+    // disappear on its own (insertItem only updates the SliverAnimatedList,
+    // not sibling slivers). Force a full rebuild to hide the loader.
+    if (wasEmpty && mounted) setState(() {});
 
     // Clear animation flag after animation completes
     if (message.guid != null) {
@@ -480,7 +523,7 @@ class MessagesViewState extends State<MessagesView> with MessagesServiceMixin, T
           border: Border.all(
             width: 2,
             style: BorderStyle.solid,
-            color: context.theme.colorScheme.properSurface,
+            color: context.theme.colorScheme.surfaceContainerHighest,
           ),
           borderRadius: BorderRadius.circular(19),
         ),

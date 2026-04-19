@@ -377,8 +377,38 @@ class IncomingMessageHandler {
 
       // 10. Refresh chat-list ordering and subtitle.
       c.dbLatestMessage;
+
+      // Guard: addMessage() may have set hasUnreadMessage = true in the DB even
+      // when this chat is the one currently open.  Clear it on the in-memory
+      // object before propagating to the UI so the badge never increments for
+      // the active chat, then persist the read state asynchronously.
+      if (ChatsSvc.isChatActive(c.guid)) {
+        c.hasUnreadMessage = false;
+        unawaited(ChatsSvc.setChatHasUnread(c, false, force: true));
+      }
+
       ChatsSvc.updateChat(c, override: true);
       ChatsSvc.updateChatLatestMessage(c.guid, saved);
+    }
+
+    // 10.5. Group photo changes — fetch/clear icon from server now that the
+    //       message is safely in the DB.  This runs regardless of isolate mode
+    //       because Chat.getIcon persists to DB; the state update is guarded.
+    if (saved.isGroupPhotoEvent) {
+      if (saved.isGroupPhotoRemoved) {
+        // Photo explicitly removed.
+        if (!isIsolate) {
+          unawaited(ChatsSvc.setChatCustomAvatarPath(c, null));
+        } else {
+          c.customAvatarPath = null;
+          unawaited(c.saveAsync(updateCustomAvatarPath: true));
+        }
+      } else {
+        // Photo added or changed — pull from server.
+        unawaited(Chat.getIcon(c, force: true).then((_) {
+          if (!isIsolate) ChatsSvc.updateChat(c, override: true);
+        }));
+      }
     }
 
     // 11. Flush any out-of-order updated-message that arrived before us.
@@ -475,20 +505,18 @@ class IncomingMessageHandler {
   Future<({Chat chat, List<int> affectedHandleIds})> _hydrateChat(Chat partial, Message m) async {
     // Group events always need fresh server data.
     if (m.isGroupEvent) {
-      Logger.debug(
-        'Message ${m.guid} is a group event, forcing chat hydration via server fetch', tag: _tag);
+      Logger.debug('Message ${m.guid} is a group event, forcing chat hydration via server fetch', tag: _tag);
       partial = (await ChatsSvc.fetchChat(partial.guid)) ?? partial;
     } else {
       // If we have a local copy and the local copy has participants, use it — no need to fetch.
       final local = Chat.findOne(guid: partial.guid);
       if (local != null && local.handles.isNotEmpty) {
         return (chat: local, affectedHandleIds: <int>[]);
-      // Cases to fetch from the server:
-      // * Local chat exists but has no participants (incomplete data).
-      // * Local chat doesn't exist at all (new chat).
+        // Cases to fetch from the server:
+        // * Local chat exists but has no participants (incomplete data).
+        // * Local chat doesn't exist at all (new chat).
       } else if ((local != null && local.handles.isEmpty) || local == null) {
-        Logger.debug(
-          'Chat ${partial.guid} is missing participant data, forcing hydration via server fetch', tag: _tag);
+        Logger.debug('Chat ${partial.guid} is missing participant data, forcing hydration via server fetch', tag: _tag);
         partial = (await ChatsSvc.fetchChat(partial.guid)) ?? partial;
       }
     }

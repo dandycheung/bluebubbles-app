@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:bluebubbles/app/components/custom_text_editing_controllers.dart';
 import 'package:bluebubbles/app/layouts/chat_creator/chat_creator.dart' show SelectedContact;
-import 'package:bluebubbles/app/layouts/chat_creator/chat_service_type.dart';
 import 'package:bluebubbles/app/layouts/conversation_view/pages/conversation_view.dart';
 import 'package:bluebubbles/app/wrappers/stateful_boilerplate.dart';
 import 'package:bluebubbles/app/wrappers/titlebar_wrapper.dart';
@@ -13,6 +12,7 @@ import 'package:bluebubbles/services/ui/chat/send_data.dart';
 import 'package:bluebubbles/utils/string_utils.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:dlibphonenumber/dlibphonenumber.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:get/get.dart' hide Response;
@@ -66,7 +66,7 @@ class ChatCreatorController extends StatefulController {
 
     // Auto-select service based on pre-selected contacts' known iMessage status.
     // If any initial contact is explicitly non-iMessage, start on SMS.
-    if (initialSelected.any((c) => c.iMessage.value == false)) {
+    if (initialSelected.any((c) => c.serviceType.value == ChatServiceType.sms)) {
       selectedService.value = ChatServiceType.sms;
     }
 
@@ -235,7 +235,12 @@ class ChatCreatorController extends StatefulController {
   Future<void> _fetchIMessageState(SelectedContact contact) async {
     try {
       final response = await HttpSvc.handleiMessageState(contact.address);
-      contact.iMessage.value = response.data['data']['available'] as bool?;
+      final available = response.data['data']['available'] as bool?;
+      contact.serviceType.value = available == true
+          ? ChatServiceType.iMessage
+          : available == false
+              ? ChatServiceType.sms
+              : null;
     } catch (_) {}
   }
 
@@ -304,7 +309,7 @@ class ChatCreatorController extends StatefulController {
     }
 
     // Auto-update service type based on selected contact iMessage status
-    final hasSmsContact = selectedContacts.firstWhereOrNull((c) => c.iMessage.value == false) != null;
+    final hasSmsContact = selectedContacts.firstWhereOrNull((c) => c.serviceType.value == ChatServiceType.sms) != null;
     if (hasSmsContact) {
       selectedService.value = ChatServiceType.sms;
     } else {
@@ -372,7 +377,7 @@ class ChatCreatorController extends StatefulController {
     return existingChat;
   }
 
-  Future<void> _activateExistingChat(Chat chat) async {
+  Future<void> _activateExistingChat(Chat chat, {bool transferText = true}) async {
     await ChatsSvc.setActiveChat(chat, clearNotifications: false);
     ChatsSvc.activeChat!.controller = cvc(chat);
 
@@ -384,19 +389,24 @@ class ChatCreatorController extends StatefulController {
 
     final newCVC = ChatsSvc.activeChat!.controller!;
 
-    // Transfer text/attachments from the "new chat" text field to the resolved CVC
-    if (initialAttachments.isNotEmpty) {
-      newCVC.pickedAttachments.value = initialAttachments;
-    } else if (activeController.value != null && activeController.value!.pickedAttachments.isNotEmpty) {
-      newCVC.pickedAttachments.value = activeController.value!.pickedAttachments;
-    }
+    // Transfer text/attachments from the "new chat" text field to the resolved CVC.
+    // Skip this when transferText is false (send path) — the caller captures content
+    // directly into pendingSend so there is no need to populate the text controller,
+    // and doing so forces an extra clear that can race with Flutter rendering.
+    if (transferText) {
+      if (initialAttachments.isNotEmpty) {
+        newCVC.pickedAttachments.value = initialAttachments;
+      } else if (activeController.value != null && activeController.value!.pickedAttachments.isNotEmpty) {
+        newCVC.pickedAttachments.value = activeController.value!.pickedAttachments;
+      }
 
-    if (initialText != null && initialText!.isNotEmpty) {
-      newCVC.textController.text = initialText!;
-    } else if (activeController.value != null && activeController.value!.textController.text.isNotEmpty) {
-      newCVC.textController.text = activeController.value!.textController.text;
-    } else if (textController.text.isNotEmpty) {
-      newCVC.textController.text = textController.text;
+      if (initialText != null && initialText!.isNotEmpty) {
+        newCVC.textController.text = initialText!;
+      } else if (activeController.value != null && activeController.value!.textController.text.isNotEmpty) {
+        newCVC.textController.text = activeController.value!.textController.text;
+      } else if (textController.text.isNotEmpty) {
+        newCVC.textController.text = textController.text;
+      }
     }
 
     activeController.value = newCVC;
@@ -412,10 +422,30 @@ class ChatCreatorController extends StatefulController {
   // Address field on-submit (auto-select if valid address)
   // ---------------------------------------------------------------------------
 
+  /// Converts a user-typed phone number to E.164 format (+15106405652) if it
+  /// doesn't already include a country code. Falls back to the raw input if the
+  /// library can't parse it (e.g. for short-codes or unconventional numbers).
+  ///
+  /// Uses [isPossibleNumber] rather than [isValidNumber] so that structurally-
+  /// correct numbers (right length for the region) are normalised even if they
+  /// aren't in an active subscriber range (e.g. 555 numbers in the US).
+  String normalizeToE164(String phone) {
+    if (phone.startsWith('+')) return phone; // already has country code
+    final cc = Get.deviceLocale?.countryCode ?? 'US';
+    try {
+      final parsed = PhoneNumberUtil.instance.parse(phone, cc);
+      if (PhoneNumberUtil.instance.isValidNumber(parsed)) {
+        return PhoneNumberUtil.instance.format(parsed, PhoneNumberFormat.e164);
+      }
+    } catch (_) {}
+    return phone;
+  }
+
   void addressOnSubmitted() {
     final text = addressController.text.trim();
     if (text.isEmail || text.isPhoneNumber) {
-      addSelected(SelectedContact(displayName: text, address: text));
+      final address = text.isEmail ? text : normalizeToE164(text);
+      addSelected(SelectedContact(displayName: address, address: address));
     } else if (filteredContacts.length == 1) {
       final possibleAddresses = [
         ...filteredContacts.first.phoneNumbers.map((p) => p.number),
@@ -436,7 +466,7 @@ class ChatCreatorController extends StatefulController {
 
   /// Called from the text field's sendMessage callback.
   /// [context] is needed for showing dialogs and navigating.
-  Future<void> sendMessage(dynamic context, {String? effectId}) async {
+  Future<void> sendMessage(BuildContext context, {String? effectId}) async {
     // Auto-submit any typed address before proceeding.
     addressOnSubmitted();
 
@@ -447,14 +477,28 @@ class ChatCreatorController extends StatefulController {
 
     // Re-check for an existing chat in case the debounce hasn't fired yet.
     Chat? resolvedChat = activeController.value?.chat ?? await findExistingChat(checkDeleted: true, update: false);
+    bool messageSentWithChat = false;
+    // Messages already synced to the DB during the new-chat creation flow.
+    // Pre-seeded into messagesService.struct before navigation so MessagesView's
+    // fast path fires and avoids an HTTP round-trip for the very first message.
+    List<Message> syncedMessages = [];
 
     // ------------------------------------------------------------------
     // Step 1: If we have a local chat, use it directly — no server check.
     // ------------------------------------------------------------------
     if (resolvedChat == null) {
       // ----------------------------------------------------------------
-      // Step 2: No local chat. Try to fetch one from the server.
+      // Step 2: No local chat. A message is required to create a new one
+      // (the server rejects POST /chat/new without one when the Private
+      // API is enabled). Validate before making any network call so the
+      // user gets immediate feedback.
       // ----------------------------------------------------------------
+      final messageText = textController.text.trim();
+      if (messageText.isEmpty) {
+        showSnackbar('Error', 'A message is required to start a new conversation');
+        return;
+      }
+
       if (!(_createCompleter?.isCompleted ?? true)) return;
       _createCompleter = Completer();
       isSending.value = true;
@@ -467,17 +511,17 @@ class ChatCreatorController extends StatefulController {
         context: context,
         barrierDismissible: false,
         builder: (ctx) => AlertDialog(
-          backgroundColor: context.theme.colorScheme.properSurface,
+          backgroundColor: ctx.theme.colorScheme.surfaceContainerHighest,
           title: Text(
             'Finding or creating chat...',
-            style: context.theme.textTheme.titleLarge,
+            style: ctx.theme.textTheme.titleLarge,
           ),
           content: SizedBox(
             height: 70,
             child: Center(
               child: CircularProgressIndicator(
-                backgroundColor: context.theme.colorScheme.properSurface,
-                valueColor: AlwaysStoppedAnimation<Color>(context.theme.colorScheme.primary),
+                backgroundColor: ctx.theme.colorScheme.surfaceContainerHighest,
+                valueColor: AlwaysStoppedAnimation<Color>(ctx.theme.colorScheme.primary),
               ),
             ),
           ),
@@ -485,17 +529,22 @@ class ChatCreatorController extends StatefulController {
       );
 
       try {
-        // Try fetching the chat from the server first (it may already exist there).
+        // For single-contact chats, try to find an existing chat on the server via a
+        // GET request before creating one. Using createChat with no message as a lookup
+        // is incorrect — the server rejects it when the Private API is enabled.
         Chat? serverChat;
-        try {
-          final response = await HttpSvc.createChat(participants, null, method);
-          serverChat = Chat.fromMap(response.data['data'] as Map<String, dynamic>);
-        } catch (_) {}
+        if (selectedContacts.length == 1) {
+          final address = selectedContacts.first.address;
+          serverChat = await ChatsSvc.fetchChat('$method;-;$address');
+        }
 
         if (serverChat == null) {
-          // No existing chat on the server — create it and include the message text.
-          final response = await HttpSvc.createChat(participants, textController.text, method);
+          // No existing chat found on the server — create one.
+          // Message has already been validated above; it is delivered as part of
+          // creation, so pendingSend must be skipped for this path.
+          final response = await HttpSvc.createChat(participants, messageText, method);
           serverChat = Chat.fromMap(response.data['data'] as Map<String, dynamic>);
+          messageSentWithChat = true;
         }
 
         // Sync the chat + its participants into the local DB.
@@ -506,11 +555,28 @@ class ChatCreatorController extends StatefulController {
         final updated = ChatsSvc.updateChat(resolvedChat);
         if (!updated) await ChatsSvc.addChat(resolvedChat);
 
+        // When the message was bundled in createChat, proactively sync it from
+        // the server so MessagesView can display it immediately rather than
+        // waiting for the socket echo (which has a built-in 500 ms delay for
+        // isFromMe / no-tempGuid messages).
+        if (messageSentWithChat) {
+          try {
+            final msgResponse = await HttpSvc.chatMessages(resolvedChat.guid, limit: 1);
+            final msgData = msgResponse.data['data'];
+            if (msgData is List && msgData.isNotEmpty) {
+              final messages = msgData.map((e) => Message.fromMap(e as Map<String, dynamic>)).toList();
+              syncedMessages = await Chat.bulkSyncMessages(resolvedChat, messages);
+            }
+          } catch (_) {
+            // Non-fatal: the socket echo will still arrive and display the message
+          }
+        }
+
         _createCompleter?.complete();
         isSending.value = false;
-        Navigator.of(context).pop(); // dismiss loading dialog
+        Navigator.of(context, rootNavigator: true).pop(); // dismiss loading dialog
       } catch (error) {
-        Navigator.of(context).pop(); // dismiss loading dialog
+        Navigator.of(context, rootNavigator: true).pop(); // dismiss loading dialog
 
         _createCompleter?.completeError(error);
         isSending.value = false;
@@ -519,20 +585,20 @@ class ChatCreatorController extends StatefulController {
           barrierDismissible: false,
           context: context,
           builder: (ctx) => AlertDialog(
-            backgroundColor: context.theme.colorScheme.properSurface,
-            title: Text('Failed to create chat!', style: context.theme.textTheme.titleLarge),
+            backgroundColor: ctx.theme.colorScheme.surfaceContainerHighest,
+            title: Text('Failed to create chat!', style: ctx.theme.textTheme.titleLarge),
             content: Text(
               error is Response
                   ? 'Reason: (${(error as dynamic).data["error"]["type"]}) -> ${(error as dynamic).data["error"]["message"]}'
                   : error.toString(),
-              style: context.theme.textTheme.bodyLarge,
+              style: ctx.theme.textTheme.bodyLarge,
             ),
             actions: [
               TextButton(
-                onPressed: () => Navigator.of(context).pop(),
+                onPressed: () => Navigator.of(ctx, rootNavigator: true).pop(),
                 child: Text(
                   'OK',
-                  style: context.theme.textTheme.bodyLarge!.copyWith(color: Get.context!.theme.colorScheme.primary),
+                  style: ctx.theme.textTheme.bodyLarge!.copyWith(color: ctx.theme.colorScheme.primary),
                 ),
               ),
             ],
@@ -546,17 +612,37 @@ class ChatCreatorController extends StatefulController {
     // Step 3: We have a chat (local or freshly synced). Set up its CVC
     // and navigate to the ConversationView, sending the message on init.
     // ------------------------------------------------------------------
+
+    // Capture content now, before _activateExistingChat runs.
+    // For existing chats the CVC already has the live text; for new chats the
+    // text is still only in the chat creator's own textController.
+    final capturedText = activeController.value?.textController.text.isNotEmpty == true
+        ? activeController.value!.textController.text
+        : textController.text;
+    final capturedAttachments = activeController.value?.pickedAttachments.isNotEmpty == true
+        ? activeController.value!.pickedAttachments.toList()
+        : List<PlatformFile>.from(initialAttachments);
+
     if (activeController.value == null || activeController.value!.chat.guid != resolvedChat.guid) {
-      await _activateExistingChat(resolvedChat);
+      // transferText: false — content is captured above and will go into pendingSend;
+      // writing it into the CVC's textController would leave stale text visible in
+      // the destination ConversationView if the clear races with Flutter rendering.
+      await _activateExistingChat(resolvedChat, transferText: false);
     }
 
-    // Ensure text/attachments are transferred to the active CVC.
+    // Pre-seed the messagesService struct with any messages already synced to the
+    // DB (only applies to the messageSentWithChat path). This means MessagesView's
+    // fast path (customService.struct.isNotEmpty) will trigger and skip the HTTP
+    // fallback that would otherwise show "Loading..." while fetching the very first
+    // message from the server.
+    if (syncedMessages.isNotEmpty && messagesService != null) {
+      messagesService!.struct.addMessages(syncedMessages);
+    }
+
+    // Ensure attachments are transferred to the active CVC (text is captured above).
     if (activeController.value != null) {
-      if (activeController.value!.textController.text.isEmpty && textController.text.isNotEmpty) {
-        activeController.value!.textController.text = textController.text;
-      }
-      if (activeController.value!.pickedAttachments.isEmpty && initialAttachments.isNotEmpty) {
-        activeController.value!.pickedAttachments.value = initialAttachments;
+      if (activeController.value!.pickedAttachments.isEmpty && capturedAttachments.isNotEmpty) {
+        activeController.value!.pickedAttachments.value = capturedAttachments;
       }
     }
 
@@ -566,31 +652,47 @@ class ChatCreatorController extends StatefulController {
     // Only send a message when there is actual content to send. When the user
     // taps the send button from the chat creator with an existing chat but no
     // text/attachments (i.e. "open conversation" intent), skip the send step.
-    final hasContent = activeCVC.textController.text.isNotEmpty || activeCVC.pickedAttachments.isNotEmpty;
+    final hasContent = capturedText.isNotEmpty || capturedAttachments.isNotEmpty;
 
-    Future<void> doSend() async {
-      await activeCVC.send(
-        SendData(
-          attachments: activeCVC.pickedAttachments.toList(),
-          text: activeCVC.textController.text,
-          subject: '',
-          replyGuid: activeCVC.replyToMessage?.message.threadOriginatorGuid ?? activeCVC.replyToMessage?.message.guid,
-          replyPart: activeCVC.replyToMessage?.partIndex,
-          effectId: effectId,
-        ),
+    // Pre-queue the send so _SendAnimationState fires it as soon as it wires up
+    // sendFunc — after the ConversationView frame builds and MessagesView has
+    // initialized its handlers. Only set when there is actual content to send,
+    // and when the message was not already sent as part of new chat creation.
+    if (hasContent && !messageSentWithChat) {
+      activeCVC.pendingSend = SendData(
+        attachments: capturedAttachments,
+        text: capturedText,
+        subject: '',
+        replyGuid: activeCVC.replyToMessage?.message.threadOriginatorGuid ?? activeCVC.replyToMessage?.message.guid,
+        replyPart: activeCVC.replyToMessage?.partIndex,
+        effectId: effectId,
       );
       activeCVC.replyToMessage = null;
-      activeCVC.pickedAttachments.clear();
-      activeCVC.textController.clear();
-      activeCVC.subjectTextController.clear();
     }
 
+    // Always clear text/attachments from the CVC and the persisted draft before navigating.
+    // - pendingSend path: data already captured above; dispose() must not re-save it as a draft.
+    // - messageSentWithChat path: message sent via createChat; nothing left to draft.
+    // Awaiting the DB clear ensures ConversationTextFieldState.getTextDraft() finds '' when
+    // the new ConversationView initialises, so the text field starts empty.
+    // Also clear activeCVC.chat.textFieldText directly: cvc() may return an already-registered
+    // CVC whose .chat is an older object instance than resolvedChat, so setChatTextFieldText
+    // would update state.chat but not the CVC's own .chat — getTextDraft() reads the latter.
+    activeCVC.chat.textFieldText = '';
+    activeCVC.textController.clear();
+    activeCVC.pickedAttachments.clear();
+    await ChatsSvc.setChatTextFieldText(chat, '');
+    await ChatsSvc.setChatTextFieldAttachments(chat, []);
+
     isHeaderVisible.value = false;
+    // Null the active controller so the inline MessagesView is removed from the
+    // tree before the new ConversationView mounts — prevents GlobalKey conflicts
+    // (the shared focusInfoKey on the CVC would otherwise appear in both trees).
+    activeController.value = null;
 
     NavigationSvc.pushAndRemoveUntil(
       Get.context!,
-      ConversationView(
-          chat: chat, customService: messagesService, fromChatCreator: true, onInit: hasContent ? doSend : null),
+      ConversationView(chat: chat, customService: messagesService, fromChatCreator: true),
       (route) => route.isFirst,
       closeActiveChat: false,
       customRoute: PageRouteBuilder(
@@ -599,14 +701,11 @@ class ChatCreatorController extends StatefulController {
             chat: chat,
             customService: messagesService,
             fromChatCreator: true,
-            onInit: hasContent ? doSend : null,
           ),
         ),
         transitionDuration: Duration.zero,
       ),
     );
-
-    await Future.delayed(const Duration(milliseconds: 500));
   }
 
   // ---------------------------------------------------------------------------

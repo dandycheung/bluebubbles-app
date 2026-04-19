@@ -333,8 +333,12 @@ class ChatState {
     // Refresh the subtitle so it reflects any updated handle display names
     // (e.g. a group-event whose sender handle was just added to the DB).
     updateSubtitleInternal(_computeSubtitle(updatedChat.latestMessage));
-    updateTextFieldTextInternal(updatedChat.textFieldText);
-    updateTextFieldAttachmentsInternal(updatedChat.textFieldAttachments);
+
+    // NOTE: textFieldText and textFieldAttachments are intentionally NOT synced here.
+    // They are purely client-side fields managed exclusively by setChatTextFieldText /
+    // setChatTextFieldAttachments. Refreshing them from a server-triggered updateFromChat
+    // call (e.g. a new message arriving before the async draft DB-write completes) would
+    // race with the in-flight save and silently wipe the user's draft.
 
     // Update other properties directly
     if (autoSendReadReceipts.value != updatedChat.autoSendReadReceipts) {
@@ -363,8 +367,7 @@ class ChatState {
     chat.displayName = updatedChat.displayName;
     chat.customAvatarPath = updatedChat.customAvatarPath;
     chat.latestMessage = updatedChat.latestMessage;
-    chat.textFieldText = updatedChat.textFieldText;
-    chat.textFieldAttachments = updatedChat.textFieldAttachments;
+    // NOTE: textFieldText and textFieldAttachments omitted intentionally — see comment above.
     chat.autoSendReadReceipts = updatedChat.autoSendReadReceipts;
     chat.autoSendTypingIndicators = updatedChat.autoSendTypingIndicators;
     chat.lockChatName = updatedChat.lockChatName;

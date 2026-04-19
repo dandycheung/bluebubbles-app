@@ -21,6 +21,7 @@ class ReactionWidget extends StatefulWidget {
     required this.reaction,
     this.reactions,
     this.chatGuid,
+    this.tailDirection,
   });
 
   final Message reaction;
@@ -30,6 +31,12 @@ class ReactionWidget extends StatefulWidget {
   /// Allows [ReactionWidgetState] to resolve MessageState from the correct
   /// MessagesService rather than falling back to [ChatsSvc.activeChat].
   final String? chatGuid;
+
+  /// When set, overrides the computed tail direction for the reaction clippers.
+  /// Useful in contexts with no [MessageStateScope] (e.g. pinned tiles) where
+  /// the fallback would produce the wrong arc orientation.
+  /// Bubble coloring is always driven by the reaction's own [isFromMe] field.
+  final ReactionTailDirection? tailDirection;
 
   @override
   ReactionWidgetState createState() => ReactionWidgetState();
@@ -69,6 +76,12 @@ class ReactionWidgetState extends State<ReactionWidget> with ThemeHelpers {
   bool get reactionIsFromMe => reaction.isFromMe ?? false;
   bool get messageIsFromMe => _parentMessage?.isFromMe ?? true;
 
+  /// Effective tail direction for the clippers.
+  /// Matches the [messageIsFromMe] semantics: sent (right) vs received (left).
+  /// Can be overridden via [widget.tailDirection] (e.g. pinned tile context).
+  ReactionTailDirection get _effectiveTailDirection =>
+      widget.tailDirection ?? (messageIsFromMe ? ReactionTailDirection.left : ReactionTailDirection.right);
+
   /// Guard against associatedMessageType being null.
   /// An empty string produces no SVG match, which is handled in build().
   String get reactionType => reaction.associatedMessageType ?? '';
@@ -107,8 +120,11 @@ class ReactionWidgetState extends State<ReactionWidget> with ThemeHelpers {
             width: 30,
             height: 30,
             decoration: BoxDecoration(
-              color: reactionIsFromMe ? context.theme.colorScheme.primary : context.theme.colorScheme.properSurface,
-              border: Border.all(color: context.theme.colorScheme.background),
+              color: reactionIsFromMe
+                  ? context.theme.colorScheme.primary
+                  : ((context.theme.extensions[BubbleColors] as BubbleColors?)?.receivedBubbleColor ??
+                      context.theme.colorScheme.surfaceContainerHighest),
+              border: Border.all(color: context.theme.colorScheme.surface),
               shape: BoxShape.circle,
             ),
             child: GestureDetector(
@@ -190,16 +206,16 @@ class ReactionWidgetState extends State<ReactionWidget> with ThemeHelpers {
             left: messageIsFromMe ? 0 : -1,
             right: !messageIsFromMe ? 0 : -1,
             child: ClipPath(
-              clipper: ReactionBorderClipper(isFromMe: messageIsFromMe),
+              clipper: ReactionBorderClipper(tailDirection: _effectiveTailDirection),
               child: Container(
                 width: iosSize + 2,
                 height: iosSize + 2,
-                color: context.theme.colorScheme.background,
+                color: context.theme.colorScheme.surface,
               ),
             ),
           ),
           ClipPath(
-              clipper: ReactionClipper(isFromMe: messageIsFromMe),
+              clipper: ReactionClipper(tailDirection: _effectiveTailDirection),
               child: Obx(() {
                 // reactionController is null when no MessageState exists for the reaction (typical).
                 // Fall back to checking the GUID prefix so temp reactions always show as pending.
@@ -210,7 +226,8 @@ class ReactionWidgetState extends State<ReactionWidget> with ThemeHelpers {
                     height: iosSize,
                     color: reactionIsFromMe
                         ? context.theme.colorScheme.primary.darkenAmount(isSending ? 0.2 : 0)
-                        : context.theme.colorScheme.properSurface,
+                        : ((context.theme.extensions[BubbleColors] as BubbleColors?)?.receivedBubbleColor ??
+                            context.theme.colorScheme.surfaceContainerHighest),
                     alignment: messageIsFromMe ? Alignment.topRight : Alignment.topLeft,
                     child: SizedBox(
                       width: iosSize * 0.8,
@@ -226,7 +243,7 @@ class ReactionWidgetState extends State<ReactionWidget> with ThemeHelpers {
                                   ? Colors.pink
                                   : (reactionIsFromMe
                                       ? context.theme.colorScheme.onPrimary
-                                      : context.theme.colorScheme.properOnSurface),
+                                      : context.theme.colorScheme.onSurfaceVariant),
                               BlendMode.srcIn),
                         ),
                       )),
@@ -291,6 +308,8 @@ class ReactionWidgetState extends State<ReactionWidget> with ThemeHelpers {
   Widget _buildStatic(BuildContext context, Message reaction) {
     final rType = reaction.associatedMessageType ?? '';
     final isFromMe = reaction.isFromMe ?? false;
+    final tailDirection = widget.tailDirection ?? (isFromMe ? ReactionTailDirection.left : ReactionTailDirection.right);
+    final tailIsRight = tailDirection == ReactionTailDirection.right;
 
     if (rType.isEmpty) return const SizedBox.shrink();
 
@@ -299,9 +318,20 @@ class ReactionWidgetState extends State<ReactionWidget> with ThemeHelpers {
         width: 30,
         height: 30,
         decoration: BoxDecoration(
-          color: isFromMe ? context.theme.colorScheme.primary : context.theme.colorScheme.properSurface,
-          border: Border.all(color: context.theme.colorScheme.background),
+          color: isFromMe
+              ? context.theme.colorScheme.primary
+              : ((context.theme.extensions[BubbleColors] as BubbleColors?)?.receivedBubbleColor ??
+                  context.theme.colorScheme.surfaceContainerHighest),
+          border: Border.all(color: context.theme.colorScheme.surface),
           shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.15),
+              blurRadius: 8,
+              spreadRadius: 2,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Center(
           child: Builder(builder: (ctx) {
@@ -325,54 +355,71 @@ class ReactionWidgetState extends State<ReactionWidget> with ThemeHelpers {
 
     // iOS skin — the pinned tile only shows reactions received (isFromMe==false).
     // Use isFromMe to orient the clipper correctly.
-    return Stack(
-      alignment: isFromMe ? Alignment.centerRight : Alignment.centerLeft,
-      fit: StackFit.passthrough,
-      clipBehavior: Clip.none,
-      children: [
-        Positioned(
-          top: -1,
-          left: isFromMe ? 0 : -1,
-          right: !isFromMe ? 0 : -1,
-          child: ClipPath(
-            clipper: ReactionBorderClipper(isFromMe: isFromMe),
-            child: Container(
-              width: iosSize + 2,
-              height: iosSize + 2,
-              color: context.theme.colorScheme.background,
+    // Shadow wraps outside the ClipPath so it is not clipped.
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 8,
+            spreadRadius: 0,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Stack(
+        alignment: !tailIsRight ? Alignment.centerRight : Alignment.centerLeft,
+        fit: StackFit.passthrough,
+        clipBehavior: Clip.none,
+        children: [
+          Positioned(
+            top: -1,
+            left: !tailIsRight ? 0 : -1,
+            right: tailIsRight ? 0 : -1,
+            child: ClipPath(
+              clipper: ReactionBorderClipper(tailDirection: tailDirection),
+              child: Container(
+                width: iosSize + 2,
+                height: iosSize + 2,
+                color: context.theme.colorScheme.surface,
+              ),
             ),
           ),
-        ),
-        ClipPath(
-          clipper: ReactionClipper(isFromMe: isFromMe),
-          child: Container(
-            width: iosSize,
-            height: iosSize,
-            color: isFromMe ? context.theme.colorScheme.primary : context.theme.colorScheme.properSurface,
-            alignment: isFromMe ? Alignment.topRight : Alignment.topLeft,
-            child: SizedBox(
-              width: iosSize * 0.8,
-              height: iosSize * 0.8,
-              child: Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(6.5).add(EdgeInsets.only(right: rType == "emphasize" ? 1 : 0)),
-                  child: SvgPicture.asset(
-                    'assets/reactions/$rType-black.svg',
-                    colorFilter: ColorFilter.mode(
-                      rType == "love"
-                          ? Colors.pink
-                          : (isFromMe
-                              ? context.theme.colorScheme.onPrimary
-                              : context.theme.colorScheme.properOnSurface),
-                      BlendMode.srcIn,
+          ClipPath(
+            clipper: ReactionClipper(tailDirection: tailDirection),
+            child: Container(
+              width: iosSize,
+              height: iosSize,
+              color: isFromMe
+                  ? context.theme.colorScheme.primary
+                  : ((context.theme.extensions[BubbleColors] as BubbleColors?)?.receivedBubbleColor ??
+                      context.theme.colorScheme.surfaceContainerHighest),
+              alignment: !tailIsRight ? Alignment.topRight : Alignment.topLeft,
+              child: SizedBox(
+                width: iosSize * 0.8,
+                height: iosSize * 0.8,
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(6.5).add(EdgeInsets.only(right: rType == "emphasize" ? 1 : 0)),
+                    child: SvgPicture.asset(
+                      'assets/reactions/$rType-black.svg',
+                      colorFilter: ColorFilter.mode(
+                        rType == "love"
+                            ? Colors.pink
+                            : (isFromMe
+                                ? context.theme.colorScheme.onPrimary
+                                : context.theme.colorScheme.onSurfaceVariant),
+                        BlendMode.srcIn,
+                      ),
                     ),
                   ),
                 ),
               ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

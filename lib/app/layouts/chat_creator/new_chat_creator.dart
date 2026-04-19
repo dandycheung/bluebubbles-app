@@ -1,6 +1,5 @@
 import 'package:bluebubbles/app/layouts/chat_creator/chat_creator.dart' show SelectedContact;
 import 'package:bluebubbles/app/layouts/chat_creator/chat_creator_controller.dart';
-import 'package:bluebubbles/app/layouts/chat_creator/chat_service_type.dart';
 import 'package:bluebubbles/app/layouts/chat_creator/widgets/recipient_chips_row.dart';
 import 'package:bluebubbles/app/layouts/chat_creator/widgets/search_results_list.dart';
 import 'package:bluebubbles/app/layouts/chat_creator/widgets/service_type_picker.dart';
@@ -258,11 +257,12 @@ class _TextFieldArea extends StatelessWidget {
               return KeyEventResult.ignored;
             },
             child: activeCVC != null
-                // Existing chat: isChatCreator = false → full attachments + reply enabled.
+                // Existing chat: pass focusNode so isChatCreator=true → media picker icons show.
                 // alwaysShowSend: true so the send button is visible even with no content,
                 // allowing the user to open the conversation without typing first.
                 ? TextFieldComponent(
                     key: ValueKey(activeCVC.chat.guid),
+                    focusNode: controller.messageNode,
                     textController: activeCVC.textController,
                     subjectTextController: activeCVC.subjectTextController,
                     controller: activeCVC,

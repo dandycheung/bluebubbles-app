@@ -16,7 +16,7 @@ class CreateNewThemeDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      backgroundColor: context.theme.colorScheme.properSurface,
+      backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
       actions: [
         TextButton(
           child: Text("Cancel",
@@ -62,7 +62,7 @@ class CreateNewThemeDialog extends StatelessWidget {
                 Expanded(
                     child: Text(
                   "Your new theme will copy the colors currently displayed in the advanced theming menu",
-                  style: context.theme.textTheme.bodySmall!.copyWith(color: context.theme.colorScheme.properOnSurface),
+                  style: context.theme.textTheme.bodySmall!.copyWith(color: context.theme.colorScheme.onSurfaceVariant),
                 )),
               ],
             ),

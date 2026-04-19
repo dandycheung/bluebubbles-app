@@ -68,7 +68,7 @@ class _ProfilePanelState extends State<ProfilePanel> with WidgetsBindingObserver
               TextButton(
                 child: Text("Cancel",
                     style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.primary)),
-                onPressed: () => Get.back(),
+                onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
               ),
               TextButton(
                 child: Text("OK",
@@ -88,7 +88,7 @@ class _ProfilePanelState extends State<ProfilePanel> with WidgetsBindingObserver
               ),
             ),
             title: Text("User Profile Name", style: context.theme.textTheme.titleLarge),
-            backgroundColor: context.theme.colorScheme.properSurface,
+            backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
           );
         });
   }
@@ -153,7 +153,7 @@ class _ProfilePanelState extends State<ProfilePanel> with WidgetsBindingObserver
                                   width: 30,
                                   height: 30,
                                   decoration: BoxDecoration(
-                                    border: Border.all(color: context.theme.colorScheme.background, width: 1),
+                                    border: Border.all(color: context.theme.colorScheme.surface, width: 1),
                                     shape: BoxShape.circle,
                                     color: context.theme.colorScheme.tertiaryContainer,
                                   ),
@@ -180,7 +180,7 @@ class _ProfilePanelState extends State<ProfilePanel> with WidgetsBindingObserver
                       text: TextSpan(
                         style: context.theme.textTheme.headlineMedium!.copyWith(
                           fontWeight: FontWeight.bold,
-                          color: context.theme.colorScheme.onBackground,
+                          color: context.theme.colorScheme.onSurface,
                         ),
                         children: MessageHelper.buildEmojiText(
                           SettingsSvc.settings.redactedMode.value && SettingsSvc.settings.hideContactInfo.value
@@ -188,7 +188,7 @@ class _ProfilePanelState extends State<ProfilePanel> with WidgetsBindingObserver
                               : SettingsSvc.settings.userName.value,
                           context.theme.textTheme.headlineMedium!.copyWith(
                             fontWeight: FontWeight.bold,
-                            color: context.theme.colorScheme.onBackground,
+                            color: context.theme.colorScheme.onSurface,
                           ),
                         ),
                       ),
@@ -270,7 +270,7 @@ class _ProfilePanelState extends State<ProfilePanel> with WidgetsBindingObserver
                                   ? "Unknown iCloud account"
                                   : SettingsSvc.settings.iCloudAccount.value,
                           style: context.theme.textTheme.bodyMedium!.apply(color: context.theme.colorScheme.outline)),
-                      trailing: Icon(Icons.edit_outlined, color: context.theme.colorScheme.onBackground),
+                      trailing: Icon(Icons.edit_outlined, color: context.theme.colorScheme.onSurface),
                     ),
                   ),
                 ),
@@ -285,7 +285,7 @@ class _ProfilePanelState extends State<ProfilePanel> with WidgetsBindingObserver
                         updatePhoto();
                       },
                       title: Text("Update your photo", style: context.theme.textTheme.bodyLarge!),
-                      trailing: Icon(Icons.edit_outlined, color: context.theme.colorScheme.onBackground),
+                      trailing: Icon(Icons.edit_outlined, color: context.theme.colorScheme.onSurface),
                     ),
                   ),
                 ),

@@ -49,7 +49,7 @@ class ResolvedFileContent extends StatelessWidget {
       return OpenContainer(
         tappable: false,
         openColor: Colors.black,
-        closedColor: context.theme.colorScheme.properSurface,
+        closedColor: context.theme.colorScheme.surfaceContainerHighest,
         closedShape: isiOS
             ? RoundedRectangleBorder(
                 borderRadius: BorderRadius.only(
@@ -74,7 +74,7 @@ class ResolvedFileContent extends StatelessWidget {
             openContainer();
           },
           child: Container(
-            color: context.theme.colorScheme.properSurface,
+            color: context.theme.colorScheme.surfaceContainerHighest,
             child: ImageViewer(
               file: file,
               attachment: attachment,
@@ -87,9 +87,7 @@ class ResolvedFileContent extends StatelessWidget {
       );
     }
 
-    if ((attachment.mimeStart == "video" || attachment.mimeType == "audio/mp4") &&
-        !SettingsSvc.settings.highPerfMode.value &&
-        !isSnap) {
+    if (attachment.mimeStart == "video" && !SettingsSvc.settings.highPerfMode.value && !isSnap) {
       return VideoPlayer(
         attachment: attachment,
         file: file,

@@ -126,7 +126,7 @@ class _UnsupportedInteractiveState extends State<UnsupportedInteractive>
                   ),
                 ]),
               ),
-              Icon(getIcon(message), color: context.theme.colorScheme.properOnSurface, size: 48),
+              Icon(getIcon(message), color: context.theme.colorScheme.onSurfaceVariant, size: 48),
             ],
           ),
         ),

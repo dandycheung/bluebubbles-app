@@ -30,10 +30,10 @@ import 'package:bluebubbles/models/models.dart' show ContactSearchResult;
 class SelectedContact {
   final String displayName;
   final String address;
-  late final RxnBool iMessage;
+  late final Rxn<ChatServiceType> serviceType;
 
-  SelectedContact({required this.displayName, required this.address, bool? isIMessage}) {
-    iMessage = RxnBool(isIMessage);
+  SelectedContact({required this.displayName, required this.address, ChatServiceType? serviceType}) {
+    this.serviceType = Rxn(serviceType);
   }
 }
 
@@ -68,8 +68,7 @@ class ChatCreatorState extends State<ChatCreator> with ThemeHelpers {
   final filteredChats = <Chat>[].obs;
   late final RxList<SelectedContact> selectedContacts = List<SelectedContact>.from(widget.initialSelected).obs;
   final Rxn<ConversationViewController> fakeController = Rxn(null);
-  final iMessage = true.obs;
-  final sms = false.obs;
+  final Rx<ChatServiceType> selectedService = ChatServiceType.iMessage.obs;
   String? oldText;
   ConversationViewController? oldController;
   Timer? _debounce;
@@ -112,7 +111,7 @@ class ChatCreatorState extends State<ChatCreator> with ThemeHelpers {
               .toList();
           final _chats = existingChats
               .where((e) =>
-                  ((iMessage.value && e.isIMessage) || (sms.value && !e.isIMessage)) &&
+                  (selectedService.value.isIMessageService == e.isIMessage) &&
                   ((e.getTitle().toLowerCase().contains(query)) ||
                       e.handles.firstWhereOrNull(
                               (e) => e.address.contains(query) || e.displayName.toLowerCase().contains(query)) !=
@@ -158,7 +157,7 @@ class ChatCreatorState extends State<ChatCreator> with ThemeHelpers {
     selectedContacts.add(c);
     try {
       final response = await HttpSvc.handleiMessageState(c.address);
-      c.iMessage.value = response.data["data"]["available"];
+      c.serviceType.value = response.data["data"]["available"] == true ? ChatServiceType.iMessage : ChatServiceType.sms;
     } catch (_) {}
     addressController.text = "";
     findExistingChat();
@@ -167,12 +166,12 @@ class ChatCreatorState extends State<ChatCreator> with ThemeHelpers {
   void addSelectedList(Iterable<SelectedContact> c) {
     selectedContacts.addAll(c);
     addressController.text = "";
-    findExistingChat();
+    unawaited(findExistingChat());
   }
 
   void removeSelected(SelectedContact c) {
     selectedContacts.remove(c);
-    findExistingChat();
+    unawaited(findExistingChat());
   }
 
   Future<Chat?> findExistingChat({bool checkDeleted = false, bool update = true}) async {
@@ -182,13 +181,11 @@ class ChatCreatorState extends State<ChatCreator> with ThemeHelpers {
       fakeController.value = null;
       return null;
     }
-    if (selectedContacts.firstWhereOrNull((element) => element.iMessage.value == false) != null) {
-      iMessage.value = false;
-      sms.value = true;
+    if (selectedContacts.firstWhereOrNull((element) => element.serviceType.value == ChatServiceType.sms) != null) {
+      selectedService.value = ChatServiceType.sms;
       filteredChats.value = List<Chat>.from(existingChats.where((e) => !e.isIMessage));
     } else {
-      iMessage.value = true;
-      sms.value = false;
+      selectedService.value = ChatServiceType.iMessage;
       filteredChats.value = List<Chat>.from(existingChats.where((e) => e.isIMessage));
     }
     Chat? existingChat;
@@ -333,7 +330,7 @@ class ChatCreatorState extends State<ChatCreator> with ThemeHelpers {
                           content: Text(
                               "Creating group chats from BlueBubbles is not possible on macOS 11 (Big Sur) and later due to limitations from Apple. You must setup the Private API to gain this feature.",
                               style: context.theme.textTheme.bodyLarge),
-                          backgroundColor: context.theme.colorScheme.properSurface,
+                          backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
                           actions: <Widget>[
                             TextButton(
                               child: Text("Close",
@@ -448,34 +445,29 @@ class ChatCreatorState extends State<ChatCreator> with ThemeHelpers {
               ),
             ),
             Obx(() => MessageTypeToggle(
-                  iMessage: iMessage.value,
-                  sms: sms.value,
+                  selectedService: selectedService.value,
                   onToggle: (index) async {
                     selectedContacts.clear();
                     addressController.text = "";
                     if (index == 0) {
-                      iMessage.value = true;
-                      sms.value = false;
+                      selectedService.value = ChatServiceType.iMessage;
                       filteredChats.value = List<Chat>.from(existingChats.where((e) => e.isIMessage));
-                      await ChatsSvc.setAllInactive();
-                      fakeController.value = null;
                     } else {
-                      iMessage.value = false;
-                      sms.value = true;
+                      selectedService.value = ChatServiceType.sms;
                       filteredChats.value = List<Chat>.from(existingChats.where((e) => !e.isIMessage));
-                      await ChatsSvc.setAllInactive();
-                      fakeController.value = null;
                     }
+                    await ChatsSvc.setAllInactive();
+                    fakeController.value = null;
                   },
                 )),
             Expanded(
               child: Obx(() => Theme(
                     data: context.theme.copyWith(
                       // in case some components still use legacy theming
-                      primaryColor: context.theme.colorScheme.bubble(context, iMessage.value),
+                      primaryColor: context.theme.colorScheme.bubble(context, selectedService.value.isIMessageService),
                       colorScheme: context.theme.colorScheme.copyWith(
-                        primary: context.theme.colorScheme.bubble(context, iMessage.value),
-                        onPrimary: context.theme.colorScheme.onBubble(context, iMessage.value),
+                        primary: context.theme.colorScheme.bubble(context, selectedService.value.isIMessageService),
+                        onPrimary: context.theme.colorScheme.onBubble(context, selectedService.value.isIMessageService),
                         surface: SettingsSvc.settings.monetTheming.value == Monet.full
                             ? null
                             : (context.theme.extensions[BubbleColors] as BubbleColors?)?.receivedBubbleColor,
@@ -522,10 +514,10 @@ class ChatCreatorState extends State<ChatCreator> with ThemeHelpers {
                 () => Theme(
                     data: context.theme.copyWith(
                       // in case some components still use legacy theming
-                      primaryColor: context.theme.colorScheme.bubble(context, iMessage.value),
+                      primaryColor: context.theme.colorScheme.bubble(context, selectedService.value.isIMessageService),
                       colorScheme: context.theme.colorScheme.copyWith(
-                        primary: context.theme.colorScheme.bubble(context, iMessage.value),
-                        onPrimary: context.theme.colorScheme.onBubble(context, iMessage.value),
+                        primary: context.theme.colorScheme.bubble(context, selectedService.value.isIMessageService),
+                        onPrimary: context.theme.colorScheme.onBubble(context, selectedService.value.isIMessageService),
                         surface: SettingsSvc.settings.monetTheming.value == Monet.full
                             ? null
                             : (context.theme.extensions[BubbleColors] as BubbleColors?)?.receivedBubbleColor,
@@ -550,53 +542,55 @@ class ChatCreatorState extends State<ChatCreator> with ThemeHelpers {
                           controller: fakeController.value,
                           recorderController: null,
                           initialAttachments: widget.initialAttachments,
+                          hideMediaPicker: fakeController.value == null,
                           sendMessage: ({String? effect}) async {
                             addressOnSubmitted();
-                            final chat =
+                            Chat? chat =
                                 fakeController.value?.chat ?? await findExistingChat(checkDeleted: true, update: false);
-                            bool existsOnServer = false;
-                            if (chat != null) {
-                              // if we don't error, then the chat exists
-                              try {
-                                await HttpSvc.singleChat(chat.guid);
-                                existsOnServer = true;
-                              } catch (_) {}
+
+                            // If no local chat and we have a single contact, try fetching from the
+                            // server using the guessed GUID pattern before falling back to creation.
+                            if (chat == null && selectedContacts.length == 1) {
+                              final address = selectedContacts.first.address;
+                              final service = selectedService.value.method;
+                              chat = await ChatsSvc.fetchChat('$service;-;$address');
                             }
-                            if (chat != null && existsOnServer) {
-                              sendInitialMessage() async {
-                                if (fakeController.value == null) {
-                                  await ChatsSvc.setActiveChat(chat, clearNotifications: false);
-                                  ChatsSvc.activeChat!.controller = cvc(chat);
-                                  ChatsSvc.activeChat!.controller!.pickedAttachments.value = [];
-                                  fakeController.value = ChatsSvc.activeChat!.controller;
-                                } else {
-                                  fakeController.value!.textController.text = textController.text;
-                                  fakeController.value!.pickedAttachments.value = widget.initialAttachments;
-                                }
 
-                                await fakeController.value!.send(SendData(
-                                  attachments: widget.initialAttachments,
-                                  text: fakeController.value!.textController.text,
-                                  subject: "",
-                                  replyGuid: fakeController.value!.replyToMessage?.message.threadOriginatorGuid ??
-                                      fakeController.value!.replyToMessage?.message.guid,
-                                  replyPart: fakeController.value!.replyToMessage?.partIndex,
-                                  effectId: effect,
-                                ));
-
-                                fakeController.value!.replyToMessage = null;
-                                fakeController.value!.pickedAttachments.clear();
-                                fakeController.value!.textController.clear();
-                                fakeController.value!.subjectTextController.clear();
+                            if (chat != null) {
+                              final existingChat = chat;
+                              // Ensure fakeController is set up for this chat
+                              if (fakeController.value == null) {
+                                await ChatsSvc.setActiveChat(existingChat, clearNotifications: false);
+                                ChatsSvc.activeChat!.controller = cvc(existingChat);
+                                fakeController.value = ChatsSvc.activeChat!.controller;
                               }
+                              if (messagesService == null || messagesService!.tag != existingChat.guid) {
+                                messagesService = MessagesSvc(existingChat.guid);
+                              }
+
+                              final ctrl = fakeController.value!;
+                              ctrl.textController.text = textController.text;
+                              ctrl.pickedAttachments.value = List<PlatformFile>.from(widget.initialAttachments);
+                              ctrl.replyToMessage = null;
+
+                              // Pre-queue the send so _SendAnimationState fires it as soon as
+                              // it wires up sendFunc — after the ConversationView frame builds.
+                              ctrl.pendingSend = SendData(
+                                attachments: widget.initialAttachments,
+                                text: ctrl.textController.text,
+                                subject: "",
+                                replyGuid: ctrl.replyToMessage?.message.threadOriginatorGuid ??
+                                    ctrl.replyToMessage?.message.guid,
+                                replyPart: ctrl.replyToMessage?.partIndex,
+                                effectId: effect,
+                              );
 
                               NavigationSvc.pushAndRemoveUntil(
                                 Get.context!,
                                 ConversationView(
-                                  chat: chat,
+                                  chat: existingChat,
                                   customService: messagesService,
                                   fromChatCreator: true,
-                                  onInit: sendInitialMessage,
                                 ),
                                 (route) => route.isFirst,
                                 // don't force close the active chat in tablet mode
@@ -605,18 +599,49 @@ class ChatCreatorState extends State<ChatCreator> with ThemeHelpers {
                                 customRoute: PageRouteBuilder(
                                   pageBuilder: (_, __, ___) => TitleBarWrapper(
                                       child: ConversationView(
-                                    chat: chat,
+                                    chat: existingChat,
                                     customService: messagesService,
                                     fromChatCreator: true,
-                                    onInit: sendInitialMessage,
                                   )),
                                   transitionDuration: Duration.zero,
                                 ),
                               );
-
-                              await Future.delayed(const Duration(milliseconds: 500));
                             } else {
                               if (!(createCompleter?.isCompleted ?? true)) return;
+
+                              // Attachments cannot be sent when creating a brand-new chat because
+                              // the server's createChat API only accepts a text body. Show an error
+                              // and let the user pick an existing contact instead.
+                              if (widget.initialAttachments.isNotEmpty) {
+                                showDialog(
+                                  context: context,
+                                  builder: (BuildContext context) {
+                                    return AlertDialog(
+                                      backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
+                                      title: Text(
+                                        "Cannot Forward Attachment",
+                                        style: context.theme.textTheme.titleLarge,
+                                      ),
+                                      content: Text(
+                                        "Attachments cannot be forwarded to a new conversation. Please select an existing contact.",
+                                        style: context.theme.textTheme.bodyLarge,
+                                      ),
+                                      actions: [
+                                        TextButton(
+                                          child: Text(
+                                            "OK",
+                                            style: context.theme.textTheme.bodyLarge!
+                                                .copyWith(color: context.theme.colorScheme.primary),
+                                          ),
+                                          onPressed: () => Navigator.of(context).pop(),
+                                        ),
+                                      ],
+                                    );
+                                  },
+                                );
+                                return;
+                              }
+
                               // hard delete a chat that exists on BB but not on the server to make way for the proper server data
                               if (chat != null) {
                                 ChatsSvc.removeChat(chat);
@@ -626,23 +651,25 @@ class ChatCreatorState extends State<ChatCreator> with ThemeHelpers {
                               final participants = selectedContacts
                                   .map((e) => e.address.isEmail ? e.address : cleansePhoneNumber(e.address))
                                   .toList();
-                              final method = iMessage.value ? "iMessage" : "SMS";
+                              final method = selectedService.value.method;
+                              BuildContext? createDialogCtx;
                               showDialog(
                                   context: context,
-                                  builder: (BuildContext context) {
+                                  builder: (BuildContext dialogContext) {
+                                    createDialogCtx = dialogContext;
                                     return AlertDialog(
-                                      backgroundColor: context.theme.colorScheme.properSurface,
+                                      backgroundColor: dialogContext.theme.colorScheme.surfaceContainerHighest,
                                       title: Text(
                                         "Creating a new $method chat...",
-                                        style: context.theme.textTheme.titleLarge,
+                                        style: dialogContext.theme.textTheme.titleLarge,
                                       ),
                                       content: SizedBox(
                                         height: 70,
                                         child: Center(
                                           child: CircularProgressIndicator(
-                                            backgroundColor: context.theme.colorScheme.properSurface,
+                                            backgroundColor: dialogContext.theme.colorScheme.surfaceContainerHighest,
                                             valueColor:
-                                                AlwaysStoppedAnimation<Color>(context.theme.colorScheme.primary),
+                                                AlwaysStoppedAnimation<Color>(dialogContext.theme.colorScheme.primary),
                                           ),
                                         ),
                                       ),
@@ -685,8 +712,8 @@ class ChatCreatorState extends State<ChatCreator> with ThemeHelpers {
                                 // Let awaiters know we completed
                                 createCompleter?.complete();
 
-                                // Navigate to the new chat
-                                Navigator.of(context).pop();
+                                if (createDialogCtx != null) Navigator.of(createDialogCtx!).pop();
+                                if (!mounted) return;
                                 NavigationSvc.pushAndRemoveUntil(
                                   Get.context!,
                                   ConversationView(chat: newChat),
@@ -702,30 +729,34 @@ class ChatCreatorState extends State<ChatCreator> with ThemeHelpers {
                                   ),
                                 );
                               }).catchError((error) {
-                                Navigator.of(context).pop();
+                                if (createDialogCtx != null) Navigator.of(createDialogCtx!).pop();
+                                if (!mounted) {
+                                  if (!createCompleter!.isCompleted) createCompleter?.completeError(error);
+                                  return;
+                                }
                                 showDialog(
                                     barrierDismissible: false,
                                     context: context,
-                                    builder: (BuildContext context) {
+                                    builder: (BuildContext dialogContext) {
                                       return AlertDialog(
-                                        backgroundColor: context.theme.colorScheme.properSurface,
+                                        backgroundColor: dialogContext.theme.colorScheme.surfaceContainerHighest,
                                         title: Text(
                                           "Failed to create chat!",
-                                          style: context.theme.textTheme.titleLarge,
+                                          style: dialogContext.theme.textTheme.titleLarge,
                                         ),
                                         content: Text(
                                           error is Response
                                               ? "Reason: (${error.data["error"]["type"]}) -> ${error.data["error"]["message"]}"
                                               : error.toString(),
-                                          style: context.theme.textTheme.bodyLarge,
+                                          style: dialogContext.theme.textTheme.bodyLarge,
                                         ),
                                         actions: [
                                           TextButton(
                                             child: Text("OK",
-                                                style: context.theme.textTheme.bodyLarge!
+                                                style: dialogContext.theme.textTheme.bodyLarge!
                                                     .copyWith(color: Get.context!.theme.colorScheme.primary)),
                                             onPressed: () {
-                                              Navigator.of(context).pop();
+                                              Navigator.of(dialogContext).pop();
                                             },
                                           )
                                         ],

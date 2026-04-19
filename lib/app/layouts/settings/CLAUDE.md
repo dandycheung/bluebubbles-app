@@ -1,6 +1,6 @@
 # settings/ — App Settings
 
-## Page Categories (`pages/`)
+## Page Categories (`pages/`) → `pages/CLAUDE.md`
 | Directory | Content |
 |-----------|---------|
 | `theming/` | Theme picker; `advanced/` for color customization; `avatar/` for avatar colors |

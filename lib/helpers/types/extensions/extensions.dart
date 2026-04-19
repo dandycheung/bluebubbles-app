@@ -274,10 +274,10 @@ String _getAttachmentText(List<Attachment?> attachments) {
       key = "video";
     } else if (mime.contains("audio")) {
       key = "audio message";
-    } else if (mime.contains("image")) {
-      key = "photo";
     } else if (mime.contains("image/gif")) {
       key = "GIF";
+    } else if (mime.contains("image")) {
+      key = "photo";
     } else if (mime.contains("application/pdf")) {
       key = "PDF";
     } else {
@@ -330,6 +330,7 @@ extension MessageNotificationExtension on Message {
 
       // If there are attachments, return the number of attachments
       if (realAttachments.isNotEmpty) {
+        if (isSticker) return "${sender}1 Sticker";
         return "$sender${_getAttachmentText(realAttachments)}";
       } else if (!isNullOrEmpty(associatedMessageGuid)) {
         // It's a reaction message, get the sender

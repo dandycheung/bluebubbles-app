@@ -31,12 +31,7 @@ class _SamsungHeaderState extends CustomState<SamsungHeader, void, ConversationL
             padding: const EdgeInsets.all(10.0).add(const EdgeInsets.only(top: 30)),
             child: Material(
               color: Colors.transparent,
-              shape: const CircleBorder(),
-              clipBehavior: Clip.antiAlias,
-              child: SizedBox(
-                width: 40,
-                child: OverflowMenu(extraItems: true, controller: controller),
-              ),
+              child: OverflowMenu(extraItems: true, controller: controller),
             ),
           ),
         );
@@ -123,7 +118,7 @@ class _SamsungHeaderState extends CustomState<SamsungHeader, void, ConversationL
                                       },
                                       icon: Icon(
                                         Icons.camera_alt_outlined,
-                                        color: context.theme.colorScheme.properOnSurface,
+                                        color: context.theme.colorScheme.onSurfaceVariant,
                                       ),
                                     )),
                               if (!showArchived && !showUnknown)
@@ -136,19 +131,14 @@ class _SamsungHeaderState extends CustomState<SamsungHeader, void, ConversationL
                                     },
                                     icon: Icon(
                                       Icons.search,
-                                      color: context.theme.colorScheme.properOnSurface,
+                                      color: context.theme.colorScheme.onSurfaceVariant,
                                     )),
                               if (!showArchived && !showUnknown)
                                 const Padding(
                                   padding: EdgeInsets.only(right: 8.0),
                                   child: Material(
                                     color: Colors.transparent,
-                                    shape: CircleBorder(),
-                                    clipBehavior: Clip.antiAlias,
-                                    child: SizedBox(
-                                      width: 40,
-                                      child: OverflowMenu(),
-                                    ),
+                                    child: OverflowMenu(),
                                   ),
                                 ),
                             ],
@@ -189,7 +179,7 @@ class _ExpandedHeaderTextState extends CustomState<ExpandedHeaderText, void, Con
                     : unreadChats > 0
                         ? "$unreadChats unread message${unreadChats > 1 ? "s" : ""}"
                         : "Messages",
-        style: context.theme.textTheme.displaySmall!.copyWith(color: context.theme.colorScheme.onBackground),
+        style: context.theme.textTheme.displaySmall!.copyWith(color: context.theme.colorScheme.onSurface),
         textAlign: TextAlign.center,
       );
     });

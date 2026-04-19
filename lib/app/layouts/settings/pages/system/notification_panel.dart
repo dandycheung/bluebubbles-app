@@ -278,7 +278,7 @@ class _NotificationPanelState extends State<NotificationPanel> with SingleTicker
                                           child: Center(
                                               child: Text("Notifications",
                                                   style: context.theme.textTheme.displaySmall!
-                                                      .copyWith(color: context.theme.colorScheme.onBackground),
+                                                      .copyWith(color: context.theme.colorScheme.onSurface),
                                                   textAlign: TextAlign.center)),
                                         ),
                                         FadeTransition(
@@ -470,7 +470,7 @@ class ChatListState extends State<ChatList> with ThemeHelpers {
                           subtitle: Text(
                             getSubtitle(chat),
                             style: context.theme.textTheme.bodySmall!
-                                .copyWith(color: context.theme.colorScheme.properOnSurface),
+                                .copyWith(color: context.theme.colorScheme.onSurfaceVariant),
                           ),
                           onSelect: (_) async {
                             await showDialog(
