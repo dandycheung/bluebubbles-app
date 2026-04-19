@@ -787,7 +787,7 @@ class _ImportDialogState extends State<_ImportDialog> {
   }
 
   Future<void> _pickFile() async {
-    final result = await FilePicker.platform.pickFiles(
+    final result = await FilePicker.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['json', 'txt'],
     );

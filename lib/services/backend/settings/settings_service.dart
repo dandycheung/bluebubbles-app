@@ -483,9 +483,9 @@ class SettingsService {
     final isDesktopRelease = release.tagName!.split('+').last.contains('desktop');
     final buildNumber =
         FilesystemSvc.packageInfo.buildNumber.lastChars(min(4, FilesystemSvc.packageInfo.buildNumber.length));
-    if (int.parse(code) <= int.parse(buildNumber) ||
+    if (available && (int.parse(code) <= int.parse(buildNumber) ||
         PrefsSvc.i.getString("client-update-check") == code ||
-        (Platform.isAndroid && isDesktopRelease)) {
+        (Platform.isAndroid && isDesktopRelease))) {
       available = false;
     }
 

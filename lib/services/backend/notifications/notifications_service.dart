@@ -77,7 +77,7 @@ class NotificationsService {
       const AndroidInitializationSettings initializationSettingsAndroid = AndroidInitializationSettings('ic_stat_icon');
       const InitializationSettings initializationSettings =
           InitializationSettings(android: initializationSettingsAndroid);
-      await flnp.initialize(initializationSettings, onDidReceiveNotificationResponse: (NotificationResponse? response) {
+      await flnp.initialize(settings: initializationSettings, onDidReceiveNotificationResponse: (NotificationResponse? response) {
         if (response?.payload != null) {
           IntentsSvc.openChat(response!.payload);
         }
@@ -96,11 +96,11 @@ class NotificationsService {
   Future<void> createReminder(Chat? chat, Message? message, DateTime time,
       {String? chatTitle, String? messageText}) async {
     await flnp.zonedSchedule(
-      Random().nextInt(9998) + 50000,
-      chatTitle ?? 'Reminder: ${chat!.getTitle()}',
-      messageText ?? (hideContent ? "iMessage" : message!.getNotificationText()),
-      TZDateTime.from(time, local),
-      NotificationDetails(
+      id: Random().nextInt(9998) + 50000,
+      title: chatTitle ?? 'Reminder: ${chat!.getTitle()}',
+      body: messageText ?? (hideContent ? "iMessage" : message!.getNotificationText()),
+      scheduledDate: TZDateTime.from(time, local),
+      notificationDetails: NotificationDetails(
         android: AndroidNotificationDetails(
           REMINDER_CHANNEL,
           'Reminders',
@@ -587,10 +587,10 @@ class NotificationsService {
       final notifs = await flnp.getActiveNotifications();
       if (notifs.firstWhereOrNull((element) => element.id == -2) != null) return;
       await flnp.show(
-        -2,
-        title,
-        subtitle,
-        NotificationDetails(
+        id: -2,
+        title: title,
+        body: subtitle,
+        notificationDetails: NotificationDetails(
           android: AndroidNotificationDetails(
             ERROR_CHANNEL,
             'Errors',
@@ -642,10 +642,10 @@ class NotificationsService {
       }
 
       await flnp.show(
-        notifId,
-        title,
-        text,
-        NotificationDetails(
+        id: notifId,
+        title: title,
+        body: text,
+        notificationDetails: NotificationDetails(
           android: AndroidNotificationDetails(ERROR_CHANNEL, 'Errors',
               channelDescription: 'Displays message send failures, connection failures, and more',
               priority: Priority.max,
@@ -699,10 +699,10 @@ class NotificationsService {
       return;
     }
     await flnp.show(
-      (chat.id! + 75000) * (scheduled ? -1 : 1),
-      title,
-      subtitle,
-      NotificationDetails(
+      id: (chat.id! + 75000) * (scheduled ? -1 : 1),
+      title: title,
+      body: subtitle,
+      notificationDetails: NotificationDetails(
         android: AndroidNotificationDetails(
           ERROR_CHANNEL,
           'Errors',
@@ -722,7 +722,7 @@ class NotificationsService {
       socketToast = null;
       return;
     }
-    await flnp.cancel(-2);
+    await flnp.cancel(id: -2);
   }
 
   Future<void> clearFailedToSend(int id) async {
@@ -731,7 +731,7 @@ class NotificationsService {
       failedToast = null;
       return;
     }
-    await flnp.cancel(id);
+    await flnp.cancel(id: id);
   }
 
   Future<void> clearDesktopNotificationsForChat(String chatGuid) async {

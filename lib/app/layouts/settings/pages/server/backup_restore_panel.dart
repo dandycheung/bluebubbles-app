@@ -405,7 +405,7 @@ class _BackupRestorePanelState extends State<BackupRestorePanel> with ThemeHelpe
                                   final downloadsDir = await FilesystemSvc.downloadsDirectory;
                                   String filePath = join(downloadsDir, "BB-Settings-$name.json");
                                   if (kIsDesktop) {
-                                    String? _filePath = await FilePicker.platform.saveFile(
+                                    String? _filePath = await FilePicker.saveFile(
                                       initialDirectory: downloadsDir,
                                       dialogTitle: 'Choose a location to save this file',
                                       fileName: "BB-Settings-$name.json",
@@ -564,7 +564,7 @@ class _BackupRestorePanelState extends State<BackupRestorePanel> with ThemeHelpe
                               ),
                             ),
                             onTap: () async {
-                              final res = await FilePicker.platform
+                              final res = await FilePicker
                                   .pickFiles(withData: true, type: FileType.custom, allowedExtensions: ["json"]);
                               if (res == null || res.files.isEmpty || res.files.first.bytes == null) return;
                               showDialog(
@@ -843,7 +843,7 @@ class _BackupRestorePanelState extends State<BackupRestorePanel> with ThemeHelpe
                                 final downloadsDir = await FilesystemSvc.downloadsDirectory;
                                 String filePath = join(downloadsDir, themeFilename);
                                 if (kIsDesktop) {
-                                  String? _filePath = await FilePicker.platform.saveFile(
+                                  String? _filePath = await FilePicker.saveFile(
                                     initialDirectory: downloadsDir,
                                     dialogTitle: 'Choose a location to save this file',
                                     fileName: themeFilename,
@@ -907,7 +907,7 @@ class _BackupRestorePanelState extends State<BackupRestorePanel> with ThemeHelpe
                               ),
                             ),
                             onTap: () async {
-                              final res = await FilePicker.platform
+                              final res = await FilePicker
                                   .pickFiles(withData: true, type: FileType.custom, allowedExtensions: ["json"]);
                               if (res == null || res.files.isEmpty || res.files.first.bytes == null) return;
 

@@ -489,7 +489,7 @@ class ConversationTextFieldState extends CustomState<ConversationTextField, void
                     visualDensity: Platform.isAndroid ? VisualDensity.compact : null,
                     onPressed: () async {
                       if (kIsDesktop) {
-                        final res = await FilePicker.platform.pickFiles(withReadStream: true, allowMultiple: true);
+                        final res = await FilePicker.pickFiles(withReadStream: true, allowMultiple: true);
                         if (res == null || res.files.isEmpty || res.files.first.readStream == null) return;
 
                         for (pf.PlatformFile e in res.files) {
@@ -516,7 +516,7 @@ class ConversationTextFieldState extends CustomState<ConversationTextField, void
                                         ListTile(
                                           title: Text("Upload file", style: Theme.of(context).textTheme.bodyLarge),
                                           onTap: () async {
-                                            final res = await FilePicker.platform
+                                            final res = await FilePicker
                                                 .pickFiles(withData: true, allowMultiple: true);
                                             if (res == null || res.files.isEmpty || res.files.first.bytes == null) {
                                               return;
@@ -1317,7 +1317,7 @@ class TextFieldComponentState extends State<TextFieldComponent> {
             visualDensity: Platform.isAndroid ? VisualDensity.compact : null,
             onPressed: () async {
               if (kIsDesktop) {
-                final res = await FilePicker.platform.pickFiles(withReadStream: true, allowMultiple: true);
+                final res = await FilePicker.pickFiles(withReadStream: true, allowMultiple: true);
                 if (res == null || res.files.isEmpty || res.files.first.readStream == null) return;
                 for (pf.PlatformFile e in res.files) {
                   if (e.size / 1024000 > 1000) {

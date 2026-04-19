@@ -5,7 +5,7 @@
   "entities": [
     {
       "id": "1:2065429213543838585",
-      "lastPropertyId": "20:8433001080232138396",
+      "lastPropertyId": "21:6459555989255954452",
       "name": "Attachment",
       "properties": [
         {
@@ -88,6 +88,11 @@
           "id": "20:8433001080232138396",
           "name": "isDownloaded",
           "type": 1
+        },
+        {
+          "id": "21:6459555989255954452",
+          "name": "metadata",
+          "type": 13
         }
       ],
       "relations": []
@@ -378,7 +383,7 @@
     },
     {
       "id": "13:4148278195232901830",
-      "lastPropertyId": "53:8594929698222481068",
+      "lastPropertyId": "54:3645372489156688543",
       "name": "Message",
       "properties": [
         {
@@ -606,6 +611,11 @@
           "id": "53:8594929698222481068",
           "name": "hasEffectPlayed",
           "type": 1
+        },
+        {
+          "id": "54:3645372489156688543",
+          "name": "metadata",
+          "type": 13
         }
       ],
       "relations": []

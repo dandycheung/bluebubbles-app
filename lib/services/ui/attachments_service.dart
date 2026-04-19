@@ -256,7 +256,7 @@ class AttachmentsService extends GetxService {
         ..setAttribute("download", file.name)
         ..click();
     } else if (kIsDesktop) {
-      String? savePath = await FilePicker.platform.saveFile(
+      String? savePath = await FilePicker.saveFile(
         initialDirectory: await FilesystemSvc.downloadsDirectory,
         dialogTitle: 'Choose a location to save this file',
         fileName: file.name,
@@ -343,7 +343,7 @@ class AttachmentsService extends GetxService {
       String? savePath;
 
       if (SettingsSvc.settings.askWhereToSave.value && !isAutoDownload) {
-        savePath = await FilePicker.platform.getDirectoryPath(
+        savePath = await FilePicker.getDirectoryPath(
           initialDirectory: SettingsSvc.settings.autoSaveDocsLocation.value,
           dialogTitle: 'Choose a location to save this file',
           lockParentWindow: true,

@@ -160,7 +160,7 @@ class _BackgroundCropState extends State<BackgroundCrop> with ThemeHelpers {
               backgroundColor: context.theme.colorScheme.primaryContainer,
             ),
             onPressed: () async {
-              final res = await FilePicker.platform.pickFiles(
+              final res = await FilePicker.pickFiles(
                 withData: true,
                 type: FileType.custom,
                 allowedExtensions: ['png', 'jpg', 'jpeg'],

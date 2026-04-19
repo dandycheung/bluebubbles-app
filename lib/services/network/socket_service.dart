@@ -136,7 +136,7 @@ class SocketService {
         customCheckOptions: [
           InternetCheckOption(
             uri: Uri.parse(serverAddress),
-            timeout: Duration(milliseconds: ss.settings.apiTimeout.value),
+            timeout: Duration(milliseconds: SettingsSvc.settings.apiTimeout.value),
             responseStatusFn: (_) => true,
           ),
         ],

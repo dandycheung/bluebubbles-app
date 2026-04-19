@@ -31,6 +31,7 @@ list(APPEND FLUTTER_PLUGIN_LIST
   system_tray
   tray_manager
   url_launcher_windows
+  webcrypto
   window_manager
   windows_taskbar
 )
