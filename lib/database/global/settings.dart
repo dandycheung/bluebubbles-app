@@ -620,12 +620,16 @@ class Settings {
         map['useCustomTitleBar'] ?? SettingsSvc.settings.useCustomTitleBar.value;
 
     SettingsSvc.settings.showReplyField.value = map['showReplyField'] ?? SettingsSvc.settings.showReplyField.value;
-    SettingsSvc.settings.selectedActionIndices.value =
-        _processSelectedActionIndices(map['selectedActionIndices'], SettingsSvc.settings.showReplyField.value);
+    if (map.containsKey('selectedActionIndices')) {
+      SettingsSvc.settings.selectedActionIndices.value =
+          _processSelectedActionIndices(map['selectedActionIndices'], SettingsSvc.settings.showReplyField.value);
+    }
     SettingsSvc.settings.actionList.value =
         _processActionList(map['actionList'] ?? jsonEncode(List<String>.from(SettingsSvc.settings.actionList)));
-    SettingsSvc.settings._detailsMenuActions.value =
-        _processDetailsMenuActions(map['detailsMenuActions'], SettingsSvc.settings.detailsMenuActions);
+    if (map.containsKey('detailsMenuActions')) {
+      SettingsSvc.settings._detailsMenuActions.value =
+          _processDetailsMenuActions(map['detailsMenuActions'], SettingsSvc.settings.detailsMenuActions);
+    }
 
     SettingsSvc.settings.windowEffect.value = kIsDesktop && Platform.isWindows
         ? WindowEffect.values.firstWhereOrNull((e) => e.name == map['windowEffect']) ??
