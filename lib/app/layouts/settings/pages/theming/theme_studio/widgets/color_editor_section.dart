@@ -97,37 +97,40 @@ class _ColorEditorSectionState extends State<ColorEditorSection> {
                 ),
               ),
             ),
-            // Expanded color tiles
-            AnimatedCrossFade(
+            // Expanded color tiles — only built when the section is open,
+            // avoiding the cost of constructing all ColorEditorTile widgets
+            // on initial page load when every section is collapsed.
+            AnimatedSize(
               duration: const Duration(milliseconds: 200),
-              crossFadeState: _expanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
-              firstChild: const SizedBox.shrink(),
-              secondChild: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Divider(height: 1, color: cs.outline.withValues(alpha: 0.15), indent: 16, endIndent: 16),
-                  ...widget.group.pairs.asMap().entries.map((entry) {
-                    final pair = entry.value;
-                    final mainColor = _colorFor(pair.main);
-                    final onColor = pair.on != null ? _colorFor(pair.on!) : null;
-                    if (mainColor == null) return const SizedBox.shrink();
-                    return Column(
+              curve: Curves.easeInOut,
+              child: _expanded
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        if (entry.key > 0)
-                          Divider(height: 1, color: cs.outline.withValues(alpha: 0.1), indent: 16, endIndent: 16),
-                        ColorEditorTile(
-                          mainKey: pair.main,
-                          onKey: pair.on,
-                          mainColor: mainColor,
-                          onColor: onColor,
-                          editable: widget.editable,
-                          controller: widget.controller,
-                        ),
+                        Divider(height: 1, color: cs.outline.withValues(alpha: 0.15), indent: 16, endIndent: 16),
+                        ...widget.group.pairs.asMap().entries.map((entry) {
+                          final pair = entry.value;
+                          final mainColor = _colorFor(pair.main);
+                          final onColor = pair.on != null ? _colorFor(pair.on!) : null;
+                          if (mainColor == null) return const SizedBox.shrink();
+                          return Column(
+                            children: [
+                              if (entry.key > 0)
+                                Divider(height: 1, color: cs.outline.withValues(alpha: 0.1), indent: 16, endIndent: 16),
+                              ColorEditorTile(
+                                mainKey: pair.main,
+                                onKey: pair.on,
+                                mainColor: mainColor,
+                                onColor: onColor,
+                                editable: widget.editable,
+                                controller: widget.controller,
+                              ),
+                            ],
+                          );
+                        }),
                       ],
-                    );
-                  }),
-                ],
-              ),
+                    )
+                  : const SizedBox.shrink(),
             ),
           ],
         ),

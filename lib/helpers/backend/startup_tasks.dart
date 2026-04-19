@@ -88,7 +88,9 @@ class StartupTasks {
     // Register the global isolate
     Logger.info("Registering isolates...");
     GetIt.I.registerSingleton<GlobalIsolate>(GlobalIsolate());
+    NetworkTasks.registerIsolate(GetIt.I<GlobalIsolate>());
     GetIt.I.registerSingleton<IncrementalSyncIsolate>(IncrementalSyncIsolate());
+    NetworkTasks.registerIsolate(GetIt.I<IncrementalSyncIsolate>());
 
     // Load FCM data into settings from the database
     // We only need to do this for the main startup
@@ -97,7 +99,7 @@ class StartupTasks {
 
     Logger.info("Registering HttpService...");
     GetIt.I.registerSingleton<HttpService>(HttpService());
-    HttpSvc.init();
+    await HttpSvc.init();
 
     // We then have to initialize all the services that the app will use.
     // Order matters here as some services may rely on others. For instance,
@@ -176,8 +178,8 @@ class StartupTasks {
       dispose: (svc) => svc.dispose(),
     );
 
-    Logger.info("Startup services initialization complete! Starting incremental sync...");
-    SyncSvc.startIncrementalSync();
+    Logger.info("Startup services initialization complete! Running localhost detection then starting incremental sync...");
+    unawaited(NetworkTasks.detectLocalhost().then((_) => SyncSvc.startIncrementalSync()));
   }
 
   static Future<void> initGlobalIsolateServices(RootIsolateToken? rootIsolateToken) async {
@@ -263,7 +265,7 @@ class StartupTasks {
 
     Logger.info("Registering HttpService...");
     GetIt.I.registerSingleton<HttpService>(HttpService());
-    HttpSvc.init();
+    await HttpSvc.init();
 
     Logger.info("Global isolate services initialization complete");
   }
@@ -340,7 +342,7 @@ class StartupTasks {
 
     Logger.info("Registering HttpService...");
     GetIt.I.registerSingleton<HttpService>(HttpService());
-    HttpSvc.init();
+    await HttpSvc.init();
     Logger.info("HttpService ready");
 
     Logger.info("Sync isolate services initialization complete");
@@ -444,7 +446,7 @@ class StartupTasks {
 
     Logger.info("Registering HttpService...");
     GetIt.I.registerSingleton<HttpService>(HttpService());
-    HttpSvc.init();
+    await HttpSvc.init();
 
     Logger.info("Registering IncomingMessageHandler...");
     GetIt.I.registerSingleton<IncomingMessageHandler>(
@@ -547,11 +549,11 @@ class StartupTasks {
     }
 
     if (HttpSvc.originOverride == null && SettingsSvc.settings.localhostPort.value != null) {
-      NetworkTasks.detectLocalhost();
+      await NetworkTasks.detectLocalhost();
     }
 
     // Start the incremental sync on open, rather than on the socket connection.
-    // Separate functionality for android vs. other.
+    // Detect localhost first so the sync (and its isolate) use the local address.
     // Don't need to await these calls
     if (!Platform.isAndroid) {
       SyncSvc.startIncrementalSync();

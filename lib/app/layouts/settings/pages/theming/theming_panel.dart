@@ -552,7 +552,7 @@ class _ThemingPanelState extends CustomState<ThemingPanel, void, ThemingPanelCon
                                     children: <Widget>[
                                       Obx(
                                         () => Text(
-                                            '${HttpSvc.fontDownloadProgress.value != null && HttpSvc.fontDownloadTotalSize.value != null ? (HttpSvc.fontDownloadProgress.value! * HttpSvc.fontDownloadTotalSize.value! / 1000).getFriendlySize(withSuffix: false) : ""} / ${((HttpSvc.fontDownloadTotalSize.value ?? 0).toDouble() / 1000).getFriendlySize()} (${((HttpSvc.fontDownloadProgress.value ?? 0) * 100).floor()}%)',
+                                            '${HttpSvc.fontDownloadProgress.value != null && HttpSvc.fontDownloadTotalSize.value != null ? (HttpSvc.fontDownloadProgress.value! * HttpSvc.fontDownloadTotalSize.value!).getFriendlySize(withSuffix: false) : ""} / ${(HttpSvc.fontDownloadTotalSize.value ?? 0).toDouble().getFriendlySize()} (${((HttpSvc.fontDownloadProgress.value ?? 0) * 100).floor()}%)',
                                             style: context.theme.textTheme.bodyLarge),
                                       ),
                                       const SizedBox(height: 10.0),
@@ -605,7 +605,7 @@ class _ThemingPanelState extends CustomState<ThemingPanel, void, ThemingPanelCon
                           },
                           title: kIsWeb
                               ? "Upload Font File"
-                              : "Download${HttpSvc.downloadingFont.value ? "ing" : ""} iOS Emoji Font${HttpSvc.downloadingFont.value ? " (${HttpSvc.fontDownloadProgress.value != null && HttpSvc.fontDownloadTotalSize.value != null ? (HttpSvc.fontDownloadProgress.value! * HttpSvc.fontDownloadTotalSize.value! / 1000).getFriendlySize(withSuffix: false) : ""} / ${((HttpSvc.fontDownloadTotalSize.value ?? 0).toDouble() / 1000).getFriendlySize()}) (${((HttpSvc.fontDownloadProgress.value ?? 0) * 100).floor()}%)" : ""}",
+                              : "Download${HttpSvc.downloadingFont.value ? "ing" : ""} iOS Emoji Font${HttpSvc.downloadingFont.value ? " (${HttpSvc.fontDownloadProgress.value != null && HttpSvc.fontDownloadTotalSize.value != null ? (HttpSvc.fontDownloadProgress.value! * HttpSvc.fontDownloadTotalSize.value!).getFriendlySize(withSuffix: false) : ""} / ${(HttpSvc.fontDownloadTotalSize.value ?? 0).toDouble().getFriendlySize()}) (${((HttpSvc.fontDownloadProgress.value ?? 0) * 100).floor()}%)" : ""}",
                           subtitle: kIsWeb ? "Upload your ttf emoji file into BlueBubbles" : null,
                         );
                       } else {

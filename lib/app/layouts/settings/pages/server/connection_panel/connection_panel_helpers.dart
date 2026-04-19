@@ -684,7 +684,7 @@ mixin ConnectionPanelHelpersMixin {
                       } else {
                         SettingsSvc.settings.localhostPort.value = null;
                       }
-                      await SettingsSvc.settings.saveOneAsync('localhostPort');
+                      await SettingsSvc.settings.saveOneAsync('useLocalhost');
                       if (SettingsSvc.settings.localhostPort.value == null) {
                         HttpSvc.originOverride = null;
                       } else {
@@ -692,7 +692,7 @@ mixin ConnectionPanelHelpersMixin {
                       }
                     },
                   )),
-            if (!kIsWeb) const SettingsDivider(),
+            if (!kIsWeb && SettingsSvc.settings.localhostPort.value != null) const SettingsDivider(),
             if (!kIsWeb)
               Obx(() => SettingsSvc.settings.localhostPort.value != null
                   ? SettingsSwitch(
@@ -700,8 +700,9 @@ mixin ConnectionPanelHelpersMixin {
                       title: "Use IPv6",
                       subtitle: "Do not enable this unless your environment supports IPv6",
                       isThreeLine: true,
-                      onChanged: (bool val) {
+                      onChanged: (bool val) async {
                         SettingsSvc.settings.useLocalIpv6.value = val;
+                        await SettingsSvc.settings.saveOneAsync('useLocalIpv6');
                         NetworkTasks.detectLocalhost(createSnackbar: true);
                       },
                       leading: const SettingsLeadingIcon(

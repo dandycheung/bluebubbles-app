@@ -36,9 +36,13 @@ class _SendAnimationState extends CustomState<SendAnimation, SendData, Conversat
   // Fixed height of the TypingIndicatorRow when visible.
   static const double _typingIndicatorHeight = 50.0;
 
-  // Live measurement of the text field's current rendered height.
-  double get textFieldSize =>
-      (controller.textFieldKey.currentContext?.findRenderObject() as RenderBox?)?.size.height ?? 0;
+  // Height of the text field component at its resting (empty, single-line) size,
+  // measured from the RenderBox once after the first frame. We avoid using a
+  // live getter because during a multi-line send the AnimatedSize is still
+  // shrinking the text field, which causes AnimatedPositioned to chase a moving
+  // target and overshoot. Using the frozen resting height keeps the target
+  // constant so the animated bubble always lands where the permanent message is.
+  double _textFieldSize = 0;
 
   // Height of the focus-info widget (NotificationsSilencedBanner) above the text field.
   double get focusInfoSize =>
@@ -52,13 +56,24 @@ class _SendAnimationState extends CustomState<SendAnimation, SendData, Conversat
 
   // Total bottom offset for the AnimatedPositioned — how far above the bottom
   // of the Stack the animation bubble should land at the end of its travel.
+  // Uses the stored resting text field height (_textFieldSize) so the target
+  // never changes during the animation, even while the field shrinks.
   double get _animationBottomOffset =>
-      textFieldSize + focusInfoSize + _textFieldVerticalPadding + _typingIndicatorOffset + _platformVerticalOffset;
+      _textFieldSize + focusInfoSize + _textFieldVerticalPadding + _typingIndicatorOffset + _platformVerticalOffset;
 
   @override
   void initState() {
     super.initState();
     controller.sendFunc = send;
+    // Capture the resting (empty, single-line) text field height from the
+    // RenderBox after the first layout pass. Must be deferred because the widget hasn't been laid
+    // out yet during initState.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final box = controller.textFieldKey.currentContext?.findRenderObject() as RenderBox?;
+      final h = box?.size.height;
+      if (h != null && h > 0) _textFieldSize = h;
+    });
 
     // If ChatCreator pre-queued a send before navigating here, fire it now.
     //

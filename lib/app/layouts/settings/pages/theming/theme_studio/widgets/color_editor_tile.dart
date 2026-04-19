@@ -226,7 +226,7 @@ Future<Color?> showColorPickerDialog(BuildContext context, Color initial) async 
   Color selected = initial;
   return showDialog<Color>(
     context: context,
-    builder: (_) => AlertDialog(
+    builder: (dialogContext) => AlertDialog(
       scrollable: true,
       backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
       content: ColorPicker(
@@ -247,15 +247,15 @@ Future<Color?> showColorPickerDialog(BuildContext context, Color initial) async 
         colorCodeHasColor: true,
         pickersEnabled: const {ColorPickerType.wheel: true},
         copyPasteBehavior: const ColorPickerCopyPasteBehavior(parseShortHexCode: true),
-        actionButtons: const ColorPickerActionButtons(dialogActionButtons: true),
+        actionButtons: const ColorPickerActionButtons(dialogActionButtons: false),
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.of(context).pop(null),
+          onPressed: () => Navigator.of(dialogContext).pop(null),
           child: const Text('CANCEL'),
         ),
         TextButton(
-          onPressed: () => Navigator.of(context).pop(selected),
+          onPressed: () => Navigator.of(dialogContext).pop(selected),
           child: const Text('SAVE'),
         ),
       ],

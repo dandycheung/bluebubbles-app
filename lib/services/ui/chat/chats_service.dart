@@ -255,6 +255,10 @@ class ChatsService {
         _insertChatSorted(c);
       }
       loadedFirstChatBatch.value = true;
+      // Increment chatListVersion after every batch so the UI rebuilds for each batch,
+      // not just the first. loadedFirstChatBatch only fires once (false→true), so
+      // subsequent batches would otherwise silently mutate _sortedChats with no Obx signal.
+      _scheduleListVersionUpdate();
     }
 
     loadedAllChats.complete();

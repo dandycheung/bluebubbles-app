@@ -9,13 +9,38 @@ import 'package:universal_io/io.dart';
 /// Two grouped sections — Light Themes and Dark Themes — each with a
 /// prominent full-width Default card (Bright White / OLED Dark) and a
 /// horizontal scroll of other presets, custom themes, and action cards.
-class ThemeSelectorSection extends StatelessWidget {
+///
+/// Rendering is deferred until after the first frame so the page appears
+/// immediately on navigation rather than blocking for the full build time.
+class ThemeSelectorSection extends StatefulWidget {
   const ThemeSelectorSection({super.key, required this.controller});
 
   final ThemeStudioController controller;
 
   @override
+  State<ThemeSelectorSection> createState() => _ThemeSelectorSectionState();
+}
+
+class _ThemeSelectorSectionState extends State<ThemeSelectorSection> {
+  bool _ready = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() => _ready = true);
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (!_ready) {
+      // Approximate placeholder height keeps the page layout stable once
+      // content appears. Adjust if the rendered height changes significantly.
+      return const SizedBox(height: 380);
+    }
+
+    final controller = widget.controller;
     final all = controller.allThemes;
 
     // Partition by brightness

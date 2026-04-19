@@ -27,7 +27,9 @@ import 'package:get/get.dart';
 /// [HandleService] drives redaction in response to settings changes.
 class HandleState {
   /// Reference to the underlying DB object.
-  final Handle handle;
+  /// Replaced (non-final) by [updateFromHandle] so post-sync contact data is
+  /// always fresh for subsequent calls such as [unredactAvatars].
+  Handle handle;
 
   // ── Reactive fields --------------------------------------------------------
 
@@ -135,15 +137,17 @@ class HandleState {
 
   /// Refresh all reactive fields from a re-fetched [Handle] after a contact sync.
   void updateFromHandle(Handle refreshed) {
-    // Update scalar fields on the underlying handle object
-    handle.formattedAddress = refreshed.formattedAddress ?? handle.formattedAddress;
-    handle.defaultEmail = refreshed.defaultEmail ?? handle.defaultEmail;
-    handle.defaultPhone = refreshed.defaultPhone ?? handle.defaultPhone;
-    handle.color = refreshed.color ?? handle.color;
+    // Merge scalar overrides that may have been written locally (e.g. custom
+    // avatar color) into the refreshed object before we adopt it.
+    refreshed.formattedAddress ??= handle.formattedAddress;
+    refreshed.defaultEmail ??= handle.defaultEmail;
+    refreshed.defaultPhone ??= handle.defaultPhone;
+    refreshed.color ??= handle.color;
 
-    // Refresh the ToMany relation reference so computed values pick up new contacts
-    // ObjectBox ToMany is lazy-loaded; clearing the internal state forces re-read
-    handle.contactsV2.applyToDb();
+    // Replace the stored reference so that all future compute calls
+    // (including unredactAvatars, unredactContactInfo, etc.) operate on the
+    // freshly-fetched handle whose contactsV2 ToMany lazily re-queries the DB.
+    handle = refreshed;
 
     updateDisplayNameInternal(_computeDisplayName(handle));
     _recomputeReactionDisplayName();
