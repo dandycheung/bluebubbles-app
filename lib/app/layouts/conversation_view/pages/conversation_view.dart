@@ -155,14 +155,6 @@ class ConversationViewState extends State<ConversationView> with ThemeHelpers<Co
                 child: Scaffold(
                   backgroundColor: windowEffect != WindowEffect.disabled ? Colors.transparent : colorScheme.surface,
                   extendBodyBehindAppBar: true,
-                  // Disable Scaffold's built-in keyboard resize. The body uses a
-                  // fixed-height SizedBox (MediaQuery.sizeOf) that does not rebuild
-                  // on keyboard inset frames — letting Scaffold shrink the body
-                  // each frame fights that fixed size and forces a full Column
-                  // relayout on every animation tick, causing visible stutter.
-                  // ConversationTextField pads itself by viewInsets.bottom instead,
-                  // so only the text field tracks the keyboard — not the whole tree.
-                  resizeToAvoidBottomInset: false,
                   appBar: PreferredSize(
                       preferredSize: Size(
                           double.infinity, // width is ignored by Scaffold; avoid MediaQuery.of subscription
@@ -178,7 +170,9 @@ class ConversationViewState extends State<ConversationView> with ThemeHelpers<Co
                       controller: controller,
                       child: SizedBox(
                         // sizeOf only rebuilds on screen size changes (rotation), not on
-                        // keyboard viewInsets animation frames which change viewInsets.bottom
+                        // keyboard viewInsets animation frames which change viewInsets.bottom.
+                        // The SizedBox requests full-screen height but is clamped by the
+                        // Scaffold body constraints, so the Column always fills the visible area.
                         height: MediaQuery.sizeOf(context).height,
                         child: Stack(
                           clipBehavior: Clip.none,
@@ -200,29 +194,24 @@ class ConversationViewState extends State<ConversationView> with ThemeHelpers<Co
                                     ],
                                   ),
                                 ),
-                                Stack(children: [
-                                  Align(
-                                    alignment: Alignment.bottomCenter,
-                                    child: GestureDetector(
-                                      onPanUpdate: (details) {
-                                        if (!mounted) return;
-                                        if (SettingsSvc.settings.swipeToCloseKeyboard.value &&
-                                            details.delta.dy > 0 &&
-                                            controller.keyboardOpen) {
-                                          controller.focusNode.unfocus();
-                                          controller.subjectFocusNode.unfocus();
-                                        } else if (SettingsSvc.settings.swipeToOpenKeyboard.value &&
-                                            details.delta.dy < 0 &&
-                                            !controller.keyboardOpen) {
-                                          controller.focusNode.requestFocus();
-                                        }
-                                      },
-                                      child: ConversationTextField(
-                                        parentController: controller,
-                                      ),
-                                    ),
-                                  )
-                                ]),
+                                GestureDetector(
+                                  onPanUpdate: (details) {
+                                    if (!mounted) return;
+                                    if (SettingsSvc.settings.swipeToCloseKeyboard.value &&
+                                        details.delta.dy > 0 &&
+                                        controller.keyboardOpen) {
+                                      controller.focusNode.unfocus();
+                                      controller.subjectFocusNode.unfocus();
+                                    } else if (SettingsSvc.settings.swipeToOpenKeyboard.value &&
+                                        details.delta.dy < 0 &&
+                                        !controller.keyboardOpen) {
+                                      controller.focusNode.requestFocus();
+                                    }
+                                  },
+                                  child: ConversationTextField(
+                                    parentController: controller,
+                                  ),
+                                ),
                               ],
                             ),
                           ],
