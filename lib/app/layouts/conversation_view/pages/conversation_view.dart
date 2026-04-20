@@ -155,6 +155,14 @@ class ConversationViewState extends State<ConversationView> with ThemeHelpers<Co
                 child: Scaffold(
                   backgroundColor: windowEffect != WindowEffect.disabled ? Colors.transparent : colorScheme.surface,
                   extendBodyBehindAppBar: true,
+                  // Disable Scaffold's built-in keyboard resize. The body uses a
+                  // fixed-height SizedBox (MediaQuery.sizeOf) that does not rebuild
+                  // on keyboard inset frames — letting Scaffold shrink the body
+                  // each frame fights that fixed size and forces a full Column
+                  // relayout on every animation tick, causing visible stutter.
+                  // ConversationTextField pads itself by viewInsets.bottom instead,
+                  // so only the text field tracks the keyboard — not the whole tree.
+                  resizeToAvoidBottomInset: false,
                   appBar: PreferredSize(
                       preferredSize: Size(
                           double.infinity, // width is ignored by Scaffold; avoid MediaQuery.of subscription

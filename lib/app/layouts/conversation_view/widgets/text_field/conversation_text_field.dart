@@ -59,6 +59,7 @@ class ConversationTextFieldState extends CustomState<ConversationTextField, void
     with TickerProviderStateMixin {
   final recorderController = kIsWeb ? null : RecorderController();
   final localController = ConversationTextFieldLocalController();
+  final _emojiScrollController = ScrollController();
 
   Chat get chat => controller.chat;
 
@@ -322,6 +323,7 @@ class ConversationTextFieldState extends CustomState<ConversationTextField, void
     controller.textController.dispose();
     controller.subjectTextController.dispose();
     recorderController?.dispose();
+    _emojiScrollController.dispose();
     localController.cancelAllTimers();
     Get.delete<ConversationTextFieldLocalController>();
     if (chat.autoSendTypingIndicators ?? SettingsSvc.settings.privateSendTypingIndicators.value) {
@@ -461,12 +463,16 @@ class ConversationTextFieldState extends CustomState<ConversationTextField, void
 
   @override
   Widget build(BuildContext context) {
+    // Track keyboard height directly so only this widget — not the entire
+    // Scaffold body — relays out on each keyboard animation frame.
+    // (Scaffold.resizeToAvoidBottomInset is false on ConversationView.)
+    final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
     return SafeArea(
       left: false,
       right: false,
       top: false,
       child: Padding(
-        padding: const EdgeInsets.only(bottom: 10.0, top: 10.0),
+        padding: EdgeInsets.only(bottom: 10.0 + keyboardInset, top: 10.0),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -770,7 +776,7 @@ class ConversationTextFieldState extends CustomState<ConversationTextField, void
                         data: context.theme.copyWith(canvasColor: Colors.transparent),
                         child: EmojiPicker(
                           textEditingController: proxyController,
-                          scrollController: ScrollController(),
+                          scrollController: _emojiScrollController,
                           config: Config(
                             height: emojiPickerHeight,
                             emojiSet: (_) => emojiSetEnglish,
