@@ -263,38 +263,38 @@ String _getAttachmentText(List<Attachment?> attachments) {
     String? mime = attachment!.mimeType;
     String key;
     if (mime == null) {
-      key = "link";
+      key = "Link";
     } else if (mime.contains("vcard")) {
-      key = "contact card";
+      key = "Contact card";
     } else if (mime.contains("location")) {
-      key = "location";
+      key = "Location";
     } else if (mime.contains("contact")) {
-      key = "contact";
+      key = "Contact";
     } else if (mime.contains("video")) {
-      key = "video";
+      key = "Video";
     } else if (mime.contains("audio")) {
-      key = "audio message";
+      key = "Audio message";
     } else if (mime.contains("image/gif")) {
       key = "GIF";
     } else if (mime.contains("image")) {
-      key = "photo";
+      key = "Photo";
     } else if (mime.contains("application/pdf")) {
       key = "PDF";
     } else {
-      key = mime.split("/").first;
+      key = mime.split("/").first.capitalize ?? "File";
     }
 
     int current = counts.containsKey(key) ? counts[key]! : 0;
     counts[key] = current + 1;
     // a message can only ever have 1 link (but multiple "attachments", so we break out)
-    if (key == "link") break;
+    if (key == "Link") break;
   }
 
   List<String> attachmentStr = [];
   counts.forEach((key, value) {
     attachmentStr.add("$value $key${value > 1 ? "s" : ""}");
   });
-  return attachmentStr.join(attachmentStr.length == 2 ? " & " : ", ").toTitleCase();
+  return attachmentStr.join(attachmentStr.length == 2 ? " & " : ", ");
 }
 
 extension RandomListChoice<E> on List<E> {

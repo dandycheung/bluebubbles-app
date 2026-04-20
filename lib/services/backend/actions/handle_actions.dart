@@ -8,9 +8,12 @@ class HandleActions {
     final updateColor = data['updateColor'] as bool;
     final matchOnOriginalROWID = data['matchOnOriginalROWID'] as bool;
 
-    return await Database.runInTransaction(TxMode.write, () async {
-      final handle = Handle.fromMap(handleData);
+    final handle = Handle.fromMap(handleData);
 
+    // Format the address before entering the transaction (async not allowed inside)
+    await handle.updateFormattedAddress();
+
+    return Database.runInTransaction(TxMode.write, () {
       Handle? existing;
       if (matchOnOriginalROWID) {
         existing = Handle.findOne(originalROWID: handle.originalROWID);
@@ -26,9 +29,6 @@ class HandleActions {
         handle.color = existing?.color ?? handle.color;
       }
 
-      // Format the address if not already formatted
-      await handle.updateFormattedAddress();
-
       try {
         handle.id = Database.handles.put(handle);
       } on UniqueViolationException catch (_) {}
@@ -42,9 +42,14 @@ class HandleActions {
     final handlesData = (data['handlesData'] as List).cast<Map<String, dynamic>>();
     final matchOnOriginalROWID = data['matchOnOriginalROWID'] as bool;
 
-    return await Database.runInTransaction(TxMode.write, () async {
-      final handles = handlesData.map((e) => Handle.fromMap(e)).toList();
+    final handles = handlesData.map((e) => Handle.fromMap(e)).toList();
 
+    // Format addresses before entering the transaction (async not allowed inside)
+    for (Handle h in handles) {
+      await h.updateFormattedAddress();
+    }
+
+    return Database.runInTransaction(TxMode.write, () {
       /// Match existing to the handles to save, where possible
       for (Handle h in handles) {
         Handle? existing;
@@ -58,9 +63,6 @@ class HandleActions {
           h.id = existing.id;
         }
         // Contact matching is now handled automatically by ContactServiceV2
-
-        // Format the address if not already formatted
-        await h.updateFormattedAddress();
       }
 
       List<int> insertedIds = Database.handles.putMany(handles);
