@@ -8,6 +8,7 @@ import 'package:bluebubbles/utils/logger/logger.dart';
 import 'package:bluebubbles/services/services.dart';
 import 'package:get/get.dart' hide Response;
 import 'package:get_it/get_it.dart';
+import 'package:universal_io/universal_io.dart';
 
 // ignore: non_constant_identifier_names
 SyncService get SyncSvc => GetIt.I<SyncService>();
@@ -45,6 +46,7 @@ class SyncService {
   }
 
   Future<void> startIncrementalSync() async {
+    if (isIncrementalSyncing.value) return;
     isIncrementalSyncing.value = true;
     int errors = 0;
 
@@ -116,7 +118,7 @@ class SyncService {
 
     try {
       // Auto upload contacts if requested
-      if (SettingsSvc.settings.syncContactsAutomatically.value) {
+      if (Platform.isAndroid && SettingsSvc.settings.syncContactsAutomatically.value) {
         Logger.debug("Starting contact upload to server...", tag: "Contact Upload");
         final contactUploadStopwatch = Stopwatch()..start();
         // Get all contacts from ContactServiceV2

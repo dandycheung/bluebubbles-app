@@ -27,6 +27,13 @@ class NetworkTasks {
         await ChatsSvc.init();
       }
     }
+
+    // On desktop the socket is kept alive while the app runs. Run an incremental
+    // sync on every (re)connect so messages missed during any drop are caught,
+    // regardless of whether the app was focused at the time.
+    if (kIsDesktop) {
+      unawaited(SyncSvc.startIncrementalSync());
+    }
   }
 
   static Future<void> detectLocalhost({bool createSnackbar = false}) async {
