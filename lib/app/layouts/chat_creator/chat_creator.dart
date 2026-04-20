@@ -5,7 +5,7 @@ import 'package:bluebubbles/app/layouts/chat_creator/widgets/chat_list_section.d
 import 'package:bluebubbles/app/layouts/chat_creator/widgets/message_type_toggle.dart';
 import 'package:bluebubbles/app/layouts/chat_creator/widgets/selected_contact_chip.dart';
 import 'package:bluebubbles/app/layouts/conversation_view/pages/conversation_view.dart';
-import 'package:bluebubbles/app/layouts/conversation_view/widgets/text_field/conversation_text_field.dart';
+import 'package:bluebubbles/app/layouts/conversation_view/widgets/text_field/text_field_component.dart';
 import 'package:bluebubbles/app/state/chat_state_scope.dart';
 import 'package:bluebubbles/app/wrappers/bb_scaffold.dart';
 import 'package:bluebubbles/app/wrappers/theme_switcher.dart';
