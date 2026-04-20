@@ -24,6 +24,7 @@ import 'package:universal_html/html.dart' hide File, Platform, Navigator;
 import 'package:universal_io/io.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:get_it/get_it.dart';
+import 'package:bluebubbles/utils/logger/logger.dart';
 
 // ignore: non_constant_identifier_names
 NotificationsService get NotificationsSvc => GetIt.I<NotificationsService>();
@@ -123,36 +124,34 @@ class NotificationsService {
     final title = isGroup ? chat.getTitle() : contactName;
     final text = hideContent ? "iMessage" : message.getNotificationText();
     final isReaction = !isNullOrEmpty(message.associatedMessageGuid);
-    final personIcon = (await rootBundle.load("assets/images/person64.png")).buffer.asUint8List();
-
-    Uint8List chatIcon = await avatarAsBytes(chat: chat, quality: 256);
-    final isFromMe = message.isFromMe ?? false;
-    Uint8List contactIcon = isFromMe
-        ? personIcon
-        : await avatarAsBytes(
-            participantsOverride: !chat.isGroup
-                ? null
-                : chat.handles.where((e) => e.address == message.handleRelation.target?.address).toList(),
-            chat: chat,
-            quality: 256);
-    if (chatIcon.isEmpty) {
-      chatIcon = personIcon;
-    }
-    if (contactIcon.isEmpty) {
-      contactIcon = personIcon;
-    }
 
     if (kIsWeb && Notification.permission == "granted") {
+      final chatIcon = await avatarAsBytes(chat: chat, quality: 256);
       final notif =
           Notification(title, body: text, icon: "data:image/png;base64,${base64Encode(chatIcon)}", tag: message.guid);
       notif.onClick.listen((event) async {
         await IntentsSvc.openChat(guid);
       });
     } else if (kIsDesktop) {
+      // Avatar loading is deferred to _buildAndShowToast — don't load it here.
       _lock.synchronized(
           () => showDesktopNotif(text, chat, title, contactName, message, isReaction, message.isGroupEvent));
     } else {
       if (message.guid != null && message.dateCreated != null) {
+        final personIcon = (await rootBundle.load("assets/images/person64.png")).buffer.asUint8List();
+        Uint8List chatIcon = await avatarAsBytes(chat: chat, quality: 256);
+        final isFromMe = message.isFromMe ?? false;
+        Uint8List contactIcon = isFromMe
+            ? personIcon
+            : await avatarAsBytes(
+                participantsOverride: !chat.isGroup
+                    ? null
+                    : chat.handles.where((e) => e.address == message.handleRelation.target?.address).toList(),
+                chat: chat,
+                quality: 256);
+        if (chatIcon.isEmpty) chatIcon = personIcon;
+        if (contactIcon.isEmpty) contactIcon = personIcon;
+
         // Determine if reaction action should be shown (only if Private API is enabled & not a reaction message)
         final bool showReactionAction = SettingsSvc.settings.enablePrivateAPI.value &&
             SettingsSvc.settings.notificationReactionAction.value &&
@@ -320,7 +319,7 @@ class NotificationsService {
     final oldTimer = debounceTimers[guid];
     oldTimer?.cancel();
     debounceTimers[guid] = Timer(
-      const Duration(milliseconds: 1000),
+      const Duration(milliseconds: 300),
       () async => await _buildAndShowToast(chat, title, message),
     );
   }
