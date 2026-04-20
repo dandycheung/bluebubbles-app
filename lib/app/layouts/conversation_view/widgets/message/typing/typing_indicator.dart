@@ -24,55 +24,131 @@ class TypingIndicator extends StatefulWidget {
   State<TypingIndicator> createState() => _TypingIndicatorState();
 }
 
-class _TypingIndicatorState extends State<TypingIndicator> with ThemeHelpers {
+class _TypingIndicatorState extends State<TypingIndicator> with SingleTickerProviderStateMixin, ThemeHelpers {
+  late final AnimationController _scaleController;
+  late final Animation<double> _scaleAnimation;
+
+  /// Whether the bubble content is present in the tree (false only after the
+  /// hide animation has fully completed).
+  bool _isShowing = false;
+
+  /// GetX worker that reacts to [ConversationViewController.showTypingIndicator]
+  /// changes. Only created when a controller is provided.
+  Worker? _visibilityWorker;
+
+  bool get _currentVisibility => widget.controller?.showTypingIndicator.value ?? widget.visible ?? false;
+
+  @override
+  void initState() {
+    super.initState();
+    _scaleController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 280),
+    );
+    _scaleAnimation = CurvedAnimation(
+      parent: _scaleController,
+      curve: Curves.easeOutBack,
+      reverseCurve: Curves.easeIn,
+    );
+
+    // After the hide animation finishes, remove the content from the tree so
+    // it no longer occupies layout space.
+    _scaleController.addStatusListener((status) {
+      if (status == AnimationStatus.dismissed && mounted) {
+        setState(() => _isShowing = false);
+      }
+    });
+
+    _isShowing = _currentVisibility;
+    if (_isShowing) {
+      _scaleController.forward(from: 0.0);
+    }
+
+    // When a controller is provided, use a GetX worker to reliably observe
+    // the reactive observable. This is more direct than relying on
+    // didUpdateWidget, which can miss repaints for scale-only changes.
+    if (widget.controller != null) {
+      _visibilityWorker = ever(widget.controller!.showTypingIndicator, _onVisibilityChanged);
+    }
+  }
+
+  void _onVisibilityChanged(bool isVisible) {
+    if (!mounted) return;
+    if (isVisible && !_isShowing) {
+      setState(() => _isShowing = true);
+      _scaleController.forward(from: 0.0);
+    } else if (!isVisible && _isShowing) {
+      // _scaleController status listener will set _isShowing = false once dismissed.
+      _scaleController.reverse();
+    }
+  }
+
+  @override
+  void dispose() {
+    _visibilityWorker?.dispose();
+    _scaleController.dispose();
+    super.dispose();
+  }
+
+  Widget _buildBubble(BuildContext context) {
+    return iOS || ChatStateScope.maybeChatOf(context) == null
+        ? ClipPath(
+            clipper: const TypingClipper(),
+            child: Container(
+              height: 50,
+              width: 80,
+              color: context.theme.colorScheme.surfaceContainerHighest,
+              child: const Stack(
+                alignment: Alignment.center,
+                children: [
+                  Positioned(
+                    top: 15,
+                    right: 12,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        AnimatedDot(index: 2),
+                        AnimatedDot(index: 1),
+                        AnimatedDot(index: 0),
+                      ],
+                    ),
+                  )
+                ],
+              ),
+            ),
+          )
+        : Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(left: 10, right: 10),
+                child: ContactAvatarWidget(
+                  handle: ChatStateScope.chatOf(context).handles.first,
+                  size: 25,
+                  fontSize: context.theme.textTheme.bodyMedium!.fontSize!,
+                  borderThickness: 0.1,
+                ),
+              ),
+              const AnimatedDot(index: 2),
+              const AnimatedDot(index: 1),
+              const AnimatedDot(index: 0),
+            ],
+          );
+  }
+
   @override
   Widget build(BuildContext context) {
     return AnimatedSize(
       duration: const Duration(milliseconds: 200),
-      child: (widget.controller?.showTypingIndicator.value ?? widget.visible)!
-          ? (iOS || ChatStateScope.maybeChatOf(context) == null
-              ? ClipPath(
-                  clipper: const TypingClipper(),
-                  child: Container(
-                    height: 50,
-                    width: 80,
-                    color: context.theme.colorScheme.surfaceContainerHighest,
-                    child: const Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        Positioned(
-                          top: 15,
-                          right: 12,
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              AnimatedDot(index: 2),
-                              AnimatedDot(index: 1),
-                              AnimatedDot(index: 0),
-                            ],
-                          ),
-                        )
-                      ],
-                    ),
-                  ),
-                )
-              : Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(left: 10, right: 10),
-                      child: ContactAvatarWidget(
-                        handle: ChatStateScope.chatOf(context).handles.first,
-                        size: 25,
-                        fontSize: context.theme.textTheme.bodyMedium!.fontSize!,
-                        borderThickness: 0.1,
-                      ),
-                    ),
-                    const AnimatedDot(index: 2),
-                    const AnimatedDot(index: 1),
-                    const AnimatedDot(index: 0),
-                  ],
-                ))
+      curve: Curves.easeOut,
+      child: _isShowing
+          ? ScaleTransition(
+              scale: _scaleAnimation,
+              // Anchor the grow/shrink at the bottom-left — the tail of the
+              // speech bubble — so it feels like a real iMessage bubble.
+              alignment: Alignment.bottomLeft,
+              child: _buildBubble(context),
+            )
           : const SizedBox.shrink(),
     );
   }
