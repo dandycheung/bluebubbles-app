@@ -40,13 +40,30 @@ class ConversationViewState extends State<ConversationView> with ThemeHelpers<Co
   // Cache actions map to avoid rebuilding on every frame
   late final Map<Type, Action<Intent>> _actionsMap;
 
+  // Cached stable widget subtrees. ConversationView.build() runs on every keyboard
+  // animation frame because Scaffold/SafeArea subscribe to MediaQuery. Flutter
+  // checks widget identity (child.widget == newWidget) before calling update() on
+  // a child element — passing the same object instance skips the State rebuild
+  // entirely, so MessagesView, GradientBackground, ConversationTextField, and the
+  // header widgets will not rebuild on keyboard frames.
+  late final Widget _bodyContent;
+  late final PreferredSizeWidget _appBar;
+
   Chat get chat => widget.chat;
+
+  void _onPanUpdate(DragUpdateDetails details) {
+    if (!mounted) return;
+    if (SettingsSvc.settings.swipeToCloseKeyboard.value && details.delta.dy > 0 && controller.keyboardOpen) {
+      controller.focusNode.unfocus();
+      controller.subjectFocusNode.unfocus();
+    } else if (SettingsSvc.settings.swipeToOpenKeyboard.value && details.delta.dy < 0 && !controller.keyboardOpen) {
+      controller.focusNode.requestFocus();
+    }
+  }
 
   @override
   void initState() {
     super.initState();
-
-    Logger.debug("Initializing Conversation View for ${chat.guid}");
     controller.fromChatCreator = widget.fromChatCreator;
     controller.fromSearchResult = widget.initialScrollToGuid != null;
     ChatsSvc.setActiveChatSync(chat);
@@ -57,6 +74,58 @@ class ConversationViewState extends State<ConversationView> with ThemeHelpers<Co
 
     // Build actions map once
     _buildActionsMap();
+
+    // Cache the stable appBar and body subtrees. See field comments above.
+    _appBar = _buildAppBar();
+    _bodyContent = _buildBodyContent();
+  }
+
+  PreferredSizeWidget _buildAppBar() {
+    return PreferredSize(
+      preferredSize: Size(
+        double.infinity, // width is ignored by Scaffold
+        (kIsDesktop ? (!iOS ? 25 : 5) : 0) +
+            90 * (iOS ? SettingsSvc.settings.avatarScale.value : 0) +
+            (!iOS ? kToolbarHeight : 0),
+      ),
+      child: iOS ? CupertinoHeader(controller: controller) : MaterialHeader(controller: controller),
+    );
+  }
+
+  Widget _buildBodyContent() {
+    return GradientBackground(
+      controller: controller,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          const Positioned.fill(child: ScreenEffectsWidget()),
+          Column(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              Expanded(
+                child: Stack(
+                  children: [
+                    MessagesView(
+                      key: Key(chat.guid),
+                      customService: widget.customService,
+                      initialScrollToGuid: widget.initialScrollToGuid,
+                      controller: controller,
+                    ),
+                    ScrollDownButton(controller: controller),
+                  ],
+                ),
+              ),
+              GestureDetector(
+                onPanUpdate: _onPanUpdate,
+                child: ConversationTextField(
+                  parentController: controller,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 
   void _buildActionsMap() {
@@ -111,7 +180,6 @@ class ConversationViewState extends State<ConversationView> with ThemeHelpers<Co
     final theme = context.theme;
     final colorScheme = theme.colorScheme;
     final windowEffect = SettingsSvc.settings.windowEffect.value;
-    final avatarScale = SettingsSvc.settings.avatarScale.value;
     final bubbleColor = colorScheme.bubble(context, chat.isIMessage);
     final onBubbleColor = colorScheme.onBubble(context, chat.isIMessage);
 
@@ -155,69 +223,10 @@ class ConversationViewState extends State<ConversationView> with ThemeHelpers<Co
                 child: Scaffold(
                   backgroundColor: windowEffect != WindowEffect.disabled ? Colors.transparent : colorScheme.surface,
                   extendBodyBehindAppBar: true,
-                  appBar: PreferredSize(
-                      preferredSize: Size(
-                          double.infinity, // width is ignored by Scaffold; avoid MediaQuery.of subscription
-                          (kIsDesktop ? (!iOS ? 25 : 5) : 0) +
-                              90 * (iOS ? avatarScale : 0) +
-                              (!iOS ? kToolbarHeight : 0)),
-                      child: iOS
-                          ? CupertinoHeader(controller: controller)
-                          : MaterialHeader(controller: controller) as PreferredSizeWidget),
+                  appBar: _appBar,
                   body: Actions(
                     actions: _actionsMap,
-                    child: GradientBackground(
-                      controller: controller,
-                      child: SizedBox(
-                        // sizeOf only rebuilds on screen size changes (rotation), not on
-                        // keyboard viewInsets animation frames which change viewInsets.bottom.
-                        // The SizedBox requests full-screen height but is clamped by the
-                        // Scaffold body constraints, so the Column always fills the visible area.
-                        height: MediaQuery.sizeOf(context).height,
-                        child: Stack(
-                          clipBehavior: Clip.none,
-                          children: [
-                            const Positioned.fill(child: ScreenEffectsWidget()),
-                            Column(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              children: [
-                                Expanded(
-                                  child: Stack(
-                                    children: [
-                                      MessagesView(
-                                        key: Key(chat.guid),
-                                        customService: widget.customService,
-                                        initialScrollToGuid: widget.initialScrollToGuid,
-                                        controller: controller,
-                                      ),
-                                      ScrollDownButton(controller: controller)
-                                    ],
-                                  ),
-                                ),
-                                GestureDetector(
-                                  onPanUpdate: (details) {
-                                    if (!mounted) return;
-                                    if (SettingsSvc.settings.swipeToCloseKeyboard.value &&
-                                        details.delta.dy > 0 &&
-                                        controller.keyboardOpen) {
-                                      controller.focusNode.unfocus();
-                                      controller.subjectFocusNode.unfocus();
-                                    } else if (SettingsSvc.settings.swipeToOpenKeyboard.value &&
-                                        details.delta.dy < 0 &&
-                                        !controller.keyboardOpen) {
-                                      controller.focusNode.requestFocus();
-                                    }
-                                  },
-                                  child: ConversationTextField(
-                                    parentController: controller,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
+                    child: _bodyContent,
                   ),
                 ),
               ),
