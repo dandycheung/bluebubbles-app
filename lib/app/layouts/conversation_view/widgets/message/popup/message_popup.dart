@@ -164,6 +164,7 @@ class _MessagePopupState extends State<MessagePopup> with SingleTickerProviderSt
   }
 
   void popDetails({bool returnVal = true}) {
+    Navigator.popUntil(context, (route) => route is! DialogRoute);
     Navigator.of(context).pop(returnVal);
   }
 
@@ -1076,8 +1077,10 @@ class _MessagePopupState extends State<MessagePopup> with SingleTickerProviderSt
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: allActions.sublist(numberToShow - 1),
                     );
-                    Get.dialog(
-                        SettingsSvc.settings.skin.value == Skins.iOS
+                    showDialog(
+                      useRootNavigator: false,
+                      context: context,
+                      builder: (context) => SettingsSvc.settings.skin.value == Skins.iOS
                             ? CupertinoAlertDialog(
                                 backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
                                 content: content,
@@ -1086,8 +1089,7 @@ class _MessagePopupState extends State<MessagePopup> with SingleTickerProviderSt
                                 backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
                                 content: content,
                               ),
-                        navigatorKey: NavigationSvc.key,
-                        name: 'Popup Menu');
+                      );
                   },
                   title: 'More...',
                   iosIcon: cupertino.CupertinoIcons.ellipsis,
