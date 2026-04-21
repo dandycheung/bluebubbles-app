@@ -24,7 +24,6 @@ import 'package:universal_html/html.dart' hide File, Platform, Navigator;
 import 'package:universal_io/io.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:get_it/get_it.dart';
-import 'package:bluebubbles/utils/logger/logger.dart';
 
 // ignore: non_constant_identifier_names
 NotificationsService get NotificationsSvc => GetIt.I<NotificationsService>();
