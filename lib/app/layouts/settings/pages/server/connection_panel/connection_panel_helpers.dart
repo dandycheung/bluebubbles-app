@@ -692,7 +692,10 @@ mixin ConnectionPanelHelpersMixin {
                       }
                     },
                   )),
-            if (!kIsWeb && SettingsSvc.settings.localhostPort.value != null) const SettingsDivider(),
+            if (!kIsWeb)
+              Obx(() => SettingsSvc.settings.localhostPort.value != null
+                  ? const SettingsDivider()
+                  : const SizedBox.shrink()),
             if (!kIsWeb)
               Obx(() => SettingsSvc.settings.localhostPort.value != null
                   ? SettingsSwitch(
