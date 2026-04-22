@@ -69,6 +69,7 @@ class _CupertinoConversationTileState extends CustomState<CupertinoConversationT
                             : null),
                   ),
                 ),
+                const SizedBox(width: 10),
                 CupertinoTrailing(parentController: controller),
               ],
             ),
