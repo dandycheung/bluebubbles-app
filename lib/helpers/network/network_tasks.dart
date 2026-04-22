@@ -13,6 +13,17 @@ import 'package:network_tools/network_tools.dart'
 class NetworkTasks {
   static Future<void>? _configureNetworkToolsFuture;
 
+  /// Deduplicates concurrent detectLocalhost() calls — callers share one result.
+  static Future<void>? _detectLocalhostFuture;
+
+  /// Timestamp of the last completed subnet port scan (Phase 2). Used to skip
+  /// repeated full-subnet scans on rapid app resumes when the server is offline.
+  static DateTime? _lastSubnetScanTime;
+
+  /// Minimum gap between Phase-2 subnet scans. Phase 1 (server-reported IPs)
+  /// always runs; only the expensive 255-address fallback is throttled.
+  static const Duration _subnetScanThrottle = Duration(minutes: 2);
+
   /// Isolates that should receive [HttpSvc.originOverride] syncs.
   /// Populated via [registerIsolate] — no hardcoded types here.
   static final List<GlobalIsolate> _isolateRegistry = [];
@@ -29,7 +40,14 @@ class NetworkTasks {
     }
   }
 
-  static Future<void> detectLocalhost({bool createSnackbar = false}) async {
+  static Future<void> detectLocalhost({bool createSnackbar = false}) {
+    // Deduplicate: if already running, all callers share the same future.
+    _detectLocalhostFuture ??= _detectLocalhostImpl(createSnackbar: createSnackbar)
+        .whenComplete(() => _detectLocalhostFuture = null);
+    return _detectLocalhostFuture!;
+  }
+
+  static Future<void> _detectLocalhostImpl({bool createSnackbar = false}) async {
     final port = SettingsSvc.settings.localhostPort.value;
     if (port == null || kIsWeb) {
       HttpSvc.originOverride = null;
@@ -75,6 +93,19 @@ class NetworkTasks {
     // Phase 2: fall back to a subnet port scan.
     // configureNetworkTools is cached because it makes an external API call to
     // fetch MAC vendor data. We don't want that on first boot.
+
+    // Throttle: skip the full subnet scan if one was run recently. The scan is
+    // expensive (probes all 255 addresses) and firing it on every app resume
+    // when the server is unreachable would drain battery unnecessarily.
+    final now = DateTime.now();
+    if (_lastSubnetScanTime != null && now.difference(_lastSubnetScanTime!) < _subnetScanThrottle) {
+      Logger.debug(
+        'Skipping subnet scan — last scan was ${now.difference(_lastSubnetScanTime!).inSeconds}s ago (throttle: ${_subnetScanThrottle.inMinutes}m)',
+        tag: 'NetworkTasks',
+      );
+      return;
+    }
+    _lastSubnetScanTime = now;
     _configureNetworkToolsFuture ??= configureNetworkTools(FilesystemSvc.appDocDir.path, enableDebugging: kDebugMode);
     await _configureNetworkToolsFuture;
 

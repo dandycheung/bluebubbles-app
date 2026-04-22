@@ -158,8 +158,11 @@ class DartWorker(context: Context, workerParams: WorkerParameters): ListenableWo
                         return@runBlocking
                     }
 
-                    val currentWork = WorkManager.getInstance(applicationContext).getWorkInfosByTag(Constants.dartWorkerTag).get().filter { element -> !element.state.isFinished }
-                    Log.d(Constants.logTag, "${currentWork.size} worker(s) still queued")
+                    // Exclude this worker's own ID — WorkManager may still report it as RUNNING
+                    // even after the Dart method callback has completed, which would cause the
+                    // engine to never be destroyed.
+                    val currentWork = WorkManager.getInstance(applicationContext).getWorkInfosByTag(Constants.dartWorkerTag).get().filter { element -> !element.state.isFinished && element.id != id }
+                    Log.d(Constants.logTag, "${currentWork.size} other worker(s) still queued")
                     if (currentWork.isEmpty()) {
                         Log.d(Constants.logTag, "Closing ${Constants.dartWorkerTag} engine")
                         // This must be run on main thread

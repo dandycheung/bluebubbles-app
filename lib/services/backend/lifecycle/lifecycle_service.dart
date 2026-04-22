@@ -10,7 +10,8 @@ import 'package:bluebubbles/utils/logger/logger.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:bluebubbles/services/isolates/global_isolate.dart';
+
 import 'package:universal_html/html.dart' hide Platform;
 import 'dart:io' show Platform;
 import 'package:get_it/get_it.dart';
@@ -23,7 +24,6 @@ class LifecycleService with WidgetsBindingObserver {
   bool headless = false;
   bool windowFocused = true;
   bool? wasActiveAliveBefore;
-  bool _keepAppAlive = false;
 
   bool get isAlive => kIsWeb
       ? !(window.document.hidden ?? false)
@@ -50,10 +50,6 @@ class LifecycleService with WidgetsBindingObserver {
 
     this.headless = headless;
     this.isBubble = isBubble;
-
-    // Cache keepAppAlive setting to avoid repeated async calls
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    _keepAppAlive = prefs.getBool("keepAppAlive") ?? false;
 
     handleForegroundService(AppLifecycleState.resumed);
     Logger.debug("LifecycleService initialized");
@@ -99,8 +95,9 @@ class LifecycleService with WidgetsBindingObserver {
     // Don't handle foreground service for inactive/hidden states
     if ([AppLifecycleState.inactive, AppLifecycleState.hidden].contains(state)) return;
 
-    // Use cached value instead of async SharedPreferences call
-    if (Platform.isAndroid && _keepAppAlive) {
+    // Read live from the reactive settings value so toggling the setting during
+    // a session takes effect immediately without requiring an app restart.
+    if (Platform.isAndroid && SettingsSvc.settings.keepAppAlive.value) {
       // We only want the foreground service to run when the app is not active
       if (state == AppLifecycleState.resumed) {
         Logger.info(tag: "LifecycleService", "Stopping foreground service");
@@ -139,6 +136,13 @@ class LifecycleService with WidgetsBindingObserver {
     if (!kIsDesktop && !kIsWeb) {
       IsolateNameServer.removePortNameMapping('bg_isolate');
       SocketSvc.disconnect();
+
+      // Stop the background isolate so its idle-poll timer does not keep the
+      // Dart event loop alive while the app is in the background. It will be
+      // restarted lazily on the next request via _ensureStarted().
+      if (GetIt.I.isRegistered<GlobalIsolate>()) {
+        GetIt.I<GlobalIsolate>().stop();
+      }
     }
     final activeChat = ChatsSvc.activeChat;
     if (activeChat != null) {

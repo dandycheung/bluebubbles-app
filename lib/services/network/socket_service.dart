@@ -42,19 +42,21 @@ class SocketService {
   void init() {
     Logger.debug("Initializing socket service...");
     startSocket();
-
-    if (!kIsDesktop || !Platform.isWindows) {
-      _connectivitySubscription = Connectivity().onConnectivityChanged.listen((event) {
-        if (!event.contains(ConnectivityResult.wifi) &&
-            !event.contains(ConnectivityResult.ethernet) &&
-            HttpSvc.originOverride != null) {
-          Logger.info("Detected switch off wifi, removing localhost address...");
-          HttpSvc.originOverride = null;
-        }
-      });
-    }
-
+    _startConnectivitySubscription();
     Logger.debug("Initialized socket service");
+  }
+
+  void _startConnectivitySubscription() {
+    if (kIsDesktop && Platform.isWindows) return;
+    _connectivitySubscription?.cancel();
+    _connectivitySubscription = Connectivity().onConnectivityChanged.listen((event) {
+      if (!event.contains(ConnectivityResult.wifi) &&
+          !event.contains(ConnectivityResult.ethernet) &&
+          HttpSvc.originOverride != null) {
+        Logger.info("Detected switch off wifi, removing localhost address...");
+        HttpSvc.originOverride = null;
+      }
+    });
   }
 
   void startSocket() {
@@ -157,6 +159,8 @@ class SocketService {
   void disconnect() {
     if (isNullOrEmpty(serverAddress)) return;
     socket?.disconnect();
+    _connectivitySubscription?.cancel();
+    _connectivitySubscription = null;
     state.value = SocketState.disconnected;
   }
 
@@ -164,6 +168,7 @@ class SocketService {
     if (state.value == SocketState.connected || isNullOrEmpty(serverAddress)) return;
     state.value = SocketState.connecting;
     socket?.connect();
+    _startConnectivitySubscription();
   }
 
   void closeSocket() {

@@ -22,6 +22,8 @@ class GlobalIsolate {
   bool _isRunning = false;
   bool _isStarting = false;
   Completer<void> _startCompleter = Completer<void>();
+  /// Completer resolved when the spawned isolate sends back its SendPort.
+  Completer<void>? _sendPortCompleter;
   final List<Future<void> Function()> _onStartedCallbacks = [];
 
   /// Timer for tracking isolate inactivity
@@ -93,6 +95,8 @@ class GlobalIsolate {
     // Clear any stale SendPort left over from a previous failed/timed-out attempt so
     // that _waitForSendPort does not complete prematurely on a dead port.
     _sendPort = null;
+    // Fresh completer for this startup attempt.
+    _sendPortCompleter = Completer<void>();
 
     _isStarting = true;
 
@@ -162,31 +166,13 @@ class GlobalIsolate {
   }
 
   Future<void> _waitForSendPort() async {
-    final completer = Completer<void>();
-    final startTime = DateTime.now();
-    final maxWaitTime = startupTimeout;
-
-    Timer.periodic(const Duration(milliseconds: 10), (timer) {
-      if (_sendPort != null) {
-        timer.cancel();
-        completer.complete();
-      } else if (_isolate == null) {
-        // Isolate exited (or was killed) before it could send its SendPort — fail immediately
-        // rather than burning the full startupTimeout.
-        timer.cancel();
-        if (!completer.isCompleted) {
-          completer.completeError('Isolate exited before sending SendPort');
-        }
-      } else if (DateTime.now().difference(startTime) > maxWaitTime) {
-        timer.cancel();
-        if (!completer.isCompleted) {
-          completer.completeError('Timeout waiting for isolate SendPort after ${maxWaitTime.inSeconds}s');
-        }
-      }
-    });
-
     try {
-      await completer.future;
+      await _sendPortCompleter!.future.timeout(
+        startupTimeout,
+        onTimeout: () => throw TimeoutException(
+          'Timeout waiting for isolate SendPort after ${startupTimeout.inSeconds}s',
+        ),
+      );
       Logger.debug('Received SendPort from isolate');
     } catch (e) {
       Logger.error('Failed to receive SendPort: $e');
@@ -321,6 +307,9 @@ class GlobalIsolate {
   void _handleIsolateMessage(dynamic message) {
     if (message is SendPort) {
       _sendPort = message;
+      if (_sendPortCompleter != null && !_sendPortCompleter!.isCompleted) {
+        _sendPortCompleter!.complete();
+      }
       return;
     }
 
@@ -471,6 +460,12 @@ class GlobalIsolate {
     // Guard against double-cleanup but allow the startup case:
     // during startup _isRunning is false, so the old guard would wrongly skip cleanup.
     if (!_isRunning && !_isStarting) return;
+
+    // If we're still waiting for the SendPort, fail the completer immediately so
+    // _waitForSendPort() unblocks rather than waiting for the full startup timeout.
+    if (_isStarting && _sendPortCompleter != null && !_sendPortCompleter!.isCompleted) {
+      _sendPortCompleter!.completeError('Isolate exited before sending SendPort');
+    }
 
     Logger.warn('$isolateDebugName has exited unexpectedly (isRunning=$_isRunning, isStarting=$_isStarting)');
     _cleanupDeadIsolate();
