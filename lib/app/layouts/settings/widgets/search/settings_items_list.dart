@@ -48,7 +48,7 @@ List<Widget> buildSettingItemList({
   required bool material,
   required TextStyle iosSubtitle,
   required TextStyle materialSubtitle,
-  required dynamic ns,
+  required NavigatorService ns,
   required RxnDouble progress,
   required RxnInt totalSize,
   required RxBool uploadingContacts,
@@ -83,7 +83,7 @@ List<Widget> buildSettingItemList({
                 ns.pushAndRemoveSettingsUntil(
                   context,
                   const ProfilePanel(),
-                  (route) => route.isFirst,
+                  (Route route) => route.isFirst,
                 );
               },
               leading: const ContactAvatarWidget(
