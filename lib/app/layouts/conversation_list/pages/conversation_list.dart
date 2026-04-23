@@ -11,7 +11,7 @@ import 'package:bluebubbles/app/layouts/conversation_list/widgets/tile/conversat
 import 'package:bluebubbles/app/layouts/conversation_list/widgets/tile/material_conversation_tile.dart';
 import 'package:bluebubbles/app/layouts/conversation_list/widgets/tile/samsung_conversation_tile.dart';
 import 'package:bluebubbles/app/layouts/conversation_view/pages/conversation_view.dart';
-import 'package:bluebubbles/app/wrappers/bb_annotated_region.dart';
+import 'package:bluebubbles/app/wrappers/bb_scaffold.dart';
 import 'package:bluebubbles/app/wrappers/stateful_boilerplate.dart';
 import 'package:bluebubbles/app/wrappers/tablet_mode_wrapper.dart';
 import 'package:bluebubbles/database/models.dart';
@@ -194,10 +194,10 @@ class _ConversationListState extends CustomState<ConversationList, void, Convers
 
     if (controller.showArchivedChats || controller.showUnknownSenders) return child;
 
-    return BBAnnotatedRegion(
-      systemNavigationBarIconBrightness: brightness,
-      statusBarIconBrightness: brightness.opposite,
-      child: TabletModeWrapper(
+    return BBScaffold(
+      safeAreaLeft: false,
+      safeAreaRight: false,
+      body: TabletModeWrapper(
         initialRatio: 0.4,
         minWidthLeft: kIsDesktop || kIsWeb ? 150 : null,
         minRatio: kIsDesktop || kIsWeb ? 0.1 : 0.33,

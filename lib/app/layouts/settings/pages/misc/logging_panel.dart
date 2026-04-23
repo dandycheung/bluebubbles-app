@@ -1,6 +1,6 @@
 import 'dart:ui';
 
-import 'package:bluebubbles/app/wrappers/bb_annotated_region.dart';
+import 'package:bluebubbles/app/wrappers/bb_scaffold.dart';
 import 'package:bluebubbles/app/wrappers/scrollbar_wrapper.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/services/services.dart';
@@ -71,19 +71,8 @@ class _LoggingPanel extends State<LoggingPanel> {
 
   @override
   Widget build(BuildContext context) {
-    final Rx<Color> _backgroundColor = (kIsDesktop && SettingsSvc.settings.windowEffect.value == WindowEffect.disabled
-            ? Colors.transparent
-            : context.theme.colorScheme.surface)
-        .obs;
-
-    if (kIsDesktop) {
-      SettingsSvc.settings.windowEffect.listen((WindowEffect effect) => _backgroundColor.value =
-          effect != WindowEffect.disabled ? Colors.transparent : context.theme.colorScheme.surface);
-    }
-    return BBAnnotatedRegion(
-        child: Obx(
-      () => Scaffold(
-        backgroundColor: _backgroundColor.value,
+    return Obx(
+      () => BBScaffold(
         appBar: PreferredSize(
           preferredSize: Size(NavigationSvc.width(context), 80),
           child: ClipRRect(
@@ -99,7 +88,9 @@ class _LoggingPanel extends State<LoggingPanel> {
                 scrolledUnderElevation: 3,
                 surfaceTintColor: context.theme.colorScheme.primary,
                 leading: buildBackButton(context),
-                backgroundColor: _backgroundColor.value,
+                  backgroundColor: SettingsSvc.settings.windowEffect.value != WindowEffect.disabled
+                      ? Colors.transparent
+                      : context.theme.colorScheme.surface,
                 centerTitle: SettingsSvc.settings.skin.value == Skins.iOS,
                 title: Text(
                   "Logs",
@@ -192,6 +183,6 @@ class _LoggingPanel extends State<LoggingPanel> {
                     )),
         ),
       ),
-    ));
+    );
   }
 }

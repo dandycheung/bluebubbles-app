@@ -12,7 +12,7 @@ import 'package:bluebubbles/app/layouts/conversation_view/widgets/message/popup/
 import 'package:bluebubbles/app/components/avatars/contact_avatar_widget.dart';
 import 'package:bluebubbles/app/components/custom/custom_cupertino_alert_dialog.dart';
 import 'package:bluebubbles/app/layouts/findmy/findmy_pin_clipper.dart';
-import 'package:bluebubbles/app/wrappers/bb_annotated_region.dart';
+import 'package:bluebubbles/app/wrappers/bb_scaffold.dart';
 import 'package:bluebubbles/app/wrappers/theme_switcher.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/app/layouts/conversation_view/pages/conversation_view.dart';
@@ -172,8 +172,7 @@ class _MessagePopupState extends State<MessagePopup> with SingleTickerProviderSt
     double narrowWidth = message.isFromMe! || !SettingsSvc.settings.alwaysShowAvatars.value ? 330 : 360;
     bool narrowScreen = NavigationSvc.width(widthContext) < narrowWidth;
 
-    return BBAnnotatedRegion(
-      child: Theme(
+    return Theme(
         data: context.theme.copyWith(
           // in case some components still use legacy theming
           primaryColor: context.theme.colorScheme.bubble(context, chat.isIMessage),
@@ -189,8 +188,10 @@ class _MessagePopupState extends State<MessagePopup> with SingleTickerProviderSt
           ),
         ),
         child: TitleBarWrapper(
-            child: Scaffold(
+            child: BBScaffold(
                 extendBodyBehindAppBar: true,
+                safeAreaLeft: false,
+                safeAreaRight: false,
                 backgroundColor: kIsDesktop && iOS && SettingsSvc.settings.windowEffect.value != WindowEffect.disabled
                     ? context.theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.6)
                     : Colors.transparent,
@@ -447,8 +448,7 @@ class _MessagePopupState extends State<MessagePopup> with SingleTickerProviderSt
                       ),
                   ],
                 ))),
-      ),
-    );
+      );
   }
 
   void reply() {

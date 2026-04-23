@@ -1,6 +1,6 @@
 import 'dart:ui';
 
-import 'package:bluebubbles/app/wrappers/bb_annotated_region.dart';
+import 'package:bluebubbles/app/wrappers/bb_scaffold.dart';
 import 'package:bluebubbles/app/layouts/conversation_list/pages/conversation_list.dart';
 import 'package:bluebubbles/app/layouts/conversation_list/widgets/tile/conversation_tile.dart';
 import 'package:bluebubbles/app/wrappers/scrollbar_wrapper.dart';
@@ -17,20 +17,9 @@ class PinnedOrderPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Rx<Color> _backgroundColor = (kIsDesktop && SettingsSvc.settings.windowEffect.value == WindowEffect.disabled
-            ? Colors.transparent
-            : context.theme.colorScheme.surface)
-        .obs;
     final ScrollController scrollController = ScrollController();
-
-    if (kIsDesktop) {
-      SettingsSvc.settings.windowEffect.listen((WindowEffect effect) => _backgroundColor.value =
-          effect != WindowEffect.disabled ? Colors.transparent : context.theme.colorScheme.surface);
-    }
-    return BBAnnotatedRegion(
-      child: Obx(
-        () => Scaffold(
-          backgroundColor: _backgroundColor.value,
+    return Obx(
+        () => BBScaffold(
           appBar: PreferredSize(
             preferredSize: Size(NavigationSvc.width(context), 80),
             child: ClipRRect(
@@ -46,7 +35,9 @@ class PinnedOrderPanel extends StatelessWidget {
                   scrolledUnderElevation: 3,
                   surfaceTintColor: context.theme.colorScheme.primary,
                   leading: buildBackButton(context),
-                  backgroundColor: _backgroundColor.value,
+                  backgroundColor: SettingsSvc.settings.windowEffect.value != WindowEffect.disabled
+                      ? Colors.transparent
+                      : context.theme.colorScheme.surface,
                   centerTitle: SettingsSvc.settings.skin.value == Skins.iOS,
                   title: Text(
                     "Pinned Chat Order",
@@ -142,7 +133,6 @@ class PinnedOrderPanel extends StatelessWidget {
             ),
           ),
         ),
-      ),
     );
   }
 }

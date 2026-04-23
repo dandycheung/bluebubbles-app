@@ -3,7 +3,7 @@ import 'package:bluebubbles/app/layouts/conversation_view/widgets/header/materia
 import 'package:bluebubbles/app/layouts/conversation_view/widgets/messages_view_components.dart';
 import 'package:bluebubbles/app/layouts/conversation_view/widgets/text_field/conversation_text_field.dart';
 import 'package:bluebubbles/app/state/chat_state_scope.dart';
-import 'package:bluebubbles/app/wrappers/bb_annotated_region.dart';
+import 'package:bluebubbles/app/wrappers/bb_scaffold.dart';
 import 'package:bluebubbles/app/wrappers/gradient_background_wrapper.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/app/layouts/conversation_view/pages/messages_view.dart';
@@ -186,8 +186,7 @@ class ConversationViewState extends State<ConversationView> with ThemeHelpers<Co
     final chatState = ChatsSvc.getOrCreateChatState(chat);
     return ChatStateScope(
       chatState: chatState,
-      child: BBAnnotatedRegion(
-        child: Theme(
+      child: Theme(
             data: theme.copyWith(
               // in case some components still use legacy theming
               primaryColor: bubbleColor,
@@ -217,21 +216,17 @@ class ConversationViewState extends State<ConversationView> with ThemeHelpers<Co
                 if (LifecycleSvc.isBubble) return;
                 return Navigator.of(context).pop();
               },
-              child: SafeArea(
-                top: false,
-                bottom: false,
-                child: Scaffold(
-                  backgroundColor: windowEffect != WindowEffect.disabled ? Colors.transparent : colorScheme.surface,
-                  extendBodyBehindAppBar: true,
-                  appBar: _appBar,
-                  body: Actions(
-                    actions: _actionsMap,
-                    child: _bodyContent,
-                  ),
+              child: BBScaffold(
+                backgroundColor: windowEffect != WindowEffect.disabled ? Colors.transparent : colorScheme.surface,
+                extendBodyBehindAppBar: true,
+                safeAreaBottom: true,
+                appBar: _appBar,
+                body: Actions(
+                  actions: _actionsMap,
+                  child: _bodyContent,
                 ),
               ),
             )),
-      ),
     );
   }
 }

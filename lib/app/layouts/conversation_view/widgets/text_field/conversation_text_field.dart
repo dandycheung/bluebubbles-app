@@ -453,11 +453,7 @@ class ConversationTextFieldState extends CustomState<ConversationTextField, void
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      left: false,
-      right: false,
-      top: false,
-      child: Padding(
+    return Padding(
         padding: const EdgeInsets.only(bottom: 10.0, top: 10.0),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -528,7 +524,6 @@ class ConversationTextFieldState extends CustomState<ConversationTextField, void
             ),
           ],
         ),
-      ),
-    );
+      );
   }
 }

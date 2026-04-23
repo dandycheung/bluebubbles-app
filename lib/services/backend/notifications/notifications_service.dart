@@ -8,6 +8,7 @@ import 'package:bluebubbles/app/layouts/settings/pages/server/server_management_
 import 'package:bluebubbles/app/wrappers/theme_switcher.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/helpers/ui/facetime_helpers.dart';
+import 'package:bluebubbles/utils/logger/logger.dart';
 import 'package:bluebubbles/database/models.dart';
 import 'package:bluebubbles/services/services.dart';
 import 'package:collection/collection.dart';
@@ -180,7 +181,15 @@ class NotificationsService {
   }
 
   Future<void> tryCreateNewMessageNotification(Message message, Chat chat) async {
-    if (message.isFromMe! || !message.handleRelation.hasValue) return;
+    if (message.isFromMe! || !message.handleRelation.hasValue) {
+      if (!(message.isFromMe ?? false) && !message.handleRelation.hasValue) {
+        Logger.warn(
+          'Skipping notification for ${message.guid} — handle relation not resolved',
+          tag: 'NotificationsService',
+        );
+      }
+      return;
+    }
     if (message.isKeptAudio) return;
     if (chat.shouldMuteNotification(message)) return;
     if (!headless && LifecycleSvc.isAlive) {

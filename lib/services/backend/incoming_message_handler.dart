@@ -368,10 +368,7 @@ class IncomingMessageHandler {
     //    outgoing echoes never need a receive sound; real incoming messages do.
     if (!(saved.isFromMe ?? false)) await _playReceiveSound();
 
-    // 8. Push / in-app notification.
-    NotificationsSvc.tryCreateNewMessageNotification(saved, c);
-
-    // 9. Drive UI reactivity, if not in a background isolate.
+    // 8. Drive UI reactivity, if not in a background isolate.
     if (!isIsolate) {
       unawaited(_dispatchNewMessage(c, saved, tempGuid: tempGuid));
 
@@ -390,6 +387,12 @@ class IncomingMessageHandler {
       ChatsSvc.updateChat(c, override: true);
       ChatsSvc.updateChatLatestMessage(c.guid, saved);
     }
+
+    // 9. Push / in-app notification.
+    // Must be awaited: the notification pipeline posts a MethodChannel call back
+    // to Android. Without await, the DartWorker engine can be destroyed before
+    // that call fires, silently dropping the notification.
+    await NotificationsSvc.tryCreateNewMessageNotification(saved, c);
 
     // 10.5. Group photo changes — fetch/clear icon from server now that the
     //       message is safely in the DB.  This runs regardless of isolate mode

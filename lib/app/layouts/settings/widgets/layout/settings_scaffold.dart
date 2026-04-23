@@ -1,5 +1,5 @@
 import 'package:bluebubbles/helpers/helpers.dart';
-import 'package:bluebubbles/app/wrappers/bb_annotated_region.dart';
+import 'package:bluebubbles/app/wrappers/bb_scaffold.dart';
 import 'package:bluebubbles/app/wrappers/scrollbar_wrapper.dart';
 import 'package:bluebubbles/app/wrappers/theme_switcher.dart';
 import 'package:bluebubbles/services/services.dart';
@@ -43,12 +43,11 @@ class SettingsScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BBAnnotatedRegion(
-      child: Scaffold(
-        backgroundColor: SettingsSvc.settings.skin.value == Skins.Material ? tileColor : headerColor,
-        appBar: SettingsSvc.settings.skin.value == Skins.Samsung
-            ? null
-            : PreferredSize(
+    return BBScaffold(
+      backgroundColor: SettingsSvc.settings.skin.value == Skins.Material ? tileColor : headerColor,
+      appBar: SettingsSvc.settings.skin.value == Skins.Samsung
+          ? null
+          : PreferredSize(
                 preferredSize: Size(NavigationSvc.width(context), extend ? 80 : 50),
                 child: AppBar(
                   systemOverlayStyle: context.theme.colorScheme.brightness == Brightness.dark
@@ -68,8 +67,9 @@ class SettingsScaffold extends StatelessWidget {
                   actions: actions,
                 ),
               ),
-        floatingActionButton: fab,
-        body: NotificationListener<ScrollEndNotification>(
+      floatingActionButton: fab,
+      extendBodyBehindAppBar: false,
+      body: NotificationListener<ScrollEndNotification>(
           onNotification: (_) {
             if (SettingsSvc.settings.skin.value != Skins.Samsung || kIsWeb || kIsDesktop) return false;
             final scrollDistance = context.height / 3 - 57;
@@ -221,7 +221,6 @@ class SettingsScaffold extends StatelessWidget {
             ),
           ),
         ),
-      ),
     );
   }
 }

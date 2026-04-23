@@ -5,7 +5,7 @@ import 'dart:ui';
 import 'package:adaptive_theme/adaptive_theme.dart';
 import 'package:async_task/async_task_extension.dart';
 import 'package:bitsdojo_window/bitsdojo_window.dart';
-import 'package:bluebubbles/app/wrappers/bb_annotated_region.dart';
+import 'package:bluebubbles/app/wrappers/bb_scaffold.dart';
 import 'package:bluebubbles/app/components/custom/custom_error_box.dart';
 import 'package:bluebubbles/helpers/backend/startup_tasks.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
@@ -602,17 +602,7 @@ class _HomeState extends State<Home> with WidgetsBindingObserver, TrayListener {
   /// Render
   @override
   Widget build(BuildContext context) {
-    SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
-      systemNavigationBarColor: SettingsSvc.settings.immersiveMode.value
-          ? Colors.transparent
-          : context.theme.colorScheme.surface, // navigation bar color
-      systemNavigationBarIconBrightness: context.theme.colorScheme.brightness.opposite,
-      statusBarColor: Colors.transparent, // status bar color
-      statusBarIconBrightness: context.theme.colorScheme.brightness.opposite,
-    ));
-
-    return BBAnnotatedRegion(
-      child: Actions(
+    return Actions(
         actions: {
           OpenSettingsIntent: OpenSettingsAction(context),
           OpenNewChatCreatorIntent: OpenNewChatCreatorAction(context),
@@ -622,7 +612,7 @@ class _HomeState extends State<Home> with WidgetsBindingObserver, TrayListener {
           StartIncrementalSyncIntent: StartIncrementalSyncAction(),
           GoBackIntent: GoBackAction(context),
         },
-        child: Obx(() => Scaffold(
+        child: Obx(() => BBScaffold(
               backgroundColor: context.theme.colorScheme.surface.themeOpacity(context),
               body: Builder(
                 builder: (BuildContext context) {
@@ -647,7 +637,6 @@ class _HomeState extends State<Home> with WidgetsBindingObserver, TrayListener {
                 },
               ),
             )),
-      ),
     );
   }
 }

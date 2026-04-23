@@ -5,7 +5,6 @@ import 'package:bluebubbles/app/layouts/settings/widgets/search/settings_items_l
 import 'package:bluebubbles/app/layouts/settings/widgets/search/settings_search_bar.dart';
 import 'package:bluebubbles/app/layouts/settings/widgets/search/settings_search_empty_result.dart';
 import 'package:bluebubbles/app/layouts/settings/widgets/settings_widgets.dart';
-import 'package:bluebubbles/app/wrappers/bb_annotated_region.dart';
 import 'package:bluebubbles/app/wrappers/tablet_mode_wrapper.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/services/services.dart';
@@ -81,8 +80,7 @@ class _SettingsPageState extends State<SettingsPage> with ThemeHelpers {
     return GestureDetector(
       behavior: HitTestBehavior.translucent,
       onTap: () => FocusScope.of(context).unfocus(),
-      child: BBAnnotatedRegion(
-        child: Actions(
+      child: Actions(
             actions: {
               GoBackIntent: GoBackAction(context),
             },
@@ -265,7 +263,6 @@ class _SettingsPageState extends State<SettingsPage> with ThemeHelpers {
                     }),
                   ),
                 ))),
-      ),
     );
   }
 }

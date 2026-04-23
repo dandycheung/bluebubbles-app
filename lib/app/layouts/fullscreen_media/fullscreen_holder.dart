@@ -1,5 +1,5 @@
 import 'package:bluebubbles/app/components/circle_progress_bar.dart';
-import 'package:bluebubbles/app/wrappers/bb_annotated_region.dart';
+import 'package:bluebubbles/app/wrappers/bb_scaffold.dart';
 import 'package:bluebubbles/utils/logger/logger.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/app/layouts/fullscreen_media/fullscreen_image.dart';
@@ -75,18 +75,17 @@ class FullscreenMediaHolderState extends State<FullscreenMediaHolder> with Theme
   @override
   Widget build(BuildContext context) {
     return TitleBarWrapper(
-      child: BBAnnotatedRegion(
-        statusBarIconBrightness: SettingsSvc.settings.skin.value != Skins.iOS
-            ? Brightness.light
-            : context.theme.colorScheme.brightness.opposite,
-        child: Actions(
+      child: Actions(
           actions: {
             GoBackIntent: GoBackAction(context),
           },
-          child: Scaffold(
+          child: BBScaffold(
+            safeAreaLeft: false,
+            safeAreaRight: false,
+            extendBodyBehindAppBar: true,
+            extendBodyBehindBottomPill: true,
             appBar: !iOS || !showAppBar
-                // AppBar placeholder to prevent shifting of content when toggling the app bar
-                ? PreferredSize(preferredSize: const Size.fromHeight(56), child: Container())
+                ? null
                 : AppBar(
                     leading: XGestureDetector(
                       supportTouch: true,
@@ -325,7 +324,6 @@ class FullscreenMediaHolderState extends State<FullscreenMediaHolder> with Theme
             ),
           ),
         ),
-      ),
     );
   }
 }

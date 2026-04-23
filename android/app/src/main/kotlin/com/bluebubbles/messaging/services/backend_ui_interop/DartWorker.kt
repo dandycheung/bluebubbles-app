@@ -27,12 +27,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withTimeoutOrNull
 import java.util.Timer
 import kotlin.concurrent.schedule
 import kotlin.coroutines.resume
-import kotlin.coroutines.suspendCoroutine
 import kotlinx.coroutines.guava.future
 
 class DartWorker(context: Context, workerParams: WorkerParameters): ListenableWorker(context, workerParams) {
@@ -85,26 +86,34 @@ class DartWorker(context: Context, workerParams: WorkerParameters): ListenableWo
                 })
 
                 Log.d(Constants.logTag, "Invoking method channel...")
-                suspendCoroutine { cont ->
-                    MethodChannel(engineToUse!!.dartExecutor.binaryMessenger, Constants.methodChannel).invokeMethod(method, gson.fromJson(data, TypeToken.getParameterized(HashMap::class.java, String::class.java, Any::class.java).type), object : MethodChannel.Result {
-                        override fun success(result: Any?) {
-                            Log.d(Constants.logTag, "Worker with method $method completed successfully")
-                            cont.resume(Result.success())
-                            closeEngineIfNeeded()
-                        }
+                val callResult = withTimeoutOrNull(120_000L) {
+                    suspendCancellableCoroutine { cont ->
+                        MethodChannel(engineToUse!!.dartExecutor.binaryMessenger, Constants.methodChannel).invokeMethod(method, gson.fromJson(data, TypeToken.getParameterized(HashMap::class.java, String::class.java, Any::class.java).type), object : MethodChannel.Result {
+                            override fun success(result: Any?) {
+                                Log.d(Constants.logTag, "Worker with method $method completed successfully")
+                                if (cont.isActive) cont.resume(Result.success())
+                                closeEngineIfNeeded()
+                            }
     
-                        override fun error(errorCode: String, errorMessage: String?, errorDetails: Any?) {
-                            Log.e(Constants.logTag, "Worker with method $method failed!")
-                            cont.resume(Result.failure())
-                            closeEngineIfNeeded()
-                        }
+                            override fun error(errorCode: String, errorMessage: String?, errorDetails: Any?) {
+                                Log.e(Constants.logTag, "Worker with method $method failed!")
+                                if (cont.isActive) cont.resume(Result.failure())
+                                closeEngineIfNeeded()
+                            }
     
-                        override fun notImplemented() {
-                            Log.e(Constants.logTag, "Worker with method $method not implemented on Dart side")
-                            cont.resume(Result.failure())
-                            closeEngineIfNeeded()
-                        }
-                    })
+                            override fun notImplemented() {
+                                Log.e(Constants.logTag, "Worker with method $method not implemented on Dart side")
+                                if (cont.isActive) cont.resume(Result.failure())
+                                closeEngineIfNeeded()
+                            }
+                        })
+                    }
+                }
+
+                if (callResult == null) {
+                    Log.e(Constants.logTag, "Method $method invocation timed out after 120s")
+                    closeEngineIfNeeded()
+                    return@future Result.failure()
                 }
 
                 Log.d(Constants.logTag, "Worker with method $method completed successfully")
@@ -126,23 +135,32 @@ class DartWorker(context: Context, workerParams: WorkerParameters): ListenableWo
         Log.d(Constants.logTag, "Loading callback info")
         val info = ApplicationInfoLoader.load(applicationContext)
         workerEngine = FlutterEngine(applicationContext)
-        suspendCoroutine { cont ->
-            // set up the method channel to receive events from Dart
-            MethodChannel(workerEngine!!.dartExecutor.binaryMessenger, Constants.methodChannel).setMethodCallHandler {
-                call, result -> run {
-                    if (call.method == "ready") {
-                        Log.d(Constants.logTag, "Dart engine is ready!")
-                        cont.resume(Unit)
-                    } else {
-                        MethodCallHandler().methodCallHandler(call, result, applicationContext)
+        val ready = withTimeoutOrNull(30_000L) {
+            suspendCancellableCoroutine<Unit> { cont ->
+                // set up the method channel to receive events from Dart
+                MethodChannel(workerEngine!!.dartExecutor.binaryMessenger, Constants.methodChannel).setMethodCallHandler {
+                    call, result -> run {
+                        if (call.method == "ready") {
+                            Log.d(Constants.logTag, "Dart engine is ready!")
+                            if (cont.isActive) cont.resume(Unit)
+                        } else {
+                            MethodCallHandler().methodCallHandler(call, result, applicationContext)
+                        }
                     }
                 }
-            }
-            val callbackInfo = FlutterCallbackInformation.lookupCallbackInformation(applicationContext.getSharedPreferences("FlutterSharedPreferences", 0).getLong("flutter.backgroundCallbackHandle", -1))
-            val callback = DartExecutor.DartCallback(applicationContext.assets, info.flutterAssetsDir, callbackInfo)
+                val callbackInfo = FlutterCallbackInformation.lookupCallbackInformation(applicationContext.getSharedPreferences("FlutterSharedPreferences", 0).getLong("flutter.backgroundCallbackHandle", -1))
+                val callback = DartExecutor.DartCallback(applicationContext.assets, info.flutterAssetsDir, callbackInfo)
 
-            Log.d(Constants.logTag, "Executing Dart callback")
-            workerEngine!!.dartExecutor.executeDartCallback(callback)
+                Log.d(Constants.logTag, "Executing Dart callback")
+                workerEngine!!.dartExecutor.executeDartCallback(callback)
+            }
+        }
+
+        if (ready == null) {
+            Log.e(Constants.logTag, "Engine 'ready' handshake timed out after 30s — destroying engine")
+            workerEngine?.destroy()
+            workerEngine = null
+            throw Exception("DartWorker engine startup timed out")
         }
     }
 

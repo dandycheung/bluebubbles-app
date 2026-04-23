@@ -5,7 +5,7 @@ import 'package:bluebubbles/app/state/message_state_scope.dart';
 import 'package:bluebubbles/app/components/custom_text_editing_controllers.dart';
 import 'package:bluebubbles/app/layouts/conversation_view/widgets/message/misc/bubble_effects.dart';
 import 'package:bluebubbles/app/layouts/conversation_view/widgets/message/misc/tail_clipper.dart';
-import 'package:bluebubbles/app/wrappers/bb_annotated_region.dart';
+import 'package:bluebubbles/app/wrappers/bb_scaffold.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/app/animations/balloon_classes.dart';
 import 'package:bluebubbles/app/animations/balloon_rendering.dart';
@@ -136,12 +136,13 @@ void sendEffectAction(
             onTap: () {
               Navigator.of(context).pop();
             },
-            child: BBAnnotatedRegion(
-              child: Scaffold(
-                backgroundColor: kIsDesktop && SettingsSvc.settings.windowEffect.value != WindowEffect.disabled
-                    ? context.theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.9)
-                    : Colors.transparent,
-                body: Stack(
+            child: BBScaffold(
+              backgroundColor: kIsDesktop && SettingsSvc.settings.windowEffect.value != WindowEffect.disabled
+                  ? context.theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.9)
+                  : Colors.transparent,
+              safeAreaLeft: false,
+              safeAreaRight: false,
+              body: Stack(
                   fit: StackFit.expand,
                   children: [
                     BackdropFilter(
@@ -493,7 +494,6 @@ void sendEffectAction(
                     }),
                   ],
                 ),
-              ),
             ),
           ),
         );

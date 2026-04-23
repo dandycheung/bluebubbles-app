@@ -231,6 +231,12 @@ class IntentsService {
         Logger.debug("Navigating to conversation view...", tag: "IntentsService");
         await StartupTasks.waitForUI();
 
+        // Rather than waiting for paging to eventually reach this chat,
+        // proactively seed its ChatState now. getOrCreateChatState() inserts
+        // a fully valid ChatState immediately and is a no-op if the batch
+        // loader already added it.
+        ChatsSvc.getOrCreateChatState(chat);
+
         // Pre-populate text/attachments on the controller before navigating so
         // the ConversationView text field is pre-filled on first build.
         setPickedAttachments();

@@ -7,7 +7,6 @@ import 'package:bluebubbles/app/layouts/conversation_details/widgets/links_secti
 import 'package:bluebubbles/app/layouts/conversation_details/widgets/locations_section.dart';
 import 'package:bluebubbles/app/layouts/conversation_details/widgets/media_grid_section.dart';
 import 'package:bluebubbles/app/layouts/conversation_details/widgets/participants_list.dart';
-import 'package:bluebubbles/app/wrappers/bb_annotated_region.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/app/layouts/settings/widgets/settings_widgets.dart';
 import 'package:bluebubbles/database/models.dart';
@@ -64,8 +63,7 @@ class _ConversationDetailsState extends State<ConversationDetails> with WidgetsB
   Widget build(BuildContext context) {
     return ChatStateScope(
       chatState: ChatsSvc.getOrCreateChatState(chat),
-      child: BBAnnotatedRegion(
-        child: Theme(
+      child: Theme(
             data: context.theme.copyWith(
               // in case some components still use legacy theming
               primaryColor: context.theme.colorScheme.bubble(context, chat.isIMessage),
@@ -200,7 +198,6 @@ class _ConversationDetailsState extends State<ConversationDetails> with WidgetsB
                     ),
                   ],
                 ))),
-      ),
     );
   }
 }

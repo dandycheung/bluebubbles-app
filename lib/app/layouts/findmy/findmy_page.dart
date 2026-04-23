@@ -1,7 +1,7 @@
 import 'dart:math';
 import 'dart:ui';
 
-import 'package:bluebubbles/app/wrappers/bb_annotated_region.dart';
+import 'package:bluebubbles/app/wrappers/bb_scaffold.dart';
 import 'package:bitsdojo_window/bitsdojo_window.dart';
 import 'package:bluebubbles/app/layouts/findmy/findmy_controller.dart';
 import 'package:bluebubbles/app/layouts/findmy/widgets/findmy_devices_tab_view.dart';
@@ -43,23 +43,22 @@ class _FindMyPageState extends State<FindMyPage> with SingleTickerProviderStateM
 
   @override
   Widget build(BuildContext context) {
-    return BBAnnotatedRegion(
-      statusBarIconBrightness: Brightness.dark,
-      child: LayoutBuilder(
-        builder: (BuildContext context, BoxConstraints constraints) {
-          if (context.isPhone) {
-            return _buildNormalLayout(context);
-          }
-          return _buildTabletLayout(context);
-        },
-      ),
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        if (context.isPhone) {
+          return _buildNormalLayout(context);
+        }
+        return _buildTabletLayout(context);
+      },
     );
   }
 
   Widget _buildTabletLayout(BuildContext context) {
     return Obx(
-      () => Scaffold(
+      () => BBScaffold(
         backgroundColor: context.theme.colorScheme.surface.themeOpacity(context),
+        safeAreaLeft: false,
+        safeAreaRight: false,
         body: Stack(
           children: [
             Row(
@@ -253,8 +252,10 @@ class _FindMyPageState extends State<FindMyPage> with SingleTickerProviderStateM
 
   Widget _buildNormalLayout(BuildContext context) {
     return Obx(
-      () => Scaffold(
+      () => BBScaffold(
         backgroundColor: context.material ? context.tileColor : context.headerColor,
+        safeAreaLeft: false,
+        safeAreaRight: false,
         body: Stack(
           children: [
             SlidingUpPanel(
