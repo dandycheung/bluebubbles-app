@@ -103,8 +103,11 @@ class BBAppBar extends StatelessWidget implements PreferredSizeWidget {
     final effectiveCenterTitle = centerTitle ?? context.iOS;
     final effectiveSurfaceTint = surfaceTintColor ?? context.theme.colorScheme.primary;
     final effectiveOverlayStyle = systemOverlayStyle ??
-        (context.theme.colorScheme.brightness == Brightness.dark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark);
-    final effectiveTitle = title ?? (titleText != null ? Text(titleText!, style: titleStyle ?? context.theme.textTheme.titleLarge) : null);
+        (context.theme.colorScheme.brightness == Brightness.dark
+            ? SystemUiOverlayStyle.light
+            : SystemUiOverlayStyle.dark);
+    final effectiveTitle =
+        title ?? (titleText != null ? Text(titleText!, style: titleStyle ?? context.theme.textTheme.titleLarge) : null);
 
     return AppBar(
       title: effectiveTitle,

@@ -48,8 +48,7 @@ class TextFieldEmojiPickerSection extends StatelessWidget {
                       backgroundColor: Colors.transparent,
                       columns: emojiColumns,
                       noRecents: Text("No Recents",
-                          style: context.textTheme.headlineMedium!
-                              .copyWith(color: context.theme.colorScheme.outline)),
+                          style: context.textTheme.headlineMedium!.copyWith(color: context.theme.colorScheme.outline)),
                     ),
                     viewOrderConfig: const ViewOrderConfig(
                       top: EmojiPickerItem.categoryBar,
@@ -62,8 +61,7 @@ class TextFieldEmojiPickerSection extends StatelessWidget {
                       dividerColor: Colors.transparent,
                     ),
                     bottomActionBarConfig: BottomActionBarConfig(
-                      customBottomActionBar:
-                          (Config config, EmojiViewState state, VoidCallback showSearchView) {
+                      customBottomActionBar: (Config config, EmojiViewState state, VoidCallback showSearchView) {
                         return Container(
                           margin: const EdgeInsets.only(top: 10),
                           child: Row(

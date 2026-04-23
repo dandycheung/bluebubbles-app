@@ -342,9 +342,7 @@ class _FontPickerSheetState extends State<_FontPickerSheet> {
   void _onSearch() {
     final q = _searchCtrl.text.toLowerCase();
     setState(() {
-      _filtered = q.isEmpty
-          ? _getFontNames()
-          : _getFontNames().where((f) => f.toLowerCase().contains(q)).toList();
+      _filtered = q.isEmpty ? _getFontNames() : _getFontNames().where((f) => f.toLowerCase().contains(q)).toList();
     });
   }
 

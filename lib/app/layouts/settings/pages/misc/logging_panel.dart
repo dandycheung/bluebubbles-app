@@ -88,9 +88,9 @@ class _LoggingPanel extends State<LoggingPanel> {
                 scrolledUnderElevation: 3,
                 surfaceTintColor: context.theme.colorScheme.primary,
                 leading: buildBackButton(context),
-                  backgroundColor: SettingsSvc.settings.windowEffect.value != WindowEffect.disabled
-                      ? Colors.transparent
-                      : context.theme.colorScheme.surface,
+                backgroundColor: SettingsSvc.settings.windowEffect.value != WindowEffect.disabled
+                    ? Colors.transparent
+                    : context.theme.colorScheme.surface,
                 centerTitle: SettingsSvc.settings.skin.value == Skins.iOS,
                 title: Text(
                   "Logs",

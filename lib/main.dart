@@ -603,40 +603,40 @@ class _HomeState extends State<Home> with WidgetsBindingObserver, TrayListener {
   @override
   Widget build(BuildContext context) {
     return Actions(
-        actions: {
-          OpenSettingsIntent: OpenSettingsAction(context),
-          OpenNewChatCreatorIntent: OpenNewChatCreatorAction(context),
-          OpenSearchIntent: OpenSearchAction(context),
-          OpenNextChatIntent: OpenNextChatAction(context),
-          OpenPreviousChatIntent: OpenPreviousChatAction(context),
-          StartIncrementalSyncIntent: StartIncrementalSyncAction(),
-          GoBackIntent: GoBackAction(context),
-        },
-        child: Obx(() => BBScaffold(
-              backgroundColor: context.theme.colorScheme.surface.themeOpacity(context),
-              body: Builder(
-                builder: (BuildContext context) {
-                  if (SettingsSvc.settings.finishedSetup.value) {
-                    if (!serverCompatible && kIsWeb) {
-                      return const FailureToStart(
-                        otherTitle: "Server version too low, please upgrade!",
-                        e: "Required Server Version: v0.2.0",
-                      );
-                    }
-                    return ConversationList(
-                      showArchivedChats: false,
-                      showUnknownSenders: false,
-                    );
-                  } else {
-                    return PopScope(
-                      canPop: false,
-                      child: TitleBarWrapper(
-                          child: kIsWeb || kIsDesktop ? const SetupView() : SplashScreen(shouldNavigate: fullyLoaded)),
+      actions: {
+        OpenSettingsIntent: OpenSettingsAction(context),
+        OpenNewChatCreatorIntent: OpenNewChatCreatorAction(context),
+        OpenSearchIntent: OpenSearchAction(context),
+        OpenNextChatIntent: OpenNextChatAction(context),
+        OpenPreviousChatIntent: OpenPreviousChatAction(context),
+        StartIncrementalSyncIntent: StartIncrementalSyncAction(),
+        GoBackIntent: GoBackAction(context),
+      },
+      child: Obx(() => BBScaffold(
+            backgroundColor: context.theme.colorScheme.surface.themeOpacity(context),
+            body: Builder(
+              builder: (BuildContext context) {
+                if (SettingsSvc.settings.finishedSetup.value) {
+                  if (!serverCompatible && kIsWeb) {
+                    return const FailureToStart(
+                      otherTitle: "Server version too low, please upgrade!",
+                      e: "Required Server Version: v0.2.0",
                     );
                   }
-                },
-              ),
-            )),
+                  return ConversationList(
+                    showArchivedChats: false,
+                    showUnknownSenders: false,
+                  );
+                } else {
+                  return PopScope(
+                    canPop: false,
+                    child: TitleBarWrapper(
+                        child: kIsWeb || kIsDesktop ? const SetupView() : SplashScreen(shouldNavigate: fullyLoaded)),
+                  );
+                }
+              },
+            ),
+          )),
     );
   }
 }

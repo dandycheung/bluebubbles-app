@@ -95,8 +95,8 @@ class TextFieldIconBar extends StatelessWidget {
 
                                     for (pf.PlatformFile e in res.files) {
                                       if (e.size / 1024000 > 1000) {
-                                        showSnackbar("Error",
-                                            "This file is over 1 GB! Please compress it before sending.");
+                                        showSnackbar(
+                                            "Error", "This file is over 1 GB! Please compress it before sending.");
                                         continue;
                                       }
                                       controller.pickedAttachments.add(PlatformFile(

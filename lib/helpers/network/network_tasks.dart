@@ -42,8 +42,8 @@ class NetworkTasks {
 
   static Future<void> detectLocalhost({bool createSnackbar = false}) {
     // Deduplicate: if already running, all callers share the same future.
-    _detectLocalhostFuture ??= _detectLocalhostImpl(createSnackbar: createSnackbar)
-        .whenComplete(() => _detectLocalhostFuture = null);
+    _detectLocalhostFuture ??=
+        _detectLocalhostImpl(createSnackbar: createSnackbar).whenComplete(() => _detectLocalhostFuture = null);
     return _detectLocalhostFuture!;
   }
 

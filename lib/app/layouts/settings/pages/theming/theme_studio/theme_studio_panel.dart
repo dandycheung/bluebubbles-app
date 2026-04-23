@@ -454,8 +454,8 @@ class _ThemeStudioPanelState extends CustomState<ThemeStudioPanel, void, ThemeSt
                       ),
                     ),
                     child: RepaintBoundary(
-                    child: ThemePreviewCard(struct: controller.previewTheme),
-                  ),
+                      child: ThemePreviewCard(struct: controller.previewTheme),
+                    ),
                   ),
                 );
               }),
@@ -473,7 +473,7 @@ class _ThemeStudioPanelState extends CustomState<ThemeStudioPanel, void, ThemeSt
 
             // Colors / Typography / Manage — deferred until after first frame
             // so the visible sections (preview + theme selector) appear immediately.
-            if (_contentReady) ...[                
+            if (_contentReady) ...[
               // Colors
               SliverToBoxAdapter(child: _sectionHeader(context, "Colors")),
               SliverToBoxAdapter(

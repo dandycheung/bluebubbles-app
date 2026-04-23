@@ -22,6 +22,7 @@ class GlobalIsolate {
   bool _isRunning = false;
   bool _isStarting = false;
   Completer<void> _startCompleter = Completer<void>();
+
   /// Completer resolved when the spawned isolate sends back its SendPort.
   Completer<void>? _sendPortCompleter;
   final List<Future<void> Function()> _onStartedCallbacks = [];

@@ -230,7 +230,7 @@ class SearchViewState extends State<SearchView> with ThemeHelpers {
 
       return PopScope(
           canPop: false,
-          onPopInvoked: (bool didPop) {
+          onPopInvokedWithResult: <T>(bool didPop, T? result) {
             if (didPop) return;
             if (panelController.status != SlidingUpPanelStatus.collapsed) {
               panelController.collapse();

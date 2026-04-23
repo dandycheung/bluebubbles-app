@@ -187,46 +187,46 @@ class ConversationViewState extends State<ConversationView> with ThemeHelpers<Co
     return ChatStateScope(
       chatState: chatState,
       child: Theme(
-            data: theme.copyWith(
-              // in case some components still use legacy theming
-              primaryColor: bubbleColor,
-              colorScheme: colorScheme.copyWith(
-                primary: bubbleColor,
-                onPrimary: onBubbleColor,
+          data: theme.copyWith(
+            // Override primary color with our custom bubble color.
+            primaryColor: bubbleColor,
+            colorScheme: colorScheme.copyWith(
+              primary: bubbleColor,
+              onPrimary: onBubbleColor,
+            ),
+          ),
+          child: PopScope(
+            canPop: false,
+            onPopInvokedWithResult: <T>(bool didPop, T? result) async {
+              if (didPop) return;
+              if (controller.inSelectMode.value) {
+                controller.inSelectMode.value = false;
+                controller.selected.clear();
+                return;
+              }
+              if (controller.showAttachmentPicker) {
+                controller.showAttachmentPicker = false;
+                controller.updateWidgets<ConversationTextField>(null);
+                return;
+              }
+              if (LifecycleSvc.isBubble) {
+                SystemNavigator.pop();
+              }
+              controller.close();
+              if (LifecycleSvc.isBubble) return;
+              return Navigator.of(context).pop();
+            },
+            child: BBScaffold(
+              backgroundColor: windowEffect != WindowEffect.disabled ? Colors.transparent : colorScheme.surface,
+              extendBodyBehindAppBar: true,
+              safeAreaBottom: true,
+              appBar: _appBar,
+              body: Actions(
+                actions: _actionsMap,
+                child: _bodyContent,
               ),
             ),
-            child: PopScope(
-              canPop: false,
-              onPopInvoked: (didPop) async {
-                if (didPop) return;
-                if (controller.inSelectMode.value) {
-                  controller.inSelectMode.value = false;
-                  controller.selected.clear();
-                  return;
-                }
-                if (controller.showAttachmentPicker) {
-                  controller.showAttachmentPicker = false;
-                  controller.updateWidgets<ConversationTextField>(null);
-                  return;
-                }
-                if (LifecycleSvc.isBubble) {
-                  SystemNavigator.pop();
-                }
-                controller.close();
-                if (LifecycleSvc.isBubble) return;
-                return Navigator.of(context).pop();
-              },
-              child: BBScaffold(
-                backgroundColor: windowEffect != WindowEffect.disabled ? Colors.transparent : colorScheme.surface,
-                extendBodyBehindAppBar: true,
-                safeAreaBottom: true,
-                appBar: _appBar,
-                body: Actions(
-                  actions: _actionsMap,
-                  child: _bodyContent,
-                ),
-              ),
-            )),
+          )),
     );
   }
 }

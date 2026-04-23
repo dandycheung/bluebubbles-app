@@ -20,7 +20,6 @@ import 'package:bluebubbles/services/services.dart';
 import 'package:bluebubbles/services/ui/chat/send_data.dart';
 import 'package:bluebubbles/utils/logger/logger.dart';
 import 'package:collection/collection.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -454,76 +453,76 @@ class ConversationTextFieldState extends CustomState<ConversationTextField, void
   @override
   Widget build(BuildContext context) {
     return Padding(
-        padding: const EdgeInsets.only(bottom: 10.0, top: 10.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-              TextFieldIconBar(controller: controller, localController: localController),
-              Expanded(
-                child: Stack(
-                  alignment: Alignment.centerLeft,
-                  clipBehavior: Clip.none,
-                  children: [
-                    TextFieldComponent(
-                      key: controller.textFieldKey,
-                      subjectTextController: controller.subjectTextController,
-                      textController: controller.textController,
-                      controller: controller,
-                      recorderController: recorderController,
-                      sendMessage: sendMessage,
-                    ),
-                    if (!kIsWeb)
-                      Positioned(
-                        top: 0,
-                        bottom: 0,
-                        child: TextFieldRecordingOverlay(
-                          controller: controller,
-                          recorderController: recorderController,
-                        ),
-                      ),
-                    SendAnimation(parentController: controller),
-                  ],
-                ),
-              ),
-              if (iOS) const SizedBox(width: 10),
-              if (samsung)
-                Padding(
-                  padding: const EdgeInsets.only(right: 5.0),
-                  child: TextFieldSuffix(
+      padding: const EdgeInsets.only(bottom: 10.0, top: 10.0),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+            TextFieldIconBar(controller: controller, localController: localController),
+            Expanded(
+              child: Stack(
+                alignment: Alignment.centerLeft,
+                clipBehavior: Clip.none,
+                children: [
+                  TextFieldComponent(
+                    key: controller.textFieldKey,
                     subjectTextController: controller.subjectTextController,
                     textController: controller.textController,
                     controller: controller,
                     recorderController: recorderController,
                     sendMessage: sendMessage,
                   ),
-                ),
-            ]),
-            Builder(builder: (context) {
-              // Capture width outside the Obx lambda so the reactive builder does not
-              // register a MediaQuery.of dependency and rebuild on keyboard animation frames.
-              // sizeOf only notifies on actual display-size changes (rotation / resize).
-              final pickerWidth = MediaQuery.sizeOf(context).width;
-              return Obx(() => AnimatedSize(
-                    duration: const Duration(milliseconds: 250),
-                    curve: Curves.easeIn,
-                    alignment: Alignment.bottomCenter,
-                    child: !showAttachmentPicker
-                        ? SizedBox(width: pickerWidth)
-                        : AttachmentPicker(
-                            controller: controller,
-                          ),
-                  ));
-            }),
-            TextFieldEmojiPickerSection(
-              controller: controller,
-              proxyController: proxyController,
-              emojiScrollController: _emojiScrollController,
-              emojiPickerHeight: emojiPickerHeight,
-              emojiColumns: emojiColumns,
+                  if (!kIsWeb)
+                    Positioned(
+                      top: 0,
+                      bottom: 0,
+                      child: TextFieldRecordingOverlay(
+                        controller: controller,
+                        recorderController: recorderController,
+                      ),
+                    ),
+                  SendAnimation(parentController: controller),
+                ],
+              ),
             ),
-          ],
-        ),
-      );
+            if (iOS) const SizedBox(width: 10),
+            if (samsung)
+              Padding(
+                padding: const EdgeInsets.only(right: 5.0),
+                child: TextFieldSuffix(
+                  subjectTextController: controller.subjectTextController,
+                  textController: controller.textController,
+                  controller: controller,
+                  recorderController: recorderController,
+                  sendMessage: sendMessage,
+                ),
+              ),
+          ]),
+          Builder(builder: (context) {
+            // Capture width outside the Obx lambda so the reactive builder does not
+            // register a MediaQuery.of dependency and rebuild on keyboard animation frames.
+            // sizeOf only notifies on actual display-size changes (rotation / resize).
+            final pickerWidth = MediaQuery.sizeOf(context).width;
+            return Obx(() => AnimatedSize(
+                  duration: const Duration(milliseconds: 250),
+                  curve: Curves.easeIn,
+                  alignment: Alignment.bottomCenter,
+                  child: !showAttachmentPicker
+                      ? SizedBox(width: pickerWidth)
+                      : AttachmentPicker(
+                          controller: controller,
+                        ),
+                ));
+          }),
+          TextFieldEmojiPickerSection(
+            controller: controller,
+            proxyController: proxyController,
+            emojiScrollController: _emojiScrollController,
+            emojiPickerHeight: emojiPickerHeight,
+            emojiColumns: emojiColumns,
+          ),
+        ],
+      ),
+    );
   }
 }

@@ -178,7 +178,8 @@ class StartupTasks {
       dispose: (svc) => svc.dispose(),
     );
 
-    Logger.info("Startup services initialization complete! Running localhost detection then starting incremental sync...");
+    Logger.info(
+        "Startup services initialization complete! Running localhost detection then starting incremental sync...");
     unawaited(NetworkTasks.detectLocalhost().then((_) => SyncSvc.startIncrementalSync()));
   }
 
