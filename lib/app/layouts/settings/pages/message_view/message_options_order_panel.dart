@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import 'package:bluebubbles/app/wrappers/bb_app_bar.dart';
 import 'package:bluebubbles/app/wrappers/bb_scaffold.dart';
 import 'package:bluebubbles/app/layouts/conversation_view/widgets/message/popup/details_menu_action.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
@@ -7,7 +8,6 @@ import 'package:bluebubbles/services/backend/settings/settings_service.dart';
 import 'package:bluebubbles/services/ui/navigator/navigator_service.dart';
 import 'package:bluebubbles/services/ui/theme/themes_service.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_acrylic/window_effect.dart';
 import 'package:get/get.dart';
 
@@ -38,28 +38,16 @@ class _MessageOptionsOrderPanelState extends State<MessageOptionsOrderPanel> wit
     return Obx(
         () => BBScaffold(
           appBar: PreferredSize(
-            preferredSize: Size(NavigationSvc.width(context), 80),
+            preferredSize: Size(NavigationSvc.width(context), kIsDesktop ? 80 : 50),
             child: ClipRRect(
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-                child: AppBar(
-                  systemOverlayStyle:
-                      ThemeData.estimateBrightnessForColor(context.theme.colorScheme.surface) == Brightness.dark
-                          ? SystemUiOverlayStyle.light
-                          : SystemUiOverlayStyle.dark,
-                  toolbarHeight: kIsDesktop ? 80 : 50,
-                  elevation: 0,
-                  scrolledUnderElevation: 3,
-                  surfaceTintColor: context.theme.colorScheme.primary,
+                child: BBAppBar(
+                  titleText: "Message Options Order",
                   leading: buildBackButton(context),
                   backgroundColor: SettingsSvc.settings.windowEffect.value != WindowEffect.disabled
                       ? Colors.transparent
                       : context.theme.colorScheme.surface,
-                  centerTitle: SettingsSvc.settings.skin.value == Skins.iOS,
-                  title: Text(
-                    "Message Options Order",
-                    style: context.theme.textTheme.titleLarge,
-                  ),
                   actions: [
                     TextButton(
                       child: Text("Reset",

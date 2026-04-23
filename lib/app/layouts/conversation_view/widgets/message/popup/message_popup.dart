@@ -12,6 +12,7 @@ import 'package:bluebubbles/app/layouts/conversation_view/widgets/message/popup/
 import 'package:bluebubbles/app/components/avatars/contact_avatar_widget.dart';
 import 'package:bluebubbles/app/components/custom/custom_cupertino_alert_dialog.dart';
 import 'package:bluebubbles/app/layouts/findmy/findmy_pin_clipper.dart';
+import 'package:bluebubbles/app/wrappers/bb_app_bar.dart';
 import 'package:bluebubbles/app/wrappers/bb_scaffold.dart';
 import 'package:bluebubbles/app/wrappers/theme_switcher.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
@@ -197,14 +198,11 @@ class _MessagePopupState extends State<MessagePopup> with SingleTickerProviderSt
                     : Colors.transparent,
                 appBar: iOS
                     ? null
-                    : AppBar(
+                    : BBAppBar(
                         backgroundColor: context.theme.colorScheme.surface.oppositeLightenOrDarken(5),
-                        systemOverlayStyle: context.theme.colorScheme.brightness == Brightness.dark
-                            ? SystemUiOverlayStyle.light
-                            : SystemUiOverlayStyle.dark,
                         automaticallyImplyLeading: false,
                         leadingWidth: 40,
-                        toolbarHeight: kIsDesktop ? 80 : null,
+                        toolbarHeight: kIsDesktop ? 80 : 50,
                         leading: Padding(
                           padding: EdgeInsets.only(top: kIsDesktop ? 20 : 0, left: 10.0),
                           child: BackButton(

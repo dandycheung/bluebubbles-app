@@ -1,17 +1,17 @@
 import 'package:bluebubbles/app/components/circle_progress_bar.dart';
-import 'package:bluebubbles/app/wrappers/bb_scaffold.dart';
-import 'package:bluebubbles/utils/logger/logger.dart';
-import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/app/layouts/fullscreen_media/fullscreen_image.dart';
 import 'package:bluebubbles/app/layouts/fullscreen_media/fullscreen_video.dart';
-import 'package:bluebubbles/app/wrappers/titlebar_wrapper.dart';
+import 'package:bluebubbles/app/wrappers/bb_app_bar.dart';
+import 'package:bluebubbles/app/wrappers/bb_scaffold.dart';
 import 'package:bluebubbles/app/wrappers/theme_switcher.dart';
+import 'package:bluebubbles/app/wrappers/titlebar_wrapper.dart';
 import 'package:bluebubbles/database/models.dart';
+import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/services/services.dart';
+import 'package:bluebubbles/utils/logger/logger.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import "package:flutter/material.dart";
-import 'package:flutter/services.dart';
 import 'package:gesture_x_detector/gesture_x_detector.dart';
 import 'package:get/get.dart';
 
@@ -86,7 +86,7 @@ class FullscreenMediaHolderState extends State<FullscreenMediaHolder> with Theme
             extendBodyBehindBottomPill: true,
             appBar: !iOS || !showAppBar
                 ? null
-                : AppBar(
+                : BBAppBar(
                     leading: XGestureDetector(
                       supportTouch: true,
                       onTap: !kIsDesktop
@@ -105,18 +105,13 @@ class FullscreenMediaHolderState extends State<FullscreenMediaHolder> with Theme
                       ),
                     ),
                     leadingWidth: 75,
-                    title: Text(
-                        kIsWeb || !widget.showInteractions || widget.currentChat == null
-                            ? "Media"
-                            : "${currentIndex + 1} of ${attachments.length}",
-                        style: context.theme.textTheme.titleLarge!
-                            .copyWith(color: context.theme.colorScheme.onSurfaceVariant)),
-                    centerTitle: iOS,
+                    titleText: kIsWeb || !widget.showInteractions || widget.currentChat == null
+                        ? "Media"
+                        : "${currentIndex + 1} of ${attachments.length}",
+                    titleStyle: context.theme.textTheme.titleLarge!
+                        .copyWith(color: context.theme.colorScheme.onSurfaceVariant),
                     iconTheme: IconThemeData(color: context.theme.colorScheme.primary),
                     backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
-                    systemOverlayStyle: context.theme.colorScheme.brightness == Brightness.dark
-                        ? SystemUiOverlayStyle.light
-                        : SystemUiOverlayStyle.dark,
                   ),
             backgroundColor: Colors.black,
             body: FocusScope(

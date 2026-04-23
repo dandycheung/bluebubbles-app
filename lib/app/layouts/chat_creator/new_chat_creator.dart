@@ -6,6 +6,7 @@ import 'package:bluebubbles/app/layouts/chat_creator/widgets/service_type_picker
 import 'package:bluebubbles/app/layouts/conversation_view/pages/messages_view.dart';
 import 'package:bluebubbles/app/layouts/conversation_view/widgets/text_field/text_field_component.dart';
 import 'package:bluebubbles/app/state/chat_state_scope.dart';
+import 'package:bluebubbles/app/wrappers/bb_app_bar.dart';
 import 'package:bluebubbles/app/wrappers/bb_scaffold.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/database/models.dart';
@@ -79,24 +80,11 @@ class _NewChatCreatorState extends State<NewChatCreator> with ThemeHelpers<NewCh
   @override
   Widget build(BuildContext context) {
     return BBScaffold(
-      appBar: PreferredSize(
-        preferredSize: Size(NavigationSvc.width(context), kIsDesktop ? 90 : 50),
-        child: AppBar(
-          systemOverlayStyle: context.theme.colorScheme.brightness == Brightness.dark
-              ? SystemUiOverlayStyle.light
-              : SystemUiOverlayStyle.dark,
-          toolbarHeight: kIsDesktop ? 90 : 50,
-          elevation: 0,
-          scrolledUnderElevation: 3,
-          surfaceTintColor: context.theme.colorScheme.primary,
-          leading: buildBackButton(context),
-          backgroundColor: Colors.transparent,
-          centerTitle: SettingsSvc.settings.skin.value == Skins.iOS,
-          title: Text(
-            'New Message',
-            style: context.theme.textTheme.titleLarge,
-          ),
-        ),
+      appBar: BBAppBar(
+        titleText: 'New Message',
+        leading: buildBackButton(context),
+        backgroundColor: Colors.transparent,
+        toolbarHeight: kIsDesktop ? 90 : 50,
       ),
       body: FocusScope(
         child: Column(

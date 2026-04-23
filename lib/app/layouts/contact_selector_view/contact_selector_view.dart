@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:bluebubbles/app/components/avatars/contact_avatar_widget.dart';
+import 'package:bluebubbles/app/wrappers/bb_app_bar.dart';
 import 'package:bluebubbles/app/wrappers/bb_scaffold.dart';
 import 'package:bluebubbles/app/wrappers/theme_switcher.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
@@ -67,23 +68,12 @@ class ContactSelectorViewState extends State<ContactSelectorView> with ThemeHelp
   @override
   Widget build(BuildContext context) {
     return BBScaffold(
-      appBar: PreferredSize(
-          preferredSize: Size(NavigationSvc.width(context), kIsDesktop ? 90 : 50),
-          child: AppBar(
-              systemOverlayStyle: context.theme.colorScheme.brightness == Brightness.dark
-                  ? SystemUiOverlayStyle.light
-                  : SystemUiOverlayStyle.dark,
-              toolbarHeight: kIsDesktop ? 90 : 50,
-              elevation: 0,
-              scrolledUnderElevation: 3,
-              surfaceTintColor: context.theme.colorScheme.primary,
-              leading: buildBackButton(context),
-              backgroundColor: Colors.transparent,
-              centerTitle: SettingsSvc.settings.skin.value == Skins.iOS,
-              title: Text(
-                "Select a Contact",
-                style: context.theme.textTheme.titleLarge,
-              ))),
+      appBar: BBAppBar(
+        titleText: "Select a Contact",
+        leading: buildBackButton(context),
+        backgroundColor: Colors.transparent,
+        toolbarHeight: kIsDesktop ? 90 : 50,
+      ),
       body: FocusScope(
         child: Column(
           children: [

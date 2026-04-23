@@ -7,6 +7,7 @@ import 'package:bluebubbles/app/layouts/chat_creator/widgets/selected_contact_ch
 import 'package:bluebubbles/app/layouts/conversation_view/pages/conversation_view.dart';
 import 'package:bluebubbles/app/layouts/conversation_view/widgets/text_field/text_field_component.dart';
 import 'package:bluebubbles/app/state/chat_state_scope.dart';
+import 'package:bluebubbles/app/wrappers/bb_app_bar.dart';
 import 'package:bluebubbles/app/wrappers/bb_scaffold.dart';
 import 'package:bluebubbles/app/wrappers/theme_switcher.dart';
 import 'package:bluebubbles/app/wrappers/titlebar_wrapper.dart';
@@ -295,58 +296,45 @@ class ChatCreatorState extends State<ChatCreator> with ThemeHelpers {
   @override
   Widget build(BuildContext context) {
     return BBScaffold(
-      appBar: PreferredSize(
-        preferredSize: Size(NavigationSvc.width(context), kIsDesktop ? 90 : 50),
-        child: AppBar(
-          systemOverlayStyle: context.theme.colorScheme.brightness == Brightness.dark
-              ? SystemUiOverlayStyle.light
-              : SystemUiOverlayStyle.dark,
-          toolbarHeight: kIsDesktop ? 90 : 50,
-          elevation: 0,
-          scrolledUnderElevation: 3,
-          surfaceTintColor: context.theme.colorScheme.primary,
-          leading: buildBackButton(context),
-          backgroundColor: Colors.transparent,
-          centerTitle: SettingsSvc.settings.skin.value == Skins.iOS,
-          title: Text(
-            "New Conversation",
-            style: context.theme.textTheme.titleLarge,
-          ),
-          actions: [
-            if (!canCreateGroupChats)
-              IconButton(
-                icon: Icon(iOS ? CupertinoIcons.exclamationmark_circle : Icons.error_outline,
-                    color: context.theme.colorScheme.error),
-                onPressed: () {
-                  showDialog(
-                      barrierDismissible: false,
-                      context: Get.context!,
-                      builder: (BuildContext context) {
-                        return AlertDialog(
-                          title: Text(
-                            "Group Chat Creation",
-                            style: context.theme.textTheme.titleLarge,
+      appBar: BBAppBar(
+        titleText: "New Conversation",
+        leading: buildBackButton(context),
+        backgroundColor: Colors.transparent,
+        toolbarHeight: kIsDesktop ? 90 : 50,
+        actions: [
+          if (!canCreateGroupChats)
+            IconButton(
+              icon: Icon(iOS ? CupertinoIcons.exclamationmark_circle : Icons.error_outline,
+                  color: context.theme.colorScheme.error),
+              onPressed: () {
+                showDialog(
+                    barrierDismissible: false,
+                    context: Get.context!,
+                    builder: (BuildContext context) {
+                      return AlertDialog(
+                        title: Text(
+                          "Group Chat Creation",
+                          style: context.theme.textTheme.titleLarge,
+                        ),
+                        content: Text(
+                            "Creating group chats from BlueBubbles is not possible on macOS 11 (Big Sur) and later due to limitations from Apple. You must setup the Private API to gain this feature.",
+                            style: context.theme.textTheme.bodyLarge),
+                        backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
+                        actions: <Widget>[
+                          TextButton(
+                            child: Text("Close",
+                                style: context.theme.textTheme.bodyLarge!
+                                    .copyWith(color: context.theme.colorScheme.primary)),
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                            },
                           ),
-                          content: Text(
-                              "Creating group chats from BlueBubbles is not possible on macOS 11 (Big Sur) and later due to limitations from Apple. You must setup the Private API to gain this feature.",
-                              style: context.theme.textTheme.bodyLarge),
-                          backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
-                          actions: <Widget>[
-                            TextButton(
-                              child: Text("Close",
-                                  style: context.theme.textTheme.bodyLarge!
-                                      .copyWith(color: context.theme.colorScheme.primary)),
-                              onPressed: () {
-                                Navigator.of(context).pop();
-                              },
-                            ),
-                          ],
-                        );
-                      });
-                },
-              ),
-          ],
-        ),
+                        ],
+                      );
+                    });
+              },
+            ),
+        ],
       ),
       body: FocusScope(
         child: Column(

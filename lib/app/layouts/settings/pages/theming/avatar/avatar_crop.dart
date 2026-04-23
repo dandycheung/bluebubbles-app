@@ -1,4 +1,5 @@
 import 'package:bluebubbles/helpers/helpers.dart';
+import 'package:bluebubbles/app/wrappers/bb_app_bar.dart';
 import 'package:bluebubbles/app/wrappers/bb_scaffold.dart';
 import 'package:bluebubbles/database/models.dart';
 import 'package:bluebubbles/services/services.dart';
@@ -90,39 +91,24 @@ class _AvatarCropState extends State<AvatarCrop> with ThemeHelpers {
   @override
   Widget build(BuildContext context) {
     return BBScaffold(
-      appBar: PreferredSize(
-        preferredSize: Size(NavigationSvc.width(context), kIsDesktop ? 80 : 50),
-        child: AppBar(
-          systemOverlayStyle: context.theme.colorScheme.brightness == Brightness.dark
-              ? SystemUiOverlayStyle.light
-              : SystemUiOverlayStyle.dark,
-          toolbarHeight: kIsDesktop ? 80 : 50,
-          elevation: 0,
-          scrolledUnderElevation: 3,
-          surfaceTintColor: context.theme.colorScheme.primary,
-          leading: buildBackButton(context),
-          backgroundColor: headerColor,
-          centerTitle: iOS,
-          title: Text(
-            "Select & Crop Avatar",
-            style: context.theme.textTheme.titleLarge,
+      appBar: BBAppBar(
+        titleText: "Select & Crop Avatar",
+        leading: buildBackButton(context),
+        actions: [
+          AbsorbPointer(
+            absorbing: _imageData == null || _isLoading,
+            child: TextButton(
+                child: Text("SAVE",
+                    style: context.theme.textTheme.bodyLarge!.apply(
+                        color: _imageData == null || _isLoading
+                            ? context.theme.colorScheme.outline
+                            : context.theme.colorScheme.primary)),
+                onPressed: () {
+                  showSavingAvatarDialog();
+                  _cropController.crop();
+                }),
           ),
-          actions: [
-            AbsorbPointer(
-              absorbing: _imageData == null || _isLoading,
-              child: TextButton(
-                  child: Text("SAVE",
-                      style: context.theme.textTheme.bodyLarge!.apply(
-                          color: _imageData == null || _isLoading
-                              ? context.theme.colorScheme.outline
-                              : context.theme.colorScheme.primary)),
-                  onPressed: () {
-                    showSavingAvatarDialog();
-                    _cropController.crop();
-                  }),
-            ),
-          ],
-        ),
+        ],
       ),
       body: SizedBox(
         width: double.infinity,

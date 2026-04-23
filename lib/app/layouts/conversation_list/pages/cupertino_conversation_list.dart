@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:bluebubbles/database/models.dart';
+import 'package:bluebubbles/app/wrappers/bb_app_bar.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/app/layouts/conversation_list/pages/conversation_list.dart';
 import 'package:bluebubbles/app/layouts/conversation_list/widgets/tile/conversation_tile.dart';
@@ -11,7 +12,6 @@ import 'package:bluebubbles/app/wrappers/scrollbar_wrapper.dart';
 import 'package:bluebubbles/services/services.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_acrylic/flutter_acrylic.dart';
 import 'package:get/get.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
@@ -61,14 +61,11 @@ class CupertinoConversationListState extends State<CupertinoConversationList> wi
               ? ConversationListFAB(parentController: controller)
               : const SizedBox.shrink()),
       appBar: showArchived || showUnknown
-          ? AppBar(
+          ? BBAppBar(
+              titleText: showArchived ? "Archive" : "Unknown Senders",
               leading: buildBackButton(context),
-              elevation: 0,
-              systemOverlayStyle:
-                  brightness == Brightness.dark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
               centerTitle: true,
               backgroundColor: Colors.transparent,
-              title: Text(showArchived ? "Archive" : "Unknown Senders", style: context.theme.textTheme.titleLarge),
             )
           : null,
       body: Stack(

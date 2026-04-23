@@ -1,4 +1,5 @@
 import 'package:bluebubbles/helpers/helpers.dart';
+import 'package:bluebubbles/app/wrappers/bb_app_bar.dart';
 import 'package:bluebubbles/app/wrappers/bb_scaffold.dart';
 import 'package:bluebubbles/app/wrappers/scrollbar_wrapper.dart';
 import 'package:bluebubbles/app/wrappers/theme_switcher.dart';
@@ -47,25 +48,12 @@ class SettingsScaffold extends StatelessWidget {
       backgroundColor: SettingsSvc.settings.skin.value == Skins.Material ? tileColor : headerColor,
       appBar: SettingsSvc.settings.skin.value == Skins.Samsung
           ? null
-          : PreferredSize(
-                preferredSize: Size(NavigationSvc.width(context), extend ? 80 : 50),
-                child: AppBar(
-                  systemOverlayStyle: context.theme.colorScheme.brightness == Brightness.dark
-                      ? SystemUiOverlayStyle.light
-                      : SystemUiOverlayStyle.dark,
-                  toolbarHeight: extend ? 80 : 50,
-                  elevation: 0,
-                  scrolledUnderElevation: 3,
-                  surfaceTintColor: context.theme.colorScheme.primary,
-                  leading: leading ?? buildBackButton(context),
-                  backgroundColor: headerColor,
-                  centerTitle: SettingsSvc.settings.skin.value == Skins.iOS,
-                  title: Text(
-                    title,
-                    style: context.theme.textTheme.titleLarge,
-                  ),
-                  actions: actions,
-                ),
+          : BBAppBar(
+                titleText: title,
+                leading: leading ?? buildBackButton(context),
+                backgroundColor: headerColor,
+                toolbarHeight: extend ? 80 : 50,
+                actions: actions,
               ),
       floatingActionButton: fab,
       extendBodyBehindAppBar: false,

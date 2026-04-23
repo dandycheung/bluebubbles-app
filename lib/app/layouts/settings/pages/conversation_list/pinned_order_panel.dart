@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import 'package:bluebubbles/app/wrappers/bb_app_bar.dart';
 import 'package:bluebubbles/app/wrappers/bb_scaffold.dart';
 import 'package:bluebubbles/app/layouts/conversation_list/pages/conversation_list.dart';
 import 'package:bluebubbles/app/layouts/conversation_list/widgets/tile/conversation_tile.dart';
@@ -21,28 +22,16 @@ class PinnedOrderPanel extends StatelessWidget {
     return Obx(
         () => BBScaffold(
           appBar: PreferredSize(
-            preferredSize: Size(NavigationSvc.width(context), 80),
+            preferredSize: Size(NavigationSvc.width(context), kIsDesktop ? 80 : 50),
             child: ClipRRect(
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-                child: AppBar(
-                  systemOverlayStyle:
-                      ThemeData.estimateBrightnessForColor(context.theme.colorScheme.surface) == Brightness.dark
-                          ? SystemUiOverlayStyle.light
-                          : SystemUiOverlayStyle.dark,
-                  toolbarHeight: kIsDesktop ? 80 : 50,
-                  elevation: 0,
-                  scrolledUnderElevation: 3,
-                  surfaceTintColor: context.theme.colorScheme.primary,
+                child: BBAppBar(
+                  titleText: "Pinned Chat Order",
                   leading: buildBackButton(context),
                   backgroundColor: SettingsSvc.settings.windowEffect.value != WindowEffect.disabled
                       ? Colors.transparent
                       : context.theme.colorScheme.surface,
-                  centerTitle: SettingsSvc.settings.skin.value == Skins.iOS,
-                  title: Text(
-                    "Pinned Chat Order",
-                    style: context.theme.textTheme.titleLarge,
-                  ),
                   actions: [
                     TextButton(
                         child: Text("Reset",

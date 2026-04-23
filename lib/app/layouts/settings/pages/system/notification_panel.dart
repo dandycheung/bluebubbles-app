@@ -1,4 +1,5 @@
 import 'package:bluebubbles/helpers/helpers.dart';
+import 'package:bluebubbles/app/wrappers/bb_app_bar.dart';
 import 'package:bluebubbles/app/wrappers/bb_scaffold.dart';
 import 'package:bluebubbles/app/layouts/conversation_list/pages/conversation_list.dart';
 import 'package:bluebubbles/app/layouts/conversation_list/widgets/tile/conversation_tile.dart';
@@ -205,24 +206,10 @@ class _NotificationPanelState extends State<NotificationPanel> with SingleTicker
               backgroundColor: material ? tileColor : headerColor,
               appBar: samsung && index.value == 0
                   ? null
-                  : PreferredSize(
-                      preferredSize: Size(NavigationSvc.width(context), 50),
-                      child: AppBar(
-                        systemOverlayStyle: context.theme.colorScheme.brightness == Brightness.dark
-                            ? SystemUiOverlayStyle.light
-                            : SystemUiOverlayStyle.dark,
-                        toolbarHeight: 50,
-                        elevation: 0,
-                        scrolledUnderElevation: 3,
-                        surfaceTintColor: context.theme.colorScheme.primary,
-                        leading: buildBackButton(context),
-                        backgroundColor: headerColor,
-                        centerTitle: iOS,
-                        title: Text(
-                          "Notifications",
-                          style: context.theme.textTheme.titleLarge,
-                        ),
-                      ),
+                  : BBAppBar(
+                      titleText: "Notifications",
+                      leading: buildBackButton(context),
+                      toolbarHeight: 50,
                     ),
               body: TabBarView(
                 physics: ThemeSwitcher.getScrollPhysics(),
