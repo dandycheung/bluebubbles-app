@@ -185,6 +185,7 @@ class _ModeGroup extends StatelessWidget {
             selectionIsPending: _selectionIsPending,
             onTap: () => controller.applyTheme(context, defaultTheme!),
             onLongPress: () => _showContextMenu(context, defaultTheme!),
+            onSecondaryTap: () => _showContextMenu(context, defaultTheme!),
           ),
           const SizedBox(height: 14),
         ],
@@ -209,6 +210,7 @@ class _ModeGroup extends StatelessWidget {
                     selectionIsPending: _selectionIsPending,
                     onTap: () => controller.applyTheme(context, t),
                     onLongPress: () => _showContextMenu(context, t),
+                    onSecondaryTap: () => _showContextMenu(context, t),
                   ),
                 );
               },
@@ -237,6 +239,7 @@ class _ModeGroup extends StatelessWidget {
                     selectionIsPending: _selectionIsPending,
                     onTap: () => controller.applyTheme(context, t),
                     onLongPress: () => _showContextMenu(context, t),
+                    onSecondaryTap: () => _showContextMenu(context, t),
                   ),
                 );
               },
@@ -501,6 +504,7 @@ class _DefaultCard extends StatelessWidget {
     required this.selectionIsPending,
     required this.onTap,
     this.onLongPress,
+    this.onSecondaryTap,
   });
 
   final ThemeStruct struct;
@@ -509,6 +513,7 @@ class _DefaultCard extends StatelessWidget {
   final bool selectionIsPending;
   final VoidCallback onTap;
   final VoidCallback? onLongPress;
+  final VoidCallback? onSecondaryTap;
 
   @override
   Widget build(BuildContext context) {
@@ -529,6 +534,7 @@ class _DefaultCard extends StatelessWidget {
 
     return GestureDetector(
       onTap: onTap,
+      onSecondaryTap: onSecondaryTap,
       onLongPress: onLongPress,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
@@ -610,6 +616,7 @@ class _ThemeCard extends StatelessWidget {
     required this.selectionIsPending,
     required this.onTap,
     this.onLongPress,
+    this.onSecondaryTap,
   });
 
   final ThemeStruct struct;
@@ -618,6 +625,7 @@ class _ThemeCard extends StatelessWidget {
   final bool selectionIsPending;
   final VoidCallback onTap;
   final VoidCallback? onLongPress;
+  final VoidCallback? onSecondaryTap;
 
   @override
   Widget build(BuildContext context) {
@@ -636,6 +644,7 @@ class _ThemeCard extends StatelessWidget {
 
     return GestureDetector(
       onTap: onTap,
+      onSecondaryTap: onSecondaryTap,
       onLongPress: onLongPress,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
@@ -787,7 +796,7 @@ class _ImportDialogState extends State<_ImportDialog> {
   }
 
   Future<void> _pickFile() async {
-    final result = await FilePicker.platform.pickFiles(
+    final result = await FilePicker.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['json', 'txt'],
     );

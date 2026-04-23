@@ -138,6 +138,7 @@ class SocketService {
         customCheckOptions: [
           InternetCheckOption(
             uri: Uri.parse(serverAddress),
+            timeout: const Duration(seconds: 3),
             responseStatusFn: (_) => true,
           ),
         ],
@@ -146,11 +147,11 @@ class SocketService {
 
       internetConnectionListener = internetConnection!.onStatusChange.listen((InternetStatus status) {
         Logger.info("Internet status changed: $status");
-        switch (status) {
-          case InternetStatus.connected:
-            socket?.connect();
-          case InternetStatus.disconnected:
-            socket?.disconnect();
+        if (status == InternetStatus.disconnected) {
+            handleStatusUpdate(SocketState.error, null);
+        } else if (state.value == SocketState.error) {
+          Logger.info("Internet reconnected, restarting socket...");
+          restartSocket();
         }
       });
     }

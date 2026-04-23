@@ -16,6 +16,7 @@ import 'package:logger/logger.dart' as LoggerFactory;
 
 import 'outputs/debug_console_output.dart';
 import 'outputs/file_output_wrapper.dart';
+import 'outputs/rotating_file_output.dart';
 
 // ignore: non_constant_identifier_names
 BaseLogger get Logger => GetIt.I<BaseLogger>();
@@ -38,18 +39,17 @@ class BaseLogger {
   final latestLogName = 'bluebubbles-latest.log';
 
   LoggerFactory.LogOutput get fileOutput {
-    final baseFileOutput = LoggerFactory.AdvancedFileOutput(
-        path: logDir,
-        maxFileSizeKB: 1024, // 1 MB
-        maxRotatedFilesCount: 5,
-        maxDelay: const Duration(seconds: 5),
-        latestFileName: latestLogName,
-        overrideExisting: false,
-        encoding: utf8,
-        fileNameFormatter: (timestamp) {
-          final now = DateTime.now();
-          return 'bluebubbles-${now.toIso8601String().split('T').first}-${now.millisecondsSinceEpoch ~/ 1000}.log';
-        });
+    final baseFileOutput = RotatingFileOutput(
+      dirPath: logDir,
+      latestFileName: latestLogName,
+      maxFileSizeKB: 1024,
+      maxRotatedFilesCount: 5,
+      encoding: utf8,
+      fileNameFormatter: (_) {
+        final now = DateTime.now();
+        return 'bluebubbles-${now.toIso8601String().split('T').first}-${now.millisecondsSinceEpoch ~/ 1000}.log';
+      },
+    );
 
     // Wrap with ANSI stripper to ensure file is valid UTF-8
     return FileOutputWrapper(baseFileOutput);

@@ -481,12 +481,29 @@ class SettingsService {
     final version = release.tagName!.split("+").first.replaceAll("v", "");
     final code = release.tagName!.split("+").last.split('-').first;
     final isDesktopRelease = release.tagName!.split('+').last.contains('desktop');
-    final buildNumber =
-        FilesystemSvc.packageInfo.buildNumber.lastChars(min(4, FilesystemSvc.packageInfo.buildNumber.length));
-    if (int.parse(code) <= int.parse(buildNumber) ||
-        PrefsSvc.i.getString("client-update-check") == code ||
-        (Platform.isAndroid && isDesktopRelease)) {
-      available = false;
+
+    String buildNumber = "";
+    if (Platform.isAndroid) {
+      buildNumber = FilesystemSvc.packageInfo.buildNumber.lastChars(min(4, FilesystemSvc.packageInfo.buildNumber.length));
+      if (int.parse(code) <= int.parse(buildNumber) ||
+          PrefsSvc.i.getString("client-update-check") == code ||
+          (Platform.isAndroid && isDesktopRelease)) {
+        available = false;
+      }
+    } else {
+      final latestRelease = Version(
+        int.parse(version.split(".")[0]),
+        int.parse(version.split(".")[1]),
+        int.parse(version.split(".")[2]),
+      );
+      final current = Version(
+        int.parse(FilesystemSvc.packageInfo.version.split(".")[0]),
+        int.parse(FilesystemSvc.packageInfo.version.split(".")[1]),
+        int.parse(FilesystemSvc.packageInfo.version.split(".")[2]),
+      );
+      if (current.compareTo(latestRelease) < 0) {
+        available = true;
+      }
     }
 
     return {

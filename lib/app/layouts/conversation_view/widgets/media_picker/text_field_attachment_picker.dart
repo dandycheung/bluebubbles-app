@@ -491,7 +491,7 @@ class _FeatureButton extends StatelessWidget {
   }
 
   Future<void> _handleFilePicker() async {
-    final res = await FilePicker.platform.pickFiles(
+    final res = await FilePicker.pickFiles(
       withReadStream: true,
       allowMultiple: true,
     );

@@ -555,9 +555,13 @@ class StartupTasks {
 
     // Start the incremental sync on open, rather than on the socket connection.
     // Detect localhost first so the sync (and its isolate) use the local address.
-    // Don't need to await these calls
+    // Don't need to await these calls.
+    // On desktop, skip when the socket is already connected — real-time delivery covers
+    // that case and the socket (re)connect path triggers its own sync when needed.
     if (!Platform.isAndroid) {
-      SyncSvc.startIncrementalSync();
+      if (SocketSvc.state.value != SocketState.connected) {
+        SyncSvc.startIncrementalSync();
+      }
     } else if (!LifecycleSvc.hasResumed ||
         (LifecycleSvc.currentState == AppLifecycleState.resumed && LifecycleSvc.wasPaused)) {
       SyncSvc.startIncrementalSync();

@@ -42,7 +42,7 @@ class Handle {
 
     Avatar _avatar = DiceBearBuilder(
       seed: address,
-      sprite: DiceBearSprite.miniavs,
+      sprite: DiceBearStyle.miniavs,
       // Random light color scheme with a custom background color to prevent white backgrounds on light mode
       backgroundColor: HexColor(backgroundColor),
     ).build();

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:bluebubbles/database/database.dart';
@@ -30,7 +31,8 @@ class ContactServiceV2 {
   /// Whether we have permission to access contacts
   bool _hasContactAccess = false;
 
-  void Function()? _contactChangeListener;
+  void Function(void)? _contactChangeListener;
+  StreamSubscription<void>? _contactChangeSubscription;
 
   bool get hasContactAccessSync {
     return _hasContactAccess;
@@ -84,8 +86,8 @@ class ContactServiceV2 {
 
       // Subscribe to device contact change events (mobile only)
       if (!kIsDesktop && !kIsWeb) {
-        _contactChangeListener = () => syncContactsToHandles(wait: false);
-        fc.FlutterContacts.addListener(_contactChangeListener!);
+        _contactChangeListener = (_) => syncContactsToHandles(wait: false);
+        _contactChangeSubscription = fc.FlutterContacts.onDatabaseChange.listen(_contactChangeListener!);
       }
     } else {
       Logger.info('[ContactServiceV2] Headless mode, skipping contact sync opeerations');
@@ -345,7 +347,7 @@ class ContactServiceV2 {
   /// Remove the contact change listener and release resources
   void dispose() {
     if (_contactChangeListener != null) {
-      fc.FlutterContacts.removeListener(_contactChangeListener!);
+      _contactChangeSubscription?.cancel();
       _contactChangeListener = null;
     }
   }

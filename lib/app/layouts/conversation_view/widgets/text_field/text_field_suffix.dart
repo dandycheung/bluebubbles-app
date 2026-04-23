@@ -252,8 +252,10 @@ class _RecordingButton extends StatelessWidget {
               return;
             }
             await recorderController!.record(
-              sampleRate: 44100,
-              bitRate: 320000,
+              recorderSettings: const RecorderSettings(
+                sampleRate: 44100,
+                bitRate: 320000,
+              ),
             );
           } else {
             // Stop recording and show dialog

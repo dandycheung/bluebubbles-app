@@ -186,7 +186,7 @@ class HandleSelectorViewState extends State<HandleSelectorView> with ThemeHelper
                                     child: InkWell(
                                         onTap: () {
                                           widget.onSelect(handle);
-                                          Navigator.of(context, rootNavigator: true).pop();
+                                          Navigator.of(context).pop();
                                         },
                                         child: ListTile(
                                             mouseCursor: MouseCursor.defer,

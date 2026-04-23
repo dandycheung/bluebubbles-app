@@ -154,7 +154,7 @@ class _AvatarCropState extends State<AvatarCrop> with ThemeHelpers {
                   backgroundColor: context.theme.colorScheme.primaryContainer,
                 ),
                 onPressed: () async {
-                  final res = await FilePicker.platform
+                  final res = await FilePicker
                       .pickFiles(withData: true, type: FileType.custom, allowedExtensions: ['png', 'jpg', 'jpeg']);
                   if (res == null || res.files.isEmpty || res.files.first.bytes == null) return;
 

@@ -418,7 +418,7 @@ class ThemesService {
       return ThemePair(light: light, dark: dark);
     }
 
-    CorePalette palette = CorePalette.of(desktopAccentColor!.toARGB32());
+    CorePalette palette = CorePalette.of(desktopAccentColor!.value);
 
     light = light.copyWith(
       colorScheme: light.colorScheme.copyWith(

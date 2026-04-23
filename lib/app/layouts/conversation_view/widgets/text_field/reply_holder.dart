@@ -166,11 +166,11 @@ class _ReplyText extends StatelessWidget {
       TextSpan(children: [
         if (isIOS && reply != null) const TextSpan(text: "Replying to "),
         if (reply != null)
-          TextSpan(
-            text: message!.isFromMe! ? 'Yourself' : message!.handleRelation.target?.displayName ?? 'Unknown',
-            style: context.textTheme.bodyMedium!.copyWith(
+          TextSpan(children: MessageHelper.buildEmojiText(
+            message!.isFromMe! ? 'Yourself' : message!.handleRelation.target?.displayName ?? 'Unknown',
+            context.textTheme.bodyMedium!.copyWith(
               fontWeight: isIOS ? FontWeight.bold : FontWeight.w400,
-            ),
+            )),
           ),
         if (date != null)
           TextSpan(
@@ -179,12 +179,12 @@ class _ReplyText extends StatelessWidget {
           ),
         if (!isIOS) const TextSpan(text: "\n"),
         if (reply != null)
-          TextSpan(
-            text: "${isIOS ? " - " : ""}${_getNotificationText()}",
-            style: context.textTheme.bodyMedium!
+          TextSpan(children: MessageHelper.buildEmojiText(
+            "${isIOS ? " - " : ""}${_getNotificationText()}",
+            context.textTheme.bodyMedium!
                 .copyWith(fontStyle: isIOS ? FontStyle.italic : null)
                 .apply(fontSizeFactor: isIOS ? 1 : 1.15),
-          ),
+          )),
       ]),
       style: context.textTheme.labelLarge!.copyWith(
         color: context.theme.colorScheme.onSurfaceVariant,

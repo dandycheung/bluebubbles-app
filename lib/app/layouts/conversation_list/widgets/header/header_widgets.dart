@@ -70,7 +70,7 @@ class OverflowMenu extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Obx(() {
-      if (SettingsSvc.settings.skin.value == Skins.iOS && !(kIsDesktop || kIsWeb)) {
+      if (SettingsSvc.settings.skin.value == Skins.iOS) {
         return CupertinoOverflowMenu(extraItems: extraItems, controller: controller);
       }
 
@@ -306,31 +306,17 @@ class _MaterialAvatarMenuState extends State<MaterialAvatarMenu> with SingleTick
   Widget build(BuildContext context) {
     return CompositedTransformTarget(
       link: _layerLink,
-      child: Padding(
-        padding: const EdgeInsets.only(left: 6, right: 10),
-        child: GestureDetector(
-          onTap: _showMenu,
-          child: Container(
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: SettingsSvc.settings.monetTheming.value != Monet.none
-                    ? context.theme.colorScheme.primary
-                    : ThemeSvc.inDarkMode(context)
-                        ? Colors.white
-                        : Colors.black,
-                width: 2,
-              ),
-            ),
-            padding: const EdgeInsets.all(2),
-            child: const ContactAvatarWidget(
-              size: 32,
-              preferHighResAvatar: true,
-              borderThickness: 0.1,
-              editable: false,
-              fontSize: 12,
-              scaleSize: false,
-            ),
+      child: GestureDetector(
+        onTap: _showMenu,
+        child: Container(
+          padding: const EdgeInsets.all(2),
+          child: const ContactAvatarWidget(
+            size: 32,
+            preferHighResAvatar: true,
+            borderThickness: 0.1,
+            editable: false,
+            fontSize: 12,
+            scaleSize: false,
           ),
         ),
       ),
@@ -399,6 +385,8 @@ class CupertinoOverflowMenu extends StatelessWidget {
       textStyle: TextStyle(
         color: context.theme.colorScheme.onSurface,
       ),
+      onHoverTextColor: context.theme.colorScheme.onSurface,
+      onHoverBackgroundColor: context.theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
       subtitleStyle: TextStyle(
         color: context.theme.colorScheme.onSurface.withValues(alpha: 0.7),
       ),

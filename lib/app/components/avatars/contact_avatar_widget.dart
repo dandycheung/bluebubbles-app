@@ -110,7 +110,7 @@ class _ContactAvatarWidgetState extends State<ContactAvatarWidget> with ThemeHel
     if (!isNullOrEmpty(gradient) && gradient[0] == color) {
       widget.handle!.color = null;
     } else {
-      widget.handle!.color = color.toARGB32().toRadixString(16);
+      widget.handle!.color = color.value.toRadixString(16);
     }
 
     await widget.handle!.saveAsync(updateColor: true);
