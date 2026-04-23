@@ -393,6 +393,7 @@ class CupertinoOverflowMenu extends StatelessWidget {
     );
 
     return PullDownButton(
+      animationAlignmentOverride: Alignment.topRight,
       routeTheme: PullDownMenuRouteTheme(
           backgroundColor: context.theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.9)),
       itemBuilder: (context) => [

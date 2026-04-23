@@ -130,7 +130,7 @@ class _FindMyPageState extends State<FindMyPage> with SingleTickerProviderStateM
       child: Obx(
         () => CustomScrollView(
           controller: controller.friendsController,
-          physics: (kIsDesktop || kIsWeb) ? const NeverScrollableScrollPhysics() : ThemeSwitcher.getScrollPhysics(),
+          physics: kIsWeb ? const NeverScrollableScrollPhysics() : ThemeSwitcher.getScrollPhysics(),
           slivers: [
             if (context.samsung) _buildSamsungAppBar(context, "FindMy Friends"),
             if (!context.samsung) FindMyFriendsTabView(controller: controller),
@@ -159,7 +159,7 @@ class _FindMyPageState extends State<FindMyPage> with SingleTickerProviderStateM
       child: Obx(
         () => CustomScrollView(
           controller: controller.devicesController,
-          physics: (kIsDesktop || kIsWeb) ? const NeverScrollableScrollPhysics() : ThemeSwitcher.getScrollPhysics(),
+          physics: kIsWeb ? const NeverScrollableScrollPhysics() : ThemeSwitcher.getScrollPhysics(),
           slivers: [
             if (context.samsung) _buildSamsungAppBar(context, "FindMy Devices"),
             if (!context.samsung) FindMyDevicesTabView(controller: controller),
@@ -188,7 +188,7 @@ class _FindMyPageState extends State<FindMyPage> with SingleTickerProviderStateM
       child: Obx(
         () => CustomScrollView(
           controller: controller.itemsController,
-          physics: (kIsDesktop || kIsWeb) ? const NeverScrollableScrollPhysics() : ThemeSwitcher.getScrollPhysics(),
+          physics: kIsWeb ? const NeverScrollableScrollPhysics() : ThemeSwitcher.getScrollPhysics(),
           slivers: [
             if (context.samsung) _buildSamsungAppBar(context, "FindMy Items"),
             if (!context.samsung) FindMyItemsTabView(controller: controller),
