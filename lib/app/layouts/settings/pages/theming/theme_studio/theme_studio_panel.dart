@@ -224,8 +224,8 @@ class ThemeStudioController extends StatefulController {
 
   Future<void> generateFromImage(BuildContext context) async {
     if (!isEditable) return;
-    final res = await FilePicker
-        .pickFiles(withData: true, type: FileType.custom, allowedExtensions: ['png', 'jpg', 'jpeg']);
+    final res =
+        await FilePicker.pickFiles(withData: true, type: FileType.custom, allowedExtensions: ['png', 'jpg', 'jpeg']);
     if (res == null || res.files.isEmpty || res.files.first.bytes == null) return;
     final image = MemoryImage(res.files.first.bytes!);
     final swatch = await ColorScheme.fromImageProvider(

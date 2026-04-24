@@ -80,11 +80,12 @@ class _NewChatCreatorState extends State<NewChatCreator> with ThemeHelpers<NewCh
   @override
   Widget build(BuildContext context) {
     return BBScaffold(
+      safeAreaTop: true,
       appBar: BBAppBar(
         titleText: 'New Message',
         leading: buildBackButton(context),
-        backgroundColor: Colors.transparent,
-        toolbarHeight: kIsDesktop ? 90 : 50,
+        // backgroundColor: Colors.transparent,
+        toolbarHeight: kIsDesktop ? 90 : 60,
       ),
       body: FocusScope(
         child: Column(
@@ -215,11 +216,7 @@ class _TextFieldArea extends StatelessWidget {
       final sending = controller.isSending.value;
 
       return Padding(
-        padding: EdgeInsets.only(
-          left: 5.0,
-          top: 10.0,
-          bottom: 5.0 + MediaQuery.of(context).viewPadding.bottom,
-        ),
+        padding: const EdgeInsets.all(10.0),
         child: Theme(
           data: context.theme.copyWith(
             primaryColor: context.theme.colorScheme.bubble(context, isIMsg),

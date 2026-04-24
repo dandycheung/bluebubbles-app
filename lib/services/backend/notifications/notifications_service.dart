@@ -78,11 +78,13 @@ class NotificationsService {
       const AndroidInitializationSettings initializationSettingsAndroid = AndroidInitializationSettings('ic_stat_icon');
       const InitializationSettings initializationSettings =
           InitializationSettings(android: initializationSettingsAndroid);
-      await flnp.initialize(settings: initializationSettings, onDidReceiveNotificationResponse: (NotificationResponse? response) {
-        if (response?.payload != null) {
-          IntentsSvc.openChat(response!.payload);
-        }
-      });
+      await flnp.initialize(
+          settings: initializationSettings,
+          onDidReceiveNotificationResponse: (NotificationResponse? response) {
+            if (response?.payload != null) {
+              IntentsSvc.openChat(response!.payload);
+            }
+          });
       final details = await flnp.getNotificationAppLaunchDetails();
       if (details != null && details.didNotificationLaunchApp && details.notificationResponse?.payload != null) {
         IntentsSvc.openChat(details.notificationResponse!.payload!);

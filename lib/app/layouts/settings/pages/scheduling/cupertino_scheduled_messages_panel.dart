@@ -350,12 +350,9 @@ class _CupertinoScheduledMessagesPanelState extends State<CupertinoScheduledMess
               if (oneTimeCompleted.isNotEmpty)
                 _buildSection(
                   items: oneTimeCompleted,
-                  iconBuilder: (item) => item.status == "error"
-                      ? CupertinoIcons.exclamationmark_circle
-                      : CupertinoIcons.checkmark_circle,
-                  iconColorBuilder: (item) => item.status == "error"
-                      ? context.theme.colorScheme.error
-                      : Colors.green,
+                  iconBuilder: (item) =>
+                      item.status == "error" ? CupertinoIcons.exclamationmark_circle : CupertinoIcons.checkmark_circle,
+                  iconColorBuilder: (item) => item.status == "error" ? context.theme.colorScheme.error : Colors.green,
                   subtitleBuilder: (item) {
                     if (item.status == "error") return item.error ?? "Failed to send";
                     return "Sent "

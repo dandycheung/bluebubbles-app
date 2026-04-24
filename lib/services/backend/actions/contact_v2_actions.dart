@@ -262,11 +262,13 @@ class ContactV2Actions {
             }
 
             for (final phone in rawContact.phones) {
-              final label = phone.label.label == fc.PhoneLabel.custom ? phone.label.customLabel ?? '' : phone.label.label.name;
+              final label =
+                  phone.label.label == fc.PhoneLabel.custom ? phone.label.customLabel ?? '' : phone.label.label.name;
               contactPhones.add(ContactPhone(number: phone.number, label: label));
             }
             for (final email in rawContact.emails) {
-              final label = email.label == fc.EmailLabel.custom ? email.label.customLabel ?? '' : email.label.label.name;
+              final label =
+                  email.label == fc.EmailLabel.custom ? email.label.customLabel ?? '' : email.label.label.name;
               contactEmails.add(ContactEmail(address: email.address, label: label));
             }
           } else if (rawContact is ContactV2) {

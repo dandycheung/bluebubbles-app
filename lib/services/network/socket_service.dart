@@ -148,7 +148,7 @@ class SocketService {
       internetConnectionListener = internetConnection!.onStatusChange.listen((InternetStatus status) {
         Logger.info("Internet status changed: $status");
         if (status == InternetStatus.disconnected) {
-            handleStatusUpdate(SocketState.error, null);
+          handleStatusUpdate(SocketState.error, null);
         } else if (state.value == SocketState.error) {
           Logger.info("Internet reconnected, restarting socket...");
           restartSocket();
