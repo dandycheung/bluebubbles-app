@@ -564,8 +564,8 @@ class _BackupRestorePanelState extends State<BackupRestorePanel> with ThemeHelpe
                               ),
                             ),
                             onTap: () async {
-                              final res = await FilePicker
-                                  .pickFiles(withData: true, type: FileType.custom, allowedExtensions: ["json"]);
+                              final res = await FilePicker.pickFiles(
+                                  withData: true, type: FileType.custom, allowedExtensions: ["json"]);
                               if (res == null || res.files.isEmpty || res.files.first.bytes == null) return;
                               showDialog(
                                 context: context,
@@ -907,8 +907,8 @@ class _BackupRestorePanelState extends State<BackupRestorePanel> with ThemeHelpe
                               ),
                             ),
                             onTap: () async {
-                              final res = await FilePicker
-                                  .pickFiles(withData: true, type: FileType.custom, allowedExtensions: ["json"]);
+                              final res = await FilePicker.pickFiles(
+                                  withData: true, type: FileType.custom, allowedExtensions: ["json"]);
                               if (res == null || res.files.isEmpty || res.files.first.bytes == null) return;
 
                               showDialog(

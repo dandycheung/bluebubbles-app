@@ -166,11 +166,12 @@ class _ReplyText extends StatelessWidget {
       TextSpan(children: [
         if (isIOS && reply != null) const TextSpan(text: "Replying to "),
         if (reply != null)
-          TextSpan(children: MessageHelper.buildEmojiText(
-            message!.isFromMe! ? 'Yourself' : message!.handleRelation.target?.displayName ?? 'Unknown',
-            context.textTheme.bodyMedium!.copyWith(
-              fontWeight: isIOS ? FontWeight.bold : FontWeight.w400,
-            )),
+          TextSpan(
+            children: MessageHelper.buildEmojiText(
+                message!.isFromMe! ? 'Yourself' : message!.handleRelation.target?.displayName ?? 'Unknown',
+                context.textTheme.bodyMedium!.copyWith(
+                  fontWeight: isIOS ? FontWeight.bold : FontWeight.w400,
+                )),
           ),
         if (date != null)
           TextSpan(
@@ -179,7 +180,8 @@ class _ReplyText extends StatelessWidget {
           ),
         if (!isIOS) const TextSpan(text: "\n"),
         if (reply != null)
-          TextSpan(children: MessageHelper.buildEmojiText(
+          TextSpan(
+              children: MessageHelper.buildEmojiText(
             "${isIOS ? " - " : ""}${_getNotificationText()}",
             context.textTheme.bodyMedium!
                 .copyWith(fontStyle: isIOS ? FontStyle.italic : null)

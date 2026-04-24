@@ -44,7 +44,7 @@ android {
 
     defaultConfig {
         applicationId "com.bluebubbles.messaging"
-        minSdkVersion flutter.minSdkVersion
+        minSdkVersion 26
         targetSdkVersion 35
         versionCode 20002000 + flutterVersionCode.toInteger()
         versionName flutterVersionName

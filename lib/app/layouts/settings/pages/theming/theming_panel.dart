@@ -518,8 +518,8 @@ class _ThemingPanelState extends CustomState<ThemingPanel, void, ThemingPanelCon
                           onTap: () async {
                             if (kIsWeb) {
                               try {
-                                final res = await FilePicker
-                                    .pickFiles(withData: true, type: FileType.custom, allowedExtensions: ["ttf"]);
+                                final res = await FilePicker.pickFiles(
+                                    withData: true, type: FileType.custom, allowedExtensions: ["ttf"]);
                                 if (res == null || res.files.isEmpty || res.files.first.bytes == null) return;
 
                                 final txn = FilesystemSvc.webDb.transaction("BBStore", idbModeReadWrite);

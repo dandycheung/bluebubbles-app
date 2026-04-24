@@ -484,7 +484,8 @@ class SettingsService {
 
     String buildNumber = "";
     if (Platform.isAndroid) {
-      buildNumber = FilesystemSvc.packageInfo.buildNumber.lastChars(min(4, FilesystemSvc.packageInfo.buildNumber.length));
+      buildNumber =
+          FilesystemSvc.packageInfo.buildNumber.lastChars(min(4, FilesystemSvc.packageInfo.buildNumber.length));
       if (int.parse(code) <= int.parse(buildNumber) ||
           PrefsSvc.i.getString("client-update-check") == code ||
           (Platform.isAndroid && isDesktopRelease)) {

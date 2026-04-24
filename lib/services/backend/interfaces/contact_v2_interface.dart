@@ -108,8 +108,7 @@ class ContactV2Interface {
   /// display contacts not yet linked to existing handles.
   static Future<List<fc.Contact>> getAddressBook() async {
     return await fc.FlutterContacts.getAll(
-      properties: {...fc.ContactProperties.allProperties, fc.ContactProperty.photoThumbnail}
-    );
+        properties: {...fc.ContactProperties.allProperties, fc.ContactProperty.photoThumbnail});
   }
 
   /// Get avatar data for a contact

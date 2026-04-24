@@ -87,8 +87,7 @@ class TextFieldIconBar extends StatelessWidget {
                                 ListTile(
                                   title: Text("Upload file", style: Theme.of(context).textTheme.bodyLarge),
                                   onTap: () async {
-                                    final res =
-                                        await FilePicker.pickFiles(withData: true, allowMultiple: true);
+                                    final res = await FilePicker.pickFiles(withData: true, allowMultiple: true);
                                     if (res == null || res.files.isEmpty || res.files.first.bytes == null) {
                                       return;
                                     }

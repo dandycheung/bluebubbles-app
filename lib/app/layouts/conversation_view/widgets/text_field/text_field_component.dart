@@ -3,7 +3,6 @@ import 'dart:math';
 import 'package:audio_waveforms/audio_waveforms.dart';
 import 'package:bluebubbles/app/components/custom/custom_bouncing_scroll_physics.dart';
 import 'package:bluebubbles/app/components/custom_text_editing_controllers.dart';
-import 'package:bluebubbles/app/layouts/camera/camera_screen.dart';
 import 'package:bluebubbles/app/layouts/conversation_view/dialogs/custom_mention_dialog.dart';
 import 'package:bluebubbles/app/layouts/conversation_view/widgets/media_picker/text_field_attachment_picker.dart';
 import 'package:bluebubbles/app/layouts/conversation_view/widgets/text_field/picked_attachments_holder.dart';
@@ -23,10 +22,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:pasteboard/pasteboard.dart';
 import 'package:path/path.dart' hide context;
-import 'package:permission_handler/permission_handler.dart';
 import 'package:supercharged/supercharged.dart';
 import 'package:universal_io/io.dart';
 
@@ -128,44 +125,6 @@ class TextFieldComponentState extends State<TextFieldComponent> {
 
   bool _showAttachmentPickerLocal = false;
 
-  Future<void> _openCamera({String type = 'camera'}) async {
-    bool granted = (await Permission.camera.request()).isGranted;
-    if (!granted) {
-      showSnackbar("Error", "Camera access was denied!");
-      return;
-    }
-
-    if (type == 'video') {
-      final micGranted = (await Permission.microphone.request()).isGranted;
-      if (!micGranted) {
-        showSnackbar("Error", "Microphone access was denied!");
-        return;
-      }
-    }
-
-    final XFile? file;
-    if (Platform.isAndroid && !kIsWeb) {
-      file = await Navigator.of(context).push<XFile?>(
-        MaterialPageRoute(
-          builder: (_) => CameraScreen(initialMode: type == 'video' ? 'video' : 'photo'),
-        ),
-      );
-    } else if (type == 'camera') {
-      file = await ImagePicker().pickImage(source: ImageSource.camera);
-    } else {
-      file = await ImagePicker().pickVideo(source: ImageSource.camera);
-    }
-
-    if (file != null) {
-      controller!.pickedAttachments.add(PlatformFile(
-        path: file.path,
-        name: file.path.split('/').last,
-        size: await file.length(),
-        bytes: await file.readAsBytes(),
-      ));
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final txtController = controller?.textController ?? textController;
@@ -176,333 +135,320 @@ class TextFieldComponentState extends State<TextFieldComponent> {
     final outerTheme = Theme.of(context);
     Widget textInput = Focus(
       onKeyEvent: (_, ev) => handleKey(_, ev, context, isChatCreator),
-      child: Padding(
-        padding: const EdgeInsets.only(right: 5.0),
-        child: ValueListenableBuilder<bool>(
-            valueListenable: isRecordingNotifier,
-            builder: (context, isRecording, child) {
-              return Container(
-                // Border is placed in the foregroundDecoration so it paints on top of
-                // child content (ReplyHolder, attachments, etc.) and remains visible
-                // at all corners instead of being covered by opaque children.
-                foregroundDecoration: iOS
-                    ? BoxDecoration(
-                        border: Border.fromBorderSide(BorderSide(
-                          color: (isRecording & iOS)
-                              ? context.theme.colorScheme.primary.withValues(alpha: 1.0)
-                              : context.theme.colorScheme.outlineVariant.withValues(alpha: 0.25),
-                          width: 1,
-                        )),
-                        borderRadius: BorderRadius.circular(20),
-                      )
-                    : null,
-                decoration: iOS
-                    ? const BoxDecoration(
-                        borderRadius: BorderRadius.all(Radius.circular(20)),
-                      )
-                    : BoxDecoration(
-                        color: context.theme.colorScheme.surfaceContainerHighest,
-                        borderRadius: BorderRadius.circular(20),
+      child: ValueListenableBuilder<bool>(
+          valueListenable: isRecordingNotifier,
+          builder: (context, isRecording, child) {
+            return Container(
+              // Border is placed in the foregroundDecoration so it paints on top of
+              // child content (ReplyHolder, attachments, etc.) and remains visible
+              // at all corners instead of being covered by opaque children.
+              foregroundDecoration: iOS
+                  ? BoxDecoration(
+                      border: Border.fromBorderSide(BorderSide(
+                        color: (isRecording & iOS)
+                            ? context.theme.colorScheme.primary.withValues(alpha: 1.0)
+                            : context.theme.colorScheme.outlineVariant.withValues(alpha: 0.25),
+                        width: 1,
+                      )),
+                      borderRadius: BorderRadius.circular(20),
+                    )
+                  : null,
+              decoration: iOS
+                  ? const BoxDecoration(
+                      borderRadius: BorderRadius.all(Radius.circular(20)),
+                    )
+                  : BoxDecoration(
+                      color: context.theme.colorScheme.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+              clipBehavior: Clip.antiAlias,
+              child: AnimatedSize(
+                duration: const Duration(milliseconds: 400),
+                alignment: Alignment.bottomCenter,
+                // easeOutBack overshoots its target size, which works fine in the full
+                // conversation view but causes a brief layout overflow in chat creator
+                // where the available vertical space is tighter (keyboard is open).
+                curve: isChatCreator ? Curves.easeOut : Curves.easeOutBack,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (widget.controller != null) ReplyHolder(controller: widget.controller!),
+                    if (initialAttachments.isNotEmpty || !isChatCreator || widget.controller != null)
+                      PickedAttachmentsHolder(
+                        controller: widget.controller,
+                        textController: txtController,
+                        initialAttachments: initialAttachments,
                       ),
-                clipBehavior: Clip.antiAlias,
-                child: AnimatedSize(
-                  duration: const Duration(milliseconds: 400),
-                  alignment: Alignment.bottomCenter,
-                  // easeOutBack overshoots its target size, which works fine in the full
-                  // conversation view but causes a brief layout overflow in chat creator
-                  // where the available vertical space is tighter (keyboard is open).
-                  curve: isChatCreator ? Curves.easeOut : Curves.easeOutBack,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (widget.controller != null) ReplyHolder(controller: widget.controller!),
-                      if (initialAttachments.isNotEmpty || !isChatCreator || widget.controller != null)
-                        PickedAttachmentsHolder(
-                          controller: widget.controller,
-                          textController: txtController,
-                          initialAttachments: initialAttachments,
-                        ),
-                      if (!isChatCreator)
-                        Obx(() {
-                          if (controller!.pickedAttachments.isNotEmpty && iOS) {
-                            return Divider(
-                              height: 1.5,
-                              thickness: 1.5,
-                              color: context.theme.colorScheme.surfaceContainerHighest,
-                            );
-                          }
-                          return const SizedBox.shrink();
-                        }),
-                      if (!isChatCreator &&
-                          SettingsSvc.settings.enablePrivateAPI.value &&
-                          SettingsSvc.settings.privateSubjectLine.value &&
-                          chat!.isIMessage)
-                        TextField(
-                          textCapitalization: TextCapitalization.sentences,
-                          focusNode: controller!.subjectFocusNode,
-                          autocorrect: true,
-                          controller: subjController,
-                          scrollPhysics: const CustomBouncingScrollPhysics(),
-                          style:
-                              context.theme.extension<BubbleText>()!.bubbleText.copyWith(fontWeight: FontWeight.bold),
-                          keyboardType: TextInputType.multiline,
-                          maxLines: 14,
-                          minLines: 1,
-                          enableIMEPersonalizedLearning: !SettingsSvc.settings.incognitoKeyboard.value,
-                          textInputAction: TextInputAction.next,
-                          cursorColor: context.theme.colorScheme.primary,
-                          cursorHeight: context.theme.extension<BubbleText>()!.bubbleText.fontSize! * 1.25,
-                          decoration: InputDecoration(
-                            contentPadding: EdgeInsets.all(iOS && !kIsDesktop && !kIsWeb ? 10 : 12.5),
-                            isDense: true,
-                            isCollapsed: true,
-                            hintText: "Subject",
-                            enabledBorder: InputBorder.none,
-                            border: InputBorder.none,
-                            focusedBorder: InputBorder.none,
-                            fillColor: Colors.transparent,
-                            hintStyle: context.theme
-                                .extension<BubbleText>()!
-                                .bubbleText
-                                .copyWith(color: context.theme.colorScheme.outline, fontWeight: FontWeight.bold),
-                            suffixIconConstraints: const BoxConstraints(minHeight: 0),
-                          ),
-                          onTap: () {
-                            HapticFeedback.selectionClick();
-                          },
-                          onSubmitted: (String value) {
-                            controller?.subjectFocusNode.requestFocus();
-                          },
-                          contentInsertionConfiguration:
-                              ContentInsertionConfiguration(onContentInserted: onContentCommit),
-                        ),
-                      if (!isChatCreator &&
-                          SettingsSvc.settings.enablePrivateAPI.value &&
-                          SettingsSvc.settings.privateSubjectLine.value &&
-                          chat!.isIMessage &&
-                          iOS)
-                        Divider(
-                          height: 1.5,
-                          thickness: 1.5,
-                          indent: 10,
-                          color: context.theme.colorScheme.surfaceContainerHighest,
-                        ),
+                    if (!isChatCreator)
+                      Obx(() {
+                        if (controller!.pickedAttachments.isNotEmpty && iOS) {
+                          return Divider(
+                            height: 1.5,
+                            thickness: 1.5,
+                            color: context.theme.colorScheme.surfaceContainerHighest,
+                          );
+                        }
+                        return const SizedBox.shrink();
+                      }),
+                    if (!isChatCreator &&
+                        SettingsSvc.settings.enablePrivateAPI.value &&
+                        SettingsSvc.settings.privateSubjectLine.value &&
+                        chat!.isIMessage)
                       TextField(
                         textCapitalization: TextCapitalization.sentences,
-                        focusNode: controller?.focusNode ?? focusNode,
+                        focusNode: controller!.subjectFocusNode,
                         autocorrect: true,
-                        controller: txtController,
+                        controller: subjController,
                         scrollPhysics: const CustomBouncingScrollPhysics(),
-                        style: context.theme.extension<BubbleText>()!.bubbleText,
+                        style: context.theme.extension<BubbleText>()!.bubbleText.copyWith(fontWeight: FontWeight.bold),
                         keyboardType: TextInputType.multiline,
                         maxLines: 14,
                         minLines: 1,
-                        autofocus: (kIsWeb || kIsDesktop) && !isChatCreator,
                         enableIMEPersonalizedLearning: !SettingsSvc.settings.incognitoKeyboard.value,
-                        textInputAction: SettingsSvc.settings.sendWithReturn.value && !kIsWeb && !kIsDesktop
-                            ? TextInputAction.send
-                            : TextInputAction.newline,
+                        textInputAction: TextInputAction.next,
                         cursorColor: context.theme.colorScheme.primary,
                         cursorHeight: context.theme.extension<BubbleText>()!.bubbleText.fontSize! * 1.25,
                         decoration: InputDecoration(
                           contentPadding: EdgeInsets.all(iOS && !kIsDesktop && !kIsWeb ? 10 : 12.5),
                           isDense: true,
                           isCollapsed: true,
-                          hintText: isChatCreator
-                              ? "New Message"
-                              : SettingsSvc.settings.recipientAsPlaceholder.value == true
-                                  ? isRecording
-                                      ? ""
-                                      : chat!.getTitle()
-                                  : (chat!.isTextForwarding && !isRecording)
-                                      ? "Text Forwarding"
-                                      : (!isRecording) // Only show iMessage when not recording
-                                          ? "iMessage"
-                                          : "",
+                          hintText: "Subject",
                           enabledBorder: InputBorder.none,
                           border: InputBorder.none,
                           focusedBorder: InputBorder.none,
-                          filled: (isRecording & iOS),
-                          fillColor: (isRecording & iOS)
-                              ? context.theme.colorScheme.primary.withValues(alpha: 0.3)
-                              : Colors.transparent,
+                          fillColor: Colors.transparent,
                           hintStyle: context.theme
                               .extension<BubbleText>()!
                               .bubbleText
-                              .copyWith(color: context.theme.colorScheme.outline),
+                              .copyWith(color: context.theme.colorScheme.outline, fontWeight: FontWeight.bold),
                           suffixIconConstraints: const BoxConstraints(minHeight: 0),
-                          suffixIcon: samsung && !isChatCreator
-                              ? null
-                              : Padding(
-                                  padding: EdgeInsets.only(right: iOS ? 0.0 : 5.0),
-                                  child: TextFieldSuffix(
-                                    subjectTextController: subjController,
-                                    textController: txtController,
-                                    controller: controller,
-                                    recorderController: recorderController,
-                                    sendMessage: sendMessage,
-                                    isChatCreator: isChatCreator,
-                                    alwaysShowSend: widget.alwaysShowSend,
-                                    hasInitialAttachments: initialAttachments.isNotEmpty,
-                                  ),
-                                ),
                         ),
-                        contextMenuBuilder: (BuildContext context, EditableTextState editableTextState) {
-                          final start = editableTextState.textEditingValue.selection.start;
-                          final end = editableTextState.textEditingValue.selection.end;
-                          final text = editableTextState.textEditingValue.text;
-                          final selected = editableTextState.textEditingValue.text.substring(
-                              (start - 1).clamp(0, text.length), (end + 1).clamp(min(1, text.length), text.length));
-
-                          final toolbar = AdaptiveTextSelectionToolbar.editableText(
-                            editableTextState: editableTextState,
-                          )..buttonItems?.addAllIf(
-                              MentionTextEditingController.escapingRegex.allMatches(selected).length == 1,
-                              [
-                                ContextMenuButtonItem(
-                                  onPressed: () {
-                                    final TextSelection selection = editableTextState.textEditingValue.selection;
-                                    if (selection.isCollapsed) {
-                                      return;
-                                    }
-                                    String text = editableTextState.textEditingValue.text;
-                                    final textPart = text.substring(0, (end + 1).clamp(1, text.length));
-                                    final mentionMatch =
-                                        MentionTextEditingController.escapingRegex.allMatches(textPart).lastOrNull;
-                                    if (mentionMatch == null) return; // Shouldn't happen
-                                    final mentionText = textPart.substring(mentionMatch.start, mentionMatch.end);
-                                    int? mentionIndex = int.tryParse(mentionText.substring(1, mentionText.length - 1));
-                                    if (mentionIndex == null) return; // Shouldn't happen
-                                    final mention = controller?.mentionables[mentionIndex];
-                                    final replacement = mention != null ? "@${mention.displayName}" : "";
-                                    text = editableTextState.textEditingValue.text.replaceRange(
-                                        (start - 1).clamp(0, text.length),
-                                        (end + 1).clamp(min(1, text.length), text.length),
-                                        replacement);
-                                    final checkSpace = end + replacement.length - 1;
-                                    final spaceAfter = checkSpace < text.length &&
-                                        text.substring(end + replacement.length - 1, end + replacement.length) == " ";
-                                    (controller?.textController ?? textController).value = TextEditingValue(
-                                        text: text,
-                                        selection: TextSelection.fromPosition(TextPosition(
-                                            offset: selection.baseOffset + replacement.length + (spaceAfter ? 1 : 0))));
-                                    editableTextState.hideToolbar();
-                                  },
-                                  label: "Remove Mention",
-                                ),
-                                ContextMenuButtonItem(
-                                  onPressed: () async {
-                                    final text = editableTextState.textEditingValue.text;
-                                    final textPart = text.substring(0, (end + 1).clamp(1, text.length));
-                                    final mentionMatch =
-                                        MentionTextEditingController.escapingRegex.allMatches(textPart).lastOrNull;
-                                    if (mentionMatch == null) return; // Shouldn't happen
-                                    final mentionText = textPart.substring(mentionMatch.start, mentionMatch.end);
-                                    int? mentionIndex = int.tryParse(mentionText.substring(1, mentionText.length - 1));
-                                    if (mentionIndex == null) return; // Shouldn't happen
-                                    final mention = controller?.mentionables[mentionIndex];
-                                    if (kIsDesktop || kIsWeb) {
-                                      controller?.showingOverlays = true;
-                                    }
-                                    final changed = await showCustomMentionDialog(context, mention);
-                                    if (kIsDesktop || kIsWeb) {
-                                      controller?.showingOverlays = false;
-                                    }
-                                    if (!isNullOrEmpty(changed) && mention != null) {
-                                      mention.customDisplayName = changed!;
-                                    }
-                                    final spaceAfter = end < text.length && text.substring(end, end + 1) == " ";
-                                    txtController.selection =
-                                        TextSelection.fromPosition(TextPosition(offset: end + (spaceAfter ? 1 : 0)));
-                                    editableTextState.hideToolbar();
-                                  },
-                                  label: "Custom Mention",
-                                ),
-                              ],
-                            );
-
-                          // Use outerTheme (captured from the real build context) because the
-                          // contextMenuBuilder's own `context` parameter shadows the build context
-                          // and may not have the dark theme applied (it's a detached overlay context).
-                          return Theme(
-                            data: outerTheme.copyWith(
-                              cardColor: outerTheme.colorScheme.surfaceContainerHighest,
-                              colorScheme: outerTheme.colorScheme.copyWith(
-                                surface: outerTheme.colorScheme.surfaceContainerHighest,
-                              ),
-                            ),
-                            child: toolbar,
-                          );
-                        },
                         onTap: () {
                           HapticFeedback.selectionClick();
                         },
                         onSubmitted: (String value) {
-                          controller?.focusNode.requestFocus();
-                          if (isNullOrEmpty(value) && (controller?.pickedAttachments.isEmpty ?? false)) return;
-                          sendMessage.call();
+                          controller?.subjectFocusNode.requestFocus();
                         },
                         contentInsertionConfiguration:
                             ContentInsertionConfiguration(onContentInserted: onContentCommit),
                       ),
-                    ],
-                  ),
+                    if (!isChatCreator &&
+                        SettingsSvc.settings.enablePrivateAPI.value &&
+                        SettingsSvc.settings.privateSubjectLine.value &&
+                        chat!.isIMessage &&
+                        iOS)
+                      Divider(
+                        height: 1.5,
+                        thickness: 1.5,
+                        indent: 10,
+                        color: context.theme.colorScheme.surfaceContainerHighest,
+                      ),
+                    TextField(
+                      textCapitalization: TextCapitalization.sentences,
+                      focusNode: controller?.focusNode ?? focusNode,
+                      autocorrect: true,
+                      controller: txtController,
+                      scrollPhysics: const CustomBouncingScrollPhysics(),
+                      style: context.theme.extension<BubbleText>()!.bubbleText,
+                      keyboardType: TextInputType.multiline,
+                      maxLines: 14,
+                      minLines: 1,
+                      autofocus: (kIsWeb || kIsDesktop) && !isChatCreator,
+                      enableIMEPersonalizedLearning: !SettingsSvc.settings.incognitoKeyboard.value,
+                      textInputAction: SettingsSvc.settings.sendWithReturn.value && !kIsWeb && !kIsDesktop
+                          ? TextInputAction.send
+                          : TextInputAction.newline,
+                      cursorColor: context.theme.colorScheme.primary,
+                      cursorHeight: context.theme.extension<BubbleText>()!.bubbleText.fontSize! * 1.25,
+                      decoration: InputDecoration(
+                        contentPadding: EdgeInsets.all(iOS && !kIsDesktop && !kIsWeb ? 10 : 12.5),
+                        isDense: true,
+                        isCollapsed: true,
+                        hintText: isChatCreator
+                            ? "New Message"
+                            : SettingsSvc.settings.recipientAsPlaceholder.value == true
+                                ? isRecording
+                                    ? ""
+                                    : chat!.getTitle()
+                                : (chat!.isTextForwarding && !isRecording)
+                                    ? "Text Forwarding"
+                                    : (!isRecording) // Only show iMessage when not recording
+                                        ? "iMessage"
+                                        : "",
+                        enabledBorder: InputBorder.none,
+                        border: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        filled: (isRecording & iOS),
+                        fillColor: (isRecording & iOS)
+                            ? context.theme.colorScheme.primary.withValues(alpha: 0.3)
+                            : Colors.transparent,
+                        hintStyle: context.theme
+                            .extension<BubbleText>()!
+                            .bubbleText
+                            .copyWith(color: context.theme.colorScheme.outline),
+                        suffixIconConstraints: const BoxConstraints(minHeight: 0),
+                        suffixIcon: samsung && !isChatCreator
+                            ? null
+                            : Padding(
+                                padding: EdgeInsets.only(right: iOS ? 0.0 : 5.0),
+                                child: TextFieldSuffix(
+                                  subjectTextController: subjController,
+                                  textController: txtController,
+                                  controller: controller,
+                                  recorderController: recorderController,
+                                  sendMessage: sendMessage,
+                                  isChatCreator: isChatCreator,
+                                  alwaysShowSend: widget.alwaysShowSend,
+                                  hasInitialAttachments: initialAttachments.isNotEmpty,
+                                ),
+                              ),
+                      ),
+                      contextMenuBuilder: (BuildContext context, EditableTextState editableTextState) {
+                        final start = editableTextState.textEditingValue.selection.start;
+                        final end = editableTextState.textEditingValue.selection.end;
+                        final text = editableTextState.textEditingValue.text;
+                        final selected = editableTextState.textEditingValue.text.substring(
+                            (start - 1).clamp(0, text.length), (end + 1).clamp(min(1, text.length), text.length));
+
+                        final toolbar = AdaptiveTextSelectionToolbar.editableText(
+                          editableTextState: editableTextState,
+                        )..buttonItems?.addAllIf(
+                            MentionTextEditingController.escapingRegex.allMatches(selected).length == 1,
+                            [
+                              ContextMenuButtonItem(
+                                onPressed: () {
+                                  final TextSelection selection = editableTextState.textEditingValue.selection;
+                                  if (selection.isCollapsed) {
+                                    return;
+                                  }
+                                  String text = editableTextState.textEditingValue.text;
+                                  final textPart = text.substring(0, (end + 1).clamp(1, text.length));
+                                  final mentionMatch =
+                                      MentionTextEditingController.escapingRegex.allMatches(textPart).lastOrNull;
+                                  if (mentionMatch == null) return; // Shouldn't happen
+                                  final mentionText = textPart.substring(mentionMatch.start, mentionMatch.end);
+                                  int? mentionIndex = int.tryParse(mentionText.substring(1, mentionText.length - 1));
+                                  if (mentionIndex == null) return; // Shouldn't happen
+                                  final mention = controller?.mentionables[mentionIndex];
+                                  final replacement = mention != null ? "@${mention.displayName}" : "";
+                                  text = editableTextState.textEditingValue.text.replaceRange(
+                                      (start - 1).clamp(0, text.length),
+                                      (end + 1).clamp(min(1, text.length), text.length),
+                                      replacement);
+                                  final checkSpace = end + replacement.length - 1;
+                                  final spaceAfter = checkSpace < text.length &&
+                                      text.substring(end + replacement.length - 1, end + replacement.length) == " ";
+                                  (controller?.textController ?? textController).value = TextEditingValue(
+                                      text: text,
+                                      selection: TextSelection.fromPosition(TextPosition(
+                                          offset: selection.baseOffset + replacement.length + (spaceAfter ? 1 : 0))));
+                                  editableTextState.hideToolbar();
+                                },
+                                label: "Remove Mention",
+                              ),
+                              ContextMenuButtonItem(
+                                onPressed: () async {
+                                  final text = editableTextState.textEditingValue.text;
+                                  final textPart = text.substring(0, (end + 1).clamp(1, text.length));
+                                  final mentionMatch =
+                                      MentionTextEditingController.escapingRegex.allMatches(textPart).lastOrNull;
+                                  if (mentionMatch == null) return; // Shouldn't happen
+                                  final mentionText = textPart.substring(mentionMatch.start, mentionMatch.end);
+                                  int? mentionIndex = int.tryParse(mentionText.substring(1, mentionText.length - 1));
+                                  if (mentionIndex == null) return; // Shouldn't happen
+                                  final mention = controller?.mentionables[mentionIndex];
+                                  if (kIsDesktop || kIsWeb) {
+                                    controller?.showingOverlays = true;
+                                  }
+                                  final changed = await showCustomMentionDialog(context, mention);
+                                  if (kIsDesktop || kIsWeb) {
+                                    controller?.showingOverlays = false;
+                                  }
+                                  if (!isNullOrEmpty(changed) && mention != null) {
+                                    mention.customDisplayName = changed!;
+                                  }
+                                  final spaceAfter = end < text.length && text.substring(end, end + 1) == " ";
+                                  txtController.selection =
+                                      TextSelection.fromPosition(TextPosition(offset: end + (spaceAfter ? 1 : 0)));
+                                  editableTextState.hideToolbar();
+                                },
+                                label: "Custom Mention",
+                              ),
+                            ],
+                          );
+
+                        // Use outerTheme (captured from the real build context) because the
+                        // contextMenuBuilder's own `context` parameter shadows the build context
+                        // and may not have the dark theme applied (it's a detached overlay context).
+                        return Theme(
+                          data: outerTheme.copyWith(
+                            cardColor: outerTheme.colorScheme.surfaceContainerHighest,
+                            colorScheme: outerTheme.colorScheme.copyWith(
+                              surface: outerTheme.colorScheme.surfaceContainerHighest,
+                            ),
+                          ),
+                          child: toolbar,
+                        );
+                      },
+                      onTap: () {
+                        HapticFeedback.selectionClick();
+                      },
+                      onSubmitted: (String value) {
+                        controller?.focusNode.requestFocus();
+                        if (isNullOrEmpty(value) && (controller?.pickedAttachments.isEmpty ?? false)) return;
+                        sendMessage.call();
+                      },
+                      contentInsertionConfiguration: ContentInsertionConfiguration(onContentInserted: onContentCommit),
+                    ),
+                  ],
                 ),
-              );
-            }),
-      ),
+              ),
+            );
+          }),
     );
     if (!showIcons) return textInput;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-          if (!kIsWeb && iOS && Platform.isAndroid)
-            GestureDetector(
-              onLongPress: () {
-                _openCamera(type: 'video');
-              },
-              child: IconButton(
-                padding: const EdgeInsets.only(left: 10),
-                icon: Icon(CupertinoIcons.camera_fill, color: context.theme.colorScheme.outline, size: 28),
-                visualDensity: VisualDensity.compact,
-                onPressed: () {
-                  _openCamera();
-                },
+          Padding(
+            padding: const EdgeInsets.only(right: 10),
+            child: IconButton(
+              style: IconButton.styleFrom(
+                backgroundColor: context.theme.colorScheme.outline.withValues(alpha: 0.2),
+                shape: const CircleBorder(),
+                padding: EdgeInsets.zero,
+                minimumSize: const Size(36, 36),
+                fixedSize: const Size(36, 36),
               ),
-            ),
-          IconButton(
-            icon: Icon(
-              iOS
-                  ? CupertinoIcons.add_circled_solid
-                  : material
-                      ? Icons.add_circle_outline
-                      : Icons.add,
-              color: context.theme.colorScheme.outline,
-              size: 28,
-            ),
-            visualDensity: Platform.isAndroid ? VisualDensity.compact : null,
-            onPressed: () async {
-              if (kIsDesktop) {
-                final res = await FilePicker.pickFiles(withReadStream: true, allowMultiple: true);
-                if (res == null || res.files.isEmpty || res.files.first.readStream == null) return;
-                for (pf.PlatformFile e in res.files) {
-                  if (e.size / 1024000 > 1000) {
-                    showSnackbar("Error", "This file is over 1 GB! Please compress it before sending.");
-                    continue;
+              icon: Icon(
+                Icons.add,
+                color: context.theme.colorScheme.outline,
+                size: 22,
+              ),
+              visualDensity: Platform.isAndroid ? VisualDensity.compact : null,
+              onPressed: () async {
+                if (kIsDesktop) {
+                  final res = await FilePicker.pickFiles(withReadStream: true, allowMultiple: true);
+                  if (res == null || res.files.isEmpty || res.files.first.readStream == null) return;
+                  for (pf.PlatformFile e in res.files) {
+                    if (e.size / 1024000 > 1000) {
+                      showSnackbar("Error", "This file is over 1 GB! Please compress it before sending.");
+                      continue;
+                    }
+                    controller!.pickedAttachments.add(PlatformFile(
+                      path: e.path,
+                      name: e.name,
+                      size: e.size,
+                      bytes: await readByteStream(e.readStream!),
+                    ));
                   }
-                  controller!.pickedAttachments.add(PlatformFile(
-                    path: e.path,
-                    name: e.name,
-                    size: e.size,
-                    bytes: await readByteStream(e.readStream!),
-                  ));
+                } else {
+                  if (!_showAttachmentPickerLocal) FocusScope.of(context).unfocus();
+                  setState(() => _showAttachmentPickerLocal = !_showAttachmentPickerLocal);
                 }
-              } else {
-                if (!_showAttachmentPickerLocal) FocusScope.of(context).unfocus();
-                setState(() => _showAttachmentPickerLocal = !_showAttachmentPickerLocal);
-              }
-            },
+              },
+            ),
           ),
           Expanded(child: textInput),
         ]),

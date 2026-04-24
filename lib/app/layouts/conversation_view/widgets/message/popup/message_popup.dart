@@ -1077,15 +1077,15 @@ class _MessagePopupState extends State<MessagePopup> with SingleTickerProviderSt
                       useRootNavigator: false,
                       context: context,
                       builder: (context) => SettingsSvc.settings.skin.value == Skins.iOS
-                            ? CupertinoAlertDialog(
-                                backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
-                                content: content,
-                              )
-                            : AlertDialog(
-                                backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
-                                content: content,
-                              ),
-                      );
+                          ? CupertinoAlertDialog(
+                              backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
+                              content: content,
+                            )
+                          : AlertDialog(
+                              backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
+                              content: content,
+                            ),
+                    );
                   },
                   title: 'More...',
                   iosIcon: cupertino.CupertinoIcons.ellipsis,
