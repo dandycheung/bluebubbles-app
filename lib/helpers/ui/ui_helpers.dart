@@ -155,7 +155,12 @@ Future<void> showConversationTileMenu(
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
             onTap: () {
-              ChatsSvc.toggleChatPin(chat, !chat.isPinned!);
+              final chatState = ChatsSvc.getChatState(chat.guid);
+              if (chatState != null) {
+                ChatsSvc.setChatPinned(chatState.chat, !chat.isPinned!);
+              } else {
+                ChatsSvc.toggleChatPin(chat, !chat.isPinned!);
+              }
               Navigator.pop(context);
             },
             child: Padding(
