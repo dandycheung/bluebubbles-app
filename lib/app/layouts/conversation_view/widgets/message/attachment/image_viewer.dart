@@ -143,7 +143,7 @@ class _ImageViewerState extends State<ImageViewer> with AutomaticKeepAliveClient
                 return Container(
                   width: displayWidth,
                   height: displayHeight,
-                  color: context.theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                  color: context.theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
                   child: Center(
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
@@ -231,7 +231,7 @@ class _ImageViewerState extends State<ImageViewer> with AutomaticKeepAliveClient
             return Container(
               width: displayWidth,
               height: displayHeight,
-              color: context.theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
+              color: context.theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
               child: Center(
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
@@ -273,7 +273,7 @@ class _ImageViewerState extends State<ImageViewer> with AutomaticKeepAliveClient
                     return Container(
                       width: displayWidth,
                       height: displayHeight,
-                      color: context.theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                      color: context.theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
                       child: Center(
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
@@ -326,7 +326,7 @@ class _ImageViewerState extends State<ImageViewer> with AutomaticKeepAliveClient
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                           decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.6),
+                            color: Colors.black.withValues(alpha: 0.6),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Row(

@@ -46,7 +46,7 @@ class _MessageOptionsOrderPanelState extends State<MessageOptionsOrderPanel> wit
         color: material ? headerColor : tileColor,
         child: Obx(
           () => ReorderableListView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 15),
+            padding: const EdgeInsets.only(left: 15, right: 15, bottom: 15),
             shrinkWrap: true,
             header: Padding(
               padding: const EdgeInsets.symmetric(vertical: 13),

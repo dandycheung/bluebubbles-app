@@ -217,7 +217,7 @@ mixin LivePhotoMixin<T extends StatefulWidget> on State<T> {
         width: 28,
         height: 28,
         decoration: BoxDecoration(
-          color: Colors.black.withOpacity(0.3),
+          color: Colors.black.withValues(alpha: 0.3),
           borderRadius: BorderRadius.circular(14),
         ),
         child: Obx(() => Stack(
@@ -231,7 +231,7 @@ mixin LivePhotoMixin<T extends StatefulWidget> on State<T> {
                       value: livePhotoProgress.value,
                       strokeWidth: 2,
                       valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
-                      backgroundColor: Colors.white.withOpacity(0.3),
+                      backgroundColor: Colors.white.withValues(alpha: 0.3),
                     ),
                   )
                 else if (isPlayingLivePhoto.value)
