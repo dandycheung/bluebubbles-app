@@ -29,7 +29,7 @@ class FindMyItemsTabView extends StatelessWidget {
           if (itemsWithLocation.isNotEmpty)
             SettingsHeader(
               iosSubtitle: context.theme.textTheme.labelLarge!.copyWith(
-                color: context.theme.colorScheme.onSurface.withOpacity(0.6),
+                color: context.theme.colorScheme.onSurface.withValues(alpha: 0.6),
                 fontWeight: FontWeight.w300,
               ),
               materialSubtitle: context.theme.textTheme.labelLarge!.copyWith(

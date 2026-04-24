@@ -233,25 +233,18 @@ class Chat {
       return handles.first.displayName;
     }
 
-    // For group chats, extract first names only from reactionDisplayName when
-    // the handle has a contact (i.e., the name is a real person's name).
-    // Without a contact, the name is a phone number or email — use the full value.
-    String shortName(Handle h) {
-      return h.contactsV2.isNotEmpty ? h.reactionDisplayName.firstWord : h.reactionDisplayName;
-    }
-
     if (count <= 4) {
       final buffer = StringBuffer();
       for (int i = 0; i < count; i++) {
         if (i > 0) buffer.write(i == count - 1 ? ' & ' : ', ');
-        buffer.write(shortName(handles[i]));
+        buffer.write(handles[i].shortName);
       }
       return buffer.toString();
     } else {
       final buffer = StringBuffer();
       for (int i = 0; i < 3; i++) {
         if (i > 0) buffer.write(', ');
-        buffer.write(shortName(handles[i]));
+        buffer.write(handles[i].shortName);
       }
       buffer.write(' & ${count - 3} others');
       return buffer.toString();

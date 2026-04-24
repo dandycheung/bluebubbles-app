@@ -50,6 +50,7 @@ class Handle {
     return _fakeAvatar!;
   }
 
+  @Transient()
   String get displayName {
     if (address.startsWith("urn:biz")) return "Business";
     if (!kIsWeb && contactsV2.isNotEmpty) {
@@ -61,6 +62,7 @@ class Handle {
     return address.contains("@") ? address : (formattedAddress ?? address);
   }
 
+  @Transient()
   String get reactionDisplayName {
     if (address.startsWith("urn:biz")) return "Business";
     if (!kIsWeb && contactsV2.isNotEmpty) {
@@ -76,6 +78,12 @@ class Handle {
     return address.contains("@") ? address : (formattedAddress ?? address);
   }
 
+  @Transient()
+  String get shortName {
+    return contactsV2.isNotEmpty ? reactionDisplayName.firstWord : reactionDisplayName;
+  }
+
+  @Transient()
   String? get initials {
     if (address.startsWith("urn:biz")) return null;
 

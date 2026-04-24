@@ -1,6 +1,9 @@
+import 'dart:typed_data';
+
 import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/database/database.dart';
 import 'package:characters/characters.dart';
+import 'package:crypto/crypto.dart';
 import 'package:collection/collection.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart';
@@ -65,6 +68,25 @@ class FilesystemService {
   String get logsPath => join(appDocDir.path, 'logs');
   String get contactAvatarsPath => join(appDocDir.path, 'contact_avatars');
   String get customBackgroundsPath => join(appDocDir.path, 'custom_backgrounds');
+  String get urlPreviewsPath => join(appDocDir.path, 'url_previews');
+
+  /// Returns the path for a cached URL preview image identified by its MD5 hash.
+  String urlPreviewImagePath(String md5) => join(urlPreviewsPath, md5);
+
+  /// Downloads and caches a URL preview image. Computes an MD5 hash of the raw
+  /// bytes and uses it as the filename so that identical images across different
+  /// messages share a single file. Returns the hex MD5 string.
+  Future<String> saveUrlPreviewImage(Uint8List bytes) async {
+    if (kIsWeb) throw 'saveUrlPreviewImage is not supported on web';
+    final hash = md5.convert(bytes).toString();
+    final dir = Directory(urlPreviewsPath);
+    await dir.create(recursive: true);
+    final file = File(join(urlPreviewsPath, hash));
+    if (!file.existsSync()) {
+      await file.writeAsBytes(bytes, flush: true);
+    }
+    return hash;
+  }
 
   // ---------------------------------------------------------------------------
   // Helpers

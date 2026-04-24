@@ -391,7 +391,7 @@ class _FullscreenVideoState extends State<FullscreenVideo> with AutomaticKeepAli
                               decoration: BoxDecoration(
                                 color: samsung
                                     ? Colors.black
-                                    : context.theme.colorScheme.surfaceContainerHighest.withOpacity(0.9),
+                                    : context.theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.9),
                               ),
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
