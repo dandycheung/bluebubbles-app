@@ -112,6 +112,7 @@ class StartupTasks {
       await channelService.init(isBubble: isBubble);
       return channelService;
     });
+    await GetIt.I.isReady<MethodChannelService>();
 
     Logger.info("Registering LifecycleService...");
     GetIt.I.registerSingletonAsync<LifecycleService>(() async {
@@ -138,7 +139,6 @@ class StartupTasks {
     // Parallelize independent services for faster startup
     Logger.info("Waiting for services to be ready...");
     await Future.wait([
-      GetIt.I.isReady<MethodChannelService>(),
       GetIt.I.isReady<LifecycleService>(),
       ThemeSvc.init(),
       IntentsSvc.init(),
@@ -356,6 +356,8 @@ class StartupTasks {
     // While this might be the only flutter engine/instance running, it's still not technically the "main" isolate.
     // So we set isIsolateOverride to true to force isIsolate to return true.
     isIsolateOverride = true;
+    // Override the log label so entries are identifiable as coming from the DartWorker.
+    isolateNameOverride = 'DartWorker';
 
     debugPrint("Registering FilesystemService...");
     GetIt.I.registerSingletonAsync<FilesystemService>(() async {

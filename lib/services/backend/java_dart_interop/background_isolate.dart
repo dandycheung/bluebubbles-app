@@ -18,6 +18,7 @@ backgroundIsolateEntrypoint() async {
   // can't use logger here
   debugPrint("(ISOLATE) Starting up...");
   WidgetsFlutterBinding.ensureInitialized();
+  DartPluginRegistrant.ensureInitialized();
   HttpOverrides.global = CustomHttpContext();
 
   await StartupTasks.initBackgroundIsolate();

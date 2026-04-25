@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:isolate';
 
 import 'package:archive/archive_io.dart';
+import 'package:bluebubbles/env.dart';
 import 'package:bluebubbles/services/services.dart';
 import 'package:bluebubbles/utils/logger/outputs/log_stream_output.dart';
 import 'package:flutter/foundation.dart';
@@ -120,7 +121,7 @@ class BaseLogger {
     return _logger;
   }
 
-  String _isolateName = "Main";
+  String _isolateName = "main";
 
   Future<void> init() async {
     // Ensure log directory and latest log file exist before AdvancedFileOutput
@@ -134,7 +135,7 @@ class BaseLogger {
     }
 
     _logger = createLogger();
-    _isolateName = Isolate.current.debugName ?? "Main";
+    _isolateName = isolateNameOverride ?? Isolate.current.debugName ?? "main";
 
     if (SettingsSvc.initCompleted.isCompleted) {
       currentLevel = SettingsSvc.settings.logLevel.value;

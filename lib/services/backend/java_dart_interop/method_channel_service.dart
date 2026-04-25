@@ -52,8 +52,7 @@ class MethodChannelService {
       } catch (_) {}
     }
 
-    // Don't await this
-    createAllNotificationChannels();
+    unawaited(createAllNotificationChannels());
 
     Logger.debug("MethodChannelService initialized");
   }
