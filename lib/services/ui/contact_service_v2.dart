@@ -182,7 +182,7 @@ class ContactServiceV2 {
 
     // Update chats that have these handles as participants
     // This ensures chat titles and headers reflect the new contact names
-    if (!kIsWeb && !kIsDesktop) {
+    if (!kIsWeb) {
       _updateChatsForHandles(handleIds);
     }
   }
