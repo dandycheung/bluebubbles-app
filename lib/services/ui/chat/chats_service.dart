@@ -14,6 +14,7 @@ import 'package:collection/collection.dart';
 import 'package:bluebubbles/models/models.dart' show HandleLookupKey, MessageSaveResult;
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:get/get.dart' hide Response;
 import 'package:universal_io/io.dart';
 import 'package:bluebubbles/database/database.dart';
@@ -407,6 +408,19 @@ class ChatsService {
         chatListVersion.value++;
       });
     }
+  }
+
+  /// Re-sort [_sortedChats] in-place and notify the chat list UI.
+  ///
+  /// Call this after bulk pin-index changes that were applied outside of the
+  /// normal [updateChat] / [_repositionChat] path (e.g. pinned-order panel).
+  /// The UI notification is deferred to the next frame so this is safe to call
+  /// from [State.dispose] (while the widget tree may still be locked).
+  void refreshSortOrder() {
+    _sortedChats.sort(Chat.sort);
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      _scheduleListVersionUpdate(immediate: true);
+    });
   }
 
   void close() {
