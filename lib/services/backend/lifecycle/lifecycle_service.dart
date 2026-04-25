@@ -141,7 +141,7 @@ class LifecycleService with WidgetsBindingObserver {
       // Dart event loop alive while the app is in the background. It will be
       // restarted lazily on the next request via _ensureStarted().
       if (GetIt.I.isRegistered<GlobalIsolate>()) {
-        GetIt.I<GlobalIsolate>().stop();
+        unawaited(GetIt.I<GlobalIsolate>().drainAndStop(timeout: const Duration(seconds: 30)));
       }
     }
     final activeChat = ChatsSvc.activeChat;

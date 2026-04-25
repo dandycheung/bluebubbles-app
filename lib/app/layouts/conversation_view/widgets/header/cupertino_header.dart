@@ -52,6 +52,7 @@ class CupertinoHeader extends StatelessWidget implements PreferredSizeWidget {
               Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
+                    tileMode: TileMode.mirror,
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     stops: const [0.0, 0.55, 1.0],

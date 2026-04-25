@@ -226,6 +226,22 @@ class GlobalIsolate {
     }
   }
 
+  /// Waits for all in-flight [_pendingRequests] to complete (or times out),
+  /// then calls [stop()]. Safe to fire-and-forget with [unawaited].
+  Future<void> drainAndStop({Duration timeout = const Duration(seconds: 30)}) async {
+    final deadline = DateTime.now().add(timeout);
+    while (_pendingRequests.isNotEmpty && DateTime.now().isBefore(deadline)) {
+      await Future<void>.delayed(const Duration(seconds: 5));
+    }
+    if (_pendingRequests.isNotEmpty) {
+      Logger.warn(
+        '$isolateDebugName drain timed out after ${timeout.inSeconds}s with '
+        '${_pendingRequests.length} pending request(s). Stopping anyway.',
+      );
+    }
+    stop();
+  }
+
   /// Closes the isolate and clears all listeners
   void close() {
     stop();
@@ -629,6 +645,12 @@ enum IsolateRequestType {
 
   // Sync actions
   performIncrementalSync,
+
+  // Send message actions (routed through isolate so sends survive backgrounding)
+  sendTextMessage,
+  sendTapback,
+  sendMultipartMessage,
+  sendAttachmentMessage,
 
   // Message actions
   bulkSaveNewMessages,
