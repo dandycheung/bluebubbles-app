@@ -180,7 +180,10 @@ class StartupTasks {
 
     Logger.info(
         "Startup services initialization complete! Running localhost detection then starting incremental sync...");
-    unawaited(NetworkTasks.detectLocalhost().then((_) => SyncSvc.startIncrementalSync()));
+
+    // For the initial incremental sync, use the global isolate.
+    // When the app resumes from the background, use the lighter incremental sync isolate.
+    unawaited(NetworkTasks.detectLocalhost().then((_) => SyncSvc.startIncrementalSync(useGlobalIsolate: true)));
   }
 
   static Future<void> initGlobalIsolateServices(RootIsolateToken? rootIsolateToken) async {

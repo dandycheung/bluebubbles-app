@@ -45,7 +45,7 @@ class SyncService {
     await _manager!.start();
   }
 
-  Future<void> startIncrementalSync() async {
+  Future<void> startIncrementalSync({bool useGlobalIsolate = false}) async {
     if (isIncrementalSyncing.value) return;
     isIncrementalSyncing.value = true;
     int errors = 0;
@@ -53,7 +53,7 @@ class SyncService {
     try {
       Logger.info('Starting incremental chat sync...', tag: 'Incremental Chat Sync');
       final chatStopwatch = Stopwatch()..start();
-      final syncedMessages = await SyncInterface.performIncrementalSync();
+      final syncedMessages = await SyncInterface.performIncrementalSync(useGlobalIsolate: useGlobalIsolate);
       if (syncedMessages.isNotEmpty) {
         // latestMessageIdPerChat is keyed by chat GUID, so syncedMessages already contains
         // at most one message per chat. Deduplicate defensively by keeping the latest
