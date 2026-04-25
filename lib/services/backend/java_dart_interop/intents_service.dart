@@ -209,6 +209,8 @@ class IntentsService {
         return;
       }
 
+      await StartupTasks.waitForUI();
+
       bool chatIsOpen = ChatsSvc.activeChat?.chat.guid == guid;
       Logger.debug("Chat is active: $chatIsOpen", tag: "IntentsService");
 
@@ -229,7 +231,6 @@ class IntentsService {
         // active chat as read prematurely.
         pendingOpenChatGuid = guid;
         Logger.debug("Navigating to conversation view...", tag: "IntentsService");
-        await StartupTasks.waitForUI();
 
         // Rather than waiting for paging to eventually reach this chat,
         // proactively seed its ChatState now. getOrCreateChatState() inserts
