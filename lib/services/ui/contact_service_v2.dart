@@ -191,7 +191,7 @@ class ContactServiceV2 {
   void _updateChatsForHandles(List<int> handleIds) {
     try {
       // Check if ChatsService is available yet (it might not be during initial startup)
-      if (!Get.isRegistered<ChatsService>()) {
+      if (!GetIt.I.isRegistered<ChatsService>()) {
         return;
       }
 
@@ -210,7 +210,7 @@ class ContactServiceV2 {
 
         // Update each chat in the ChatsService to trigger UI updates
         for (final chat in chatsWithHandle) {
-          ChatsService chats = Get.find<ChatsService>();
+          ChatsService chats = GetIt.I<ChatsService>();
           chats.updateChat(chat);
         }
       }
