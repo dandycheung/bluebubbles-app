@@ -29,7 +29,6 @@ class GlobalIsolate {
 
   /// Timer for tracking isolate inactivity
   Timer? _idleTimer;
-  DateTime? _lastActivityTime;
 
   /// Timeout duration for individual task requests
   final Duration taskTimeout;
@@ -146,7 +145,7 @@ class GlobalIsolate {
       await _waitForSendPort();
 
       _isRunning = true;
-      _lastActivityTime = DateTime.now();
+      _scheduleIdleShutdown();
 
       if (!_startCompleter.isCompleted) {
         _startCompleter.complete();
@@ -218,7 +217,6 @@ class GlobalIsolate {
     _isolate = null;
     _sendPort = null;
     _isRunning = false;
-    _lastActivityTime = null;
 
     // Reset the start completer
     if (_startCompleter.isCompleted) {
@@ -303,6 +301,9 @@ class GlobalIsolate {
 
     _pendingRequests[requestId] = _RequestInfo(completer: completer, timer: timer, type: type);
 
+    // Reset idle shutdown when new work is queued.
+    _scheduleIdleShutdown();
+
     // Create a standard request message
     final message = IsolateRequest(uuid: requestId, type: type, data: input).toMap();
 
@@ -314,6 +315,8 @@ class GlobalIsolate {
   /// Fire-and-forget send (no response expected)
   void broadcast(IsolateRequestType type, dynamic input) {
     _ensureStarted().then((_) {
+      _scheduleIdleShutdown();
+
       // Create a standard request message with empty UUID since no response is expected
       final message = IsolateRequest(uuid: '', type: type, data: input).toMap();
 
@@ -350,9 +353,8 @@ class GlobalIsolate {
         final requestInfo = _pendingRequests.remove(uuid)!;
         requestInfo.timer?.cancel();
 
-        // Track activity when work completes
-        _lastActivityTime = DateTime.now();
-        _resetIdleTimer();
+        // Reset idle shutdown after work completes.
+        _scheduleIdleShutdown();
 
         if (isolateResponse.ok) {
           requestInfo.completer.complete(isolateResponse.data);
@@ -385,44 +387,26 @@ class GlobalIsolate {
     }
   }
 
-  /// Start the idle timer to automatically shutdown the isolate after a period of inactivity
-  void _startIdleTimer() {
+  /// Schedules isolate shutdown to happen [idleTimeout] after the latest activity.
+  /// This avoids periodic polling and makes idle shutdown precise.
+  void _scheduleIdleShutdown() {
     if (idleTimeout == null) return;
 
     _idleTimer?.cancel();
-    _idleTimer = Timer.periodic(const Duration(seconds: 10), (timer) {
-      if (_lastActivityTime == null) return;
+    _idleTimer = Timer(idleTimeout!, () {
+      if (!_isRunning) return;
 
-      final idleDuration = DateTime.now().difference(_lastActivityTime!);
-      if (idleDuration >= idleTimeout!) {
-        Logger.info('$isolateDebugName has been idle for ${idleDuration.inMinutes} minutes. Shutting down...');
-        timer.cancel();
-        stop();
+      // Never stop while work is in flight. Re-schedule from "now" and check again.
+      if (_pendingRequests.isNotEmpty) {
+        _scheduleIdleShutdown();
+        return;
       }
+
+      Logger.info(
+        '$isolateDebugName has been idle for ${idleTimeout!.inSeconds}s. Shutting down...',
+      );
+      stop();
     });
-  }
-
-  /// Reset the idle timer after activity
-  void _resetIdleTimer() {
-    if (idleTimeout == null) return;
-
-    _lastActivityTime = DateTime.now();
-
-    // Start the idle timer if it's not already running (starts after first work completion)
-    if (_idleTimer == null || !_idleTimer!.isActive) {
-      _startIdleTimer();
-    }
-
-    // Special handling for Duration.zero - shutdown immediately after work completes
-    if (idleTimeout == Duration.zero) {
-      // Use a short delay to allow any pending cleanup
-      Future.delayed(const Duration(milliseconds: 100), () {
-        if (_isRunning && _pendingRequests.isEmpty) {
-          Logger.info('$isolateDebugName idleTimeout is zero. Shutting down after work completion...');
-          stop();
-        }
-      });
-    }
   }
 
   /// Verify that the isolate is actually alive and responsive
@@ -464,7 +448,6 @@ class GlobalIsolate {
     _isolate = null;
     _sendPort = null;
     _isRunning = false;
-    _lastActivityTime = null;
 
     // Reset the start completer
     if (_startCompleter.isCompleted) {
