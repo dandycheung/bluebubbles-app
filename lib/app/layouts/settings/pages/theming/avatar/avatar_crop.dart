@@ -15,7 +15,12 @@ import 'package:universal_io/io.dart';
 class AvatarCrop extends StatefulWidget {
   final int? index;
   final Chat? chat;
-  const AvatarCrop({super.key, this.index, this.chat});
+
+  const AvatarCrop({
+    super.key,
+    this.index,
+    this.chat,
+  });
 
   @override
   State<AvatarCrop> createState() => _AvatarCropState();
@@ -61,30 +66,14 @@ class _AvatarCropState extends State<AvatarCrop> with ThemeHelpers {
       if (!(await file.exists())) {
         await file.create(recursive: true);
       }
-      if (widget.chat!.customAvatarPath != null) {
-        await File(widget.chat!.customAvatarPath!).delete();
-      }
       await file.writeAsBytes(croppedData);
-      widget.chat!.customAvatarPath = file.path;
-      await widget.chat!.saveAsync(updateCustomAvatarPath: true);
+
       Navigator.of(context, rootNavigator: true).pop();
-      Navigator.of(context).pop();
+      Navigator.of(context).pop(file.path);
       showSnackbar("Notice", "Custom chat avatar saved successfully");
     } else {
-      File file = File(p.join(FilesystemSvc.avatarsPath, FilesystemService.sanitizeGuid(widget.chat!.guid),
-          "avatar-${croppedData.length}.jpg"));
-      if (!(await file.exists())) {
-        await file.create(recursive: true);
-      }
-      if (widget.chat!.customAvatarPath != null) {
-        await File(widget.chat!.customAvatarPath!).delete();
-      }
-      await file.writeAsBytes(croppedData);
-      widget.chat!.customAvatarPath = file.path;
-      await widget.chat!.saveAsync(updateCustomAvatarPath: true);
       Navigator.of(context, rootNavigator: true).pop();
-      Navigator.of(context).pop(widget.chat!.customAvatarPath);
-      showSnackbar("Notice", "Custom chat avatar saved successfully");
+      Navigator.of(context).pop();
     }
   }
 

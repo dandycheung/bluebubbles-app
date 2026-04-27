@@ -71,19 +71,23 @@ class _ChatInfoState extends State<ChatInfo> with ThemeHelpers {
       papi = await showMethodDialog("Group Icon Update Method");
     }
     if (papi == null) return;
+    final usePrivateApi = papi;
     final String? result = await Navigator.of(context).push(
       ThemeSwitcher.buildPageRoute(
         builder: (context) => AvatarCrop(chat: chat),
       ),
     );
-    if (result != null) {
-      chat.customAvatarPath = result;
+    if (result == null) return;
+
+    if (!usePrivateApi) {
+      await ChatsSvc.setChatCustomAvatarPath(chat, result);
+      return;
     }
-    if (papi &&
-        SettingsSvc.settings.enablePrivateAPI.value &&
-        result != null &&
-        SettingsSvc.serverDetails.isMinBigSur &&
-        SettingsSvc.serverDetails.supportsGroupChatManagement) {
+
+    if (usePrivateApi &&
+      SettingsSvc.settings.enablePrivateAPI.value &&
+      SettingsSvc.serverDetails.isMinBigSur &&
+      SettingsSvc.serverDetails.supportsGroupChatManagement) {
       showDialog(
           context: context,
           builder: (BuildContext context) {
@@ -104,14 +108,23 @@ class _ChatInfoState extends State<ChatInfo> with ThemeHelpers {
               ),
             );
           });
-      final response = await HttpSvc.setChatIcon(chat.guid, chat.customAvatarPath!);
+      final response = await HttpSvc.setChatIcon(chat.guid, result);
       if (response.statusCode == 200) {
+        await ChatsSvc.setChatCustomAvatarPath(chat, result);
         Navigator.of(context, rootNavigator: true).pop();
         showSnackbar("Notice", "Updated group photo successfully!");
       } else {
+        try {
+          await File(result).delete();
+        } catch (_) {}
         Navigator.of(context, rootNavigator: true).pop();
         showSnackbar("Error", "Failed to update group photo!");
       }
+    } else if (usePrivateApi) {
+      try {
+        await File(result).delete();
+      } catch (_) {}
+      showSnackbar("Error", "Failed to update group photo!");
     }
   }
 
@@ -121,23 +134,23 @@ class _ChatInfoState extends State<ChatInfo> with ThemeHelpers {
       papi = await showMethodDialog("Group Icon Deletion Method");
     }
     if (papi == null) return;
-    try {
-      File file = File(chat.customAvatarPath!);
-      file.delete();
-    } catch (_) {}
-    chat.customAvatarPath = null;
-    await chat.saveAsync(updateCustomAvatarPath: true);
-    if (papi &&
+    final usePrivateApi = papi;
+
+    if (usePrivateApi &&
         SettingsSvc.settings.enablePrivateAPI.value &&
         SettingsSvc.serverDetails.isMinBigSur &&
         SettingsSvc.serverDetails.supportsGroupChatManagement) {
       final response = await HttpSvc.deleteChatIcon(chat.guid);
       if (response.statusCode == 200) {
+        await ChatsSvc.setChatCustomAvatarPath(chat, null);
         showSnackbar("Notice", "Deleted group photo successfully!");
       } else {
         showSnackbar("Error", "Failed to delete group photo!");
       }
+      return;
     }
+
+    await ChatsSvc.setChatCustomAvatarPath(chat, null);
   }
 
   @override

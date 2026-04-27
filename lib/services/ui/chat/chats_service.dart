@@ -1133,16 +1133,25 @@ class ChatsService {
   /// Set chat custom avatar path
   Future<void> setChatCustomAvatarPath(Chat chat, String? value) async {
     final state = getChatState(chat.guid);
-
-    if (state != null && state.customAvatarPath.value == value) return;
-
-    // Update Chat model (use state.chat if available, otherwise use passed in chat)
     final chatToUpdate = state?.chat ?? chat;
+    final oldPath = chatToUpdate.customAvatarPath;
+
+    if (oldPath == value) return;
+
     chatToUpdate.customAvatarPath = value;
     await chatToUpdate.saveAsync(updateCustomAvatarPath: true);
 
     // Update state if available
     state?.updateCustomAvatarPathInternal(value);
+
+    if (!kIsWeb && oldPath != null && oldPath != value) {
+      try {
+        final file = File(oldPath);
+        if (await file.exists()) {
+          await file.delete();
+        }
+      } catch (_) {}
+    }
   }
 
   /// Set chat custom background path
