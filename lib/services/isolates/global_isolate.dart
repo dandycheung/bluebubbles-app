@@ -185,8 +185,9 @@ class GlobalIsolate {
     }
   }
 
-  /// Stops the isolate
-  void stop() {
+  /// Stops the isolate process but keeps runtime listeners/state by default so
+  /// lazy restarts continue to deliver events to existing subscribers.
+  void stop({bool clearEventListeners = false, bool closeOutputStream = false}) {
     if (!_isRunning) return;
 
     // Cancel the idle timer
@@ -202,7 +203,9 @@ class GlobalIsolate {
     _exitPort = null;
     _errorPort?.close();
     _errorPort = null;
-    _controller.close();
+    if (closeOutputStream) {
+      _controller.close();
+    }
 
     // Complete all pending requests with an error
     for (final requestInfo in _pendingRequests.values) {
@@ -213,7 +216,9 @@ class GlobalIsolate {
     }
 
     _pendingRequests.clear();
-    _eventListeners.clear();
+    if (clearEventListeners) {
+      _eventListeners.clear();
+    }
     _isolate = null;
     _sendPort = null;
     _isRunning = false;
@@ -242,7 +247,7 @@ class GlobalIsolate {
 
   /// Closes the isolate and clears all listeners
   void close() {
-    stop();
+    stop(clearEventListeners: true, closeOutputStream: true);
   }
 
   /// Register a listener for a specific event type
