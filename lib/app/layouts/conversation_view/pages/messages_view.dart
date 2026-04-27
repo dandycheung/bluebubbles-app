@@ -485,13 +485,13 @@ class MessagesViewState extends State<MessagesView> with MessagesServiceMixin, T
     // Check if widget is still mounted before processing
     if (!mounted) return;
 
-    Logger.debug("handleUpdatedMessage: Updating message ${message.guid ?? oldGuid}");
+    Logger.debug("handleUpdatedMessage: Updating message ${oldGuid ?? message.guid}");
     final index = _messages.indexWhere((e) => e.guid == (oldGuid ?? message.guid));
     if (index != -1) {
       _messages[index] = message;
       Logger.debug("handleUpdatedMessage: Updated message at index $index");
     } else {
-      Logger.warn("handleUpdatedMessage: Message ${message.guid ?? oldGuid} not found in list");
+      Logger.warn("handleUpdatedMessage: Message ${oldGuid ?? message.guid} not found in list");
     }
     if (message.wasDeliveredQuietly != latestMessageDeliveredState.value) {
       latestMessageDeliveredState.value = message.wasDeliveredQuietly;
