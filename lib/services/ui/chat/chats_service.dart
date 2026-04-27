@@ -866,6 +866,10 @@ class ChatsService {
     await ChatInterface.softDeleteChat(chatData: chat.toMap());
     chat.clearTranscript();
 
+    // Propagate dateDeleted to ChatState before removing it so any live
+    // listeners (e.g. ConversationTileController) can react reactively.
+    getChatState(chat.guid)?.updateDateDeletedInternal(DateTime.now().toUtc());
+
     // Remove from service state
     removeChat(chat);
   }

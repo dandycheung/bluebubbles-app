@@ -30,7 +30,7 @@ class PinnedConversationTile extends CustomStateful<ConversationTileController> 
                 ? Get.find<ConversationTileController>(tag: chat.guid)
                 : Get.put(
                     ConversationTileController(
-                      chat: chat,
+                      chatState: ChatsSvc.getOrCreateChatState(chat),
                       listController: controller,
                     ),
                     tag: "${chat.guid}-pinned"));
@@ -291,7 +291,7 @@ class _ChatTitleState extends CustomState<ChatTitle, void, ConversationTileContr
     return Container(
       padding: const EdgeInsets.only(top: 6, bottom: 4),
       child: Obx(() {
-        final isPinned = controller.chatState?.isPinned.value ?? controller.chat.isPinned ?? false;
+        final isPinned = controller.chatState.isPinned.value;
         final style = context.theme.textTheme.bodyMedium!.apply(
           color: controller.shouldHighlight.value
               ? context.theme.colorScheme.onBubble(context, controller.chat.isIMessage)

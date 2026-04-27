@@ -68,7 +68,7 @@ class _SamsungConversationTileState extends CustomState<SamsungConversationTile,
     );
 
     return ChatStateScope(
-      chatState: controller.chatState!,
+      chatState: controller.chatState,
       child: Obx(() {
         NavigationSvc.listener.value;
         return AnimatedContainer(
@@ -189,7 +189,7 @@ class _UnreadIconState extends CustomState<UnreadIcon, void, ConversationTileCon
   @override
   Widget build(BuildContext context) {
     return Obx(() {
-      final unread = ChatsSvc.getChatState(controller.chat.guid)?.hasUnreadMessage.value ?? false;
+      final unread = controller.chatState.hasUnreadMessage.value;
       return (unread)
           ? Container(
               decoration: BoxDecoration(

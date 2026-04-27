@@ -97,7 +97,7 @@ class _MaterialConversationTileState extends CustomState<MaterialConversationTil
     );
 
     return ChatStateScope(
-      chatState: controller.chatState!,
+      chatState: controller.chatState,
       child: Obx(() {
         NavigationSvc.listener.value;
         return AnimatedContainer(
