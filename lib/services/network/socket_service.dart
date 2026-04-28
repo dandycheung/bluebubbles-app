@@ -30,6 +30,7 @@ class SocketService {
   SocketState _lastState = SocketState.connecting;
   RxString lastError = "".obs;
   Timer? _reconnectTimer;
+  bool _manualDisconnectRequested = false;
   Socket? socket;
 
   InternetConnection? internetConnection;
@@ -60,6 +61,8 @@ class SocketService {
   }
 
   void startSocket() {
+    _manualDisconnectRequested = false;
+
     // Validate server address before attempting to connect
     if (isNullOrEmpty(serverAddress)) {
       Logger.warn("Cannot start socket: server address is empty");
@@ -159,6 +162,9 @@ class SocketService {
 
   void disconnect() {
     if (isNullOrEmpty(serverAddress)) return;
+    _manualDisconnectRequested = true;
+    _reconnectTimer?.cancel();
+    _reconnectTimer = null;
     socket?.disconnect();
     _connectivitySubscription?.cancel();
     _connectivitySubscription = null;
@@ -167,6 +173,7 @@ class SocketService {
 
   void reconnect() {
     if (state.value == SocketState.connected || isNullOrEmpty(serverAddress)) return;
+    _manualDisconnectRequested = false;
     state.value = SocketState.connecting;
     socket?.connect();
     _startConnectivitySubscription();
@@ -174,6 +181,7 @@ class SocketService {
 
   void closeSocket() {
     if (isNullOrEmpty(serverAddress)) return;
+    _manualDisconnectRequested = true;
     _reconnectTimer?.cancel();
     _reconnectTimer = null;
     internetConnectionListener?.cancel();
@@ -183,6 +191,7 @@ class SocketService {
   }
 
   void restartSocket() {
+    _manualDisconnectRequested = false;
     closeSocket();
     startSocket();
   }
@@ -260,12 +269,19 @@ class SocketService {
   /// Called when socket.io exhausts all reconnect attempts. Schedules a
   /// restart after a short delay so we can refresh the server URL first.
   void _handleReconnectFailed(dynamic data) {
+    if (_manualDisconnectRequested) {
+      Logger.debug("Ignoring reconnect_failed after manual disconnect");
+      return;
+    }
+
     Logger.warn("Socket exhausted reconnect attempts — scheduling restart");
     handleStatusUpdate(SocketState.error, data);
 
     if (_reconnectTimer != null && _reconnectTimer!.isActive) return;
     _reconnectTimer = Timer(const Duration(seconds: 5), () async {
-      if (state.value == SocketState.connected) return;
+      if (state.value == SocketState.connected || _manualDisconnectRequested || !_shouldMaintainSocketConnection()) {
+        return;
+      }
 
       Logger.info("Attempting to fetch new URL and restart socket...");
       final String? newUrl = await fdb.fetchNewUrl();
@@ -275,10 +291,15 @@ class SocketService {
 
       restartSocket();
 
-      if (!SettingsSvc.settings.keepAppAlive.value) {
+      if (!SettingsSvc.settings.keepAppAlive.value && LifecycleSvc.isAlive) {
         NotificationsSvc.createSocketError();
       }
     });
+  }
+
+  bool _shouldMaintainSocketConnection() {
+    if (kIsDesktop || kIsWeb) return true;
+    return SettingsSvc.settings.keepAppAlive.value || LifecycleSvc.isAlive;
   }
 
   void handleSocketException(SocketException e) {
