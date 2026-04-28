@@ -628,7 +628,14 @@ class AttachmentsService extends GetxService {
               (orientationStr.contains('90') ||
                   orientationStr.contains('270') ||
                   orientationStr.toLowerCase().contains('rotated 90') ||
-                  orientationStr.toLowerCase().contains('rotated 270'));
+                  orientationStr.toLowerCase().contains('rotated 270') ||
+                  orientationStr.toLowerCase().contains('horizontal (normal)') ||
+                  orientationStr.toLowerCase().contains('mirrored horizontal'));
+
+          Logger.test('Exif Height: $exifHeight, Exif Width: $exifWidth, Orientation: $orientationStr, Needs Swap: $needsSwap');
+          exif.forEach((key, value) {
+            print('EXIF Data - $key: $value');
+          });
 
           if (exifWidth != null && exifHeight != null) {
             if (needsSwap) {
