@@ -93,7 +93,7 @@ class _CupertinoConversationTileState extends CustomState<CupertinoConversationT
     );
 
     return ChatStateScope(
-      chatState: controller.chatState!,
+      chatState: controller.chatState,
       child: Obx(() {
         NavigationSvc.listener.value;
         return AnimatedContainer(

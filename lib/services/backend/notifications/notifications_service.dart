@@ -481,11 +481,10 @@ class NotificationsService {
         );
         _message.generateTempGuid();
         OutgoingMsgHandler.queue(
-          OutgoingItem(
-            type: QueueType.sendMessage,
+          OutgoingReaction(
             chat: chat,
             message: _message,
-            selected: message,
+            selectedMessage: message,
             reaction: reaction,
           ),
         );
@@ -507,8 +506,7 @@ class NotificationsService {
       _message.generateTempGuid();
 
       OutgoingMsgHandler.queue(
-        OutgoingItem(
-          type: QueueType.sendMessage,
+        OutgoingMessage(
           chat: chat,
           message: _message,
         ),

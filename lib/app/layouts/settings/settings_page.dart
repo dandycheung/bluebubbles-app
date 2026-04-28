@@ -31,11 +31,9 @@ class _SettingsPageState extends State<SettingsPage> with ThemeHelpers {
   final RxnInt totalSize = RxnInt();
 
   String searchQuery = "";
-  List<Widget>? _cachedSettingsItemList;
 
-  // Lazy-load and cache the settings list
   List<Widget> _getSettingsItemList(BuildContext context) {
-    _cachedSettingsItemList ??= buildSettingItemList(
+    return buildSettingItemList(
       context: context,
       searchQuery: searchQuery,
       tileColor: tileColor,
@@ -49,8 +47,6 @@ class _SettingsPageState extends State<SettingsPage> with ThemeHelpers {
       totalSize: totalSize,
       uploadingContacts: uploadingContacts,
     );
-
-    return _cachedSettingsItemList!;
   }
 
   @override

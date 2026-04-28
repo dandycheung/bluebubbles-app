@@ -48,6 +48,7 @@ class IncomingPayload {
   final Chat chat;
 
   final Message message;
+  final List<Attachment> attachments;
 
   /// The local temp GUID that was assigned when *we* sent this message.
   /// Present only when the server is echoing back one of our own sends.
@@ -58,6 +59,7 @@ class IncomingPayload {
     required this.source,
     required this.chat,
     required this.message,
+    this.attachments = const [],
     this.tempGuid,
   });
 
@@ -66,6 +68,7 @@ class IncomingPayload {
     MessageSource? source,
     Chat? chat,
     Message? message,
+    List<Attachment>? attachments,
     String? tempGuid,
   }) {
     return IncomingPayload(
@@ -73,6 +76,7 @@ class IncomingPayload {
       source: source ?? this.source,
       chat: chat ?? this.chat,
       message: message ?? this.message,
+      attachments: attachments ?? this.attachments,
       tempGuid: tempGuid ?? this.tempGuid,
     );
   }
@@ -306,6 +310,7 @@ class IncomingMessageHandler {
   Future<void> _processNewMessage(IncomingPayload payload) async {
     final m = payload.message;
     final tempGuid = payload.tempGuid;
+    final incomingAttachments = payload.attachments;
 
     Logger.debug(
       '[new-message] START guid=${m.guid} tempGuid=$tempGuid '
@@ -351,7 +356,11 @@ class IncomingMessageHandler {
     //    notification-triggered reaction doesn't lose its source notification.
     final clearNotificationFromMe = (m.isFromMe ?? false) && m.associatedMessageGuid == null;
     Logger.debug('[new-message] calling addMessage for guid=${m.guid}', tag: _tag);
-    final result = await c.addMessage(m, clearNotificationsIfFromMe: clearNotificationFromMe);
+    final result = await c.addMessage(
+      m,
+      clearNotificationsIfFromMe: clearNotificationFromMe,
+      attachments: incomingAttachments,
+    );
     final saved = result.message;
     Logger.debug('[new-message] addMessage complete — saved.guid=${saved.guid} id=${saved.id}', tag: _tag);
 
@@ -360,7 +369,9 @@ class IncomingMessageHandler {
     if (saved.guid != null) _markProcessed(saved.guid!);
 
     // 6. Complete any pending outgoing send-progress tracker.
-    if (tempGuid != null) OutgoingMsgHandler.completeSendProgressIfExists(tempGuid, Origin.incomingMessageHandler);
+    if (tempGuid != null && GetIt.I.isRegistered<OutgoingMessageHandler>()) {
+      OutgoingMsgHandler.completeSendProgressIfExists(tempGuid, Origin.incomingMessageHandler);
+    }
 
     // 7. Audible receive feedback.
     //    The original ActionHandler gates sound on its shouldNotifyForNewMessageGuid dedup flag.
@@ -423,6 +434,7 @@ class IncomingMessageHandler {
   Future<void> _processUpdatedMessage(IncomingPayload payload) async {
     final m = payload.message;
     final tempGuid = payload.tempGuid;
+    final replacementAttachments = List<Attachment?>.from(payload.attachments);
 
     Logger.debug(
       '[updated-message] START guid=${m.guid} tempGuid=$tempGuid '
@@ -431,7 +443,9 @@ class IncomingMessageHandler {
     );
 
     // 1. Complete any pending send-progress tracker first.
-    if (tempGuid != null) OutgoingMsgHandler.completeSendProgressIfExists(tempGuid, Origin.incomingMessageHandler);
+    if (tempGuid != null && GetIt.I.isRegistered<OutgoingMessageHandler>()) {
+      OutgoingMsgHandler.completeSendProgressIfExists(tempGuid, Origin.incomingMessageHandler);
+    }
 
     // 2. Locate the existing DB record.
     //    Try tempGuid first (outgoing echo), then fall back to the real GUID
@@ -477,7 +491,7 @@ class IncomingMessageHandler {
     await _replaceMessage(c, existingGuid, existing, m);
 
     // 6. Persist attachment GUID swaps (e.g. temp attachment → real GUID).
-    await _replaceAttachments(c, existingGuid, existing, m);
+    await _replaceAttachments(c, existingGuid, existing, m, replacementAttachments);
 
     // 7. Drive UI reactivity, if not in a background isolate.
     if (!isIsolate) {
@@ -633,6 +647,7 @@ class IncomingMessageHandler {
     String existingGuid,
     Message existing,
     Message replacement,
+    List<Attachment?> replacementAttachments,
   ) async {
     Logger.debug(
       '[_replaceAttachments] START existingGuid=$existingGuid '
@@ -641,8 +656,8 @@ class IncomingMessageHandler {
       tag: _tag,
     );
 
-    for (int i = 0; i < replacement.attachments.length; i++) {
-      final newAttachment = replacement.attachments[i];
+    for (int i = 0; i < replacementAttachments.length; i++) {
+      final newAttachment = replacementAttachments[i];
       if (newAttachment == null) {
         Logger.debug('[_replaceAttachments] index=$i newAttachment is null — skipping', tag: _tag);
         continue;
@@ -737,14 +752,13 @@ class IncomingMessageHandler {
 
     // After all DB swaps complete, notify MessagesService so the MessageState
     // for this message gets the updated attachment list (real GUIDs replacing temp ones).
-    if (replacement.attachments.isNotEmpty && Get.isRegistered<MessagesService>(tag: chat.guid)) {
+    if (replacementAttachments.isNotEmpty && Get.isRegistered<MessagesService>(tag: chat.guid)) {
       // Re-fetch from DB so the attachment relations reflect the post-swap state.
       final freshMessage = Message.findOne(guid: replacement.guid!);
       if (freshMessage != null) {
-        freshMessage.attachments = List<Attachment>.from(freshMessage.dbAttachments);
         Logger.debug(
           '[_replaceAttachments] notifying MessagesService with fresh message guid=${freshMessage.guid} '
-          'attachmentCount=${freshMessage.attachments.length} oldGuid=$existingGuid',
+          'attachmentCount=${freshMessage.dbAttachments.length} oldGuid=$existingGuid',
           tag: _tag,
         );
         MessagesSvc(chat.guid).updateMessage(

@@ -270,30 +270,21 @@ class MessageState extends StatefulController {
       if (attachment?.guid == null) continue;
       final guid = attachment!.guid!;
 
+      // Promote the state for this attachment if it has a pending temp -> real promotion registered.
+      String? tempKey = _pendingGuidPromotions[guid];
+      if (tempKey != null && attachmentStates.containsKey(tempKey)) {
+        _pendingGuidPromotions.remove(tempKey);
+        final promoted = attachmentStates.remove(tempKey)!;
+        promoted.updateFromAttachment(attachment);
+        promoted.updateGuidInternal(guid);
+        attachmentStates[guid] = promoted;
+      }
+
       if (attachmentStates.containsKey(guid)) {
         // Update metadata without touching the active transfer state.
         attachmentStates[guid]!.updateFromAttachment(attachment);
       } else {
-        // The real GUID is not yet in the map.  Look for a pending promotion
-        // registered by notifyAttachmentSendComplete — this gives us a
-        // deterministic temp→real GUID mapping even for multi-attachment
-        // messages (no ambiguous heuristic).
-        String? tempKey;
-        for (final entry in _pendingGuidPromotions.entries) {
-          if (entry.value == guid) {
-            tempKey = entry.key;
-            break;
-          }
-        }
-        if (tempKey != null && attachmentStates.containsKey(tempKey)) {
-          _pendingGuidPromotions.remove(tempKey);
-          final promoted = attachmentStates.remove(tempKey)!;
-          promoted.updateFromAttachment(attachment);
-          promoted.updateGuidInternal(guid);
-          attachmentStates[guid] = promoted;
-        } else {
-          attachmentStates[guid] = AttachmentState(attachment);
-        }
+        attachmentStates[guid] = AttachmentState(attachment);
       }
     }
 
@@ -613,12 +604,8 @@ class MessageState extends StatefulController {
     message.hasApplePayloadData = updatedMessage.hasApplePayloadData;
     message.isBookmarked = updatedMessage.isBookmarked;
 
-    // Update the in-memory attachment list so UI widgets see the new GUIDs
-    // (e.g. after a temp→real GUID swap via _replaceAttachments).
-    if (updatedMessage.dbAttachments.isNotEmpty) {
-      message.attachments = updatedMessage.dbAttachments;
-      _syncAttachmentStates(updatedMessage.dbAttachments);
-    }
+    // Keep AttachmentState as the UI source of truth, synchronized from dbAttachments.
+    _syncAttachmentStates(updatedMessage.dbAttachments);
   }
 
   /// Convenience getter: Is this message in an error state?

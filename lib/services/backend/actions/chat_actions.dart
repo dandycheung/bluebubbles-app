@@ -172,6 +172,10 @@ class ChatActions {
 
   static Future<Map<String, dynamic>> addMessageToChat(dynamic data) async {
     final messageData = data['messageData'] as Map<String, dynamic>;
+    final attachmentsData = ((data['attachmentsData'] as List?) ?? const [])
+        .whereType<Map>()
+        .map((e) => e.cast<String, dynamic>())
+        .toList();
     final chatData = data['chatData'] as Map<String, dynamic>;
     final latestMessageData = data['latestMessageData'] as Map<String, dynamic>;
     final checkForMessageText = data['checkForMessageText'] as bool;
@@ -184,6 +188,7 @@ class ChatActions {
 
       // Deserialize inputs
       final inputMessage = Message.fromMap(messageData);
+      final inputAttachments = attachmentsData.map(Attachment.fromMap).toList();
       final inputChat = Chat.fromMap(chatData);
       final inputLatest = Message.fromMap(latestMessageData);
 
@@ -284,10 +289,8 @@ class ChatActions {
           }
 
           // Process and link attachments if present
-          if (inputMessage.attachments.isNotEmpty) {
-            for (Attachment? attachment in inputMessage.attachments) {
-              if (attachment == null) continue;
-
+          if (inputAttachments.isNotEmpty) {
+            for (final attachment in inputAttachments) {
               // Find existing attachment
               final attachQuery = attachmentBox.query(Attachment_.guid.equals(attachment.guid ?? '')).build();
               attachQuery.limit = 1;
@@ -693,6 +696,18 @@ class ChatActions {
     return Database.runInTransaction(TxMode.write, () {
       final inputChat = Chat.fromMap(chatData);
       final inputMessages = messagesData.map((e) => Message.fromMap(e)).toList();
+      final messageAttachments = <String, List<Attachment>>{};
+      for (final msgData in messagesData) {
+        final msgGuid = msgData['guid'] as String?;
+        if (msgGuid == null) continue;
+        final attachments = ((msgData['attachments'] as List?) ?? const [])
+            .whereType<Map>()
+            .map((e) => Attachment.fromMap(e.cast<String, dynamic>()))
+            .toList();
+        if (attachments.isNotEmpty) {
+          messageAttachments[msgGuid] = attachments;
+        }
+      }
 
       final chatQuery = Database.chats.query(Chat_.guid.equals(inputChat.guid)).build();
       final dbChat = chatQuery.findFirst();
@@ -715,10 +730,8 @@ class ChatActions {
 
       // Extract & cache the attachments
       Map<String, Attachment> attachmentCache = {};
-      for (var msg in inputMessages) {
-        if (msg.attachments.isEmpty) continue;
-        for (Attachment? attachment in msg.attachments) {
-          if (attachment == null) continue;
+      for (final attachments in messageAttachments.values) {
+        for (final attachment in attachments) {
           attachmentCache[attachment.guid!] = attachment;
         }
       }
@@ -733,16 +746,10 @@ class ChatActions {
       // Sync the messages & insert synced attachments
       final syncedMessages = _syncMessagesInTransaction(dbChat, inputMessages);
       for (var message in syncedMessages) {
-        // Update related attachments with synced versions
-        for (var attachment in message.attachments) {
-          if (attachment == null) continue;
-          Attachment? cached = attachmentCache[attachment.guid];
-          if (cached == null) continue;
-          attachment = cached;
-        }
-
         // Update the relational attachments
-        message.dbAttachments.addAll(message.attachments.where((element) => element != null).map((e) => e!).toList());
+        final rawAttachments = messageAttachments[message.guid] ?? const <Attachment>[];
+        message.dbAttachments
+            .addAll(rawAttachments.map((attachment) => attachmentCache[attachment.guid] ?? attachment).toList());
       }
 
       // Invoke a final put call to sync the relational data

@@ -33,6 +33,7 @@ class ChatState {
   final RxBool lockChatName;
   final RxBool lockChatIcon;
   final RxnString lastReadMessageGuid;
+  final Rxn<DateTime> dateDeleted;
 
   /// The delivery/read status of the latest outgoing message.  Updated any
   /// time [updateLatestMessageInternal] is called, even when the GUID has not
@@ -84,6 +85,7 @@ class ChatState {
         lockChatName = chat.lockChatName.obs,
         lockChatIcon = chat.lockChatIcon.obs,
         lastReadMessageGuid = RxnString(chat.lastReadMessageGuid),
+        dateDeleted = Rxn<DateTime>(chat.dateDeleted),
         isActive = false.obs,
         isAlive = false.obs,
         shouldHideAttachments =
@@ -157,6 +159,12 @@ class ChatState {
   void updateLockChatNameInternal(bool value) {
     if (lockChatName.value != value) {
       lockChatName.value = value;
+    }
+  }
+
+  void updateDateDeletedInternal(DateTime? value) {
+    if (dateDeleted.value != value) {
+      dateDeleted.value = value;
     }
   }
 

@@ -10,13 +10,18 @@ class SyncInterface {
   /// Performs an incremental sync in the isolate.
   /// Returns the latest [Message] object per synced chat, hydrated from the local DB.
   /// Callers use these messages to update [ChatState] subtitles via [ChatsService].
-  static Future<List<Message>> performIncrementalSync() async {
+  static Future<List<Message>> performIncrementalSync({bool useGlobalIsolate = false}) async {
     late List<int> messageIds = [];
     if (isIsolate) {
       messageIds = await SyncActions.performIncrementalSync({});
     } else {
-      messageIds =
-          await GetIt.I<IncrementalSyncIsolate>().send<List<int>>(IsolateRequestType.performIncrementalSync, input: {});
+      if (useGlobalIsolate) {
+        messageIds =
+            await GetIt.I<GlobalIsolate>().send<List<int>>(IsolateRequestType.performIncrementalSync, input: {});
+      } else {
+        messageIds = await GetIt.I<IncrementalSyncIsolate>()
+            .send<List<int>>(IsolateRequestType.performIncrementalSync, input: {});
+      }
     }
 
     return Database.messages.getMany(messageIds).whereType<Message>().toList();

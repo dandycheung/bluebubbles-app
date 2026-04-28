@@ -335,7 +335,10 @@ class Chat {
   /// Add message to chat - pure DB operation
   /// Note: For full message add with service updates, use ChatsSvc.addMessageToChat
   Future<MessageSaveResult> addMessage(Message message,
-      {bool changeUnreadStatus = true, bool checkForMessageText = true, bool clearNotificationsIfFromMe = true}) async {
+      {bool changeUnreadStatus = true,
+      bool checkForMessageText = true,
+      bool clearNotificationsIfFromMe = true,
+      List<Attachment> attachments = const []}) async {
     // Save the message using the interface
     Message? latest = latestMessage;
     Message? newMessage;
@@ -344,6 +347,7 @@ class Chat {
     try {
       final result = await ChatInterface.addMessageToChat(
         messageData: message.toMap(),
+        attachmentsData: attachments.map((e) => e.toMap()).toList(),
         chatData: toMap(),
         latestMessageData: latest.toMap(),
         checkForMessageText: checkForMessageText,
@@ -499,7 +503,6 @@ class Chat {
         associatedMessagesQuery.close();
         associatedMessages = MessageHelper.normalizedAssociatedMessages(associatedMessages);
         for (Message m in messages) {
-          m.attachments = List<Attachment>.from(m.dbAttachments);
           m.associatedMessages = associatedMessages.where((e) => e.associatedMessageGuid == m.guid).toList();
         }
       }

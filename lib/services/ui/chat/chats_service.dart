@@ -14,6 +14,7 @@ import 'package:collection/collection.dart';
 import 'package:bluebubbles/models/models.dart' show HandleLookupKey, MessageSaveResult;
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:get/get.dart' hide Response;
 import 'package:universal_io/io.dart';
 import 'package:bluebubbles/database/database.dart';
@@ -407,6 +408,19 @@ class ChatsService {
         chatListVersion.value++;
       });
     }
+  }
+
+  /// Re-sort [_sortedChats] in-place and notify the chat list UI.
+  ///
+  /// Call this after bulk pin-index changes that were applied outside of the
+  /// normal [updateChat] / [_repositionChat] path (e.g. pinned-order panel).
+  /// The UI notification is deferred to the next frame so this is safe to call
+  /// from [State.dispose] (while the widget tree may still be locked).
+  void refreshSortOrder() {
+    _sortedChats.sort(Chat.sort);
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      _scheduleListVersionUpdate(immediate: true);
+    });
   }
 
   void close() {
@@ -852,6 +866,10 @@ class ChatsService {
     await ChatInterface.softDeleteChat(chatData: chat.toMap());
     chat.clearTranscript();
 
+    // Propagate dateDeleted to ChatState before removing it so any live
+    // listeners (e.g. ConversationTileController) can react reactively.
+    getChatState(chat.guid)?.updateDateDeletedInternal(DateTime.now().toUtc());
+
     // Remove from service state
     removeChat(chat);
   }
@@ -1119,16 +1137,25 @@ class ChatsService {
   /// Set chat custom avatar path
   Future<void> setChatCustomAvatarPath(Chat chat, String? value) async {
     final state = getChatState(chat.guid);
-
-    if (state != null && state.customAvatarPath.value == value) return;
-
-    // Update Chat model (use state.chat if available, otherwise use passed in chat)
     final chatToUpdate = state?.chat ?? chat;
+    final oldPath = chatToUpdate.customAvatarPath;
+
+    if (oldPath == value) return;
+
     chatToUpdate.customAvatarPath = value;
     await chatToUpdate.saveAsync(updateCustomAvatarPath: true);
 
     // Update state if available
     state?.updateCustomAvatarPathInternal(value);
+
+    if (!kIsWeb && oldPath != null && oldPath != value) {
+      try {
+        final file = File(oldPath);
+        if (await file.exists()) {
+          await file.delete();
+        }
+      } catch (_) {}
+    }
   }
 
   /// Set chat custom background path

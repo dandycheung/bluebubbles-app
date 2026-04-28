@@ -136,26 +136,24 @@ class _SendAnimationState extends CustomState<SendAnimation, SendData, Conversat
 
     for (int i = 0; i < attachments.length; i++) {
       final file = attachments[i];
+      final attachment = Attachment(
+        isOutgoing: true,
+        mimeType: mime(file.path) ?? mime(file.name),
+        uti: "public.jpg",
+        transferName: file.name,
+        totalBytes: file.size,
+        // Store the original source path in metadata so prepAttachment can copy it.
+        // For bytes-only files (clipboard/GIF keyboard), store bytes in the transient field
+        // so prepAttachment can write them to disk.
+        metadata: file.path != null ? {'source_path': file.path} : null,
+        bytes: file.path == null ? file.bytes : null,
+      );
 
       final message = Message(
         text: "",
         dateCreated: DateTime.now(),
         hasAttachments: true,
         balloonBundleId: file.balloonBundleId,
-        attachments: [
-          Attachment(
-            isOutgoing: true,
-            mimeType: mime(file.path) ?? mime(file.name),
-            uti: "public.jpg",
-            transferName: file.name,
-            totalBytes: file.size,
-            // Store the original source path in metadata so prepAttachment can copy it.
-            // For bytes-only files (clipboard/GIF keyboard), store bytes in the transient field
-            // so prepAttachment can write them to disk.
-            metadata: file.path != null ? {'source_path': file.path} : null,
-            bytes: file.path == null ? file.bytes : null,
-          ),
-        ],
         isFromMe: true,
         handleId: 0,
         threadOriginatorGuid: i == 0 ? data.replyGuid : null,
@@ -163,12 +161,15 @@ class _SendAnimationState extends CustomState<SendAnimation, SendData, Conversat
         expressiveSendStyleId: data.effectId,
       );
       message.generateTempGuid();
-      message.attachments.first!.guid = message.guid;
-      await OutgoingMsgHandler.queue(OutgoingItem(
-          type: QueueType.sendAttachment,
+      attachment.guid = message.guid;
+      await OutgoingMsgHandler.queue(
+        OutgoingAttachment(
           chat: controller.chat,
           message: message,
-          customArgs: {"audio": data.isAudioMessage}));
+          attachment: attachment,
+          isAudioMessage: data.isAudioMessage,
+        ),
+      );
     }
 
     if (text.isNotEmpty || data.subject.isNotEmpty) {
@@ -234,11 +235,17 @@ class _SendAnimationState extends CustomState<SendAnimation, SendData, Conversat
         ],
       );
       _message.generateTempGuid();
-      OutgoingMsgHandler.queue(OutgoingItem(
-        type: (_message.attributedBody.isNotEmpty) ? QueueType.sendMultipart : QueueType.sendMessage,
-        chat: controller.chat,
-        message: _message,
-      ));
+      OutgoingMsgHandler.queue(
+        (_message.attributedBody.isNotEmpty)
+            ? OutgoingMultipartMessage(
+                chat: controller.chat,
+                message: _message,
+              )
+            : OutgoingMessage(
+                chat: controller.chat,
+                message: _message,
+              ),
+      );
       setState(() {
         tween = Tween<double>(
           begin: 0.9,

@@ -184,10 +184,11 @@ class _UrlPreviewState extends State<UrlPreview> with AutomaticKeepAliveClientMi
     if (attachment == null) return false;
 
     content = AttachmentsSvc.getContent(attachment, autoDownload: true, onComplete: (file) {
-      if (mounted)
+      if (mounted) {
         setState(() {
           content = file;
         });
+      }
     });
     if (content is PlatformFile && mounted) setState(() {});
     return true;
@@ -210,10 +211,11 @@ class _UrlPreviewState extends State<UrlPreview> with AutomaticKeepAliveClientMi
         metadataKey: 'previewIconMd5',
         message: message,
         onResult: (path, _) {
-          if (mounted)
+          if (mounted) {
             setState(() {
               _iconImagePath = path;
             });
+          }
         },
       );
     }
@@ -240,10 +242,11 @@ class _UrlPreviewState extends State<UrlPreview> with AutomaticKeepAliveClientMi
   /// re-resolves the cached preview image if available.
   Future<void> _restoreCachedMetadata(Message message, bool inReply) async {
     final meta = Metadata.fromJson(message.metadata!);
-    if (mounted)
+    if (mounted) {
       setState(() {
         _fetchedMetadata = meta;
       });
+    }
     if (kIsWeb || inReply || meta.image == null) return;
 
     await _resolveImage(
@@ -285,10 +288,11 @@ class _UrlPreviewState extends State<UrlPreview> with AutomaticKeepAliveClientMi
 
       message.metadata = metaMap;
       if (!kIsWeb && message.id != null) message.save();
-      if (mounted)
+      if (mounted) {
         setState(() {
           _fetchedMetadata = fetched;
         });
+      }
     } on SocketException catch (ex, stack) {
       Logger.warn('Network unavailable for URL preview fetch; will retry', error: ex, trace: stack, tag: 'UrlPreview');
     } on TimeoutException catch (ex, stack) {

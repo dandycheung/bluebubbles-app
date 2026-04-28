@@ -97,21 +97,22 @@ Future<void> retryReaction({
   }
 
   // Re-send
-  OutgoingMsgHandler.queue(OutgoingItem(
-    type: QueueType.sendMessage,
-    chat: chat,
-    message: Message(
-      associatedMessageGuid: selected.guid,
-      associatedMessageType: reaction.associatedMessageType,
-      associatedMessagePart: reaction.associatedMessagePart,
-      dateCreated: DateTime.now(),
-      hasAttachments: false,
-      isFromMe: true,
-      handleId: 0,
+  OutgoingMsgHandler.queue(
+    OutgoingReaction(
+      chat: chat,
+      message: Message(
+        associatedMessageGuid: selected.guid,
+        associatedMessageType: reaction.associatedMessageType,
+        associatedMessagePart: reaction.associatedMessagePart,
+        dateCreated: DateTime.now(),
+        hasAttachments: false,
+        isFromMe: true,
+        handleId: 0,
+      ),
+      selectedMessage: selected,
+      reaction: reaction.associatedMessageType!,
     ),
-    selected: selected,
-    reaction: reaction.associatedMessageType!,
-  ));
+  );
 }
 
 /// Shared remove logic for reactions

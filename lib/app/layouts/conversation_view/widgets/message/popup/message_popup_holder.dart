@@ -137,13 +137,14 @@ class _MessagePopupHolderState extends State<MessagePopupHolder> with ThemeHelpe
     Logger.debug("[sendTapback] Creating temp reaction: type=$reaction, parent=${message.guid}",
         tag: "MessageReactivity");
 
-    OutgoingMsgHandler.queue(OutgoingItem(
-      type: QueueType.sendMessage,
-      chat: message.getChat() ?? ChatStateScope.chatOf(context),
-      message: tempMessage,
-      selected: message,
-      reaction: reaction,
-    ));
+    OutgoingMsgHandler.queue(
+      OutgoingReaction(
+        chat: message.chat.target ?? ChatStateScope.chatOf(context),
+        message: tempMessage,
+        selectedMessage: message,
+        reaction: reaction,
+      ),
+    );
   }
 
   @override

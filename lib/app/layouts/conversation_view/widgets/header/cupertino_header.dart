@@ -52,13 +52,12 @@ class CupertinoHeader extends StatelessWidget implements PreferredSizeWidget {
               Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
+                    tileMode: TileMode.clamp,
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
-                    stops: const [0.0, 0.55, 1.0],
                     colors: [
-                      context.theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.85),
-                      context.theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.70),
-                      context.theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.20),
+                      context.theme.colorScheme.surfaceContainerHighest.withValues(alpha: 1.0),
+                      context.theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
                     ],
                   ),
                   border: Border(

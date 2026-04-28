@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:audio_waveforms/audio_waveforms.dart';
@@ -11,21 +12,16 @@ import 'package:bluebubbles/app/layouts/conversation_view/widgets/text_field/tex
 import 'package:bluebubbles/database/models.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/services/services.dart';
-import 'package:bluebubbles/utils/logger/logger.dart';
-import 'package:chunked_stream/chunked_stream.dart';
-import 'package:collection/collection.dart';
-import 'package:unicode_emojis/unicode_emojis.dart';
-import 'package:file_picker/file_picker.dart' as pf;
-import 'package:file_picker/file_picker.dart' hide PlatformFile;
-import 'package:flutter/cupertino.dart';
+import 'package:file_picker/file_picker.dart' as fp;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:pasteboard/pasteboard.dart';
-import 'package:path/path.dart' hide context;
-import 'package:supercharged/supercharged.dart';
 import 'package:universal_io/io.dart';
+import 'handlers/emoji_autocomplete_handler.dart';
+import 'handlers/mention_autocomplete_handler.dart';
+import 'handlers/keyboard_shortcut_handler.dart';
+import 'handlers/clipboard_paste_handler.dart';
 
 class TextFieldComponent extends StatefulWidget {
   const TextFieldComponent({
@@ -72,6 +68,10 @@ class TextFieldComponentState extends State<TextFieldComponent> {
   late final Future<void> Function({String? effect}) sendMessage;
 
   late final ValueNotifier<bool> isRecordingNotifier;
+  EmojiAutocompleteHandler? emojiHandler;
+  MentionAutocompleteHandler? mentionHandler;
+  KeyboardShortcutHandler? keyboardHandler;
+  ClipboardPasteHandler? clipboardHandler;
 
   TextFieldComponentState() : isRecordingNotifier = ValueNotifier<bool>(false);
 
@@ -91,6 +91,8 @@ class TextFieldComponentState extends State<TextFieldComponent> {
       isRecordingNotifier.value = recorderController?.isRecording ?? false;
     });
 
+    _configureHandlers();
+
     assert(!(subjectTextController == null &&
         !isChatCreator &&
         SettingsSvc.settings.enablePrivateAPI.value &&
@@ -106,11 +108,34 @@ class TextFieldComponentState extends State<TextFieldComponent> {
   }
 
   @override
-  void didUpdateWidget(TextFieldComponent old) {
-    super.didUpdateWidget(old);
-    if (widget.controller != old.controller) {
+  void didUpdateWidget(TextFieldComponent oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.controller != oldWidget.controller) {
       controller = widget.controller;
+      _configureHandlers();
     }
+  }
+
+  void _configureHandlers() {
+    final ctrl = controller;
+    if (ctrl == null) {
+      emojiHandler = null;
+      mentionHandler = null;
+      keyboardHandler = null;
+      clipboardHandler = null;
+      return;
+    }
+
+    emojiHandler = EmojiAutocompleteHandler(controller: ctrl, textField: textController);
+    mentionHandler = MentionAutocompleteHandler(controller: ctrl, textField: textController, buildContext: context);
+    keyboardHandler = KeyboardShortcutHandler(
+      controller: ctrl,
+      sendMessage: sendMessage,
+      subjectTextController: subjectTextController ?? textController,
+      messageTextController: textController,
+      isChatCreator: focusNode != null,
+    );
+    clipboardHandler = ClipboardPasteHandler(controller: ctrl);
   }
 
   bool get iOS => SettingsSvc.settings.skin.value == Skins.iOS;
@@ -429,9 +454,9 @@ class TextFieldComponentState extends State<TextFieldComponent> {
               visualDensity: Platform.isAndroid ? VisualDensity.compact : null,
               onPressed: () async {
                 if (kIsDesktop) {
-                  final res = await FilePicker.pickFiles(withReadStream: true, allowMultiple: true);
+                  final res = await fp.FilePicker.pickFiles(withReadStream: true, allowMultiple: true);
                   if (res == null || res.files.isEmpty || res.files.first.readStream == null) return;
-                  for (pf.PlatformFile e in res.files) {
+                  for (fp.PlatformFile e in res.files) {
                     if (e.size / 1024000 > 1000) {
                       showSnackbar("Error", "This file is over 1 GB! Please compress it before sending.");
                       continue;
@@ -465,295 +490,103 @@ class TextFieldComponentState extends State<TextFieldComponent> {
   }
 
   void onContentCommit(KeyboardInsertedContent content) async {
-    // Add some debugging logs
-    Logger.info("[Content Commit] Keyboard received content");
-    Logger.info("  -> Content Type: ${content.mimeType}");
-    Logger.info("  -> URI: ${content.uri}");
-    Logger.info("  -> Content Length: ${content.hasData ? content.data!.length : "null"}");
-
-    // Parse the filename from the URI and read the data as a List<int>
-    String filename = FilesystemSvc.uriToFilename(content.uri, content.mimeType);
-
-    // Save the data to a location and add it to the file picker
-    if (content.hasData) {
-      widget.controller?.pickedAttachments.add(PlatformFile(
-        name: filename,
-        size: content.data!.length,
-        bytes: content.data,
-      ));
-    } else {
-      showSnackbar('Insertion Failed', 'Attachment has no data!');
-    }
+    // Delegate to clipboard handler
+    clipboardHandler?.handleKeyboardInsertedContent(content);
   }
 
   KeyEventResult handleKey(FocusNode _, KeyEvent ev, BuildContext context, bool isChatCreator) {
     if (ev is! KeyDownEvent) return KeyEventResult.ignored;
 
+    // Handle clipboard paste (Ctrl+V or Cmd+V)
     if ((kIsWeb || Platform.isWindows || Platform.isLinux) &&
         (ev.physicalKey == PhysicalKeyboardKey.keyV || ev.logicalKey == LogicalKeyboardKey.keyV) &&
         HardwareKeyboard.instance.isControlPressed) {
-      if (kIsDesktop) {
-        Pasteboard.files().then((files) {
-          if (files.isEmpty) {
-            Pasteboard.image.then((image) async {
-              if (image != null) {
-                controller!.pickedAttachments.add(PlatformFile(
-                  name: "image-${controller!.pickedAttachments.length + 1}.png",
-                  bytes: image,
-                  size: image.length,
-                ));
-              } else {
-                String? clipboardText = (await Clipboard.getData(Clipboard.kTextPlain))?.text;
-                if (clipboardText == null) return;
-
-                TextSelection selection = controller!.lastFocusedTextController.selection;
-                String oldText = controller!.lastFocusedTextController.text;
-                String newText = oldText.replaceRange(selection.start, selection.end, clipboardText);
-                controller!.lastFocusedTextController.value = TextEditingValue(
-                  text: newText,
-                  selection: TextSelection.fromPosition(
-                    TextPosition(offset: selection.start + clipboardText.length),
-                  ),
-                );
-              }
-            });
-          } else {
-            for (final String path in files) {
-              final String name = basename(path);
-              final File file = File(path);
-              controller!.pickedAttachments.add(PlatformFile(
-                name: name,
-                path: path,
-                bytes: file.readAsBytesSync(),
-                size: file.lengthSync(),
-              ));
-            }
-          }
-        });
-      } else {
-        // This is just web
-        Pasteboard.image.then((image) async {
-          if (image != null) {
-            controller!.pickedAttachments.add(PlatformFile(
-              name: "image-${controller!.pickedAttachments.length + 1}.png",
-              bytes: image,
-              size: image.length,
-            ));
-          } else {
-            String? clipboardText = (await Clipboard.getData(Clipboard.kTextPlain))?.text;
-            if (clipboardText == null) return;
-
-            TextSelection selection = controller!.lastFocusedTextController.selection;
-            String oldText = controller!.lastFocusedTextController.text;
-            String newText = oldText.replaceRange(selection.start, selection.end, clipboardText);
-            controller!.lastFocusedTextController.value = TextEditingValue(
-              text: newText,
-              selection: TextSelection.fromPosition(
-                TextPosition(offset: selection.start + clipboardText.length),
-              ),
-            );
-          }
-        });
+      final handler = clipboardHandler;
+      if (handler != null) {
+        unawaited(handler.handlePasteEvent());
+        return KeyEventResult.handled;
       }
-      return KeyEventResult.handled;
+      return KeyEventResult.ignored;
     }
 
+    // Early return if holding modifier keys (unless for special Ctrl+V case above)
     if (HardwareKeyboard.instance.isMetaPressed ||
         HardwareKeyboard.instance.isControlPressed ||
         HardwareKeyboard.instance.isAltPressed) {
       return KeyEventResult.ignored;
     }
 
-    if (isChatCreator) {
-      if ((kIsDesktop || kIsWeb) &&
-          ev.logicalKey == LogicalKeyboardKey.enter &&
-          !HardwareKeyboard.instance.isShiftPressed) {
-        sendMessage();
-        return KeyEventResult.handled;
-      }
-      return KeyEventResult.ignored;
-    }
-
+    // Calculate movement indices for emoji/mention pickers
     int maxShown = context.height / 3 ~/ 40;
     int upMovementIndex = maxShown ~/ 3;
     int downMovementIndex = maxShown * 2 ~/ 3;
 
-    // Down arrow
-    if (ev.logicalKey == LogicalKeyboardKey.arrowDown) {
-      if (controller!.mentionSelectedIndex.value < controller!.mentionMatches.length - 1) {
-        controller!.mentionSelectedIndex.value++;
-        if (controller!.mentionSelectedIndex.value >= downMovementIndex &&
-            controller!.mentionSelectedIndex < controller!.mentionMatches.length - maxShown + downMovementIndex + 1) {
-          controller!.emojiScrollController.jumpTo(max(
-              (controller!.mentionSelectedIndex.value - downMovementIndex) * 40,
-              controller!.emojiScrollController.offset));
-        }
+    // Check which key was pressed
+    final isEscapeKey = ev.logicalKey == LogicalKeyboardKey.escape;
+    final isTabOrEnter = ev.logicalKey == LogicalKeyboardKey.tab || ev.logicalKey == LogicalKeyboardKey.enter;
+    final isDownArrow = ev.logicalKey == LogicalKeyboardKey.arrowDown;
+    final isUpArrow = ev.logicalKey == LogicalKeyboardKey.arrowUp;
+
+    // Try emoji handler first (emoji matches have priority over mentions if both active)
+    bool handledByEmoji = emojiHandler?.handleKeyEvent(
+          logicalKey: ev.logicalKey,
+          isEscapeKey: isEscapeKey,
+          isTabOrEnter: isTabOrEnter,
+          isDownArrow: isDownArrow,
+          isUpArrow: isUpArrow,
+          maxShown: maxShown,
+          upMovementIndex: upMovementIndex,
+          downMovementIndex: downMovementIndex,
+        ) ??
+        false;
+    if (handledByEmoji) return KeyEventResult.handled;
+
+    // Try mention handler
+    bool handledByMention = mentionHandler?.handleKeyEvent(
+          logicalKey: ev.logicalKey,
+          isEscapeKey: isEscapeKey,
+          isTabOrEnter: isTabOrEnter,
+          isDownArrow: isDownArrow,
+          isUpArrow: isUpArrow,
+          maxShown: maxShown,
+          upMovementIndex: upMovementIndex,
+          downMovementIndex: downMovementIndex,
+        ) ??
+        false;
+    if (handledByMention) return KeyEventResult.handled;
+
+    // Try keyboard shortcut handler (escape, enter, etc.)
+    KeyEventResult shortcutResult = keyboardHandler?.handleKeyEvent(ev) ?? KeyEventResult.ignored;
+    if (shortcutResult == KeyEventResult.handled) return KeyEventResult.handled;
+
+    // Escape: clear picker state if not handled by handlers above
+    if (isEscapeKey) {
+      final ctrl = controller;
+      if (ctrl == null) return KeyEventResult.ignored;
+
+      if (ctrl.showEmojiPicker.value) {
+        ctrl.showEmojiPicker.value = false;
         return KeyEventResult.handled;
       }
-      if (controller!.emojiSelectedIndex.value < controller!.emojiMatches.length - 1) {
-        controller!.emojiSelectedIndex.value++;
-        if (controller!.emojiSelectedIndex.value >= downMovementIndex &&
-            controller!.emojiSelectedIndex < controller!.emojiMatches.length - maxShown + downMovementIndex + 1) {
-          controller!.emojiScrollController.jumpTo(max((controller!.emojiSelectedIndex.value - downMovementIndex) * 40,
-              controller!.emojiScrollController.offset));
-        }
+      if (ctrl.replyToMessage != null) {
+        ctrl.replyToMessage = null;
+        return KeyEventResult.handled;
+      }
+      if (ctrl.pickedAttachments.isNotEmpty) {
+        ctrl.pickedAttachments.clear();
         return KeyEventResult.handled;
       }
     }
 
-    // Up arrow
-    if (ev.logicalKey == LogicalKeyboardKey.arrowUp) {
-      if (chat != null &&
-          controller!.lastFocusedTextController.text.isEmpty &&
-          SettingsSvc.settings.editLastSentMessageOnUpArrow.value &&
-          SettingsSvc.serverDetails.isMinVentura &&
-          SettingsSvc.serverDetails.supportsEditAndUnsend) {
-        final message = MessagesSvc(chat!.guid).mostRecentSent;
-        if (message != null) {
-          final messageController = MessagesSvc(chat!.guid).getOrCreateState(message);
-          final isSending = messageController.isSending.value;
-          if (!isSending) {
-            final parts = messageController.parts;
-            final part = parts.filter((p) => p.text?.isNotEmpty ?? false).lastOrNull;
-            if (part != null) {
-              final FocusNode? node = kIsDesktop || kIsWeb ? FocusNode() : null;
-              controller!.editing.add(MessageEditEntry(
-                  message: message,
-                  part: part,
-                  controller: SpellCheckTextEditingController(text: part.text!, focusNode: node)));
-              node?.requestFocus();
-              return KeyEventResult.handled;
-            }
-          }
-        }
-      }
-      if (controller!.mentionSelectedIndex.value > 0) {
-        controller!.mentionSelectedIndex.value--;
-        if (controller!.mentionSelectedIndex.value >= upMovementIndex &&
-            controller!.mentionSelectedIndex < controller!.mentionMatches.length - maxShown + upMovementIndex + 1) {
-          controller!.emojiScrollController.jumpTo(min((controller!.mentionSelectedIndex.value - upMovementIndex) * 40,
-              controller!.emojiScrollController.offset));
-        }
-        return KeyEventResult.handled;
-      }
-      if (controller!.emojiSelectedIndex.value > 0) {
-        controller!.emojiSelectedIndex.value--;
-        if (controller!.emojiSelectedIndex.value >= upMovementIndex &&
-            controller!.emojiSelectedIndex < controller!.emojiMatches.length - maxShown + upMovementIndex + 1) {
-          controller!.emojiScrollController.jumpTo(min(
-              (controller!.emojiSelectedIndex.value - upMovementIndex) * 40, controller!.emojiScrollController.offset));
-        }
-        return KeyEventResult.handled;
-      }
-    }
-
-    // Tab or Enter
-    if (ev.logicalKey == LogicalKeyboardKey.tab || ev.logicalKey == LogicalKeyboardKey.enter) {
-      if (controller!.focusNode.hasPrimaryFocus &&
-          controller!.mentionMatches.length > controller!.mentionSelectedIndex.value) {
-        int index = controller!.mentionSelectedIndex.value;
-        TextEditingController textField = controller!.subjectFocusNode.hasPrimaryFocus
-            ? controller!.subjectTextController
-            : controller!.textController;
-        String text = textField.text;
-        RegExp regExp = RegExp(r"@(?:[^@ \n]+|$)(?=[ \n]|$)", multiLine: true);
-        Iterable<RegExpMatch> matches = regExp.allMatches(text);
-        if (matches.isNotEmpty && matches.any((m) => m.start < textField.selection.start)) {
-          RegExpMatch match = matches.lastWhere((m) => m.start < textField.selection.start);
-          controller!.textController
-              .addMention(text.substring(match.start, match.end), controller!.mentionMatches[index]);
-        } else {
-          // If the user moved the cursor before trying to insert a mention, reset the picker
-          controller!.emojiScrollController.jumpTo(0);
-        }
-        controller!.mentionSelectedIndex.value = 0;
-        controller!.mentionMatches.value = <Mentionable>[];
-
-        return KeyEventResult.handled;
-      }
-      if (controller!.emojiMatches.length > controller!.emojiSelectedIndex.value) {
-        int index = controller!.emojiSelectedIndex.value;
-        TextEditingController textField = controller!.subjectFocusNode.hasPrimaryFocus
-            ? controller!.subjectTextController
-            : controller!.textController;
-        String text = textField.text;
-        RegExp regExp = RegExp(r":[^: \n]{2,}(?=[ \n]|$)", multiLine: true);
-        Iterable<RegExpMatch> matches = regExp.allMatches(text);
-        if (matches.isNotEmpty && matches.any((m) => m.start < textField.selection.start)) {
-          RegExpMatch match = matches.lastWhere((m) => m.start < textField.selection.start);
-          String emoji = controller!.emojiMatches[index].emoji;
-          String _text = "${text.substring(0, match.start)}$emoji ${text.substring(match.end)}";
-          textField.value =
-              TextEditingValue(text: _text, selection: TextSelection.collapsed(offset: match.start + emoji.length + 1));
-        } else {
-          // If the user moved the cursor before trying to insert an emoji, reset the picker
-          controller!.emojiScrollController.jumpTo(0);
-        }
-        controller!.emojiSelectedIndex.value = 0;
-        controller!.emojiMatches.value = <Emoji>[];
-
-        return KeyEventResult.handled;
-      }
-      if (SettingsSvc.settings.privateSubjectLine.value) {
-        if (ev.logicalKey == LogicalKeyboardKey.tab) {
-          // Tab to switch between text fields
-          if (!HardwareKeyboard.instance.isShiftPressed && controller!.subjectFocusNode.hasPrimaryFocus) {
-            controller!.focusNode.requestFocus();
-            return KeyEventResult.handled;
-          }
-          if (HardwareKeyboard.instance.isShiftPressed && controller!.focusNode.hasPrimaryFocus) {
-            controller!.subjectFocusNode.requestFocus();
-            return KeyEventResult.handled;
-          }
-        }
-      }
-    }
-
-    // Escape
-    if (ev.logicalKey == LogicalKeyboardKey.escape) {
-      if (controller!.mentionMatches.isNotEmpty) {
-        controller!.mentionMatches.value = <Mentionable>[];
-        return KeyEventResult.handled;
-      }
-      if (controller!.emojiMatches.isNotEmpty) {
-        controller!.emojiMatches.value = <Emoji>[];
-        return KeyEventResult.handled;
-      }
-      if (controller!.showEmojiPicker.value) {
-        controller!.showEmojiPicker.value = false;
-        return KeyEventResult.handled;
-      }
-      if (controller!.replyToMessage != null) {
-        controller!.replyToMessage = null;
-        return KeyEventResult.handled;
-      }
-      if (controller!.pickedAttachments.isNotEmpty) {
-        controller!.pickedAttachments.clear();
-        return KeyEventResult.handled;
-      }
-    }
-
-    if ((kIsDesktop || kIsWeb) &&
-        ev.logicalKey == LogicalKeyboardKey.enter &&
-        !HardwareKeyboard.instance.isShiftPressed) {
-      sendMessage();
-      controller!.focusNode.requestFocus();
-      return KeyEventResult.handled;
-    }
-
-    if (kIsDesktop || kIsWeb) return KeyEventResult.ignored;
-    if (ev.physicalKey == PhysicalKeyboardKey.enter && SettingsSvc.settings.sendWithReturn.value) {
-      if (!isNullOrEmpty(textController.text) || !isNullOrEmpty(controller!.subjectTextController.text)) {
-        sendMessage();
-        controller!.focusNode.previousFocus(); // I genuinely don't know why this works
-        return KeyEventResult.handled;
-      } else {
-        controller!.subjectTextController.text = "";
-        textController.text = ""; // Stop pressing physical enter with enterIsSend from creating newlines
-        controller!.focusNode.previousFocus(); // I genuinely don't know why this works
-        return KeyEventResult.handled;
-      }
-    }
     return KeyEventResult.ignored;
+  }
+
+  /// Convert a file stream to bytes
+  Future<Uint8List> readByteStream(Stream<List<int>> stream) async {
+    final chunks = <Uint8List>[];
+    await for (final chunk in stream) {
+      chunks.add(Uint8List.fromList(chunk));
+    }
+    return Uint8List.fromList(chunks.expand((e) => e).toList());
   }
 }

@@ -108,12 +108,14 @@ class ChatInterface {
 
   static Future<MessageSaveResult> addMessageToChat({
     required Map<String, dynamic> messageData,
+    List<Map<String, dynamic>> attachmentsData = const [],
     required Map<String, dynamic> chatData,
     required Map<String, dynamic> latestMessageData,
     required bool checkForMessageText,
   }) async {
     final data = {
       'messageData': messageData,
+      'attachmentsData': attachmentsData,
       'chatData': chatData,
       'latestMessageData': latestMessageData,
       'checkForMessageText': checkForMessageText,

@@ -1,5 +1,6 @@
 import 'package:bluebubbles/services/backend/actions/app_actions.dart';
 import 'package:bluebubbles/services/backend/actions/attachment_actions.dart';
+import 'package:bluebubbles/services/backend/actions/send_message_actions.dart';
 import 'package:bluebubbles/services/backend/actions/chat_actions.dart';
 import 'package:bluebubbles/services/backend/actions/contact_v2_actions.dart';
 import 'package:bluebubbles/services/backend/actions/handle_actions.dart';
@@ -49,8 +50,6 @@ class IsolateActons {
     IsolateRequestType.bulkSaveNewMessages: MessageActions.bulkSaveNewMessages,
     IsolateRequestType.bulkAddMessages: MessageActions.bulkAddMessages,
     IsolateRequestType.replaceMessage: MessageActions.replaceMessage,
-    IsolateRequestType.fetchAttachmentsAsync: MessageActions.fetchAttachmentsAsync,
-    IsolateRequestType.getChatAsync: MessageActions.getChatAsync,
     IsolateRequestType.deleteMessage: MessageActions.deleteMessage,
     IsolateRequestType.softDeleteMessage: MessageActions.softDeleteMessage,
     IsolateRequestType.fetchAssociatedMessagesAsync: MessageActions.fetchAssociatedMessagesAsync,
@@ -106,5 +105,11 @@ class IsolateActons {
 
     // Sync
     IsolateRequestType.performIncrementalSync: SyncActions.performIncrementalSync,
+
+    // Send message (routed through isolate so sends survive backgrounding)
+    IsolateRequestType.sendTextMessage: SendMessageActions.sendTextMessage,
+    IsolateRequestType.sendTapback: SendMessageActions.sendTapback,
+    IsolateRequestType.sendMultipartMessage: SendMessageActions.sendMultipartMessage,
+    IsolateRequestType.sendAttachmentMessage: SendMessageActions.sendAttachmentMessage,
   };
 }

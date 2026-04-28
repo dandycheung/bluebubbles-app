@@ -215,25 +215,26 @@ class Share {
       text: "",
       dateCreated: DateTime.now(),
       hasAttachments: true,
-      attachments: [
-        Attachment(
-          guid: _attachmentGuid,
-          mimeType: "text/x-vlocation",
-          isOutgoing: true,
-          uti: "public.vlocation",
-          bytes: bytes,
-          transferName: fileName,
-          totalBytes: bytes!.length,
-        ),
-      ],
       isFromMe: true,
       handleId: 0,
     );
 
-    OutgoingMsgHandler.queue(OutgoingItem(
-      type: QueueType.sendAttachment,
-      chat: chat,
-      message: message,
-    ));
+    final attachment = Attachment(
+      guid: _attachmentGuid,
+      mimeType: "text/x-vlocation",
+      isOutgoing: true,
+      uti: "public.vlocation",
+      bytes: bytes,
+      transferName: fileName,
+      totalBytes: bytes!.length,
+    );
+
+    OutgoingMsgHandler.queue(
+      OutgoingAttachment(
+        chat: chat,
+        message: message,
+        attachment: attachment,
+      ),
+    );
   }
 }

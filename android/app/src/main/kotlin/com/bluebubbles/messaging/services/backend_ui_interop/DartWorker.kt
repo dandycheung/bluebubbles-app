@@ -17,6 +17,7 @@ import com.google.gson.GsonBuilder
 import com.google.gson.ToNumberPolicy
 import com.google.gson.reflect.TypeToken
 import io.flutter.embedding.engine.FlutterEngine
+import io.flutter.embedding.engine.FlutterJNI
 import io.flutter.embedding.engine.dart.DartExecutor
 import io.flutter.embedding.engine.loader.ApplicationInfoLoader
 import io.flutter.embedding.engine.loader.FlutterLoader
@@ -35,6 +36,19 @@ import java.util.Timer
 import kotlin.concurrent.schedule
 import kotlin.coroutines.resume
 import kotlinx.coroutines.guava.future
+
+// Background worker plugins — only those required for notification/sync processing
+import com.dexterous.flutterlocalnotifications.FlutterLocalNotificationsPlugin
+import com.github.dart_lang.jni.JniPlugin
+import com.johnstef.flutter_user_certificates_android.FlutterUserCertificatesAndroidPlugin
+import dev.fluttercommunity.plus.device_info.DeviceInfoPlusPlugin
+import dev.fluttercommunity.plus.packageinfo.PackageInfoPlugin
+import io.flutter.plugins.flutter_plugin_android_lifecycle.FlutterAndroidLifecyclePlugin
+import io.flutter.plugins.pathprovider.PathProviderPlugin
+import io.flutter.plugins.sharedpreferences.SharedPreferencesPlugin
+import io.objectbox.objectbox_flutter_libs.ObjectboxFlutterLibsPlugin
+import net.wolverinebeach.flutter_timezone.FlutterTimezonePlugin
+import org.unifiedpush.flutter.connector.Plugin as UnifiedPushConnectorPlugin
 
 class DartWorker(context: Context, workerParams: WorkerParameters): ListenableWorker(context, workerParams) {
 
@@ -134,7 +148,8 @@ class DartWorker(context: Context, workerParams: WorkerParameters): ListenableWo
 
         Log.d(Constants.logTag, "Loading callback info")
         val info = ApplicationInfoLoader.load(applicationContext)
-        workerEngine = FlutterEngine(applicationContext)
+        workerEngine = FlutterEngine(applicationContext, null, FlutterJNI(), null, false)
+        registerWorkerPlugins(workerEngine!!)
         val ready = withTimeoutOrNull(30_000L) {
             suspendCancellableCoroutine<Unit> { cont ->
                 // set up the method channel to receive events from Dart
@@ -192,6 +207,33 @@ class DartWorker(context: Context, workerParams: WorkerParameters): ListenableWo
                 }
             }
         }
+    }
+
+    /**
+     * Registers only the plugins required for background notification and sync processing.
+     * Heavy UI-only plugins (MLKit, camera, geolocator, printing, media, etc.) are excluded
+     * to reduce startup overhead and avoid unnecessary initialisation in a headless context.
+     */
+    private fun registerWorkerPlugins(engine: FlutterEngine) {
+        val plugins = engine.plugins
+        // Core Flutter platform channels
+        plugins.add(FlutterAndroidLifecyclePlugin())
+        plugins.add(PathProviderPlugin())
+        plugins.add(SharedPreferencesPlugin())
+        // App information (used by FilesystemService and SettingsService init)
+        plugins.add(PackageInfoPlugin())
+        plugins.add(DeviceInfoPlusPlugin())
+        // Database
+        plugins.add(ObjectboxFlutterLibsPlugin())
+        // Notifications
+        plugins.add(FlutterLocalNotificationsPlugin())
+        // Transport security (custom user certificates; JniPlugin is a required dependency)
+        plugins.add(JniPlugin())
+        plugins.add(FlutterUserCertificatesAndroidPlugin())
+        // Timezone (used during message date handling)
+        plugins.add(FlutterTimezonePlugin())
+        // UnifiedPush
+        plugins.add(UnifiedPushConnectorPlugin())
     }
 
     // Dumb thing that appears to be necessary for Android 11 and under (see https://stackoverflow.com/questions/69684656/upgrading-to-workmanager-2-7-0-how-to-implement-getforegroundinfoasync-for-rxwo)

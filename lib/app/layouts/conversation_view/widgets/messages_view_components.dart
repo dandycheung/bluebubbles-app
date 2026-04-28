@@ -132,11 +132,13 @@ class _NotifyAnywayButton extends StatelessWidget {
 class SmartRepliesRow extends StatelessWidget {
   const SmartRepliesRow({
     super.key,
+    required this.controller,
     required this.smartReplies,
     required this.internalSmartReplies,
   });
 
-  final RxList<Widget> smartReplies;
+  final ConversationViewController controller;
+  final RxList<String> smartReplies;
   final RxMap<String, Widget> internalSmartReplies;
 
   @override
@@ -151,13 +153,54 @@ class SmartRepliesRow extends StatelessWidget {
                     child: ListView(
                       scrollDirection: Axis.horizontal,
                       reverse: true,
-                      children: List<Widget>.from(smartReplies)..addAll(internalSmartReplies.values),
+                      children: smartReplies.map((suggestion) => _buildReplyWidget(context, suggestion)).toList()
+                        ..addAll(internalSmartReplies.values),
                     ),
                   ),
                 )
               : const SizedBox.shrink(),
         ));
   }
+
+  Widget _buildReplyWidget(BuildContext context, String suggestion) => Container(
+        margin: const EdgeInsets.all(5),
+        decoration: BoxDecoration(
+          border: Border.all(
+            width: 2,
+            style: BorderStyle.solid,
+            color: context.theme.colorScheme.surfaceContainerHighest,
+          ),
+          borderRadius: BorderRadius.circular(19),
+        ),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(19),
+          onTap: () {
+            OutgoingMsgHandler.queue(OutgoingMessage(
+              chat: controller.chat,
+              message: Message(
+                text: suggestion,
+                dateCreated: DateTime.now(),
+                hasAttachments: false,
+                isFromMe: true,
+                handleId: 0,
+              ),
+            ));
+          },
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 1.5, left: 13.0, right: 13.0),
+              child: RichText(
+                text: TextSpan(
+                  children: MessageHelper.buildEmojiText(
+                    suggestion,
+                    context.theme.extension<BubbleText>()!.bubbleText,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
 }
 
 /// Extracted widget for scroll down button
