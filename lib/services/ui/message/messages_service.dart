@@ -568,7 +568,7 @@ class MessagesService extends GetxController {
   /// download.  Called when the user taps a failed (error-state) attachment.
   void retryAttachmentDownload(String messageGuid, Attachment attachment) {
     if (attachment.guid != null) {
-      Get.delete<AttachmentDownloadController>(tag: attachment.guid);
+      AttachmentDownloader.clearControllerForGuid(attachment.guid!);
     }
     // Clear stale active-download reference before restarting.
     messageStates[messageGuid]?.getAttachmentState(attachment.guid!)?.updateActiveDownloadInternal(null);
@@ -586,6 +586,9 @@ class MessagesService extends GetxController {
     final attGuid = attachment.guid;
     if (attGuid == null) return;
 
+    // Hard reset any stale queued/completed controller before state wiring.
+    AttachmentDownloader.clearControllerForGuid(attGuid);
+
     // 1. Reset the AttachmentState so the UI drops the resolved file
     //    immediately and shows the downloading widget instead.
     final attState = messageStates[messageGuid]?.getAttachmentState(attGuid);
@@ -597,13 +600,20 @@ class MessagesService extends GetxController {
     }
 
     // 2. Delete local files, reset DB flag, and register a new controller.
-    await AttachmentsSvc.redownloadAttachment(attachment);
+    try {
+      await AttachmentsSvc.redownloadAttachment(attachment);
+    } catch (e, s) {
+      Logger.error('redownloadAttachment failed for $attGuid', error: e, trace: s, tag: 'MessagesService');
+    }
 
     // 3. Wire the freshly created controller into the state machine so the
     //    Obx in AttachmentHolder rebuilds with DownloadingContent.
     final ctrl = AttachmentDownloader.getController(attGuid);
     if (ctrl != null) {
       notifyAttachmentDownloadStarted(messageGuid, attGuid, ctrl);
+    } else {
+      // Defensive fallback: ensure the re-download always starts.
+      _startAttachmentDownload(messageGuid, attachment);
     }
   }
 

@@ -532,7 +532,7 @@ class GlobalIsolate {
         sendPort.send(IsolateResponse.success(uuid: uuid, data: result).toMap());
         Logger.debug('Returning request: $type');
       } catch (e, s) {
-        Logger.error('Error in isolate action: $e', trace: s);
+        Logger.error('Error in isolate action: [$type] $e', trace: s);
 
         // Send standardized error response
         sendPort.send(
