@@ -20,7 +20,6 @@ import 'package:universal_html/html.dart' as html;
 class ConversationTileController extends StatefulController {
   final RxBool shouldHighlight = false.obs;
   final RxBool shouldPartialHighlight = false.obs;
-  final RxBool hoverHighlight = false.obs;
   final ChatState chatState;
   final ConversationListController listController;
   final Function(bool)? onSelect;
@@ -151,9 +150,6 @@ class _ConversationTileState extends CustomState<ConversationTile, void, Convers
   Widget build(BuildContext context) {
     super.build(context);
     return MouseRegion(
-      onEnter: (event) => controller.hoverHighlight.value = true,
-      onExit: (event) => controller.hoverHighlight.value = false,
-      cursor: SystemMouseCursors.click,
       child: ThemeSwitcher(
         iOSSkin: CupertinoConversationTile(
           parentController: controller,
