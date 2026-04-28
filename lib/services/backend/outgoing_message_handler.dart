@@ -26,7 +26,7 @@ OutgoingMessageHandler get OutgoingMsgHandler => GetIt.I<OutgoingMessageHandler>
 // ─── Internal queue entry ─────────────────────────────────────────────────────
 
 class _OutgoingEntry {
-  final OutgoingItem item;
+  final OutgoingQueueItem item;
 
   _OutgoingEntry(this.item);
 }
@@ -165,9 +165,9 @@ class OutgoingMessageHandler {
   /// happens when the queue reaches this item.
   ///
   /// Returns a [Future] that completes (or errors) when the item's
-  /// [OutgoingItem.completer] resolves — i.e. when the HTTP response arrives
+  /// [OutgoingQueueItem.completer] resolves — i.e. when the HTTP response arrives
   /// or an error is surfaced.
-  Future<void> queue(OutgoingItem item) async {
+  Future<void> queue(OutgoingQueueItem item) async {
     Logger.debug(
       '[queue] Enqueueing type=${item.type.name} chat=${item.chat.guid} guid=${item.message.guid}',
       tag: _tag,
@@ -183,15 +183,7 @@ class OutgoingMessageHandler {
       Logger.debug('[queue] prepMessage returned ${(returned as List).length} message(s)', tag: _tag);
       for (final m in returned) {
         Logger.debug('[queue] enqueueing message guid=${m.guid}', tag: _tag);
-        _queue.add(_OutgoingEntry(OutgoingItem(
-          type: item.type,
-          chat: item.chat,
-          message: m,
-          completer: item.completer,
-          selected: item.selected,
-          reaction: item.reaction,
-          customArgs: item.customArgs,
-        )));
+        _queue.add(_OutgoingEntry(_copyWithMessage(item, m)));
       }
     } else {
       // Attachment: prepAttachment already saved it; keep the original item.
@@ -200,6 +192,49 @@ class OutgoingMessageHandler {
     }
 
     unawaited(_processNext());
+  }
+
+  OutgoingQueueItem _copyWithMessage(OutgoingQueueItem item, Message message) {
+    if (item is OutgoingReaction) {
+      return OutgoingReaction(
+        chat: item.chat,
+        message: message,
+        selectedMessage: item.selectedMessage,
+        reaction: item.reaction,
+        isRetry: item.isRetry,
+        clearNotificationsIfFromMe: item.clearNotificationsIfFromMe,
+        completer: item.completer,
+      );
+    }
+    if (item is OutgoingMultipartMessage) {
+      return OutgoingMultipartMessage(
+        chat: item.chat,
+        message: message,
+        isRetry: item.isRetry,
+        clearNotificationsIfFromMe: item.clearNotificationsIfFromMe,
+        completer: item.completer,
+      );
+    }
+    if (item is OutgoingMessage) {
+      return OutgoingMessage(
+        chat: item.chat,
+        message: message,
+        isRetry: item.isRetry,
+        clearNotificationsIfFromMe: item.clearNotificationsIfFromMe,
+        completer: item.completer,
+      );
+    }
+    if (item is OutgoingAttachment) {
+      return OutgoingAttachment(
+        chat: item.chat,
+        message: message,
+        attachment: item.attachment,
+        isAudioMessage: item.isAudioMessage,
+        isRetry: item.isRetry,
+        completer: item.completer,
+      );
+    }
+    throw StateError('Unsupported outgoing item type: ${item.runtimeType}');
   }
 
   Future<void> _processNext() async {
@@ -313,14 +348,25 @@ class OutgoingMessageHandler {
     return race.future;
   }
 
-  Future<void> _dispatchItem(OutgoingItem item) {
+  Future<void> _dispatchItem(OutgoingQueueItem item) {
     switch (item.type) {
       case QueueType.sendMessage:
-        return sendMessage(item.chat, item.message, item.selected, item.reaction);
+        final typed = item as OutgoingMessage;
+        return sendMessage(typed.chat, typed.message, null, null);
+      case QueueType.sendReaction:
+        final typed = item as OutgoingReaction;
+        return sendMessage(typed.chat, typed.message, typed.selectedMessage, typed.reaction);
       case QueueType.sendMultipart:
-        return sendMultipart(item.chat, item.message, item.selected, item.reaction);
+        final typed = item as OutgoingMultipartMessage;
+        return sendMultipart(typed.chat, typed.message, null, null);
       case QueueType.sendAttachment:
-        return sendAttachment(item.chat, item.message, item.customArgs?['audio'] ?? false);
+        final typed = item as OutgoingAttachment;
+        return sendAttachment(
+          typed.chat,
+          typed.message,
+          typed.isAudioMessage,
+          typed.attachment,
+        );
     }
   }
 
@@ -335,20 +381,41 @@ class OutgoingMessageHandler {
   /// For attachment sends: calls [prepAttachment], which copies the file to
   /// the local attachment directory and saves the message to the DB.  Returns
   /// `null` to indicate the item itself should be enqueued without splitting.
-  Future<dynamic> _prepItem(OutgoingItem item) async {
+  Future<dynamic> _prepItem(OutgoingQueueItem item) async {
     switch (item.type) {
-      case QueueType.sendMultipart:
-      case QueueType.sendMessage:
+      case QueueType.sendReaction:
+        final typed = item as OutgoingReaction;
         return prepMessage(
-          item.chat,
-          item.message,
-          item.selected,
-          item.reaction,
-          clearNotificationsIfFromMe: !(item.customArgs?['notifReply'] ?? false),
-          isRetry: item.customArgs?['isRetry'] ?? false,
+          typed.chat,
+          typed.message,
+          typed.selectedMessage,
+          typed.reaction,
+          clearNotificationsIfFromMe: typed.clearNotificationsIfFromMe,
+          isRetry: typed.isRetry,
+        );
+      case QueueType.sendMultipart:
+        final typedMultipart = item as OutgoingMultipartMessage;
+        return prepMessage(
+          typedMultipart.chat,
+          typedMultipart.message,
+          null,
+          null,
+          clearNotificationsIfFromMe: typedMultipart.clearNotificationsIfFromMe,
+          isRetry: typedMultipart.isRetry,
+        );
+      case QueueType.sendMessage:
+        final typedMessage = item as OutgoingMessage;
+        return prepMessage(
+          typedMessage.chat,
+          typedMessage.message,
+          null,
+          null,
+          clearNotificationsIfFromMe: typedMessage.clearNotificationsIfFromMe,
+          isRetry: typedMessage.isRetry,
         );
       case QueueType.sendAttachment:
-        await prepAttachment(item.chat, item.message);
+        final typedAttachment = item as OutgoingAttachment;
+        await prepAttachment(typedAttachment.chat, typedAttachment.message, typedAttachment.attachment);
         return null;
     }
   }
@@ -434,8 +501,11 @@ class OutgoingMessageHandler {
   /// Attachment metadata carries the original source path so the file can be
   /// copied without loading it into memory (except GIFs, which need
   /// optimisation).
-  Future<void> prepAttachment(Chat c, Message m) async {
-    final attachment = m.attachments.first!;
+  Future<void> prepAttachment(Chat c, Message m, Attachment? attachment) async {
+    if (attachment == null) {
+      throw StateError('Missing attachment for sendAttachment prep on message ${m.guid}');
+    }
+
     final progress = AttachmentUploadProgress(attachment.guid!, 0.0.obs);
     attachmentProgress.add(progress);
 
@@ -512,7 +582,7 @@ class OutgoingMessageHandler {
     // GlobalIsolate transaction commits.  This object has its id set and its
     // dbAttachments ToMany linked to the main Store, so _handleNewMessage can
     // reload attachments from DB without racing against cross-isolate write timing.
-    final savedMessage = (await c.addMessage(m)).message;
+    final savedMessage = (await c.addMessage(m, attachments: [attachment])).message;
 
     // The DB write goes through the GlobalIsolate, so the main-isolate OB watch
     // subscription won't fire for it.  Explicitly push the message into the view
@@ -657,9 +727,11 @@ class OutgoingMessageHandler {
   }
 
   /// Sends an attachment message.
-  Future<void> sendAttachment(Chat c, Message m, bool isAudioMessage) async {
-    if (m.attachments.isEmpty) return;
-    final attachment = m.attachments.first!;
+  Future<void> sendAttachment(Chat c, Message m, bool isAudioMessage, Attachment? attachment) async {
+    if (attachment == null) {
+      throw StateError('Missing attachment for sendAttachment on message ${m.guid}');
+    }
+
     // Save both GUIDs before any mutation — attachment.guid == m.guid by design
     // (set in send_animation.dart: attachment.guid = message.guid).
     final tempGuid = m.guid!;
@@ -705,9 +777,12 @@ class OutgoingMessageHandler {
       ),
       onSuccess: (Map<String, dynamic> data) async {
         final newMessage = Message.fromMap(data['data']);
+        final responseAttachments = ((data['data']?['attachments'] as List?) ?? <dynamic>[])
+            .whereType<Map>()
+            .map((e) => Attachment.fromMap(e.cast<String, Object>()))
+            .toList();
         // Swap attachment GUIDs first, then swap the message GUID.
-        for (final a in newMessage.attachments) {
-          if (a == null) continue;
+        for (final a in responseAttachments) {
           try {
             await _matchAttachmentWithExisting(c, tempGuid, a);
             // Complete the attachment state.  We pass both the temp and real

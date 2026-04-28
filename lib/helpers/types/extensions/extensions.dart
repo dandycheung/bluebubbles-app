@@ -324,10 +324,6 @@ extension MessageNotificationExtension on Message {
         }
         return "${sender}Empty message";
       }
-      if (hasAttachments && attachments.isEmpty) {
-        fetchAttachments();
-      }
-
       // If there are attachments, return the number of attachments
       if (realAttachments.isNotEmpty) {
         if (isSticker) return "${sender}1 Sticker";
@@ -366,7 +362,8 @@ extension MessageNotificationExtension on Message {
               if (attachmentGuids.isNotEmpty) {
                 attachment = true;
                 messageText = _getAttachmentText(
-                    associatedMessage.fetchAttachments()!.where((e) => attachmentGuids.contains(e?.guid)).toList());
+                  associatedMessage.dbAttachments.where((e) => attachmentGuids.contains(e.guid)).toList(),
+                );
               } else if (ranges.isNotEmpty) {
                 messageText = "";
                 for (List range in ranges) {
@@ -379,7 +376,7 @@ extension MessageNotificationExtension on Message {
             if (messageText == null) {
               if (associatedMessage.hasAttachments) {
                 attachment = true;
-                messageText = _getAttachmentText(associatedMessage.fetchAttachments()!);
+                messageText = _getAttachmentText(associatedMessage.dbAttachments.toList());
               } else {
                 messageText = (associatedMessage.subject ?? "") +
                     (!isNullOrEmpty(associatedMessage.subject?.trim()) ? "\n" : "") +

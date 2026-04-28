@@ -644,8 +644,6 @@ enum IsolateRequestType {
   bulkSaveNewMessages,
   bulkAddMessages,
   replaceMessage,
-  fetchAttachmentsAsync,
-  getChatAsync,
   deleteMessage,
   softDeleteMessage,
   fetchAssociatedMessagesAsync,

@@ -30,14 +30,26 @@ class MessageActions {
 
       final inputChat = Chat.fromMap(chatData);
       final inputMessages = messagesData.map((e) => Message.fromMap(e)).toList();
+      final messageAttachmentsData = <String, List<Map<String, dynamic>>>{};
+      for (final raw in messagesData) {
+        final guid = raw['guid'] as String?;
+        if (guid == null) continue;
+        final attachments =
+            ((raw['attachments'] as List?) ?? const []).whereType<Map>().map((e) => e.cast<String, dynamic>()).toList();
+        if (attachments.isNotEmpty) {
+          messageAttachmentsData[guid] = attachments;
+        }
+      }
       final inputMessageGuids = inputMessages.map((element) => element.guid!).toList();
 
       // 0. Create map for the messages and attachments to save
       Map<String, Attachment> attachmentsToSave = {};
       Map<String, List<String>> messageAttachments = {};
       for (final msg in inputMessages) {
-        for (final a in msg.attachments) {
-          if (!attachmentsToSave.containsKey(a!.guid)) {
+        final rawAttachments = messageAttachmentsData[msg.guid] ?? const <Map<String, dynamic>>[];
+        for (final raw in rawAttachments) {
+          final a = Attachment.fromMap(raw);
+          if (!attachmentsToSave.containsKey(a.guid)) {
             attachmentsToSave[a.guid!] = a;
           }
 
@@ -112,7 +124,6 @@ class MessageActions {
       // 6. Relate the attachments to the messages
       for (final msg in newMessages) {
         final relatedAttachments = messageAttachments[msg.guid]?.map((e) => attachmentMap[e]).nonNulls.toList() ?? [];
-        msg.attachments = relatedAttachments;
         msg.dbAttachments.addAll(relatedAttachments);
       }
 
@@ -260,29 +271,6 @@ class MessageActions {
 
       // Return just the ID for efficient transfer across isolates
       return existing.id!;
-    });
-  }
-
-  static Future<List<Map<String, dynamic>>> fetchAttachmentsAsync(dynamic data) async {
-    final messageId = data['messageId'] as int;
-
-    return Database.runInTransaction(TxMode.read, () {
-      final message = Database.messages.get(messageId);
-      if (message == null) return <Map<String, dynamic>>[];
-
-      final attachments = List<Attachment>.from(message.dbAttachments);
-      return attachments.map((e) => e.toMap()).toList();
-    });
-  }
-
-  static Future<Map<String, dynamic>?> getChatAsync(dynamic data) async {
-    final messageId = data['messageId'] as int;
-
-    return Database.runInTransaction(TxMode.read, () {
-      final message = Database.messages.get(messageId);
-      if (message == null) return null;
-
-      return message.chat.target?.toMap();
     });
   }
 
@@ -631,10 +619,10 @@ class MessageActions {
             // 1. dbAttachments: ToMany relationship for DB persistence
             //    Must be done AFTER message has an ID from put()
             //    For existing messages, clear first to avoid duplicates
-            // 2. attachments: List field for serialization via toMap()
+            // 2. No transient Message.attachments cache; dbAttachments is the
+            //    only message-level attachment source of truth.
             messageToSave.dbAttachments.clear();
             messageToSave.dbAttachments.addAll(attachmentsToLink);
-            messageToSave.attachments = attachmentsToLink;
 
             // Apply the ToMany relationship changes to DB
             messageToSave.dbAttachments.applyToDb();

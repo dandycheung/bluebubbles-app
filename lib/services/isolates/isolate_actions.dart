@@ -50,8 +50,6 @@ class IsolateActons {
     IsolateRequestType.bulkSaveNewMessages: MessageActions.bulkSaveNewMessages,
     IsolateRequestType.bulkAddMessages: MessageActions.bulkAddMessages,
     IsolateRequestType.replaceMessage: MessageActions.replaceMessage,
-    IsolateRequestType.fetchAttachmentsAsync: MessageActions.fetchAttachmentsAsync,
-    IsolateRequestType.getChatAsync: MessageActions.getChatAsync,
     IsolateRequestType.deleteMessage: MessageActions.deleteMessage,
     IsolateRequestType.softDeleteMessage: MessageActions.softDeleteMessage,
     IsolateRequestType.fetchAssociatedMessagesAsync: MessageActions.fetchAssociatedMessagesAsync,

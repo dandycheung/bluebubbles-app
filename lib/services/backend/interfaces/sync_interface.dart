@@ -16,9 +16,11 @@ class SyncInterface {
       messageIds = await SyncActions.performIncrementalSync({});
     } else {
       if (useGlobalIsolate) {
-        messageIds = await GetIt.I<GlobalIsolate>().send<List<int>>(IsolateRequestType.performIncrementalSync, input: {});
+        messageIds =
+            await GetIt.I<GlobalIsolate>().send<List<int>>(IsolateRequestType.performIncrementalSync, input: {});
       } else {
-        messageIds = await GetIt.I<IncrementalSyncIsolate>().send<List<int>>(IsolateRequestType.performIncrementalSync, input: {});
+        messageIds = await GetIt.I<IncrementalSyncIsolate>()
+            .send<List<int>>(IsolateRequestType.performIncrementalSync, input: {});
       }
     }
 

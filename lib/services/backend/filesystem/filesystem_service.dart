@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/database/database.dart';
 import 'package:characters/characters.dart';

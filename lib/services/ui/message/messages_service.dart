@@ -714,16 +714,6 @@ class MessagesService extends GetxController {
   }
 
   Future<void> _handleNewMessage(Message message) async {
-    if (message.hasAttachments && !kIsWeb) {
-      message.attachments = List<Attachment>.from(message.dbAttachments);
-      // we may need an artificial delay in some cases since the attachment
-      // relation is initialized after message itself is saved
-      if (message.attachments.isEmpty) {
-        await Future.delayed(const Duration(milliseconds: 250));
-        message.attachments = List<Attachment>.from(message.dbAttachments);
-      }
-    }
-
     // Add to struct first to ensure it's available for lookups
     struct.addMessages([message]);
 
@@ -813,7 +803,7 @@ class MessagesService extends GetxController {
     updated.error = incomingError;
     updated.errorMessage = incomingErrorMessage;
     struct.removeMessage(oldGuid ?? updated.guid!);
-    struct.removeAttachments(toUpdate.attachments.map((e) => e!.guid!));
+    struct.removeAttachments(toUpdate.dbAttachments.map((e) => e.guid!));
     struct.addMessages([updated]);
 
     // Update MessageState - try oldGuid first, then fallback to updated.guid
@@ -868,7 +858,7 @@ class MessagesService extends GetxController {
 
   void removeMessage(Message toRemove) {
     struct.removeMessage(toRemove.guid!);
-    struct.removeAttachments(toRemove.attachments.map((e) => e!.guid!));
+    struct.removeAttachments(toRemove.dbAttachments.map((e) => e.guid!));
     messageUpdateTrigger.remove(toRemove.guid!);
 
     // Dispose attachment states and remove MessageState
@@ -1176,19 +1166,25 @@ class MessagesService extends GetxController {
       }
     }
 
-    // Refresh the flat attachments list so prepAttachment.m.attachments.first
-    // returns the updated Attachment object with new GUID and bytes.
-    message.attachments = List<Attachment>.from(message.dbAttachments);
-
     // Queue for sending (message already in UI, just updated)
     if (message.dbAttachments.isNotEmpty) {
-      OutgoingMsgHandler.queue(OutgoingItem(type: QueueType.sendAttachment, chat: chat, message: message, customArgs: {
-        'isRetry': true,
-      }));
+      OutgoingMsgHandler.queue(
+        OutgoingAttachment(
+          chat: chat,
+          message: message,
+          attachment: message.dbAttachments.first,
+          isAudioMessage: message.itemType == 5,
+          isRetry: true,
+        ),
+      );
     } else {
-      OutgoingMsgHandler.queue(OutgoingItem(type: QueueType.sendMessage, chat: chat, message: message, customArgs: {
-        'isRetry': true,
-      }));
+      OutgoingMsgHandler.queue(
+        OutgoingMessage(
+          chat: chat,
+          message: message,
+          isRetry: true,
+        ),
+      );
     }
   }
 

@@ -604,12 +604,8 @@ class MessageState extends StatefulController {
     message.hasApplePayloadData = updatedMessage.hasApplePayloadData;
     message.isBookmarked = updatedMessage.isBookmarked;
 
-    // Update the in-memory attachment list so UI widgets see the new GUIDs
-    // (e.g. after a temp→real GUID swap via _replaceAttachments).
-    if (updatedMessage.dbAttachments.isNotEmpty) {
-      message.attachments = updatedMessage.dbAttachments;
-      _syncAttachmentStates(updatedMessage.dbAttachments);
-    }
+    // Keep AttachmentState as the UI source of truth, synchronized from dbAttachments.
+    _syncAttachmentStates(updatedMessage.dbAttachments);
   }
 
   /// Convenience getter: Is this message in an error state?

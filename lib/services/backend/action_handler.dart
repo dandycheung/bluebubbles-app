@@ -108,6 +108,10 @@ class ActionHandler extends GetxService {
                 source: MessageSource.socket,
                 chat: Chat.fromMap(payload.data['chats'].first.cast<String, Object>()),
                 message: message,
+                attachments: ((payload.data['attachments'] as List?) ?? const [])
+                    .whereType<Map>()
+                    .map((e) => Attachment.fromMap(e.cast<String, Object>()))
+                    .toList(),
                 tempGuid: payload.data['tempGuid'],
               ),
               front: !useQueue);
@@ -124,6 +128,10 @@ class ActionHandler extends GetxService {
                 source: MessageSource.socket,
                 chat: Chat.fromMap(payload.data['chats'].first.cast<String, Object>()),
                 message: updatedMessage,
+                attachments: ((payload.data['attachments'] as List?) ?? const [])
+                    .whereType<Map>()
+                    .map((e) => Attachment.fromMap(e.cast<String, Object>()))
+                    .toList(),
                 tempGuid: payload.data['tempGuid'],
               ),
               front: !useQueue);

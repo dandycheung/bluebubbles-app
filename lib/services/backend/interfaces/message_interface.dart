@@ -21,10 +21,7 @@ class MessageInterface {
     return results;
   }
 
-  static Future<List<Message>> bulkSaveNewMessages({
-    required Map<String, dynamic> data,
-    bool hydrateAttachments = true,
-  }) async {
+  static Future<List<Message>> bulkSaveNewMessages({required Map<String, dynamic> data}) async {
     late List<int> messageIds;
     if (isIsolate) {
       messageIds = await MessageActions.bulkSaveNewMessages(data);
@@ -37,11 +34,8 @@ class MessageInterface {
     return messages;
   }
 
-  static Future<Message> replaceMessage({
-    required String? oldGuid,
-    required Map<String, dynamic> newMessageData,
-    bool hydrateAttachments = true,
-  }) async {
+  static Future<Message> replaceMessage(
+      {required String? oldGuid, required Map<String, dynamic> newMessageData}) async {
     final data = {
       'oldGuid': oldGuid,
       'newMessageData': newMessageData,
@@ -61,39 +55,6 @@ class MessageInterface {
     }
 
     return message;
-  }
-
-  static Future<List<Map<String, dynamic>>> fetchAttachmentsAsync({
-    required int messageId,
-    required String messageGuid,
-  }) async {
-    final data = {
-      'messageId': messageId,
-      'messageGuid': messageGuid,
-    };
-
-    if (isIsolate) {
-      return await MessageActions.fetchAttachmentsAsync(data);
-    } else {
-      return await GetIt.I<GlobalIsolate>()
-          .send<List<Map<String, dynamic>>>(IsolateRequestType.fetchAttachmentsAsync, input: data);
-    }
-  }
-
-  static Future<Map<String, dynamic>?> getChatAsync({
-    required int messageId,
-    required String messageGuid,
-  }) async {
-    final data = {
-      'messageId': messageId,
-      'messageGuid': messageGuid,
-    };
-
-    if (isIsolate) {
-      return await MessageActions.getChatAsync(data);
-    } else {
-      return await GetIt.I<GlobalIsolate>().send<Map<String, dynamic>?>(IsolateRequestType.getChatAsync, input: data);
-    }
   }
 
   static Future<void> deleteMessage({
@@ -147,7 +108,6 @@ class MessageInterface {
     required Map<String, dynamic> messageData,
     Map<String, dynamic>? chatData,
     required bool updateIsBookmarked,
-    bool hydrateAttachments = true,
   }) async {
     final data = {
       'messageData': messageData,
@@ -167,11 +127,7 @@ class MessageInterface {
     return message;
   }
 
-  static Future<Message?> findOneAsync({
-    String? guid,
-    String? associatedMessageGuid,
-    bool hydrateAttachments = true,
-  }) async {
+  static Future<Message?> findOneAsync({String? guid, String? associatedMessageGuid}) async {
     final data = {
       'guid': guid,
       'associatedMessageGuid': associatedMessageGuid,
@@ -191,10 +147,7 @@ class MessageInterface {
     return message;
   }
 
-  static Future<List<Message>> findAsync({
-    String? conditionJson,
-    bool hydrateAttachments = true,
-  }) async {
+  static Future<List<Message>> findAsync({String? conditionJson}) async {
     final data = {
       'conditionJson': conditionJson,
     };
@@ -212,12 +165,10 @@ class MessageInterface {
   }
 
   /// Bulk add messages - offloads heavy processing to the isolate
-  static Future<List<Message>> bulkAddMessages({
-    Map<String, dynamic>? chatData,
-    required List<Map<String, dynamic>> messagesData,
-    bool checkForLatestMessageText = true,
-    bool hydrateAttachments = true,
-  }) async {
+  static Future<List<Message>> bulkAddMessages(
+      {Map<String, dynamic>? chatData,
+      required List<Map<String, dynamic>> messagesData,
+      bool checkForLatestMessageText = true}) async {
     late List<int> messageIds;
     final data = {
       'chatData': chatData,

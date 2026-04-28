@@ -85,9 +85,9 @@ class _ChatInfoState extends State<ChatInfo> with ThemeHelpers {
     }
 
     if (usePrivateApi &&
-      SettingsSvc.settings.enablePrivateAPI.value &&
-      SettingsSvc.serverDetails.isMinBigSur &&
-      SettingsSvc.serverDetails.supportsGroupChatManagement) {
+        SettingsSvc.settings.enablePrivateAPI.value &&
+        SettingsSvc.serverDetails.isMinBigSur &&
+        SettingsSvc.serverDetails.supportsGroupChatManagement) {
       showDialog(
           context: context,
           builder: (BuildContext context) {

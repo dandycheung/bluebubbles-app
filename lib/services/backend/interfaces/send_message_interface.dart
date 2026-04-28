@@ -35,8 +35,7 @@ class SendMessageInterface {
     if (isIsolate) {
       return await SendMessageActions.sendTextMessage(data);
     }
-    return await GetIt.I<GlobalIsolate>()
-        .send<Map<String, dynamic>>(IsolateRequestType.sendTextMessage, input: data);
+    return await GetIt.I<GlobalIsolate>().send<Map<String, dynamic>>(IsolateRequestType.sendTextMessage, input: data);
   }
 
   /// Sends a tapback and returns the decoded server response body.
@@ -57,8 +56,7 @@ class SendMessageInterface {
     if (isIsolate) {
       return await SendMessageActions.sendTapback(data);
     }
-    return await GetIt.I<GlobalIsolate>()
-        .send<Map<String, dynamic>>(IsolateRequestType.sendTapback, input: data);
+    return await GetIt.I<GlobalIsolate>().send<Map<String, dynamic>>(IsolateRequestType.sendTapback, input: data);
   }
 
   /// Sends a multipart (mention / mixed-content) message and returns the decoded

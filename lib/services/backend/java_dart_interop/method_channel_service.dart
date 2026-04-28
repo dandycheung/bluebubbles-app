@@ -100,6 +100,10 @@ class MethodChannelService {
               source: MessageSource.methodChannel,
               chat: Chat.fromMap(payload.data['chats'].first.cast<String, Object>()),
               message: Message.fromMap(payload.data),
+              attachments: ((payload.data['attachments'] as List?) ?? const [])
+                  .whereType<Map>()
+                  .map((e) => Attachment.fromMap(e.cast<String, Object>()))
+                  .toList(),
               tempGuid: payload.data['tempGuid'],
             ));
           }
@@ -146,6 +150,10 @@ class MethodChannelService {
               source: MessageSource.methodChannel,
               chat: Chat.fromMap(payload.data['chats'].first.cast<String, Object>()),
               message: Message.fromMap(payload.data),
+              attachments: ((payload.data['attachments'] as List?) ?? const [])
+                  .whereType<Map>()
+                  .map((e) => Attachment.fromMap(e.cast<String, Object>()))
+                  .toList(),
               tempGuid: payload.data['tempGuid'],
             ));
           }
@@ -236,8 +244,8 @@ class MethodChannelService {
           return Future.value(false);
         } else {
           final Completer<void> completer = Completer();
-          OutgoingMsgHandler.queue(OutgoingItem(
-              type: QueueType.sendMessage,
+          OutgoingMsgHandler.queue(
+            OutgoingMessage(
               completer: completer,
               chat: chat,
               message: Message(
@@ -247,7 +255,9 @@ class MethodChannelService {
                 isFromMe: true,
                 handleId: 0,
               ),
-              customArgs: {'notifReply': true}));
+              clearNotificationsIfFromMe: false,
+            ),
+          );
           await completer.future;
           return Future.value(true);
         }

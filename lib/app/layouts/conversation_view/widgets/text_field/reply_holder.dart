@@ -150,11 +150,17 @@ class _ReplyText extends StatelessWidget {
 
   String _getNotificationText() {
     if (reply is MessagePart) {
+      // Create a fake message and append the attachments.
+      // This does not add anything to the DB and is just
+      // in memory for the sake of displaying the correct text
+      // for a particular message part.
       final msg = Message(
         text: reply.text,
         subject: reply.subject,
-        attachments: reply.attachments,
-      ).mergeWith(message!);
+        hasAttachments: reply.attachments.isNotEmpty,
+      )
+        ..dbAttachments.addAll(reply.attachments)
+        ..mergeWith(message!);
       return msg.getNotificationText();
     }
     return message!.getNotificationText();

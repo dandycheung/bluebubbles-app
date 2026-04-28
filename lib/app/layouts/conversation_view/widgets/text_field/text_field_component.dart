@@ -17,7 +17,6 @@ import 'package:collection/collection.dart';
 import 'package:unicode_emojis/unicode_emojis.dart';
 import 'package:file_picker/file_picker.dart' as pf;
 import 'package:file_picker/file_picker.dart' hide PlatformFile;
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';

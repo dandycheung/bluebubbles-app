@@ -531,8 +531,7 @@ class MessagesViewState extends State<MessagesView> with MessagesServiceMixin, T
           borderRadius: BorderRadius.circular(19),
           onTap: onTap ??
               () {
-                OutgoingMsgHandler.queue(OutgoingItem(
-                  type: QueueType.sendMessage,
+                OutgoingMsgHandler.queue(OutgoingMessage(
                   chat: controller.chat,
                   message: Message(
                     text: text,
