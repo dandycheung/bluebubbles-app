@@ -386,11 +386,7 @@ class _ChatOptionsState extends State<ChatOptions> with ThemeHelpers {
                       title: "Pin Conversation",
                       initialVal: chatState?.isPinned.value ?? chat.isPinned!,
                       onChanged: (value) {
-                        if (chatState != null) {
-                          ChatsSvc.setChatPinned(chatState.chat, !chatState.isPinned.value);
-                        } else {
-                          ChatsSvc.toggleChatPin(chat, !chat.isPinned!);
-                        }
+                        ChatsSvc.setChatPinned(chatState?.chat ?? chat, !(chatState?.isPinned.value ?? chat.isPinned!));
                       },
                       backgroundColor: tileColor,
                     );
@@ -418,11 +414,7 @@ class _ChatOptionsState extends State<ChatOptions> with ThemeHelpers {
                       title: "Archive Conversation",
                       initialVal: chatState?.isArchived.value ?? chat.isArchived!,
                       onChanged: (value) {
-                        if (chatState != null) {
-                          ChatsSvc.setChatArchived(chatState.chat, value);
-                        } else {
-                          ChatsSvc.toggleChatArchive(chat, value);
-                        }
+                        ChatsSvc.setChatArchived(chatState?.chat ?? chat, value);
                       },
                       backgroundColor: tileColor,
                     );

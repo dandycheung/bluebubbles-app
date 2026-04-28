@@ -881,7 +881,7 @@ class ChatsService {
   }
 
   /// Toggle chat pin status with service updates
-  Future<Chat> toggleChatPin(Chat chat, bool isPinned) async {
+  Future<Chat> _toggleChatPin(Chat chat, bool isPinned) async {
     // Perform DB operation
     await chat.togglePinAsync(isPinned);
 
@@ -896,7 +896,7 @@ class ChatsService {
   }
 
   /// Toggle chat archive status with service updates
-  Future<Chat> toggleChatArchive(Chat chat, bool isArchived) async {
+  Future<Chat> _toggleChatArchive(Chat chat, bool isArchived) async {
     // Perform DB operation
     await chat.toggleArchivedAsync(isArchived);
 
@@ -911,7 +911,7 @@ class ChatsService {
   }
 
   /// Toggle chat unread status with active chat awareness
-  Future<Chat> toggleChatHasUnread(Chat chat, bool hasUnread,
+  Future<Chat> _toggleChatHasUnread(Chat chat, bool hasUnread,
       {bool force = false, bool clearLocalNotifications = true, bool privateMark = true}) async {
     // Check if chat is active and adjust behavior
     final isActive = isChatActive(chat.guid);
@@ -970,11 +970,11 @@ class ChatsService {
 
       if (message.isFromMe! || isActive) {
         // Mark as read if from me or chat is active
-        await toggleChatHasUnread(chat, false,
+        await _toggleChatHasUnread(chat, false,
             clearLocalNotifications: clearNotificationsIfFromMe, force: isActive, privateMark: isActive);
       } else {
         // Mark as unread if not from me and chat is not active
-        await toggleChatHasUnread(chat, true, privateMark: false);
+        await _toggleChatHasUnread(chat, true, privateMark: false);
       }
     }
 
@@ -991,7 +991,7 @@ class ChatsService {
     if (state != null && state.isPinned.value == value) return;
 
     // Update DB
-    await toggleChatPin(chat, value);
+    await _toggleChatPin(chat, value);
 
     // Update state if available
     state?.updateIsPinnedInternal(value);
@@ -1025,7 +1025,7 @@ class ChatsService {
     if (state != null && state.hasUnreadMessage.value == value && !force) return;
 
     // Update DB with active chat awareness
-    await toggleChatHasUnread(chat, value,
+    await _toggleChatHasUnread(chat, value,
         force: force, clearLocalNotifications: clearLocalNotifications, privateMark: privateMark);
 
     // Update state if available
@@ -1054,7 +1054,7 @@ class ChatsService {
     if (state != null && state.isArchived.value == value) return;
 
     // Update DB
-    await toggleChatArchive(chat, value);
+    await _toggleChatArchive(chat, value);
 
     // Update state if available
     state?.updateArchivedInternal(value);

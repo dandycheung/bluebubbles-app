@@ -239,11 +239,7 @@ class _ConversationPeekViewState extends State<ConversationPeekView>
         child: InkWell(
           onTap: () async {
             final chatState = ChatsSvc.getChatState(widget.chat.guid);
-            if (chatState != null) {
-              await ChatsSvc.setChatPinned(chatState.chat, !widget.chat.isPinned!);
-            } else {
-              await ChatsSvc.toggleChatPin(widget.chat, !widget.chat.isPinned!);
-            }
+            await ChatsSvc.setChatPinned(chatState?.chat ?? widget.chat, !widget.chat.isPinned!);
             popPeekView();
           },
           child: ListTile(
@@ -320,11 +316,7 @@ class _ConversationPeekViewState extends State<ConversationPeekView>
         child: InkWell(
           onTap: () async {
             final chatState = ChatsSvc.getChatState(widget.chat.guid);
-            if (chatState != null) {
-              await ChatsSvc.setChatArchived(chatState.chat, !widget.chat.isArchived!);
-            } else {
-              await ChatsSvc.toggleChatArchive(widget.chat, !widget.chat.isArchived!);
-            }
+            await ChatsSvc.setChatArchived(chatState?.chat ?? widget.chat, !widget.chat.isArchived!);
             popPeekView();
           },
           child: ListTile(

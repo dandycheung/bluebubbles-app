@@ -156,11 +156,7 @@ Future<void> showConversationTileMenu(
             behavior: HitTestBehavior.opaque,
             onTap: () {
               final chatState = ChatsSvc.getChatState(chat.guid);
-              if (chatState != null) {
-                ChatsSvc.setChatPinned(chatState.chat, !chat.isPinned!);
-              } else {
-                ChatsSvc.toggleChatPin(chat, !chat.isPinned!);
-              }
+              ChatsSvc.setChatPinned(chatState?.chat ?? chat, !chat.isPinned!);
               Navigator.pop(context);
             },
             child: Padding(
@@ -253,7 +249,7 @@ Future<void> showConversationTileMenu(
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
             onTap: () {
-              ChatsSvc.toggleChatArchive(chat, !chat.isArchived!);
+              ChatsSvc.setChatArchived(chat, !chat.isArchived!);
               Navigator.pop(context);
             },
             child: Padding(
