@@ -628,7 +628,9 @@ class AttachmentsService extends GetxService {
               (orientationStr.contains('90') ||
                   orientationStr.contains('270') ||
                   orientationStr.toLowerCase().contains('rotated 90') ||
-                  orientationStr.toLowerCase().contains('rotated 270'));
+                  orientationStr.toLowerCase().contains('rotated 270') ||
+                  orientationStr.toLowerCase().contains('horizontal (normal)') ||
+                  orientationStr.toLowerCase().contains('mirrored horizontal'));
 
           if (exifWidth != null && exifHeight != null) {
             if (needsSwap) {
