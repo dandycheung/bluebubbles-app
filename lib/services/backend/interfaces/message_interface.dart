@@ -21,19 +21,6 @@ class MessageInterface {
     return results;
   }
 
-  static Future<List<Message>> bulkSaveNewMessages({required Map<String, dynamic> data}) async {
-    late List<int> messageIds;
-    if (isIsolate) {
-      messageIds = await MessageActions.bulkSaveNewMessages(data);
-    } else {
-      messageIds = await GetIt.I<GlobalIsolate>().send<List<int>>(IsolateRequestType.bulkSaveNewMessages, input: data);
-    }
-
-    // Fetch messages by ID using getMany for efficiency
-    final messages = Database.messages.getMany(messageIds).whereType<Message>().toList();
-    return messages;
-  }
-
   static Future<Message> replaceMessage(
       {required String? oldGuid, required Map<String, dynamic> newMessageData}) async {
     final data = {
@@ -157,29 +144,6 @@ class MessageInterface {
       messageIds = await MessageActions.findAsync(data);
     } else {
       messageIds = await GetIt.I<GlobalIsolate>().send<List<int>>(IsolateRequestType.findAsync, input: data);
-    }
-
-    // Fetch messages by ID using getMany for efficiency
-    final messages = Database.messages.getMany(messageIds).whereType<Message>().toList();
-    return messages;
-  }
-
-  /// Bulk add messages - offloads heavy processing to the isolate
-  static Future<List<Message>> bulkAddMessages(
-      {Map<String, dynamic>? chatData,
-      required List<Map<String, dynamic>> messagesData,
-      bool checkForLatestMessageText = true}) async {
-    late List<int> messageIds;
-    final data = {
-      'chatData': chatData,
-      'messagesData': messagesData,
-      'checkForLatestMessageText': checkForLatestMessageText,
-    };
-
-    if (isIsolate) {
-      messageIds = await MessageActions.bulkAddMessages(data);
-    } else {
-      messageIds = await GetIt.I<GlobalIsolate>().send<List<int>>(IsolateRequestType.bulkAddMessages, input: data);
     }
 
     // Fetch messages by ID using getMany for efficiency

@@ -598,7 +598,6 @@ enum IsolateRequestType {
   syncLatestMessages,
   bulkSyncChats,
   getMessagesAsync,
-  bulkSyncMessages,
   getParticipantsAsync,
   clearTranscriptAsync,
   getChatsAsync,
@@ -633,6 +632,7 @@ enum IsolateRequestType {
 
   // Sync actions
   performIncrementalSync,
+  bulkSyncData,
 
   // Send message actions (routed through isolate so sends survive backgrounding)
   sendTextMessage,
@@ -641,8 +641,6 @@ enum IsolateRequestType {
   sendAttachmentMessage,
 
   // Message actions
-  bulkSaveNewMessages,
-  bulkAddMessages,
   replaceMessage,
   deleteMessage,
   softDeleteMessage,

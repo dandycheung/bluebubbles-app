@@ -4,6 +4,7 @@ import 'package:bluebubbles/utils/logger/logger.dart';
 import 'package:bluebubbles/database/models.dart';
 import 'package:bluebubbles/services/backend/sync/sync_manager_impl.dart';
 import 'package:bluebubbles/services/services.dart';
+import 'package:bluebubbles/services/backend/interfaces/sync_interface.dart';
 import 'package:dio/dio.dart' as dio;
 
 class IncrementalSyncManager extends SyncManager {
@@ -250,7 +251,7 @@ class IncrementalSyncManager extends SyncManager {
 
     // Enumerate the chats into cache
     Map<String, Chat> chatCache = {};
-    Map<String, List<Message>> messagesToSync = {};
+    Map<String, List<Map<String, dynamic>>> messagesToSync = {};
 
     // Tracks the latest group-name-change per chat, keyed by chat GUID.
     // We keep only the latest (highest dateCreated) so that if multiple name
@@ -267,9 +268,12 @@ class IncrementalSyncManager extends SyncManager {
           messagesToSync[chat['guid']] = [];
         }
 
+        // Create a Message object temporarily for local tracking and group event detection.
+        // The raw msgData map (not the Message object) is passed to the sync action so
+        // that attachment data from the server is preserved.
         Message msg = Message.fromMap(msgData);
         if (msg.error > 0) msg.errorMessage = serverErrorMessage(msg.error);
-        messagesToSync[chat['guid']]!.add(msg);
+        messagesToSync[chat['guid']]!.add(msgData as Map<String, dynamic>);
 
         // Save the last synced ROWID
         if (msg.originalROWID != null && (lastSyncedRowId == null || msg.originalROWID! > lastSyncedRowId!)) {
@@ -364,13 +368,16 @@ class IncrementalSyncManager extends SyncManager {
       Chat? theChat = chatCache[item.key];
       if (theChat == null || item.value.isEmpty) continue;
 
-      List<Message> s = await Chat.bulkSyncMessages(theChat, item.value);
-      messagesSynced += s.length;
+      final syncResult = await SyncInterface.bulkSyncData(
+        chatData: theChat.toMap(),
+        messagesData: item.value,
+      );
+      messagesSynced += syncResult.messages.length;
       setProgress(messagesSynced, total);
 
       // Track the latest message per chat (highest dateCreated with a valid DB id)
       // so the action layer can return message IDs instead of chat IDs.
-      final latest = s
+      final latest = syncResult.messages
           .where((m) => m.id != null && m.dateCreated != null)
           .fold<Message?>(null, (prev, m) => prev == null || m.dateCreated!.isAfter(prev.dateCreated!) ? m : prev);
       if (latest != null) {
@@ -423,7 +430,6 @@ class IncrementalSyncManager extends SyncManager {
 
     // Update the chat service with the latest chats
     for (var chat in syncedChats.values) {
-      chat.dbLatestMessage;
       ChatsSvc.updateChat(chat, override: true);
     }
 

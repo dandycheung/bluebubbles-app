@@ -187,11 +187,9 @@ class ChatsService {
         final newCount = event.count();
         if (newCount > currentCount && currentCount != 0) {
           final chat = event.findFirst()!;
-          if (chat.latestMessage.dateCreated!.millisecondsSinceEpoch == 0) {
+          if (chat.dbOnlyLatestMessageDate == null || chat.dbOnlyLatestMessageDate!.millisecondsSinceEpoch == 0) {
             // wait for the chat.addMessage to go through
             await Future.delayed(const Duration(milliseconds: 500));
-            // refresh the latest message
-            chat.dbLatestMessage;
           }
           await addChat(chat, immediate: true);
         }
@@ -250,6 +248,9 @@ class ChatsService {
       for (Chat c in chatBatch) {
         // Create ChatState and add to map
         chatStates[c.guid] = ChatState(c);
+        if (c.guid.contains('bluebubblesapp')) {
+          Logger.test('Chat Latest Message: ${c.dbLatestMessage.target?.guid} - ${c.dbLatestMessage.target?.text} - Has Attachments: ${c.dbLatestMessage.target?.hasAttachments} - Attachment Count: ${c.dbLatestMessage.target?.dbAttachments.length}');
+        }
         _setupChatStateListeners(chatStates[c.guid]!);
 
         // Add to sorted list
@@ -503,8 +504,8 @@ class ChatsService {
       final currentIsPinned = state.isPinned.value;
 
       // Check if sort-order-relevant fields have changed
-      final latestMessageChanged = updated.latestMessage.guid != currentLatestMessage?.guid ||
-          updated.latestMessage.dateCreated != currentLatestMessage?.dateCreated;
+      final latestMessageChanged = updated.dbLatestMessage.target?.guid != currentLatestMessage?.guid ||
+          updated.dbOnlyLatestMessageDate != currentLatestMessage?.dateCreated;
       final pinIndexChanged = updated.pinIndex != currentPinIndex;
       final isPinnedChanged = (updated.isPinned ?? false) != currentIsPinned;
       final sortOrderChanged = latestMessageChanged || pinIndexChanged || isPinnedChanged;
@@ -1181,11 +1182,7 @@ class ChatsService {
 
     // Update Chat model (use state.chat if available, otherwise use passed in chat)
     final chatToUpdate = state?.chat ?? chat;
-    chatToUpdate.latestMessage = value ??
-        Message(
-          dateCreated: DateTime.fromMillisecondsSinceEpoch(0),
-          guid: chatToUpdate.guid,
-        );
+    if (value != null) chatToUpdate.setLatestMessage(value);
 
     // Update state if available
     state?.updateLatestMessageInternal(value);
@@ -1204,7 +1201,7 @@ class ChatsService {
     final hideMessageContent = redacted && SettingsSvc.settings.hideMessageContent.value;
     state.updateSubtitleInternal(
         message.getNotificationText(hideContactInfo: hideContactInfo, hideMessageContent: hideMessageContent));
-    state.chat.latestMessage = message;
+    state.chat.setLatestMessage(message);
     _repositionChat(state.chat, immediate: true);
   }
 

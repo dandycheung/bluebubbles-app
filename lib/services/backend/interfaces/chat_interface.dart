@@ -229,27 +229,6 @@ class ChatInterface {
     return Database.messages.getMany(messageIds).whereType<Message>().toList();
   }
 
-  static Future<List<Message>> bulkSyncMessages({
-    required Map<String, dynamic> chatData,
-    required List<Map<String, dynamic>> messagesData,
-    bool hydrateAttachments = true,
-  }) async {
-    final data = {
-      'chatData': chatData,
-      'messagesData': messagesData,
-    };
-
-    late List<int> messageIds;
-    if (isIsolate) {
-      messageIds = await ChatActions.bulkSyncMessages(data);
-    } else {
-      messageIds = await GetIt.I<GlobalIsolate>().send<List<int>>(IsolateRequestType.bulkSyncMessages, input: data);
-    }
-
-    // Fetch messages by ID using getMany for efficiency
-    return Database.messages.getMany(messageIds).whereType<Message>().toList();
-  }
-
   static Future<List<Handle>> getParticipantsAsync({
     required int chatId,
     required String chatGuid,

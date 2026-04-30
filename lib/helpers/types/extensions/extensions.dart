@@ -318,6 +318,11 @@ extension MessageNotificationExtension on Message {
       if (isInteractive) {
         return "$sender$interactiveText";
       }
+
+      if (guid!.contains('09CAF8D4-6FF0-4CBD-B387-F48B4ACA671F')) {
+        Logger.test('Notification Latest Message: ${guid} - ${text} - Has Attachments: ${hasAttachments} - Attachment Count: ${dbAttachments.length}');
+      }
+
       if (isNullOrEmpty(fullText) && !hasAttachments && isNullOrEmpty(associatedMessageGuid)) {
         if (dateEdited != null) {
           return "${sender}Unsent message";

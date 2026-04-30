@@ -8,6 +8,7 @@ import 'package:bluebubbles/app/wrappers/titlebar_wrapper.dart';
 import 'package:bluebubbles/database/models.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/services/services.dart';
+import 'package:bluebubbles/services/backend/interfaces/sync_interface.dart';
 import 'package:bluebubbles/services/ui/chat/send_data.dart';
 import 'package:bluebubbles/utils/string_utils.dart';
 import 'package:dio/dio.dart';
@@ -564,8 +565,12 @@ class ChatCreatorController extends StatefulController {
             final msgResponse = await HttpSvc.chatMessages(resolvedChat.guid, limit: 1);
             final msgData = msgResponse.data['data'];
             if (msgData is List && msgData.isNotEmpty) {
-              final messages = msgData.map((e) => Message.fromMap(e as Map<String, dynamic>)).toList();
-              syncedMessages = await Chat.bulkSyncMessages(resolvedChat, messages);
+              final rawMessages = msgData.cast<Map<String, dynamic>>();
+              syncedMessages = (await SyncInterface.bulkSyncData(
+                chatData: resolvedChat.toMap(),
+                messagesData: rawMessages,
+              ))
+                  .messages;
             }
           } catch (_) {
             // Non-fatal: the socket echo will still arrive and display the message

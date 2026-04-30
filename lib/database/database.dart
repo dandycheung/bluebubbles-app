@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/database/models.dart';
+import 'package:bluebubbles/database/migrations/chat_latest_message_migration.dart';
 import 'package:bluebubbles/database/migrations/message_handle_relationship_migration.dart';
 import 'package:bluebubbles/services/services.dart';
 import 'package:bluebubbles/utils/logger/logger.dart';
@@ -13,7 +14,7 @@ import 'package:io/io.dart';
 import 'package:path/path.dart';
 
 class Database {
-  static int version = 7;
+  static int version = 8;
 
   /// Bump this whenever preset theme definitions change (colors, font sizes,
   /// etc.) to force existing installs to re-seed preset themes on next launch.
@@ -244,6 +245,13 @@ class Database {
         // Version 7: Remove V1 Contact entity (we don't need to do anything.)
         // We removed the code, so it's unused, but it'll remain in the database.
         case 7:
+          break;
+
+        // Version 8: Backfill Chat.dbLatestMessage (ToOne<Message>) and
+        // dbOnlyLatestMessageDate from each chat's most recent message.
+        case 8:
+          Logger.info("Executing chat latest message backfill...", tag: "DB-Migration");
+          ChatLatestMessageMigration.migrate();
           break;
       }
 

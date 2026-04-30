@@ -267,7 +267,7 @@ class Message {
       associatedMessageType: json["associatedMessageType"],
       expressiveSendStyleId: json["expressiveSendStyleId"],
       handle: json['handle'] != null ? Handle.fromMap(json['handle']!.cast<String, Object>()) : null,
-      hasAttachments: json['hasAttachments'] == true,
+      hasAttachments: (json['attachments'] as List? ?? []).isNotEmpty || json['hasAttachments'] == true,
       hasReactions: json['hasReactions'] == true,
       dateDeleted: parseDate(json["dateDeleted"]),
       metadata: metadata is String ? null : metadata,
@@ -362,18 +362,6 @@ class Message {
       id = result.id;
     }
     return this;
-  }
-
-  static Future<List<Message>> bulkSaveNewMessages(Chat chat, List<Message> messages) async {
-    if (kIsWeb) throw Exception("Web does not support saving messages!");
-    if (messages.isEmpty) return [];
-
-    return await MessageInterface.bulkSaveNewMessages(
-      data: {
-        'chatData': chat.toMap(),
-        'messagesData': messages.map((e) => e.toMap()).toList(),
-      },
-    );
   }
 
   /// Replace a temp message with the message from the server

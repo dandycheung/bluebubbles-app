@@ -5,6 +5,7 @@ import 'package:bluebubbles/models/models.dart';
 import 'package:bluebubbles/services/backend/sync/sync_manager_impl.dart';
 import 'package:bluebubbles/database/models.dart';
 import 'package:bluebubbles/services/services.dart';
+import 'package:bluebubbles/services/backend/interfaces/sync_interface.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:universal_io/io.dart';
@@ -93,7 +94,7 @@ class FullSyncManager extends SyncManager {
           if (kIsWeb || (chat.chatIdentifier ?? "").startsWith("urn:biz")) continue;
           try {
             await for (final messageEvent in streamChatMessages(chat.guid, messageCount, batchSize: messageCount)) {
-              List<Message> newMessages = messageEvent.messages;
+              List<Map<String, dynamic>> newMessages = messageEvent.messages;
               String? displayName = chat.guid;
               if (chat.displayName != null && chat.displayName!.isNotEmpty) {
                 displayName = chat.displayName;
@@ -125,7 +126,10 @@ class FullSyncManager extends SyncManager {
               addToOutput('Saving chunk of ${newMessages.length} message(s) for chat: $displayName');
 
               // Asyncronously save the messages
-              List<Message> insertedMessages = await Message.bulkSaveNewMessages(chat, newMessages);
+              List<Message> insertedMessages = await SyncInterface.bulkSyncData(
+                chatData: chat.toMap(),
+                messagesData: newMessages,
+              ).then((r) => r.messages);
               messagesSynced += insertedMessages.length;
 
               // Fetch group chat icon if available.
@@ -221,9 +225,9 @@ class FullSyncManager extends SyncManager {
         final originalCount = chats.length;
         chats = chats.where((chat) {
           // Use the latestMessage from the Chat object
-          final latestMessage = chat.latestMessage;
-          if (latestMessage.dateCreated != null) {
-            return latestMessage.dateCreated!.isAfter(cutoffDate);
+          final latestDate = chat.dbOnlyLatestMessageDate;
+          if (latestDate != null) {
+            return latestDate.isAfter(cutoffDate);
           }
 
           // If no latestMessage date, exclude the chat (it's likely empty)
@@ -265,11 +269,7 @@ class FullSyncManager extends SyncManager {
 
       // Convert the returned chat dictionaries to a list of Chat Objects
       List<dynamic> messageResponse = data["data"];
-      List<Message> messages = messageResponse.map((e) {
-        final m = Message.fromMap(e);
-        if (m.error > 0) m.errorMessage = serverErrorMessage(m.error);
-        return m;
-      }).toList();
+      List<Map<String, dynamic>> messages = messageResponse.cast<Map<String, dynamic>>();
       yield MessageSyncPage((i + 1) / batches, messages);
     }
   }

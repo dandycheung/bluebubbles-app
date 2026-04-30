@@ -147,7 +147,6 @@ class SearchViewState extends State<SearchView> with ThemeHelpers {
       chats = results.map((e) => e.chat.target).toList();
       chats.forEachIndexed((index, element) {
         if (element == null) return;
-        element.latestMessage = messages[index];
         search.results.add(_SearchResult(chat: element, message: messages[index]));
       });
     } else {
@@ -205,7 +204,6 @@ class SearchViewState extends State<SearchView> with ThemeHelpers {
       final dbChats = Database.chats.query(Chat_.guid.oneOf(chatsToGet)).build().find();
       for (int i = 0; i < itemChats.length; i++) {
         final chat = dbChats.firstWhereOrNull((e) => e.guid == itemChats[i].guid) ?? itemChats[i];
-        chat.latestMessage = itemMessages[i];
         search.results.add(_SearchResult(chat: chat, message: itemMessages[i]));
       }
     }

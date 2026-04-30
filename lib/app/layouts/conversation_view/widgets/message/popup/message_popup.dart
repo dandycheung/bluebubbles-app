@@ -829,7 +829,7 @@ class _MessagePopupState extends State<MessagePopup> with SingleTickerProviderSt
 
   void delete() {
     service.removeMessage(message);
-    Message.softDelete(message.guid!);
+    Message.delete(message.guid!);
     popDetails();
   }
 

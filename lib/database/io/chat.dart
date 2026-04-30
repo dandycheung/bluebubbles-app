@@ -6,7 +6,6 @@ import 'package:bluebubbles/database/database.dart';
 import 'package:bluebubbles/database/models.dart';
 import 'package:bluebubbles/services/services.dart';
 import 'package:bluebubbles/services/backend/interfaces/chat_interface.dart';
-import 'package:collection/collection.dart';
 import 'package:dio/dio.dart';
 import 'package:faker/faker.dart';
 import 'package:flutter/foundation.dart';
@@ -37,24 +36,22 @@ class Chat {
   bool? autoSendTypingIndicators;
   String? textFieldText;
   List<String> textFieldAttachments = [];
-  Message? _latestMessage;
-  Message get latestMessage {
-    if (_latestMessage != null) return _latestMessage!;
-    return dbLatestMessage;
-  }
 
-  Message get dbLatestMessage {
-    _latestMessage = Chat.getMessages(this, limit: 1, getDetails: true).firstOrNull ??
-        Message(
-          dateCreated: DateTime.fromMillisecondsSinceEpoch(0),
-          guid: guid,
-        );
-    return _latestMessage!;
-  }
+  /// ObjectBox ToOne relation to the latest message for O(1) lookup.
+  /// Keep [dbOnlyLatestMessageDate] in sync via [setLatestMessage].
+  final dbLatestMessage = ToOne<Message>();
 
-  set latestMessage(Message m) => _latestMessage = m;
   @Property(uid: 526293286661780207)
   DateTime? dbOnlyLatestMessageDate;
+
+  /// Update the latest-message relation and its sort-key in one step.
+  /// Persists both fields to the DB asynchronously (fire-and-forget).
+  void setLatestMessage(Message m) {
+    dbLatestMessage.target = m;
+    dbOnlyLatestMessageDate = m.dateCreated;
+    unawaited(saveAsync(updateLatestMessage: true));
+  }
+
   DateTime? dateDeleted;
   int? style;
   bool lockChatName;
@@ -125,7 +122,7 @@ class Chat {
     customBackgroundPath = customBackground;
     pinIndex = pinnedIndex;
     if (textFieldAttachments.isEmpty) textFieldAttachments = [];
-    _latestMessage = latestMessage;
+    if (latestMessage != null) dbOnlyLatestMessageDate ??= latestMessage.dateCreated;
   }
 
   factory Chat.fromMap(Map<String, dynamic> json) {
@@ -177,6 +174,7 @@ class Chat {
     bool updateLockChatName = false,
     bool updateLockChatIcon = false,
     bool updateLastReadMessageGuid = false,
+    bool updateLatestMessage = false,
   }) async {
     if (kIsWeb) return this;
 
@@ -201,6 +199,7 @@ class Chat {
         'updateLockChatName': updateLockChatName,
         'updateLockChatIcon': updateLockChatIcon,
         'updateLastReadMessageGuid': updateLastReadMessageGuid,
+        'updateLatestMessage': updateLatestMessage,
       },
     );
 
@@ -340,7 +339,7 @@ class Chat {
       bool clearNotificationsIfFromMe = true,
       List<Attachment> attachments = const []}) async {
     // Save the message using the interface
-    Message? latest = latestMessage;
+    Message? latest = dbLatestMessage.target;
     Message? newMessage;
     bool isNewer = false;
 
@@ -349,7 +348,7 @@ class Chat {
         messageData: message.toMap(),
         attachmentsData: attachments.map((e) => e.toMap()).toList(),
         chatData: toMap(),
-        latestMessageData: latest.toMap(),
+        latestMessageData: (latest ?? Message(dateCreated: DateTime.fromMillisecondsSinceEpoch(0), guid: guid)).toMap(),
         checkForMessageText: checkForMessageText,
       );
 
@@ -366,12 +365,12 @@ class Chat {
 
     // Handle post-save operations on main thread
     if (isNewer) {
-      _latestMessage = message;
+      setLatestMessage(message);
       if (dateDeleted != null) {
         dateDeleted = null;
         await saveAsync(updateDateDeleted: true);
       }
-      if (isArchived! && !_latestMessage!.isFromMe! && SettingsSvc.settings.unarchiveOnNewMessage.value) {
+      if (isArchived! && !message.isFromMe! && SettingsSvc.settings.unarchiveOnNewMessage.value) {
         await toggleArchivedAsync(false);
       }
     }
@@ -730,16 +729,6 @@ class Chat {
         .chats;
   }
 
-  static Future<List<Message>> bulkSyncMessages(Chat chat, List<Message> messages) async {
-    if (kIsWeb) throw Exception("Web does not support saving messages!");
-
-    if (messages.isEmpty) return [];
-    return await ChatInterface.bulkSyncMessages(
-      chatData: chat.toMap(),
-      messagesData: messages.map((e) => e.toMap()).toList(),
-    );
-  }
-
   void clearTranscript() {
     if (kIsWeb) return;
     Database.runInTransaction(TxMode.write, () {
@@ -791,7 +780,8 @@ class Chat {
     hasUnreadMessage ??= other.hasUnreadMessage;
     isArchived ??= other.isArchived;
     isPinned ??= other.isPinned;
-    _latestMessage ??= other.latestMessage;
+    if (dbLatestMessage.target == null && other.dbLatestMessage.target != null)
+      setLatestMessage(other.dbLatestMessage.target!);
     muteArgs ??= other.muteArgs;
     dateDeleted ??= other.dateDeleted;
     style ??= other.style;
@@ -822,8 +812,8 @@ class Chat {
     }
 
     // Compare the last message dates (negate to sort newest first)
-    final aDate = a.latestMessage.dateCreated!;
-    final bDate = b.latestMessage.dateCreated!;
+    final aDate = a.dbOnlyLatestMessageDate ?? DateTime.fromMillisecondsSinceEpoch(0);
+    final bDate = b.dbOnlyLatestMessageDate ?? DateTime.fromMillisecondsSinceEpoch(0);
     return -aDate.compareTo(bDate);
   }
 
@@ -874,6 +864,8 @@ class Chat {
       "lastReadMessageGuid": lastReadMessageGuid,
       "textFieldText": textFieldText,
       "textFieldAttachments": textFieldAttachments,
+      "dbOnlyLatestMessageDate": dbOnlyLatestMessageDate?.millisecondsSinceEpoch,
+      "dbLatestMessageId": dbLatestMessage.targetId,
     };
   }
 }

@@ -16,6 +16,7 @@ import 'package:bluebubbles/app/layouts/conversation_view/pages/messages_view.da
 import 'package:bluebubbles/database/database.dart';
 import 'package:bluebubbles/database/models.dart';
 import 'package:bluebubbles/services/services.dart';
+import 'package:bluebubbles/services/backend/interfaces/sync_interface.dart';
 import 'package:bluebubbles/services/ui/chat/send_data.dart';
 import 'package:bluebubbles/utils/string_utils.dart';
 import 'package:dio/dio.dart';
@@ -686,10 +687,12 @@ class ChatCreatorState extends State<ChatCreator> with ThemeHelpers {
                                 // Fetch the last message for the chat and save it.
                                 final messageRes = await HttpSvc.chatMessages(newChat.guid, limit: 1);
                                 if (messageRes.data["data"].length > 0) {
-                                  final messages = (messageRes.data["data"] as List<dynamic>)
-                                      .map((e) => Message.fromMap(e))
-                                      .toList();
-                                  await Chat.bulkSyncMessages(newChat, messages);
+                                  final rawMessages =
+                                      (messageRes.data["data"] as List<dynamic>).cast<Map<String, dynamic>>();
+                                  await SyncInterface.bulkSyncData(
+                                    chatData: newChat.toMap(),
+                                    messagesData: rawMessages,
+                                  );
                                 }
 
                                 // Force close the message service for the chat so it can be reloaded.

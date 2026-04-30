@@ -13,6 +13,7 @@ import 'package:bluebubbles/app/state/message_state.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/database/models.dart';
 import 'package:bluebubbles/services/services.dart';
+import 'package:bluebubbles/utils/logger/logger.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -183,6 +184,9 @@ class _MessageContentBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (message.text != null && message.text!.startsWith('Channeling')) {
+      Logger.test('Found a channeling message, rendering as text bubble to prevent crashes');
+    }
     return ClipPath(
       clipper: TailClipper(
         isFromMe: message.isFromMe!,

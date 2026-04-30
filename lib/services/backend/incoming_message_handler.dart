@@ -384,7 +384,6 @@ class IncomingMessageHandler {
       unawaited(_dispatchNewMessage(c, saved, tempGuid: tempGuid));
 
       // 10. Refresh chat-list ordering and subtitle.
-      c.dbLatestMessage;
 
       // Guard: addMessage() may have set hasUnreadMessage = true in the DB even
       // when this chat is the one currently open.  Clear it on the in-memory
