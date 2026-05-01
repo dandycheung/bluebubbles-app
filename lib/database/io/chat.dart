@@ -404,7 +404,7 @@ class Chat {
     // Sync participants from server - delegates to service layer
     // Note: For full sync with service updates, this is called by ChatsSvc.addMessageToChat
     try {
-      final response = await HttpSvc.singleChat(guid, withQuery: "participants");
+      final response = await HttpSvc.chat.fetchOne(guid, withQuery: "participants");
       if (response.statusCode == 200 && response.data["data"] != null) {
         final chatData = response.data["data"];
         final updatedChat = (await ChatInterface.bulkSyncChats(chatsData: [chatData])).chats;
@@ -631,7 +631,7 @@ class Chat {
     this.autoSendReadReceipts = autoSendReadReceipts;
     await saveAsync(updateAutoSendReadReceipts: true);
     if (autoSendReadReceipts ?? SettingsSvc.settings.privateMarkChatAsRead.value) {
-      HttpSvc.markChatRead(guid);
+      HttpSvc.chat.markRead(guid);
     }
     return this;
   }
@@ -780,8 +780,9 @@ class Chat {
     hasUnreadMessage ??= other.hasUnreadMessage;
     isArchived ??= other.isArchived;
     isPinned ??= other.isPinned;
-    if (dbLatestMessage.target == null && other.dbLatestMessage.target != null)
+    if (dbLatestMessage.target == null && other.dbLatestMessage.target != null) {
       setLatestMessage(other.dbLatestMessage.target!);
+    }
     muteArgs ??= other.muteArgs;
     dateDeleted ??= other.dateDeleted;
     style ??= other.style;
@@ -819,7 +820,7 @@ class Chat {
 
   static Future<void> getIcon(Chat c, {bool force = false}) async {
     if (!force && c.lockChatIcon) return;
-    final response = await HttpSvc.getChatIcon(c.guid).catchError((err, stack) async {
+    final response = await HttpSvc.chat.getIcon(c.guid).catchError((err, stack) async {
       Logger.error("Failed to get chat icon for chat ${c.getTitle()}", error: err, trace: stack);
       return Response(statusCode: 500, requestOptions: RequestOptions(path: ""));
     });

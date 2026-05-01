@@ -74,7 +74,7 @@ class NetworkTasks {
 
     // Phase 1: try the known local IPs reported by the server.
     try {
-      final response = await HttpSvc.serverInfo();
+      final response = await HttpSvc.server.info();
       final data = response.data?['data'];
       final localIpv4s = ((data?['local_ipv4s'] ?? []) as List).cast<String>();
       final localIpv6s = ((data?['local_ipv6s'] ?? []) as List).cast<String>();
@@ -179,7 +179,7 @@ class NetworkTasks {
       for (final scheme in ['https', 'http']) {
         final addr = '$scheme://$ip:$port';
         try {
-          final response = await HttpSvc.ping(customUrl: addr);
+          final response = await HttpSvc.server.ping(customUrl: addr);
           if (response.data.toString().contains('pong')) return addr;
         } catch (_) {
           Logger.debug('Failed to connect to local address: $addr', tag: 'NetworkTasks');

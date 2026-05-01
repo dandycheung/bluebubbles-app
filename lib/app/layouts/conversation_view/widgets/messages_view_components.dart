@@ -120,7 +120,7 @@ class _NotifyAnywayButton extends StatelessWidget {
           style: context.theme.textTheme.labelLarge!.copyWith(color: context.theme.colorScheme.tertiaryContainer),
         ),
         onPressed: () async {
-          await HttpSvc.notify(latestMessage!.guid!);
+          await HttpSvc.message.notify(latestMessage!.guid!);
         },
       );
     }

@@ -196,11 +196,13 @@ class AttachmentDownloadController extends GetxController {
     // For web, download to memory. For native platforms, write directly to disk
     final savePath = kIsWeb ? null : attachment.path;
 
-    var response = await HttpSvc.downloadAttachment(
+    var response = await HttpSvc.attachment
+        .download(
       attachment.guid!,
       savePath: savePath,
       onReceiveProgress: (count, total) => setProgress(kIsWeb ? (count / total) : (count / attachment.totalBytes!)),
-    ).catchError((err) async {
+    )
+        .catchError((err) async {
       if (!kIsWeb && savePath != null) {
         File file = File(savePath);
         if (await file.exists()) {

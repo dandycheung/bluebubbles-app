@@ -293,7 +293,7 @@ class ContactServiceV2 {
     final networkContacts = <ContactV2>[];
     logger?.call("Fetching contacts from server...");
     try {
-      final response = await HttpSvc.contacts(withAvatars: true);
+      final response = await HttpSvc.contact.fetchAll(withAvatars: true);
 
       if (response.statusCode == 200 && !isNullOrEmpty(response.data['data'])) {
         logger?.call("Found contacts!");

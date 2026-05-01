@@ -50,7 +50,7 @@ class CloudMessagingService {
       Logger.debug("Already authorized FCM device! Token: $token", tag: 'FCM-Auth');
       Logger.info('Registering device with server...', tag: 'FCM-Auth');
       String deviceName = await getDeviceName();
-      await HttpSvc.addFcmDevice(deviceName.trim(), token!.trim()).then((_) {
+      await HttpSvc.fcm.addDevice(deviceName.trim(), token!.trim()).then((_) {
         Logger.info('Device registration successful!', tag: 'FCM-Auth');
         completer?.complete();
       }).catchError((ex) {
@@ -89,7 +89,7 @@ class CloudMessagingService {
 
       // If the first try fails, let's try again with new FCM data from the server
       Logger.info('Fetching FCM data from the server...', tag: 'FCM-Auth');
-      final response = await HttpSvc.fcmClient().catchError((err) {
+      final response = await HttpSvc.fcm.getServiceAccount().catchError((err) {
         if (err is Response) {
           return err;
         } else {
@@ -132,7 +132,7 @@ class CloudMessagingService {
     token = result;
     Logger.info('Registering device with server...', tag: 'FCM-Auth');
     String deviceName = await getDeviceName();
-    await HttpSvc.addFcmDevice(deviceName.trim(), token!.trim()).then((_) {
+    await HttpSvc.fcm.addDevice(deviceName.trim(), token!.trim()).then((_) {
       Logger.info('Device registration successful!', tag: 'FCM-Auth');
       completer?.complete();
     }).catchError((ex) {

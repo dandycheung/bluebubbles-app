@@ -52,11 +52,10 @@ class _ChatSyncDialogState extends State<ChatSyncDialog> {
         // Update ChatState with the new latest message so the conversation-list
         // tile subtitle, sort position, and unread indicator stay in sync.
         if (savedMessages.isNotEmpty) {
-          final latest = savedMessages.reduce((a, b) =>
-              (a.dateCreated ?? DateTime.fromMillisecondsSinceEpoch(0))
-                      .isAfter(b.dateCreated ?? DateTime.fromMillisecondsSinceEpoch(0))
-                  ? a
-                  : b);
+          final latest = savedMessages.reduce((a, b) => (a.dateCreated ?? DateTime.fromMillisecondsSinceEpoch(0))
+                  .isAfter(b.dateCreated ?? DateTime.fromMillisecondsSinceEpoch(0))
+              ? a
+              : b);
           ChatsSvc.updateChatLatestMessage(widget.chat.guid, latest);
         }
 

@@ -125,12 +125,12 @@ class FindMyController extends GetxController {
 
     // Fetch friends data
     final response2 = refreshFriends
-        ? await HttpSvc.refreshFindMyFriends().catchError((_) async {
+        ? await HttpSvc.icloud.refreshFriends().catchError((_) async {
             refreshing2.value = false;
             showSnackbar("Error", "Something went wrong refreshing FindMy Friends data!");
             return Response(requestOptions: RequestOptions(path: ''));
           })
-        : await HttpSvc.findMyFriends().catchError((_) async {
+        : await HttpSvc.icloud.getFriends().catchError((_) async {
             fetching2.value = null;
             return Response(requestOptions: RequestOptions(path: ''));
           });
@@ -163,12 +163,12 @@ class FindMyController extends GetxController {
 
     // Fetch devices data
     final response = refreshDevices
-        ? await HttpSvc.refreshFindMyDevices().catchError((_) async {
+        ? await HttpSvc.icloud.refreshDevices().catchError((_) async {
             refreshing.value = false;
             showSnackbar("Error", "Something went wrong refreshing FindMy Devices data!");
             return Response(requestOptions: RequestOptions(path: ''));
           })
-        : await HttpSvc.findMyDevices().catchError((_) async {
+        : await HttpSvc.icloud.getDevices().catchError((_) async {
             fetching.value = null;
             return Response(requestOptions: RequestOptions(path: ''));
           });
@@ -196,7 +196,7 @@ class FindMyController extends GetxController {
 
     // Call the FindMy Friends refresh anyways so that new data comes through the socket
     if (!refreshFriends) {
-      HttpSvc.refreshFindMyFriends();
+      HttpSvc.icloud.refreshFriends();
     } else {
       canRefresh.value = false;
       // Allow users to refresh after 30sec

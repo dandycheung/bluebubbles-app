@@ -1,7 +1,6 @@
 import 'package:bluebubbles/database/database.dart';
 import 'package:bluebubbles/database/models.dart';
 import 'package:bluebubbles/utils/logger/logger.dart';
-import 'package:objectbox/objectbox.dart';
 
 /// Migration that backfills [Chat.dbLatestMessage] and [Chat.dbOnlyLatestMessageDate]
 /// for all existing chats by querying each chat's most recent non-deleted message.

@@ -267,7 +267,7 @@ class MessagesViewState extends State<MessagesView> with MessagesServiceMixin, T
     if (!SettingsSvc.serverDetails.isMinMonterey) return;
     final recipient = chat.handles.firstOrNull;
     if (recipient != null) {
-      HttpSvc.handleFocusState(recipient.address).then((response) {
+      HttpSvc.handle.handleFocusState(recipient.address).then((response) {
         final status = response.data['data']['status'];
         controller.recipientNotifsSilenced.value = status != "none";
       }).catchError((error, stack) async {

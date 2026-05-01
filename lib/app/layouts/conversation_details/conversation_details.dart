@@ -171,7 +171,7 @@ class _ConversationDetailsState extends State<ConversationDetails> with WidgetsB
                                     ),
                                   );
                                 });
-                            final response = await HttpSvc.leaveChat(chat.guid);
+                            final response = await HttpSvc.chat.leave(chat.guid);
                             if (!context.mounted) return;
                             if (response.statusCode == 200) {
                               Navigator.of(context, rootNavigator: true).pop();

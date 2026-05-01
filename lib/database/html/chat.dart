@@ -276,9 +276,9 @@ class Chat {
           SettingsSvc.settings.enablePrivateAPI.value &&
           SettingsSvc.settings.privateMarkChatAsRead.value) {
         if (!hasUnread && autoSendReadReceipts!) {
-          HttpSvc.markChatRead(guid);
+          HttpSvc.chat.markRead(guid);
         } else if (hasUnread) {
-          HttpSvc.markChatUnread(guid);
+          HttpSvc.chat.markUnread(guid);
         }
       }
     } catch (_) {}
@@ -438,7 +438,7 @@ class Chat {
     this.autoSendReadReceipts = autoSendReadReceipts;
     save(updateAutoSendReadReceipts: true);
     if (autoSendReadReceipts ?? SettingsSvc.settings.privateMarkChatAsRead.value) {
-      HttpSvc.markChatRead(guid);
+      HttpSvc.chat.markRead(guid);
     }
     return this;
   }

@@ -118,7 +118,6 @@ class OutgoingMessageHandler {
   /// HTTP vs. socket race.
   void registerSendProgressTracker(String tempGuid, Chat chat, Completer<void> completer) {
     _sendProgressTrackers[tempGuid] = _SendProgressTracker(chat, completer);
-    Logger.debug('Registered send-progress tracker for $tempGuid', tag: _tag);
   }
 
   /// Called by [IncomingMessageHandler] when it receives a socket event for a
@@ -132,11 +131,7 @@ class OutgoingMessageHandler {
     if (tracker == null) return;
 
     if (origin == Origin.incomingMessageHandler) {
-      Logger.debug('Server event arrived before HTTP response for $tempGuid — completing send progress early',
-          tag: _tag);
     } else if (origin == Origin.outgoingMessageHandler) {
-      Logger.debug('Outgoing send request returned before server event for $tempGuid — completing send progress',
-          tag: _tag);
     } else {
       Logger.warn('Unknown origin $origin for send progress completion of $tempGuid', tag: _tag);
     }
@@ -168,10 +163,6 @@ class OutgoingMessageHandler {
   /// [OutgoingQueueItem.completer] resolves — i.e. when the HTTP response arrives
   /// or an error is surfaced.
   Future<void> queue(OutgoingQueueItem item) async {
-    Logger.debug(
-      '[queue] Enqueueing type=${item.type.name} chat=${item.chat.guid} guid=${item.message.guid}',
-      tag: _tag,
-    );
     // Prepare items (writes temp messages / copies attachment files to disk).
     // prepMessage may return multiple Message objects when it splits a URL
     // message into two parts (pre-Big Sur macOS compatibility).
@@ -180,14 +171,11 @@ class OutgoingMessageHandler {
     if (returned is List<Message>) {
       // prepMessage already saved each message to the DB; create a queue
       // entry for each one with the message that was actually saved.
-      Logger.debug('[queue] prepMessage returned ${(returned as List).length} message(s)', tag: _tag);
       for (final m in returned) {
-        Logger.debug('[queue] enqueueing message guid=${m.guid}', tag: _tag);
         _queue.add(_OutgoingEntry(_copyWithMessage(item, m)));
       }
     } else {
       // Attachment: prepAttachment already saved it; keep the original item.
-      Logger.debug('[queue] attachment item enqueued guid=${item.message.guid}', tag: _tag);
       _queue.add(_OutgoingEntry(item));
     }
 
@@ -240,15 +228,10 @@ class OutgoingMessageHandler {
   Future<void> _processNext() async {
     if (_isProcessing) return;
     _isProcessing = true;
-    Logger.debug('[_processNext] Starting queue processing (${_queue.length} item(s) queued)', tag: _tag);
 
     while (_queue.isNotEmpty) {
       final entry = _queue.removeFirst();
       final item = entry.item;
-      Logger.debug(
-        '[_processNext] Processing item type=${item.type.name} guid=${item.message.guid} chat=${item.chat.guid}',
-        tag: _tag,
-      );
 
       try {
         await _handleSend(() => _dispatchItem(item), item.chat).catchError((err) async {
@@ -258,13 +241,10 @@ class OutgoingMessageHandler {
             for (final pending in toCancel) {
               _queue.removeWhere((e) => e.item == pending);
               final m = pending.message;
-              final tempGuid = m.guid;
+              final tempGuid = m.guid!;
               m.error = MessageError.BAD_REQUEST.code;
               m.errorMessage = 'Canceled due to previous failure';
-              await Message.replaceMessage(tempGuid, m);
-              if (Get.isRegistered<MessagesService>(tag: pending.chat.guid)) {
-                MessagesSvc(pending.chat.guid).updateMessage(m, oldGuid: tempGuid);
-              }
+              await _finalizeOutgoingFailure(pending.chat, m, tempGuid);
             }
           }
         });
@@ -275,7 +255,6 @@ class OutgoingMessageHandler {
       }
     }
 
-    Logger.debug('[_processNext] Queue drained', tag: _tag);
     _isProcessing = false;
   }
 
@@ -470,14 +449,19 @@ class OutgoingMessageHandler {
         ));
       }
 
+      Message? lastSaved;
       for (final message in messages) {
         message.generateTempGuid();
         // r == null is guaranteed by the outer guard, so these are never reactions.
         final saved = (await c.addMessage(message, clearNotificationsIfFromMe: clearNotificationsIfFromMe)).message;
+        lastSaved = saved;
         if (Get.isRegistered<MessagesService>(tag: c.guid)) {
           await MessagesSvc(c.guid).addNewMessage(saved);
         }
       }
+      // Update ChatState immediately so the tile reflects the outgoing message
+      // before the queue dispatches the HTTP call.
+      if (lastSaved != null) ChatsSvc.updateChatLatestMessage(c.guid, lastSaved);
     } else {
       m.generateTempGuid();
       final saved = (await c.addMessage(m, clearNotificationsIfFromMe: clearNotificationsIfFromMe)).message;
@@ -491,6 +475,9 @@ class OutgoingMessageHandler {
         await MessagesSvc(c.guid).addNewMessage(saved);
       }
       messages.add(m);
+      // Update ChatState immediately so the tile reflects the outgoing message
+      // before the queue dispatches the HTTP call.
+      ChatsSvc.updateChatLatestMessage(c.guid, saved);
     }
     return messages;
   }
@@ -511,10 +498,6 @@ class OutgoingMessageHandler {
 
     if (!kIsWeb) {
       final sourcePath = attachment.metadata?['source_path'] as String?;
-      Logger.debug(
-        'prepAttachment: sourcePath=$sourcePath, hasBytes=${attachment.bytes != null}',
-        tag: _tag,
-      );
       if (sourcePath == null && attachment.bytes == null) {
         throw Exception('Attachment has no source_path in metadata or bytes');
       }
@@ -572,11 +555,6 @@ class OutgoingMessageHandler {
       attachment.isDownloaded = true;
     }
 
-    Logger.debug(
-      'prepAttachment: calling addMessage with attachment.guid=${attachment.guid}',
-      tag: _tag,
-    );
-
     // ChatInterface.addMessageToChat returns a DB-hydrated Message loaded from
     // the main isolate's Store (Database.messages.get(id)) after the
     // GlobalIsolate transaction commits.  This object has its id set and its
@@ -593,20 +571,38 @@ class OutgoingMessageHandler {
       // MessageState already exists.
       MessagesSvc(c.guid).notifyAttachmentUploadStarted(savedMessage, attachment);
     }
+    // Update ChatState immediately so the tile reflects the outgoing attachment
+    // before the queue dispatches the HTTP call.
+    ChatsSvc.updateChatLatestMessage(c.guid, savedMessage);
   }
 
   // ── Send methods ─────────────────────────────────────────────────────────
+
+  /// Returns `'private-api'` if [m] must be sent via the Private API,
+  /// `'apple-script'` otherwise.
+  ///
+  /// Private API is required when:
+  /// - the user has it globally enabled AND the per-type setting is on, OR
+  /// - the message uses a feature only pAPI supports (subject, thread
+  ///   originator, or expressive effect).
+  String _resolveMethod(Message m, {bool forAttachment = false}) {
+    final papiEnabled = SettingsSvc.settings.enablePrivateAPI.value;
+    final papiSend =
+        forAttachment ? SettingsSvc.settings.privateAPIAttachmentSend.value : SettingsSvc.settings.privateAPISend.value;
+    if ((papiEnabled && papiSend) ||
+        (m.subject?.isNotEmpty ?? false) ||
+        m.threadOriginatorGuid != null ||
+        m.expressiveSendStyleId != null) {
+      return 'private-api';
+    }
+    return 'apple-script';
+  }
 
   /// Sends a text message (or a reaction/tapback) to [c].
   Future<void> sendMessage(Chat c, Message m, Message? selected, String? r) {
     ChatsSvc.updateChat(c);
     ChatsSvc.updateChatLatestMessage(c.guid, m);
     final tempGuid = m.guid!;
-    Logger.debug(
-      '[sendMessage] START tempGuid=$tempGuid chat=${c.guid} '
-      'isReaction=${r != null} selectedGuid=${selected?.guid}',
-      tag: _tag,
-    );
 
     return _sendWithRace(
       tempGuid: tempGuid,
@@ -616,12 +612,7 @@ class OutgoingMessageHandler {
               chatGuid: c.guid,
               tempGuid: tempGuid,
               message: m.text!,
-              method: (SettingsSvc.settings.enablePrivateAPI.value && SettingsSvc.settings.privateAPISend.value) ||
-                      (m.subject?.isNotEmpty ?? false) ||
-                      m.threadOriginatorGuid != null ||
-                      m.expressiveSendStyleId != null
-                  ? 'private-api'
-                  : 'apple-script',
+              method: _resolveMethod(m),
               selectedMessageGuid: m.threadOriginatorGuid,
               effectId: m.expressiveSendStyleId,
               subject: m.subject,
@@ -635,52 +626,44 @@ class OutgoingMessageHandler {
               reaction: r,
               partIndex: m.associatedMessagePart,
             ),
-      onSuccess: (Map<String, dynamic> data) async {
-        final newMessage = Message.fromMap(data['data']);
-        Logger.debug(
-          r == null
-              ? 'Message sent: temp=$tempGuid, real=${newMessage.guid}'
-              : 'Reaction sent: temp=$tempGuid, real=${newMessage.guid}, parent=${selected?.guid}',
-          tag: _tag,
-        );
-        await _matchMessageWithExisting(c, tempGuid, newMessage);
-        if (r != null && newMessage.associatedMessageGuid != null) {
-          // Update the parent message's reaction in-place once we have the real GUID.
-          final parentState = MessagesSvc(c.guid).getMessageStateIfExists(newMessage.associatedMessageGuid!);
-          if (parentState != null) {
-            parentState.updateAssociatedMessageInternal(newMessage, tempGuid: tempGuid);
-          } else {
-            Logger.warn(
-              'Parent MessageState not found for ${newMessage.associatedMessageGuid} when updating reaction',
-              tag: _tag,
-            );
-          }
-        }
-      },
-      onError: (error, stack) async {
-        Logger.error(
-          r == null ? 'Failed to send message' : 'Failed to send reaction',
-          error: error,
-          trace: stack,
-          tag: _tag,
-        );
-        m = handleSendError(error, m);
-        if (!LifecycleSvc.isAlive || !(ChatsSvc.getChatController(c.guid)?.isAlive.value ?? false)) {
-          await NotificationsSvc.createFailedToSend(c);
-        }
-        await Message.replaceMessage(tempGuid, m);
-        if (Get.isRegistered<MessagesService>(tag: c.guid)) {
-          MessagesSvc(c.guid).updateMessage(m, oldGuid: tempGuid);
-          // Reactions are stored in the parent's associatedMessages list rather
-          // than as top-level entries in the struct/messageStates map, so
-          // updateMessage above is a no-op for them.  Explicitly update the
-          // parent's associatedMessages so the error state propagates to the UI.
-          if (r != null && m.associatedMessageGuid != null) {
-            final parentState = MessagesSvc(c.guid).getMessageStateIfExists(m.associatedMessageGuid!);
-            parentState?.updateAssociatedMessageInternal(m, tempGuid: tempGuid);
-          }
-        }
-      },
+      onSuccess: (data) => _finalizeOutgoingSuccess(
+        c, tempGuid, data,
+        // Reactions live in the parent's associatedMessages list, not as
+        // top-level MessagesService entries.  Once the GUID is confirmed,
+        // explicitly update the parent so the badge reflects the real reaction.
+        onExtra: r != null
+            ? (confirmed) async {
+                if (confirmed.associatedMessageGuid != null) {
+                  final parentState = MessagesSvc(c.guid).getMessageStateIfExists(confirmed.associatedMessageGuid!);
+                  if (parentState != null) {
+                    parentState.updateAssociatedMessageInternal(confirmed, tempGuid: tempGuid);
+                  } else {
+                    Logger.warn(
+                      'Parent MessageState not found for ${confirmed.associatedMessageGuid} when updating reaction',
+                      tag: _tag,
+                    );
+                  }
+                }
+              }
+            : null,
+      ),
+      onError: (error, stack) => _finalizeOutgoingFailure(
+        c, m, tempGuid,
+        logMessage: r == null ? 'Failed to send message' : 'Failed to send reaction',
+        error: error,
+        stack: stack,
+        // Reactions live in the parent's associatedMessages list, not as
+        // top-level MessagesService entries, so the standard updateMessage call
+        // inside _finalizeOutgoingFailure is a no-op for them.  Explicitly
+        // update the parent so the error badge propagates to the UI.
+        onExtra: r != null && m.associatedMessageGuid != null
+            ? (errorMsg) async {
+                MessagesSvc(c.guid)
+                    .getMessageStateIfExists(m.associatedMessageGuid!)
+                    ?.updateAssociatedMessageInternal(errorMsg, tempGuid: tempGuid);
+              }
+            : null,
+      ),
     );
   }
 
@@ -689,7 +672,6 @@ class OutgoingMessageHandler {
     ChatsSvc.updateChat(c);
     ChatsSvc.updateChatLatestMessage(c.guid, m);
     final tempGuid = m.guid!;
-    Logger.debug('[sendMultipart] START tempGuid=$tempGuid chat=${c.guid}', tag: _tag);
     final parts = m.attributedBody.first.runs
         .map((e) => {
               'text': m.attributedBody.first.string.substring(e.range.first, e.range.first + e.range.last),
@@ -711,18 +693,15 @@ class OutgoingMessageHandler {
         partIndex: int.tryParse(m.threadOriginatorPart?.split(':').firstOrNull ?? ''),
         ddScan: !SettingsSvc.serverDetails.isMinSonoma && parts.any((e) => e['text'].toString().hasUrl),
       ),
-      onSuccess: (Map<String, dynamic> data) => _matchMessageWithExisting(c, tempGuid, Message.fromMap(data['data'])),
-      onError: (error, stack) async {
-        Logger.error('Failed to send multipart message', error: error, trace: stack, tag: _tag);
-        m = handleSendError(error, m);
-        if (!LifecycleSvc.isAlive || !(ChatsSvc.getChatController(c.guid)?.isAlive.value ?? false)) {
-          await NotificationsSvc.createFailedToSend(c);
-        }
-        await Message.replaceMessage(tempGuid, m);
-        if (Get.isRegistered<MessagesService>(tag: c.guid)) {
-          MessagesSvc(c.guid).updateMessage(m, oldGuid: tempGuid);
-        }
-      },
+      onSuccess: (data) => _finalizeOutgoingSuccess(c, tempGuid, data),
+      onError: (error, stack) => _finalizeOutgoingFailure(
+        c,
+        m,
+        tempGuid,
+        logMessage: 'Failed to send multipart message',
+        error: error,
+        stack: stack,
+      ),
     );
   }
 
@@ -739,12 +718,6 @@ class OutgoingMessageHandler {
     // subtitle immediately so the tile reflects the outgoing attachment.
     ChatsSvc.updateChat(c);
     ChatsSvc.updateChatLatestMessage(c.guid, m);
-    Logger.debug(
-      '[sendAttachment] START tempGuid=$tempGuid chat=${c.guid} '
-      'attachmentGuid=${attachment.guid} mimeType=${attachment.mimeType} '
-      'isAudio=$isAudioMessage',
-      tag: _tag,
-    );
 
     // On web the isolate path is not supported (web is deprecated).
     if (kIsWeb) return;
@@ -764,12 +737,7 @@ class OutgoingMessageHandler {
         filePath: attachment.path,
         fileName: attachment.transferName!,
         fileSize: attachment.totalBytes ?? 0,
-        method: (SettingsSvc.settings.enablePrivateAPI.value && SettingsSvc.settings.privateAPIAttachmentSend.value) ||
-                (m.subject?.isNotEmpty ?? false) ||
-                m.threadOriginatorGuid != null ||
-                m.expressiveSendStyleId != null
-            ? 'private-api'
-            : 'apple-script',
+        method: _resolveMethod(m, forAttachment: true),
         selectedMessageGuid: m.threadOriginatorGuid,
         effectId: m.expressiveSendStyleId,
         partIndex: int.tryParse(m.threadOriginatorPart?.split(':').firstOrNull ?? ''),
@@ -802,25 +770,86 @@ class OutgoingMessageHandler {
         await _matchMessageWithExisting(c, tempGuid, newMessage);
         attachmentProgress.removeWhere((e) => e.guid == tempGuid);
       },
-      onError: (error, stack) async {
-        Logger.error('Failed to send attachment', error: error, trace: stack, tag: _tag);
-        m = handleSendError(error, m);
-        if (!LifecycleSvc.isAlive || !(ChatsSvc.getChatController(c.guid)?.isAlive.value ?? false)) {
-          await NotificationsSvc.createFailedToSend(c);
-        }
-        await Message.replaceMessage(tempGuid, m);
-        if (Get.isRegistered<MessagesService>(tag: c.guid)) {
-          // Swap the message GUID and flip hasError/isSending in the reactive state.
-          MessagesSvc(c.guid).updateMessage(m, oldGuid: tempGuid);
-          // Mark attachment as errored so the UI shows a retry option.
-          // notifyAttachmentTransferError uses the new error GUID since updateMessage
-          // already re-keyed the MessageState map.
-          MessagesSvc(c.guid).notifyAttachmentTransferError(m.guid!, attachment.guid!);
-        }
-        // Use the saved tempGuid — m.guid is now the error GUID after handleSendError.
-        attachmentProgress.removeWhere((e) => e.guid == tempGuid);
-      },
+      onError: (error, stack) => _finalizeOutgoingFailure(
+        c,
+        m,
+        tempGuid,
+        logMessage: 'Failed to send attachment',
+        error: error,
+        stack: stack,
+        onExtra: (errorMsg) async {
+          // updateMessage (inside _finalizeOutgoingFailure) has already
+          // re-keyed MessageState to errorMsg.guid, so notifyAttachmentTransferError
+          // can use that key directly.
+          if (Get.isRegistered<MessagesService>(tag: c.guid)) {
+            MessagesSvc(c.guid).notifyAttachmentTransferError(errorMsg.guid!, attachment.guid!);
+          }
+          attachmentProgress.removeWhere((e) => e.guid == tempGuid);
+        },
+      ),
     );
+  }
+
+  // ── Finalization helpers ─────────────────────────────────────────────────
+
+  /// Centralises the post-success steps shared by text and multipart send paths:
+  ///
+  /// 1. Parses the server-confirmed [Message] from [data].
+  /// 2. Calls [_matchMessageWithExisting] to swap the temp DB record and update
+  ///    [ChatState] with the confirmed message.
+  /// 3. Calls [onExtra] with the confirmed message for type-specific
+  ///    side-effects (e.g. updating a reaction parent's UI state).
+  ///
+  /// Note: [sendAttachment] success is intentionally handled inline because
+  /// attachment GUID swaps must complete *before* the message GUID swap — an
+  /// ordering constraint that doesn't fit the [onExtra] model.
+  Future<void> _finalizeOutgoingSuccess(
+    Chat c,
+    String tempGuid,
+    Map<String, dynamic> data, {
+    Future<void> Function(Message confirmed)? onExtra,
+  }) async {
+    final serverMessage = Message.fromMap(data['data']);
+    await _matchMessageWithExisting(c, tempGuid, serverMessage);
+    await onExtra?.call(serverMessage);
+  }
+
+  /// Centralises the post-failure steps shared by every outgoing send path:
+  ///
+  /// 1. Logs at error level when [logMessage] is non-null.
+  /// 2. When [error] is non-null: classifies it via [handleSendError] and
+  ///    posts a "failed to send" notification if the UI is no longer alive.
+  /// 3. Replaces the temp DB record with the error-state message.
+  /// 4. Propagates the update to [MessagesService] and [ChatState].
+  /// 5. Calls [onExtra] for type-specific side-effects (e.g. attachment
+  ///    progress cleanup, reaction parent update).
+  ///
+  /// Returns the DB-hydrated error [Message] for callers that need it.
+  Future<Message> _finalizeOutgoingFailure(
+    Chat c,
+    Message m,
+    String tempGuid, {
+    String? logMessage,
+    Object? error,
+    StackTrace? stack,
+    Future<void> Function(Message errorMsg)? onExtra,
+  }) async {
+    if (logMessage != null) {
+      Logger.error(logMessage, error: error, trace: stack, tag: _tag);
+    }
+    if (error != null) {
+      m = handleSendError(error, m);
+      if (!LifecycleSvc.isAlive || !(ChatsSvc.getChatController(c.guid)?.isAlive.value ?? false)) {
+        await NotificationsSvc.createFailedToSend(c);
+      }
+    }
+    final errorMsg = await Message.replaceMessage(tempGuid, m);
+    if (Get.isRegistered<MessagesService>(tag: c.guid)) {
+      MessagesSvc(c.guid).updateMessage(errorMsg, oldGuid: tempGuid);
+    }
+    ChatsSvc.updateChatLatestMessage(c.guid, errorMsg);
+    await onExtra?.call(errorMsg);
+    return errorMsg;
   }
 
   // ── DB helpers ──────────────────────────────────────────────────────────
@@ -841,67 +870,38 @@ class OutgoingMessageHandler {
     String existingGuid,
     Message replacement,
   ) async {
-    Logger.debug(
-      '[_matchMessageWithExisting] START existingGuid=$existingGuid → replacementGuid=${replacement.guid} chat=${chat.guid}',
-      tag: _tag,
-    );
-
     final alreadyPresent = Message.findOne(guid: replacement.guid);
-    Logger.debug(
-      '[_matchMessageWithExisting] alreadyPresent check for ${replacement.guid} → found=${alreadyPresent != null} (id=${alreadyPresent?.id})',
-      tag: _tag,
-    );
+
+    // Track the DB-hydrated confirmed message so we can update ChatState after the swap.
+    late Message _confirmedMessage;
 
     if (alreadyPresent != null) {
       // Socket event won the race — real GUID is already in the DB.
       final isNewer = replacement.isNewerThan(alreadyPresent);
-      Logger.debug(
-        '[_matchMessageWithExisting] parallel-delivery: isNewerThan=$isNewer',
-        tag: _tag,
-      );
       if (isNewer) {
-        Logger.debug('[_matchMessageWithExisting] overwriting with newer replacement ${replacement.guid}', tag: _tag);
         await Message.replaceMessage(replacement.guid, replacement);
       }
+      // alreadyPresent was fetched from the DB and has a valid id.
+      _confirmedMessage = alreadyPresent;
 
       // Clean up the stale temp record if it's distinct from the real one.
       if (existingGuid != replacement.guid) {
         final stale = Message.findOne(guid: existingGuid);
-        Logger.debug(
-          '[_matchMessageWithExisting] stale cleanup: existingGuid=$existingGuid staleFound=${stale != null}',
-          tag: _tag,
-        );
         if (stale != null) {
-          Logger.debug('[_matchMessageWithExisting] deleting stale record $existingGuid', tag: _tag);
           Message.delete(stale.guid!);
           if (Get.isRegistered<MessagesService>(tag: chat.guid)) {
-            Logger.debug(
-              '[_matchMessageWithExisting] calling updateMessage oldGuid=$existingGuid → ${replacement.guid}',
-              tag: _tag,
-            );
             MessagesSvc(chat.guid).updateMessage(replacement, oldGuid: existingGuid);
           }
         }
-      } else {
-        Logger.debug('[_matchMessageWithExisting] existingGuid == replacementGuid — no stale cleanup needed',
-            tag: _tag);
-      }
+      } else {}
     } else {
       // Normal path: rename the temp record to the real GUID.
-      Logger.debug(
-        '[_matchMessageWithExisting] normal path: replaceMessage $existingGuid → ${replacement.guid}',
-        tag: _tag,
-      );
       try {
-        await Message.replaceMessage(existingGuid, replacement);
-        Logger.debug('[_matchMessageWithExisting] replaceMessage succeeded: $existingGuid → ${replacement.guid}',
-            tag: _tag);
+        // Capture the return value — it is fetched from the DB and has a valid id.
+        final saved = await Message.replaceMessage(existingGuid, replacement);
+        _confirmedMessage = saved;
         if (Get.isRegistered<MessagesService>(tag: chat.guid)) {
-          Logger.debug(
-            '[_matchMessageWithExisting] calling updateMessage oldGuid=$existingGuid → ${replacement.guid}',
-            tag: _tag,
-          );
-          MessagesSvc(chat.guid).updateMessage(replacement, oldGuid: existingGuid);
+          MessagesSvc(chat.guid).updateMessage(saved, oldGuid: existingGuid);
         }
       } catch (ex, st) {
         // If the temp message isn't found in the isolate store, it was never saved.
@@ -916,13 +916,20 @@ class OutgoingMessageHandler {
         );
         // Instead of trying to replace, just save the replacement and update the UI to use it.
         // This handles the case where the temp message was never saved to the main thread's store.
-        replacement.save();
+        replacement.save(); // sets replacement.id via Database.messages.put()
+        _confirmedMessage = replacement;
         if (Get.isRegistered<MessagesService>(tag: chat.guid)) {
           // Update the UI, treating this as transitioning from temp to real GUID
           MessagesSvc(chat.guid).updateMessage(replacement, oldGuid: existingGuid);
         }
       }
     }
+
+    // Update ChatState with the confirmed server message so that ChatState.latestMessage
+    // no longer references the now-deleted temp record.  sendMessage/sendAttachment called
+    // updateChatLatestMessage with the temp message earlier; this corrects that reference
+    // and also persists the real message id to chat.dbLatestMessage via setLatestMessage.
+    ChatsSvc.updateChatLatestMessage(chat.guid, _confirmedMessage);
 
     // Move the interactive media directory (for handwriten / digital-touch
     // messages) from the temp-GUID path to the real-GUID path so that
@@ -934,10 +941,6 @@ class OutgoingMessageHandler {
         final newMessageDir = Directory(join(FilesystemSvc.messagesPath, replacement.guid!));
         if (oldMessageDir.existsSync() && !newMessageDir.existsSync()) {
           oldMessageDir.renameSync(newMessageDir.path);
-          Logger.debug(
-            '[_matchMessageWithExisting] moved message media dir $existingGuid → ${replacement.guid}',
-            tag: _tag,
-          );
         }
       } catch (ex) {
         Logger.warn(
@@ -956,45 +959,18 @@ class OutgoingMessageHandler {
     String existingGuid,
     Attachment replacement,
   ) async {
-    Logger.debug(
-      '[_matchAttachmentWithExisting] START existingGuid=$existingGuid → replacementGuid=${replacement.guid} chat=${chat.guid}',
-      tag: _tag,
-    );
-
     final alreadyPresent = await Attachment.findOneAsync(replacement.guid!);
-    Logger.debug(
-      '[_matchAttachmentWithExisting] alreadyPresent check for ${replacement.guid} → found=${alreadyPresent != null}',
-      tag: _tag,
-    );
     if (alreadyPresent != null) {
-      Logger.debug('[_matchAttachmentWithExisting] parallel-delivery: updating ${replacement.guid} in place',
-          tag: _tag);
       await Attachment.replaceAttachmentAsync(replacement.guid, replacement);
       if (existingGuid != replacement.guid) {
         final stale = await Attachment.findOneAsync(existingGuid);
-        Logger.debug(
-          '[_matchAttachmentWithExisting] stale cleanup: $existingGuid staleFound=${stale != null}',
-          tag: _tag,
-        );
         if (stale != null) {
-          Logger.debug('[_matchAttachmentWithExisting] deleting stale attachment $existingGuid', tag: _tag);
           await Attachment.deleteAsync(stale.guid!);
         }
-      } else {
-        Logger.debug('[_matchAttachmentWithExisting] existingGuid == replacementGuid — no stale cleanup needed',
-            tag: _tag);
-      }
+      } else {}
     } else {
-      Logger.debug(
-        '[_matchAttachmentWithExisting] normal path: replaceAttachmentAsync $existingGuid → ${replacement.guid}',
-        tag: _tag,
-      );
       try {
         await Attachment.replaceAttachmentAsync(existingGuid, replacement);
-        Logger.debug(
-          '[_matchAttachmentWithExisting] replaceAttachmentAsync succeeded: $existingGuid → ${replacement.guid}',
-          tag: _tag,
-        );
       } catch (ex) {
         Logger.warn(
           '[_matchAttachmentWithExisting] FAILED: Unable to find & replace attachment with GUID $existingGuid',
@@ -1004,8 +980,6 @@ class OutgoingMessageHandler {
       }
     }
 
-    Logger.debug('[_matchAttachmentWithExisting] END existingGuid=$existingGuid → ${replacement.guid}', tag: _tag);
-
     // Move the file directory from the temp-GUID path to the real-GUID path so that
     // getContent finds the local file immediately without triggering a server download.
     if (!kIsWeb && existingGuid != replacement.guid && existingGuid.startsWith('temp')) {
@@ -1014,10 +988,6 @@ class OutgoingMessageHandler {
         final newDir = Directory(replacement.directory);
         if (oldDir.existsSync() && !newDir.existsSync()) {
           oldDir.renameSync(newDir.path);
-          Logger.debug(
-            '[_matchAttachmentWithExisting] moved attachment dir $existingGuid → ${replacement.guid}',
-            tag: _tag,
-          );
         }
       } catch (ex) {
         Logger.warn(
@@ -1039,15 +1009,18 @@ class OutgoingMessageHandler {
       GetIt.I<GlobalIsolate>()
           .removeEventListener(IsolateEvent.attachmentUploadProgress, _handleAttachmentUploadProgressEvent);
     }
+
     latestCancelToken?.cancel('OutgoingMessageHandler disposed');
     latestCancelToken = null;
     _sendProgressTrackers.clear();
+
     while (_queue.isNotEmpty) {
       final entry = _queue.removeFirst();
       entry.item.completer?.completeError(
         StateError('OutgoingMessageHandler disposed before item was processed'),
       );
     }
+
     _isProcessing = false;
   }
 }

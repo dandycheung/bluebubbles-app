@@ -22,7 +22,7 @@ class SendMessageActions {
     final partIndex = map['partIndex'] as int?;
     final ddScan = map['ddScan'] as bool?;
 
-    final response = await HttpSvc.sendMessage(
+    final response = await HttpSvc.message.sendText(
       chatGuid,
       tempGuid,
       message,
@@ -45,7 +45,7 @@ class SendMessageActions {
     final reaction = map['reaction'] as String;
     final partIndex = map['partIndex'] as int?;
 
-    final response = await HttpSvc.sendTapback(
+    final response = await HttpSvc.message.sendTapback(
       chatGuid,
       selectedMessageText,
       selectedMessageGuid,
@@ -67,7 +67,7 @@ class SendMessageActions {
     final partIndex = map['partIndex'] as int?;
     final ddScan = map['ddScan'] as bool?;
 
-    final response = await HttpSvc.sendMultipart(
+    final response = await HttpSvc.message.sendMultipart(
       chatGuid,
       tempGuid,
       parts,
@@ -98,7 +98,7 @@ class SendMessageActions {
     final partIndex = map['partIndex'] as int?;
     final isAudioMessage = map['isAudioMessage'] as bool? ?? false;
 
-    final response = await HttpSvc.sendAttachment(
+    final response = await HttpSvc.message.sendAttachment(
       chatGuid,
       tempGuid,
       PlatformFile(

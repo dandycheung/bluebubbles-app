@@ -1254,7 +1254,7 @@ class MessagesService extends GetxController {
     }
 
     try {
-      final response = await HttpSvc.edit(
+      final response = await HttpSvc.message.edit(
         messageGuid,
         newText,
         "Edited to: '$newText'",
@@ -1336,7 +1336,7 @@ class MessagesService extends GetxController {
     }
 
     try {
-      final response = await HttpSvc.unsend(messageGuid, partIndex: partIndex);
+      final response = await HttpSvc.message.unsend(messageGuid, partIndex: partIndex);
       final updatedMessage = Message.fromMap(response.data['data']);
       IncomingMsgHandler.handle(IncomingPayload(
         type: MessageEventType.updatedMessage,
@@ -1565,7 +1565,8 @@ class MessagesService extends GetxController {
     if (withChatParticipants) withQuery.add("chat.participants");
     withQuery.add("attachment.metadata");
 
-    HttpSvc.messages(
+    HttpSvc.message
+        .query(
             withQuery: withQuery,
             where: where,
             sort: sort,

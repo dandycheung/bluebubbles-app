@@ -93,7 +93,7 @@ class ContactV2Actions {
       if (kIsDesktop) {
         // Step 1: Fetch contacts from server
         Logger.info('[ContactV2] Starting contact fetch from server...');
-        final response = await HttpSvc.contacts(withAvatars: true);
+        final response = await HttpSvc.contact.fetchAll(withAvatars: true);
 
         if (response.statusCode == 200 && !isNullOrEmpty(response.data['data'])) {
           for (Map<String, dynamic> map in response.data['data']) {
@@ -643,7 +643,7 @@ class ContactV2Actions {
     final contacts = data['contacts'] as List<Map<String, dynamic>>;
 
     try {
-      await HttpSvc.createContact(contacts);
+      await HttpSvc.contact.create(contacts);
       Logger.info('[ContactV2] Successfully uploaded ${contacts.length} contacts to server');
     } catch (err, stack) {
       if (err is Response) {

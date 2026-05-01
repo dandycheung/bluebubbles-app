@@ -187,7 +187,7 @@ class ContactTile extends StatelessWidget {
                             );
                           });
 
-                      HttpSvc.chatParticipant("remove", chat.guid, handle.address).then((response) async {
+                      HttpSvc.chat.modifyParticipant("remove", chat.guid, handle.address).then((response) async {
                         navigator.pop();
                         if (response.statusCode == 200 && response.data != null && response.data['data'] != null) {
                           final result = await ChatInterface.bulkSyncChats(

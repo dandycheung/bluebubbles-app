@@ -54,7 +54,7 @@ class FullSyncManager extends SyncManager {
     addToOutput('Fetching chats from the server...');
 
     // Get the total chats so we can properly fetch them all
-    Response chatCountResponse = await HttpSvc.chatCount();
+    Response chatCountResponse = await HttpSvc.chat.getCount();
     Map<String, dynamic> res = chatCountResponse.data;
     int? totalChats;
     if (chatCountResponse.statusCode == 200) {
@@ -202,7 +202,7 @@ class FullSyncManager extends SyncManager {
     for (int i = 0; i < batches; i++) {
       // Fetch the chats and throw an error if we don't get back a good response.
       // Throwing an error should cancel the sync
-      Response chatPage = await HttpSvc.chats(
+      Response chatPage = await HttpSvc.chat.query(
           offset: i * countPerBatch,
           limit: countPerBatch,
           sort: kIsWeb ? "lastmessage" : null,
@@ -255,7 +255,7 @@ class FullSyncManager extends SyncManager {
     for (int i = 0; i < batches; i++) {
       // Fetch the messages and throw an error if we don't get back a good response.
       // Throwing an error should _not_ cancel the sync
-      Response messagePage = await HttpSvc.chatMessages(chatGuid,
+      Response messagePage = await HttpSvc.chat.getMessages(chatGuid,
           after: 0,
           before: endTimestamp,
           offset: i * countPerBatch,

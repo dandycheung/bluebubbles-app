@@ -158,7 +158,7 @@ class ChatCreatorState extends State<ChatCreator> with ThemeHelpers {
   void addSelected(SelectedContact c) async {
     selectedContacts.add(c);
     try {
-      final response = await HttpSvc.handleiMessageState(c.address);
+      final response = await HttpSvc.handle.handleiMessageState(c.address);
       c.serviceType.value = response.data["data"]["available"] == true ? ChatServiceType.iMessage : ChatServiceType.sms;
     } catch (_) {}
     addressController.text = "";
@@ -664,7 +664,7 @@ class ChatCreatorState extends State<ChatCreator> with ThemeHelpers {
                                       ),
                                     );
                                   });
-                              HttpSvc.createChat(participants, textController.text, method).then((response) async {
+                              HttpSvc.chat.create(participants, textController.text, method).then((response) async {
                                 // Load the chat data and save it to the DB
                                 Chat newChat = Chat.fromMap(response.data["data"]);
                                 newChat = await newChat.saveAsync();
@@ -685,7 +685,7 @@ class ChatCreatorState extends State<ChatCreator> with ThemeHelpers {
                                 }
 
                                 // Fetch the last message for the chat and save it.
-                                final messageRes = await HttpSvc.chatMessages(newChat.guid, limit: 1);
+                                final messageRes = await HttpSvc.chat.getMessages(newChat.guid, limit: 1);
                                 if (messageRes.data["data"].length > 0) {
                                   final rawMessages =
                                       (messageRes.data["data"] as List<dynamic>).cast<Map<String, dynamic>>();

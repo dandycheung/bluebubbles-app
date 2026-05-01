@@ -32,13 +32,13 @@ class _ProfilePanelState extends State<ProfilePanel> with WidgetsBindingObserver
 
   void getDetails() async {
     try {
-      final result = await HttpSvc.getAccountInfo();
+      final result = await HttpSvc.icloud.getAccountInfo();
       if (!isNullOrEmpty(result.data.isNotEmpty)) {
         accountInfo.addAll(result.data['data']);
       }
       opacity.value = 1.0;
       if (SettingsSvc.serverDetails.isMinBigSur) {
-        final result2 = await HttpSvc.getAccountContact();
+        final result2 = await HttpSvc.icloud.getAccountContact();
         if (!isNullOrEmpty(result2.data.isNotEmpty)) {
           accountContact.addAll(result2.data['data']);
         }
@@ -316,8 +316,7 @@ class _ProfilePanelState extends State<ProfilePanel> with WidgetsBindingObserver
                     children: [
                       Obx(() {
                         bool redact = SettingsSvc.settings.redactedMode.value;
-                        return Container(
-                            child: Padding(
+                        return Padding(
                           padding: const EdgeInsets.only(bottom: 8.0, left: 15, top: 8.0, right: 15),
                           child: AnimatedOpacity(
                             duration: const Duration(milliseconds: 300),
@@ -377,7 +376,7 @@ class _ProfilePanelState extends State<ProfilePanel> with WidgetsBindingObserver
                               },
                             ),
                           ),
-                        ));
+                        );
                       }),
                       if (accountInfo['active_alias'] != null)
                         Container(
@@ -402,7 +401,7 @@ class _ProfilePanelState extends State<ProfilePanel> with WidgetsBindingObserver
                             if (value == null) return;
                             accountInfo['active_alias'] = value;
                             setState(() {});
-                            await HttpSvc.setAccountAlias(value);
+                            await HttpSvc.icloud.setAccountAlias(value);
                           },
                         ),
                     ],

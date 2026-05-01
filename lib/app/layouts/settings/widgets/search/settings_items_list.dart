@@ -766,7 +766,7 @@ List<Widget> buildSettingItemList({
                   var map = c.toMap();
                   contacts.add(map);
                 }
-                HttpSvc.createContact(contacts, onSendProgress: (count, total) {
+                HttpSvc.contact.create(contacts, onSendProgress: (count, total) {
                   uploadingContacts.value = true;
                   progress.value = count / total;
                   totalSize.value = total;

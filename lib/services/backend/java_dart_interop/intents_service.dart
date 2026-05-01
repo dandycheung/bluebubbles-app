@@ -146,7 +146,7 @@ class IntentsService {
 
     String? link;
     try {
-      final call = await HttpSvc.answerFaceTime(callUuid);
+      final call = await HttpSvc.faceTime.answer(callUuid);
       link = call.data?["data"]?["link"];
     } catch (_) {}
     if (Get.context != null) {

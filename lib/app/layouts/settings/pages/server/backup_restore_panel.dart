@@ -39,7 +39,7 @@ class _BackupRestorePanelState extends State<BackupRestorePanel> with ThemeHelpe
   }
 
   void getBackups() async {
-    final response1 = await HttpSvc.getSettings().catchError((_) {
+    final response1 = await HttpSvc.backup.getSettings().catchError((_) {
       fetching.value = null;
       return Response(requestOptions: RequestOptions(path: ''));
     });
@@ -47,7 +47,7 @@ class _BackupRestorePanelState extends State<BackupRestorePanel> with ThemeHelpe
       settings.value = response1.data['data'].cast<Map<String, dynamic>>();
       settings.sort((a, b) => DateTime.fromMillisecondsSinceEpoch(b['timestamp'] ?? 0)
           .compareTo(DateTime.fromMillisecondsSinceEpoch(a['timestamp'] ?? 0)));
-      final response2 = await HttpSvc.getTheme().catchError((_) {
+      final response2 = await HttpSvc.backup.getTheme().catchError((_) {
         fetching.value = null;
         return Response(requestOptions: RequestOptions(path: ''));
       });
@@ -60,12 +60,12 @@ class _BackupRestorePanelState extends State<BackupRestorePanel> with ThemeHelpe
 
   void deleteSettings(String name) {
     settings.removeWhere((element) => element["name"] == name);
-    HttpSvc.deleteSettings(name);
+    HttpSvc.backup.deleteSettings(name);
   }
 
   void deleteTheme(String name) {
     themes.removeWhere((element) => element["name"] == name);
-    HttpSvc.deleteTheme(name);
+    HttpSvc.backup.deleteTheme(name);
   }
 
   Future<String> defaultName() async {
@@ -214,7 +214,8 @@ class _BackupRestorePanelState extends State<BackupRestorePanel> with ThemeHelpe
                                                     SettingsSvc.settings.toMap(includeAll: false);
                                                 json["description"] = item["description"];
                                                 json["timestamp"] = DateTime.now().millisecondsSinceEpoch;
-                                                Response response = await HttpSvc.setSettings(item["name"], json);
+                                                Response response =
+                                                    await HttpSvc.backup.setSettings(item["name"], json);
                                                 Navigator.of(_context).pop();
                                                 if (response.statusCode != 200) {
                                                   showSnackbar(
@@ -380,7 +381,7 @@ class _BackupRestorePanelState extends State<BackupRestorePanel> with ThemeHelpe
                                 final timestamp = DateTime.now().millisecondsSinceEpoch;
                                 json["timestamp"] = timestamp;
                                 if (method) {
-                                  var response = await HttpSvc.setSettings(name, json);
+                                  var response = await HttpSvc.backup.setSettings(name, json);
                                   if (response.statusCode != 200) {
                                     showSnackbar(
                                       "Error",
@@ -806,7 +807,8 @@ class _BackupRestorePanelState extends State<BackupRestorePanel> with ThemeHelpe
                               if (method) {
                                 bool errored = false;
                                 for (ThemeStruct e in allThemes) {
-                                  var response = await HttpSvc.setTheme(e.name.characters.take(50).string, e.toMap());
+                                  var response =
+                                      await HttpSvc.backup.setTheme(e.name.characters.take(50).string, e.toMap());
                                   if (response.statusCode != 200) {
                                     errored = true;
                                   }

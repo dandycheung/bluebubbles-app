@@ -592,7 +592,7 @@ class _MessagePopupState extends State<MessagePopup> with SingleTickerProviderSt
     try {
       for (Attachment? element in toDownload) {
         attachmentObs.value = element;
-        final response = await HttpSvc.downloadAttachment(element!.guid!,
+        final response = await HttpSvc.attachment.download(element!.guid!,
             original: true,
             onReceiveProgress: (count, total) =>
                 progress.value = kIsWeb ? (count / total) : (count / element.totalBytes!));
@@ -675,8 +675,8 @@ class _MessagePopupState extends State<MessagePopup> with SingleTickerProviderSt
     try {
       for (Attachment? element in toDownload) {
         attachmentObs.value = element;
-        final response = await HttpSvc.downloadLivePhoto(element!.guid!,
-            onReceiveProgress: (count, total) => progress.value = count);
+        final response = await HttpSvc.attachment
+            .downloadLivePhoto(element!.guid!, onReceiveProgress: (count, total) => progress.value = count);
         final nameSplit = element.transferName!.split(".");
         final file = PlatformFile(
           name: "${nameSplit.take(nameSplit.length - 1).join(".")}.mov",

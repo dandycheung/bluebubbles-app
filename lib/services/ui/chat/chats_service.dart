@@ -212,7 +212,7 @@ class ChatsService {
 
     // Get current count from database or server
     currentCount = getChatCount() ??
-        (await HttpSvc.chatCount().catchError((err) {
+        (await HttpSvc.chat.getCount().catchError((err) {
           Logger.info("Error when fetching chat count!", tag: "ChatBloc");
           return Response(requestOptions: RequestOptions(path: ''));
         }))
@@ -248,9 +248,6 @@ class ChatsService {
       for (Chat c in chatBatch) {
         // Create ChatState and add to map
         chatStates[c.guid] = ChatState(c);
-        if (c.guid.contains('bluebubblesapp')) {
-          Logger.test('Chat Latest Message: ${c.dbLatestMessage.target?.guid} - ${c.dbLatestMessage.target?.text} - Has Attachments: ${c.dbLatestMessage.target?.hasAttachments} - Attachment Count: ${c.dbLatestMessage.target?.dbAttachments.length}');
-        }
         _setupChatStateListeners(chatStates[c.guid]!);
 
         // Add to sorted list
@@ -561,7 +558,7 @@ class ChatsService {
       MethodChannelSvc.invokeMethod(
           "delete-notification", {"notification_id": c.id, "tag": NotificationsService.NEW_MESSAGE_TAG});
       if (SettingsSvc.settings.enablePrivateAPI.value && SettingsSvc.settings.privateMarkChatAsRead.value) {
-        HttpSvc.markChatRead(c.guid);
+        HttpSvc.chat.markRead(c.guid);
       }
 
       // Update chat state if it exists
@@ -642,7 +639,7 @@ class ChatsService {
     if (withParticipants) withQuery.add("participants");
     if (withLastMessage) withQuery.add("lastmessage");
 
-    final response = await HttpSvc.singleChat(chatGuid, withQuery: withQuery.join(",")).catchError((err, stack) {
+    final response = await HttpSvc.chat.fetchOne(chatGuid, withQuery: withQuery.join(",")).catchError((err, stack) {
       Logger.error("Failed to fetch chat metadata!", error: err, trace: stack, tag: "Fetch-Chat");
       return Response(requestOptions: RequestOptions(path: ''));
     });
@@ -667,8 +664,8 @@ class ChatsService {
     if (withParticipants) withQuery.add("participants");
     if (withLastMessage) withQuery.add("lastmessage");
 
-    final response = await HttpSvc.chats(
-            withQuery: withQuery, offset: offset, limit: limit, sort: withLastMessage ? "lastmessage" : null)
+    final response = await HttpSvc.chat
+        .query(withQuery: withQuery, offset: offset, limit: limit, sort: withLastMessage ? "lastmessage" : null)
         .catchError((err, stack) {
       Logger.error("Failed to fetch chats!", error: err, trace: stack, tag: "Fetch-Chat");
       return Response(requestOptions: RequestOptions(path: ''));
@@ -701,7 +698,8 @@ class ChatsService {
     if (withAttachment) withQuery.add("attachment");
     if (withHandle) withQuery.add("handle");
 
-    HttpSvc.chatMessages(guid,
+    HttpSvc.chat
+        .getMessages(guid,
             withQuery: withQuery.join(","), offset: offset, limit: limit, sort: sort, after: after, before: before)
         .then((response) {
       if (!completer.isCompleted) completer.complete(response.data["data"]);

@@ -21,9 +21,9 @@ class ChatActions {
 
     if (shouldMarkOnServer && SettingsSvc.settings.enablePrivateAPI.value) {
       if (markAsRead) {
-        await HttpSvc.markChatRead(chatGuid);
+        await HttpSvc.chat.markRead(chatGuid);
       } else {
-        await HttpSvc.markChatUnread(chatGuid);
+        await HttpSvc.chat.markUnread(chatGuid);
       }
     }
   }

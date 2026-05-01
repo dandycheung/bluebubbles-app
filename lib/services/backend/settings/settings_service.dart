@@ -157,7 +157,7 @@ class SettingsService {
   }
 
   Future<Map<String, dynamic>> getServerDetailsDict() async {
-    final response = await HttpSvc.serverInfo();
+    final response = await HttpSvc.server.info();
     if (response.statusCode == 200) {
       final List<String> toSave = [];
       if (settings.iCloudAccount.isEmpty && response.data['data']['detected_icloud'] is String) {
@@ -373,7 +373,7 @@ class SettingsService {
   }
 
   Future<Map<String, dynamic>> getServerUpdateDict() async {
-    final response = await HttpSvc.checkUpdate();
+    final response = await HttpSvc.server.checkUpdate();
     if (response.statusCode == 200) {
       bool available = response.data['data']['available'] ?? false;
       Map<String, dynamic> metadata = response.data['data']['metadata'] ?? {};
@@ -456,7 +456,7 @@ class SettingsService {
               if (updateInfo.version != null) {
                 await PrefsSvc.i.setString("server-update-check", updateInfo.version!);
               }
-              HttpSvc.installUpdate();
+              HttpSvc.server.installUpdate();
               Navigator.of(context).pop();
             },
           ),

@@ -137,7 +137,7 @@ class IncrementalSyncManager extends SyncManager {
     // Query the API for messages.
     // This endpoint will return the total messages that match the query in v1.6.0+
     addToOutput('Fetching messages...');
-    dio.Response<dynamic> messagesRes = await HttpSvc.messages(
+    dio.Response<dynamic> messagesRes = await HttpSvc.message.query(
       where: buildRowIdWhereArgs(startRowId!, endRowId),
       limit: batchSize,
       offset: 0,
@@ -164,7 +164,7 @@ class IncrementalSyncManager extends SyncManager {
     }
 
     // Hit API endpoint to check for updated messages
-    dio.Response<dynamic> uMessageCountRes = await HttpSvc.messageCount(
+    dio.Response<dynamic> uMessageCountRes = await HttpSvc.message.getCount(
       after: DateTime.fromMillisecondsSinceEpoch(startTimestamp!),
     );
 
@@ -186,7 +186,7 @@ class IncrementalSyncManager extends SyncManager {
     // the messages have a null text, we can still account for them when we fetch.
 
     // Hit API endpoint to check for updated messages
-    dio.Response<dynamic> uMessageCountRes = await HttpSvc.messageCount(
+    dio.Response<dynamic> uMessageCountRes = await HttpSvc.message.getCount(
       after: DateTime.fromMillisecondsSinceEpoch(startTimestamp!),
     );
 
@@ -218,13 +218,13 @@ class IncrementalSyncManager extends SyncManager {
 
       // Fetch the pages differently depending on the parameters.
       if (useRowId) {
-        messagesResponse = await HttpSvc.messages(
+        messagesResponse = await HttpSvc.message.query(
             where: buildRowIdWhereArgs(startRowId!, endRowId),
             offset: i * batchSize,
             limit: batchSize,
             withQuery: defaultWithQuery);
       } else {
-        messagesResponse = await HttpSvc.messages(
+        messagesResponse = await HttpSvc.message.query(
             after: startTimestamp,
             before: endTimestamp,
             offset: i * batchSize,
@@ -326,7 +326,7 @@ class IncrementalSyncManager extends SyncManager {
       addToOutput('Fetching participant data for ${chatsNeedingParticipants.length} chat(s)...', level: LogLevel.DEBUG);
       for (var chatGuid in chatsNeedingParticipants) {
         try {
-          final response = await HttpSvc.singleChat(chatGuid, withQuery: "participants");
+          final response = await HttpSvc.chat.fetchOne(chatGuid, withQuery: "participants");
           if (response.statusCode == 200 && response.data["data"] != null) {
             final chatData = response.data["data"];
             // Update the cache with the full chat data from the server

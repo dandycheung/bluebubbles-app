@@ -101,7 +101,7 @@ Future<List<Map>> fetchFirebaseProjects(String token) async {
   List<Map> usableProjects = [];
   try {
     // query firebase projects
-    final response = await HttpSvc.getFirebaseProjects(token);
+    final response = await HttpSvc.firebase.getFirebaseProjects(token);
     final projects = response.data['results'];
     List<Object> errors = [];
     // find projects with RTDB or cloud firestore
@@ -109,7 +109,8 @@ Future<List<Map>> fetchFirebaseProjects(String token) async {
       for (Map e in projects) {
         if (e['resources']['realtimeDatabaseInstance'] != null) {
           try {
-            final serverUrlResponse = await HttpSvc.getServerUrlRTDB(e['resources']['realtimeDatabaseInstance'], token);
+            final serverUrlResponse =
+                await HttpSvc.firebase.getServerUrlRTDB(e['resources']['realtimeDatabaseInstance'], token);
             e['serverUrl'] = serverUrlResponse.data['serverUrl'];
             usableProjects.add(e);
           } catch (ex) {
@@ -117,7 +118,7 @@ Future<List<Map>> fetchFirebaseProjects(String token) async {
           }
         } else {
           try {
-            final serverUrlResponse = await HttpSvc.getServerUrlCF(e['projectId'], token);
+            final serverUrlResponse = await HttpSvc.firebase.getServerUrlCF(e['projectId'], token);
             e['serverUrl'] = serverUrlResponse.data['fields']['serverUrl']['stringValue'];
             usableProjects.add(e);
           } catch (ex) {
