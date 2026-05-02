@@ -21,6 +21,9 @@ class SyncService {
   int? syncTimeFilter;
   final RxBool isIncrementalSyncing = false.obs;
 
+  static const Duration _incrementalSyncCooldown = Duration(seconds: 30);
+  DateTime? _lastIncrementalSyncTimestamp;
+
   FullSyncManager? _manager;
   FullSyncManager? get fullSyncManager => _manager;
 
@@ -47,6 +50,19 @@ class SyncService {
 
   Future<void> startIncrementalSync({bool useGlobalIsolate = false}) async {
     if (isIncrementalSyncing.value) return;
+
+    final now = DateTime.now();
+    if (_lastIncrementalSyncTimestamp != null &&
+        now.difference(_lastIncrementalSyncTimestamp!) < _incrementalSyncCooldown) {
+      Logger.debug(
+        'Skipping incremental sync... Last ran ${now.difference(_lastIncrementalSyncTimestamp!).inSeconds}s ago '
+        '(cooldown: ${_incrementalSyncCooldown.inSeconds}s)',
+        tag: 'Incremental Chat Sync',
+      );
+      return;
+    }
+
+    _lastIncrementalSyncTimestamp = now;
     isIncrementalSyncing.value = true;
     int errors = 0;
 

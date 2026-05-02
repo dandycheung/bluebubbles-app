@@ -461,7 +461,9 @@ class OutgoingMessageHandler {
       }
       // Update ChatState immediately so the tile reflects the outgoing message
       // before the queue dispatches the HTTP call.
-      if (lastSaved != null) ChatsSvc.updateChatLatestMessage(c.guid, lastSaved);
+      if (lastSaved != null) {
+        ChatsSvc.updateChatLatestMessage(c.guid, lastSaved);
+      }
     } else {
       m.generateTempGuid();
       final saved = (await c.addMessage(m, clearNotificationsIfFromMe: clearNotificationsIfFromMe)).message;
@@ -475,6 +477,7 @@ class OutgoingMessageHandler {
         await MessagesSvc(c.guid).addNewMessage(saved);
       }
       messages.add(m);
+
       // Update ChatState immediately so the tile reflects the outgoing message
       // before the queue dispatches the HTTP call.
       ChatsSvc.updateChatLatestMessage(c.guid, saved);
@@ -601,7 +604,13 @@ class OutgoingMessageHandler {
   /// Sends a text message (or a reaction/tapback) to [c].
   Future<void> sendMessage(Chat c, Message m, Message? selected, String? r) {
     ChatsSvc.updateChat(c);
-    ChatsSvc.updateChatLatestMessage(c.guid, m);
+
+    // Only update latest message if the failed message is the current latest message.
+    // Prep message should have already updated the latest message.
+    if (ChatsSvc.getChatState(c.guid)?.latestMessage.value?.guid == m.guid) {
+      ChatsSvc.updateChatLatestMessage(c.guid, m);
+    }
+
     final tempGuid = m.guid!;
 
     return _sendWithRace(
@@ -670,7 +679,13 @@ class OutgoingMessageHandler {
   /// Sends a multipart (mention / mixed-content) message.
   Future<void> sendMultipart(Chat c, Message m, Message? selected, String? r) {
     ChatsSvc.updateChat(c);
-    ChatsSvc.updateChatLatestMessage(c.guid, m);
+
+    // Only update latest message if the failed message is the current latest message.
+    // Prep message should have already updated the latest message.
+    if (ChatsSvc.getChatState(c.guid)?.latestMessage.value?.guid == m.guid) {
+      ChatsSvc.updateChatLatestMessage(c.guid, m);
+    }
+
     final tempGuid = m.guid!;
     final parts = m.attributedBody.first.runs
         .map((e) => {
@@ -716,8 +731,12 @@ class OutgoingMessageHandler {
     final tempGuid = m.guid!;
     // The temp message was already saved to DB in prepAttachment; update ChatState
     // subtitle immediately so the tile reflects the outgoing attachment.
-    ChatsSvc.updateChat(c);
-    ChatsSvc.updateChatLatestMessage(c.guid, m);
+
+    // Only update latest message if the attachment message is the current latest message.
+    // Prep attachment should have already updated the latest message.
+    if (ChatsSvc.getChatState(c.guid)?.latestMessage.value?.guid == m.guid) {
+      ChatsSvc.updateChatLatestMessage(c.guid, m);
+    }
 
     // On web the isolate path is not supported (web is deprecated).
     if (kIsWeb) return;
@@ -843,13 +862,25 @@ class OutgoingMessageHandler {
         await NotificationsSvc.createFailedToSend(c);
       }
     }
-    final errorMsg = await Message.replaceMessage(tempGuid, m);
-    if (Get.isRegistered<MessagesService>(tag: c.guid)) {
-      MessagesSvc(c.guid).updateMessage(errorMsg, oldGuid: tempGuid);
+
+    try {
+      // Replace may fail, meaning it's already been replaced (likely by a socket event)
+      final errorMsg = await Message.replaceMessage(tempGuid, m);
+      if (Get.isRegistered<MessagesService>(tag: c.guid)) {
+        MessagesSvc(c.guid).updateMessage(errorMsg, oldGuid: tempGuid);
+      }
+
+      // Only update latest message if the failed message is the current latest message.
+      if (ChatsSvc.getChatState(c.guid)?.latestMessage.value?.guid == tempGuid) {
+        ChatsSvc.updateChatLatestMessage(c.guid, errorMsg);
+      }
+
+      await onExtra?.call(errorMsg);
+      return errorMsg;
+    } catch (ex, st) {
+      Logger.warn(ex.toString(), error: ex, trace: st, tag: _tag);
+      return m;
     }
-    ChatsSvc.updateChatLatestMessage(c.guid, errorMsg);
-    await onExtra?.call(errorMsg);
-    return errorMsg;
   }
 
   // ── DB helpers ──────────────────────────────────────────────────────────
@@ -879,7 +910,15 @@ class OutgoingMessageHandler {
       // Socket event won the race — real GUID is already in the DB.
       final isNewer = replacement.isNewerThan(alreadyPresent);
       if (isNewer) {
-        await Message.replaceMessage(replacement.guid, replacement);
+        try {
+          await Message.replaceMessage(replacement.guid, replacement);
+        } catch (ex, st) {
+          Logger.warn(
+              'Unable to replace message with GUID, "${replacement.guid}". The socket likely confirmed the message first.',
+              error: ex,
+              trace: st,
+              tag: _tag);
+        }
       }
       // alreadyPresent was fetched from the DB and has a valid id.
       _confirmedMessage = alreadyPresent;
@@ -908,12 +947,12 @@ class OutgoingMessageHandler {
         // This can happen if prepMessage failed silently. Fall back to just saving
         // the replacement message and updating the UI.
         Logger.warn(
-          '[_matchMessageWithExisting] FAILED: Unable to find & replace message with GUID $existingGuid. '
-          'Falling back to save replacement ${replacement.guid}',
+          'Unable to replace message with GUID "$existingGuid". Socket likely confirmed the message first.',
           error: ex,
           trace: st,
           tag: _tag,
         );
+
         // Instead of trying to replace, just save the replacement and update the UI to use it.
         // This handles the case where the temp message was never saved to the main thread's store.
         replacement.save(); // sets replacement.id via Database.messages.put()
@@ -925,11 +964,10 @@ class OutgoingMessageHandler {
       }
     }
 
-    // Update ChatState with the confirmed server message so that ChatState.latestMessage
-    // no longer references the now-deleted temp record.  sendMessage/sendAttachment called
-    // updateChatLatestMessage with the temp message earlier; this corrects that reference
-    // and also persists the real message id to chat.dbLatestMessage via setLatestMessage.
-    ChatsSvc.updateChatLatestMessage(chat.guid, _confirmedMessage);
+    // Only update latest message if the failed message is the current latest message.
+    if (ChatsSvc.getChatState(chat.guid)?.latestMessage.value?.guid == existingGuid) {
+      ChatsSvc.updateChatLatestMessage(chat.guid, _confirmedMessage);
+    }
 
     // Move the interactive media directory (for handwriten / digital-touch
     // messages) from the temp-GUID path to the real-GUID path so that

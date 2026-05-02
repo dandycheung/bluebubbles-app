@@ -137,7 +137,7 @@ class MethodChannelService {
               Logger.warn("No chat data found, attempting to find chat from message guid...");
               final existingMsg = Message.findOne(guid: payload.data["guid"]);
               if (existingMsg != null && existingMsg.chat.target != null) {
-                Logger.debug("Found chat from message guid, adding to payload");
+                Logger.info("Found chat from message guid, adding to payload");
                 payload.data['chats'] = [existingMsg.chat.target!.toMap()];
               } else {
                 Logger.warn("No chat data found, and unable to find chat from message guid");

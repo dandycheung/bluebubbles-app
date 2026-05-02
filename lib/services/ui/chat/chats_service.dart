@@ -1173,17 +1173,20 @@ class ChatsService {
   }
 
   /// Set chat latest message
-  Future<void> setChatLatestMessage(Chat chat, Message? value) async {
+  Future<void> setChatLatestMessage(Chat chat, Message value) async {
     final state = getChatState(chat.guid);
-
-    if (state != null && state.latestMessage.value?.guid == value?.guid) return;
+    if (state == null) return;
 
     // Update Chat model (use state.chat if available, otherwise use passed in chat)
-    final chatToUpdate = state?.chat ?? chat;
-    if (value != null) chatToUpdate.setLatestMessage(value);
+    final chatToUpdate = state.chat;
+
+    // Only save in the DB if it's not already the same latest message.
+    if (state.latestMessage.value?.guid != value.guid) {
+      chatToUpdate.setLatestMessage(value);
+    }
 
     // Update state if available
-    state?.updateLatestMessageInternal(value);
+    state.updateLatestMessageInternal(value);
   }
 
   /// Update chat latest message and subtitle in response to a new or updated message.

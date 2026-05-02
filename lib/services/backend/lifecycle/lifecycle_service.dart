@@ -42,8 +42,6 @@ class LifecycleService with WidgetsBindingObserver {
       statesSinceLastResume.contains(AppLifecycleState.detached);
   bool get hasResumed => statesSinceLastResume.contains(AppLifecycleState.resumed);
 
-  bool incrementalSyncShouldRun = false;
-
   Future<void> init({bool headless = false, bool isBubble = false}) async {
     Logger.debug("Initializing LifecycleService${headless ? " in headless mode" : ""}");
     WidgetsBinding.instance.addObserver(this);
@@ -72,12 +70,13 @@ class LifecycleService with WidgetsBindingObserver {
     if (state == AppLifecycleState.resumed) {
       await Database.waitForInit();
       open();
-    } else if (state == AppLifecycleState.inactive) {
+    } else if (state == AppLifecycleState.inactive || state == AppLifecycleState.hidden) {
       // Eagerly mark the active chat as dead so that any message arriving during
-      // the inactive to paused transition is not silently suppressed by the
+      // the inactive → paused transition is not silently suppressed by the
       // "chat is active" notification guard. setActiveToDead() is idempotent
       // (equality-checked inside) and will run again in close() when paused fires.
-      if (!kIsDesktop && !kIsWeb) {
+      // Also handles Samsung One UI which emits `hidden` before `paused`.
+      if (Platform.isAndroid) {
         ChatsSvc.setActiveToDead();
       }
     } else {

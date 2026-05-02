@@ -725,7 +725,7 @@ class Settings {
     s.minimizeToTray.value = map['minimizeToTray'] ?? false;
     s.askWhereToSave.value = map['askWhereToSave'] ?? false;
     s.statusIndicatorsOnChats.value = map['statusIndicatorsOnChats'] ?? false;
-    s.apiTimeout.value = map['apiTimeout'] ?? 15000;
+    s.apiTimeout.value = map['apiTimeout'] ?? 30000;
     s.allowUpsideDownRotation.value = map['allowUpsideDownRotation'] ?? false;
     s.cancelQueuedMessages.value = map['cancelQueuedMessages'] ?? false;
     s.repliesToPrevious.value = map['repliesToPrevious'] ?? false;

@@ -95,7 +95,7 @@ class HttpService implements BaseApi {
       return Future.error(e, s);
     }
   }
-  
+
   /// Return the future with either a value or error, depending on response from API
   @override
   Future<Response> returnSuccessOrError(Response r) {

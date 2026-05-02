@@ -132,7 +132,7 @@ Future<void> removeReaction({
   await NotificationsSvc.clearFailedToSend(chat.id!);
   // Get the "new" latest info
   List<Message> latest = await Chat.getMessagesAsync(chat, limit: 1);
-  chat.setLatestMessage(latest.first);
+  ChatsSvc.setChatLatestMessage(chat, latest.first);
   await chat.saveAsync();
 }
 

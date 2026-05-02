@@ -558,18 +558,13 @@ class StartupTasks {
       await NetworkTasks.detectLocalhost();
     }
 
-    // Start the incremental sync on open, rather than on the socket connection.
-    // Detect localhost first so the sync (and its isolate) use the local address.
-    // Don't need to await these calls.
-    // On desktop, skip when the socket is already connected — real-time delivery covers
-    // that case and the socket (re)connect path triggers its own sync when needed.
+    // On app resume, don't use the global isolate.
+    // Only use the GlobalIsolate when invoked on startup or on app reconnect.
     if (!Platform.isAndroid) {
-      if (SocketSvc.state.value != SocketState.connected) {
-        SyncSvc.startIncrementalSync();
-      }
+      unawaited(SyncSvc.startIncrementalSync());
     } else if (!LifecycleSvc.hasResumed ||
         (LifecycleSvc.currentState == AppLifecycleState.resumed && LifecycleSvc.wasPaused)) {
-      SyncSvc.startIncrementalSync();
+      unawaited(SyncSvc.startIncrementalSync());
     }
 
     if (!kIsDesktop && !kIsWeb) {
@@ -577,7 +572,13 @@ class StartupTasks {
         LifecycleSvc.createFakePort();
       }
 
-      SocketSvc.reconnect();
+      // On Android, always restart the socket rather than just reconnecting.
+      // Some OEMs (e.g. Samsung One UI) fire lifecycle events that skip `paused`,
+      // meaning `disconnect()` is never called and `state` stays `connected` even
+      // though the underlying TCP connection may be stale after a network change.
+      // `restartSocket()` disposes the old socket and builds a fresh one, which is
+      // reliable regardless of what lifecycle sequence the device sent.
+      SocketSvc.restartSocket();
     }
 
     if (kIsDesktop) {

@@ -300,9 +300,8 @@ class ChatState {
   }
 
   void updateLatestMessageInternal(Message? value) {
-    if (latestMessage.value?.guid != value?.guid) {
-      latestMessage.value = value;
-    }
+    // Don't GUID-guard
+    latestMessage.value = value;
     // Always update status even when the GUID is unchanged — a delivery or
     // read receipt arrives for the same message object, and the indicator
     // must reflect the new state without a full GUID change.
@@ -376,7 +375,6 @@ class ChatState {
     chat.isArchived = updatedChat.isArchived;
     chat.displayName = updatedChat.displayName;
     chat.customAvatarPath = updatedChat.customAvatarPath;
-    if (updatedChat.dbLatestMessage.target != null) chat.setLatestMessage(updatedChat.dbLatestMessage.target!);
     chat.autoSendReadReceipts = updatedChat.autoSendReadReceipts;
     chat.autoSendTypingIndicators = updatedChat.autoSendTypingIndicators;
     chat.lockChatName = updatedChat.lockChatName;

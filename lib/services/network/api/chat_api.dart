@@ -98,8 +98,7 @@ class ChatApi {
 
   /// Create a chat with the specified [addresses]. Requires an initial [message]
   /// to send.
-  Future<Response> create(List<String> addresses, String? message, String service,
-      {CancelToken? cancelToken}) async {
+  Future<Response> create(List<String> addresses, String? message, String service, {CancelToken? cancelToken}) async {
     return _svc.runApiGuarded(() async {
       final response = await _svc.dio.post(
         "${_svc.apiRoot}/chat/new",
