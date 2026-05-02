@@ -23,6 +23,7 @@ enum SocketState {
   disconnected,
   error,
   connecting,
+  reconnecting,
 }
 
 class SocketService {
@@ -103,7 +104,7 @@ class SocketService {
     socket?.onConnect((data) => handleStatusUpdate(SocketState.connected, data));
     socket?.onReconnect((data) => handleStatusUpdate(SocketState.connected, data));
 
-    socket?.onReconnectAttempt((data) => handleStatusUpdate(SocketState.connecting, data));
+    socket?.onReconnectAttempt((data) => handleStatusUpdate(SocketState.reconnecting, data));
 
     socket?.onDisconnect((data) => handleStatusUpdate(SocketState.disconnected, data));
 
@@ -234,8 +235,12 @@ class SocketService {
           _reconnectTimer?.cancel();
           _reconnectTimer = null;
           NetworkTasks.onConnect();
-          NotificationsSvc.clearSocketError();
           Logger.info("Socket connected successfully to $serverAddress");
+        }
+      case SocketState.reconnecting:
+        if (stateChanged) {
+          Logger.info("Reconnecting to socket at $serverAddress");
+          state.value = SocketState.reconnecting;
         }
       case SocketState.disconnected:
         if (stateChanged) {
@@ -278,8 +283,8 @@ class SocketService {
     handleStatusUpdate(SocketState.error, data);
 
     if (_reconnectTimer != null && _reconnectTimer!.isActive) return;
-    _reconnectTimer = Timer(const Duration(seconds: 5), () async {
-      if (state.value == SocketState.connected || _manualDisconnectRequested || !_shouldMaintainSocketConnection()) {
+    _reconnectTimer = Timer(const Duration(seconds: 10), () async {
+      if (state.value == SocketState.connected || _manualDisconnectRequested) {
         return;
       }
 
@@ -290,16 +295,7 @@ class SocketService {
       }
 
       restartSocket();
-
-      if (!SettingsSvc.settings.keepAppAlive.value && LifecycleSvc.isAlive) {
-        NotificationsSvc.createSocketError();
-      }
     });
-  }
-
-  bool _shouldMaintainSocketConnection() {
-    if (kIsDesktop || kIsWeb) return true;
-    return SettingsSvc.settings.keepAppAlive.value || LifecycleSvc.isAlive;
   }
 
   void handleSocketException(SocketException e) {

@@ -461,13 +461,13 @@ void showSnackbar(String title, String message,
   );
 }
 
-Widget getIndicatorIcon(SocketState socketState, {double size = 24, bool showAlpha = true}) {
+Widget getSocketStateIndicatorIcon(SocketState socketState, {double size = 24, bool showAlpha = true}) {
   return Icon(Icons.fiber_manual_record,
       color: getIndicatorColor(socketState).withAlpha(showAlpha ? 200 : 255), size: size);
 }
 
 Color getIndicatorColor(SocketState socketState) {
-  if (socketState == SocketState.connecting) {
+  if (socketState == SocketState.connecting || socketState == SocketState.reconnecting) {
     return HexColor('ffd500');
   } else if (socketState == SocketState.connected) {
     return HexColor('32CD32');

@@ -4,7 +4,6 @@ import 'dart:math';
 
 import 'package:bluebubbles/app/layouts/conversation_view/pages/conversation_view.dart';
 import 'package:bluebubbles/app/layouts/settings/pages/scheduling/scheduled_messages_panel.dart';
-import 'package:bluebubbles/app/layouts/settings/pages/server/server_management_panel.dart';
 import 'package:bluebubbles/app/wrappers/theme_switcher.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/helpers/ui/facetime_helpers.dart';
@@ -58,7 +57,6 @@ class NotificationsService {
 
   /// For desktop use only
   static LocalNotification? failedToast;
-  static LocalNotification? socketToast;
   static LocalNotification? aliasesToast;
   static Map<String, LocalNotification> facetimeNotifications = {};
   static Map<String, LocalNotification> activeToasts = {};
@@ -563,56 +561,6 @@ class NotificationsService {
     }
   }
 
-  Future<void> createSocketError() async {
-    const title = 'Could not connect';
-    const subtitle = 'Your server may be offline!';
-    if (kIsDesktop) {
-      // Don't create duplicate socket error toasts
-      if (socketToast != null) return;
-      socketToast = LocalNotification(
-        type: LocalNotificationType.text02,
-        title: title,
-        body: subtitle,
-        actions: [],
-      );
-
-      socketToast!.onClick = () async {
-        socketToast = null;
-        await windowManager.show();
-        Navigator.of(Get.context!).push(
-          ThemeSwitcher.buildPageRoute(
-            builder: (BuildContext context) {
-              return ServerManagementPanel();
-            },
-          ),
-        );
-      };
-
-      await socketToast!.show();
-      return;
-    } else {
-      final notifs = await flnp.getActiveNotifications();
-      if (notifs.firstWhereOrNull((element) => element.id == -2) != null) return;
-      await flnp.show(
-        id: -2,
-        title: title,
-        body: subtitle,
-        notificationDetails: NotificationDetails(
-          android: AndroidNotificationDetails(
-            ERROR_CHANNEL,
-            'Errors',
-            channelDescription: 'Displays message send failures, connection failures, and more',
-            priority: Priority.max,
-            importance: Importance.max,
-            color: HexColor("4990de"),
-            ongoing: true,
-            onlyAlertOnce: true,
-          ),
-        ),
-      );
-    }
-  }
-
   Future<void> createAliasesRemovedNotification(List<String> aliases) async {
     const title = "iMessage alias deregistered!";
     const notifId = -3;
@@ -721,15 +669,6 @@ class NotificationsService {
       ),
       payload: chat.guid + (scheduled ? "-scheduled" : ""),
     );
-  }
-
-  Future<void> clearSocketError() async {
-    if (kIsDesktop) {
-      await socketToast?.close();
-      socketToast = null;
-      return;
-    }
-    await flnp.cancel(id: -2);
   }
 
   Future<void> clearFailedToSend(int id) async {
