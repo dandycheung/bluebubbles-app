@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:bluebubbles/services/backend/interfaces/chat_interface.dart';
 import 'package:bluebubbles/utils/logger/logger.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/database/html/attachment.dart';
@@ -448,7 +449,7 @@ class Chat {
     this.autoSendTypingIndicators = autoSendTypingIndicators;
     save(updateAutoSendTypingIndicators: true);
     if (!(autoSendTypingIndicators ?? SettingsSvc.settings.privateSendTypingIndicators.value)) {
-      SocketSvc.sendMessage("stopped-typing", {"chatGuid": guid});
+      unawaited(ChatInterface.stopTyping(chatGuid: guid));
     }
     return this;
   }

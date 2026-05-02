@@ -641,7 +641,7 @@ class Chat {
     this.autoSendTypingIndicators = autoSendTypingIndicators;
     await saveAsync(updateAutoSendTypingIndicators: true);
     if (!(autoSendTypingIndicators ?? SettingsSvc.settings.privateSendTypingIndicators.value)) {
-      SocketSvc.sendMessage("stopped-typing", {"chatGuid": guid});
+      unawaited(ChatInterface.stopTyping(chatGuid: guid));
     }
     return this;
   }

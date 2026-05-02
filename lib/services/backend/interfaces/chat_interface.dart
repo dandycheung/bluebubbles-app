@@ -4,6 +4,7 @@ import 'package:bluebubbles/env.dart';
 import 'package:bluebubbles/services/backend/actions/chat_actions.dart';
 import 'package:bluebubbles/models/models.dart' show MessageSaveResult;
 import 'package:bluebubbles/services/services.dart';
+import 'package:flutter/foundation.dart';
 import 'package:get_it/get_it.dart';
 import 'package:bluebubbles/services/isolates/global_isolate.dart';
 
@@ -39,6 +40,24 @@ class ChatInterface {
       return await ChatActions.markChatReadUnread(data);
     } else {
       return await GetIt.I<GlobalIsolate>().send<void>(IsolateRequestType.markChatReadUnread, input: data);
+    }
+  }
+
+  static Future<void> startTyping({required String chatGuid}) async {
+    final data = {'chatGuid': chatGuid};
+    if (isIsolate || kIsWeb) {
+      return await ChatActions.startTyping(data);
+    } else {
+      return await GetIt.I<GlobalIsolate>().send<void>(IsolateRequestType.startTyping, input: data);
+    }
+  }
+
+  static Future<void> stopTyping({required String chatGuid}) async {
+    final data = {'chatGuid': chatGuid};
+    if (isIsolate || kIsWeb) {
+      return await ChatActions.stopTyping(data);
+    } else {
+      return await GetIt.I<GlobalIsolate>().send<void>(IsolateRequestType.stopTyping, input: data);
     }
   }
 

@@ -28,6 +28,16 @@ class ChatActions {
     }
   }
 
+  static Future<void> startTyping(dynamic data) async {
+    final chatGuid = data['chatGuid'] as String;
+    await HttpSvc.chat.startTyping(chatGuid);
+  }
+
+  static Future<void> stopTyping(dynamic data) async {
+    final chatGuid = data['chatGuid'] as String;
+    await HttpSvc.chat.stopTyping(chatGuid);
+  }
+
   static Future<int?> saveChat(dynamic data) async {
     final guid = data['guid'] as String;
     final updateFlags = (data['updateFlags'] as Map).cast<String, bool>();

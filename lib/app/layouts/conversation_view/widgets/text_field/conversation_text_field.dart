@@ -16,6 +16,7 @@ import 'package:bluebubbles/app/layouts/conversation_view/widgets/text_field/tex
 import 'package:bluebubbles/app/wrappers/stateful_boilerplate.dart';
 import 'package:bluebubbles/database/models.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
+import 'package:bluebubbles/services/backend/interfaces/chat_interface.dart';
 import 'package:bluebubbles/services/services.dart';
 import 'package:bluebubbles/services/ui/chat/send_data.dart';
 import 'package:bluebubbles/utils/logger/logger.dart';
@@ -262,10 +263,10 @@ class ConversationTextFieldState extends CustomState<ConversationTextField, void
     if (SettingsSvc.settings.enablePrivateAPI.value &&
         (chat.autoSendTypingIndicators ?? SettingsSvc.settings.privateSendTypingIndicators.value)) {
       if (localController.debounceTyping == null) {
-        SocketSvc.sendMessage("started-typing", {"chatGuid": chatGuid});
+        unawaited(ChatInterface.startTyping(chatGuid: chatGuid));
       }
       localController.debounceTyping = Timer(const Duration(seconds: 3), () {
-        SocketSvc.sendMessage("stopped-typing", {"chatGuid": chatGuid});
+        unawaited(ChatInterface.stopTyping(chatGuid: chatGuid));
         localController.debounceTyping = null;
       });
     }
@@ -316,7 +317,7 @@ class ConversationTextFieldState extends CustomState<ConversationTextField, void
     localController.cancelAllTimers();
     Get.delete<ConversationTextFieldLocalController>();
     if (chat.autoSendTypingIndicators ?? SettingsSvc.settings.privateSendTypingIndicators.value) {
-      SocketSvc.sendMessage("stopped-typing", {"chatGuid": chatGuid});
+      unawaited(ChatInterface.stopTyping(chatGuid: chatGuid));
     }
 
     super.dispose();

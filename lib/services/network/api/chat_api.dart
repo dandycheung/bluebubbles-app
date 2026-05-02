@@ -168,6 +168,30 @@ class ChatApi {
     });
   }
 
+  /// Start a typing indicator for the chat with [guid]
+  Future<Response> startTyping(String guid, {CancelToken? cancelToken}) async {
+    return _svc.runApiGuarded(() async {
+      final response = await _svc.dio.post(
+        "${_svc.apiRoot}/chat/$guid/typing",
+        queryParameters: _svc.buildQueryParams(),
+        cancelToken: cancelToken,
+      );
+      return _svc.returnSuccessOrError(response);
+    });
+  }
+
+  /// Stop a typing indicator for the chat with [guid]
+  Future<Response> stopTyping(String guid, {CancelToken? cancelToken}) async {
+    return _svc.runApiGuarded(() async {
+      final response = await _svc.dio.delete(
+        "${_svc.apiRoot}/chat/$guid/typing",
+        queryParameters: _svc.buildQueryParams(),
+        cancelToken: cancelToken,
+      );
+      return _svc.returnSuccessOrError(response);
+    });
+  }
+
   /// Get a group chat icon by the chat [guid]
   Future<Response> getIcon(
     String guid, {
