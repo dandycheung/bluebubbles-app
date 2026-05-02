@@ -72,7 +72,15 @@ class LifecycleService with WidgetsBindingObserver {
     if (state == AppLifecycleState.resumed) {
       await Database.waitForInit();
       open();
-    } else if (state != AppLifecycleState.inactive) {
+    } else if (state == AppLifecycleState.inactive) {
+      // Eagerly mark the active chat as dead so that any message arriving during
+      // the inactive to paused transition is not silently suppressed by the
+      // "chat is active" notification guard. setActiveToDead() is idempotent
+      // (equality-checked inside) and will run again in close() when paused fires.
+      if (!kIsDesktop && !kIsWeb) {
+        ChatsSvc.setActiveToDead();
+      }
+    } else {
       SystemChannels.textInput.invokeMethod('TextInput.hide').catchError((e, stack) {
         Logger.error("Error caught while hiding keyboard!", error: e, trace: stack);
       });
