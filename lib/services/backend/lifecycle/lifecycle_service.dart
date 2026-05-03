@@ -70,16 +70,7 @@ class LifecycleService with WidgetsBindingObserver {
     if (state == AppLifecycleState.resumed) {
       await Database.waitForInit();
       open();
-    } else if (state == AppLifecycleState.inactive || state == AppLifecycleState.hidden) {
-      // Eagerly mark the active chat as dead so that any message arriving during
-      // the inactive → paused transition is not silently suppressed by the
-      // "chat is active" notification guard. setActiveToDead() is idempotent
-      // (equality-checked inside) and will run again in close() when paused fires.
-      // Also handles Samsung One UI which emits `hidden` before `paused`.
-      if (Platform.isAndroid) {
-        ChatsSvc.setActiveToDead();
-      }
-    } else {
+    } else if (state != AppLifecycleState.inactive) {
       SystemChannels.textInput.invokeMethod('TextInput.hide').catchError((e, stack) {
         Logger.error("Error caught while hiding keyboard!", error: e, trace: stack);
       });
@@ -137,9 +128,11 @@ class LifecycleService with WidgetsBindingObserver {
     if (kIsDesktop) {
       wasActiveAliveBefore = ChatsSvc.activeChat?.isAlive.value;
     }
+
     if (!kIsDesktop || wasActiveAliveBefore != false) {
       ChatsSvc.setActiveToDead();
     }
+
     if (!kIsDesktop && !kIsWeb) {
       IsolateNameServer.removePortNameMapping('bg_isolate');
       SocketSvc.disconnect();
