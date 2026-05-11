@@ -34,6 +34,12 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
 
   FlashMode _flashMode = FlashMode.auto;
 
+  // Zoom state
+  double _minAvailableZoom = 1.0;
+  double _maxAvailableZoom = 1.0;
+  double _currentZoom = 1.0;
+  double _baseZoom = 1.0;
+
   // Preview (after capture, before confirm)
   XFile? _previewFile;
 
@@ -108,6 +114,11 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
 
     try {
       await controller.initialize();
+      _minAvailableZoom = await controller.getMinZoomLevel();
+      _maxAvailableZoom = await controller.getMaxZoomLevel();
+      _currentZoom = _currentZoom.clamp(_minAvailableZoom, _maxAvailableZoom).toDouble();
+      await controller.setZoomLevel(_currentZoom);
+
       if (mounted) {
         setState(() {
           _isInitializing = false;
@@ -124,6 +135,31 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
         });
       }
     }
+  }
+
+  Future<void> _setZoomLevel(double zoom) async {
+    final controller = _controller;
+    if (controller == null || !controller.value.isInitialized) return;
+
+    final targetZoom = zoom.clamp(_minAvailableZoom, _maxAvailableZoom).toDouble();
+    if ((_currentZoom - targetZoom).abs() < 0.01) return;
+
+    try {
+      await controller.setZoomLevel(targetZoom);
+      if (mounted) {
+        setState(() => _currentZoom = targetZoom);
+      }
+    } catch (_) {
+      // Some devices may reject zoom level changes intermittently.
+    }
+  }
+
+  void _onScaleStart(ScaleStartDetails details) {
+    _baseZoom = _currentZoom;
+  }
+
+  void _onScaleUpdate(ScaleUpdateDetails details) {
+    _setZoomLevel(_baseZoom * details.scale);
   }
 
   Future<void> _applyFlashMode() async {
@@ -360,7 +396,12 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
       children: [
         // Camera preview — fills the screen respecting aspect ratio
         Center(
-          child: _isRecording ? _withRecordingBorder(CameraPreview(controller)) : CameraPreview(controller),
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onScaleStart: _onScaleStart,
+            onScaleUpdate: _onScaleUpdate,
+            child: _isRecording ? _withRecordingBorder(CameraPreview(controller)) : CameraPreview(controller),
+          ),
         ),
 
         // Top bar: flash + close
@@ -403,6 +444,28 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
               ),
             ),
           ),
+
+        // Zoom indicator
+        Positioned(
+          top: _isRecording ? 90 : 56,
+          left: 0,
+          right: 0,
+          child: IgnorePointer(
+            child: Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.black54,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '${_currentZoom.toStringAsFixed(1)}x',
+                  style: const TextStyle(color: Colors.white, fontSize: 13),
+                ),
+              ),
+            ),
+          ),
+        ),
       ],
     );
   }

@@ -177,23 +177,6 @@ class ChatInterface {
     return reactions.whereType<Message>().toList();
   }
 
-  static Future<List<Chat>> syncLatestMessages({required List<String> chatGuids, required bool toggleUnread}) async {
-    final data = {
-      'chatGuids': chatGuids,
-      'toggleUnread': toggleUnread,
-    };
-
-    late List<int> chatIds;
-    if (isIsolate) {
-      chatIds = await ChatActions.syncLatestMessages(data);
-    } else {
-      chatIds = await GetIt.I<GlobalIsolate>().send<List<int>>(IsolateRequestType.syncLatestMessages, input: data);
-    }
-
-    // Fetch chats by ID using getMany for efficiency
-    return Database.chats.getMany(chatIds).whereType<Chat>().toList();
-  }
-
   static Future<({List<Chat> chats, List<int> affectedHandleIds})> bulkSyncChats(
       {required List<Map<String, dynamic>> chatsData}) async {
     final data = {

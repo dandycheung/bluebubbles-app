@@ -567,7 +567,7 @@ class StartupTasks {
       unawaited(SyncSvc.startIncrementalSync());
     }
 
-    if (!kIsDesktop && !kIsWeb) {
+    if (Platform.isAndroid) {
       if (!LifecycleSvc.isBubble) {
         LifecycleSvc.createFakePort();
       }

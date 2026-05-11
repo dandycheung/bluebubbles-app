@@ -707,18 +707,6 @@ class Chat {
     return chats;
   }
 
-  static Future<List<Chat>> syncLatestMessages(List<Chat> chats, bool toggleUnread) async {
-    if (kIsWeb) throw Exception("Use socket to sync the last message on Web!");
-    if (chats.isEmpty) return chats;
-
-    final inputGuids = chats.map((e) => e.guid).toList();
-
-    return await ChatInterface.syncLatestMessages(
-      chatGuids: inputGuids,
-      toggleUnread: toggleUnread,
-    );
-  }
-
   static Future<List<Chat>> bulkSyncChats(List<Chat> chats) async {
     if (kIsWeb) throw Exception("Web does not support saving chats!");
     if (chats.isEmpty) return [];
