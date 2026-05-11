@@ -203,8 +203,7 @@ class IncomingMessageHandler {
   Future<void> handle(IncomingPayload payload, {bool front = false}) {
     Logger.debug(
       'Enqueueing ${payload.type.name} [source=${payload.source.name}] '
-      'guid=${payload.message.guid} tempGuid=${payload.tempGuid} '
-      'chat=${payload.chat.guid} front=$front',
+      'guid=${payload.message.guid} tempGuid=${payload.tempGuid} chat=${payload.chat.guid}',
       tag: _tag,
     );
     final entry = _QueueEntry(payload: payload, completer: Completer<void>());
@@ -268,11 +267,6 @@ class IncomingMessageHandler {
   }
 
   Future<void> _dispatchPayload(IncomingPayload payload) async {
-    Logger.debug(
-      'Dispatching ${payload.type.name} [source=${payload.source.name}] '
-      'guid=${payload.message.guid} tempGuid=${payload.tempGuid}',
-      tag: _tag,
-    );
     switch (payload.type) {
       case MessageEventType.newMessage:
         await _processNewMessage(payload);
@@ -320,7 +314,7 @@ class IncomingMessageHandler {
 
     // 1. Deduplication — skip real GUIDs we have already fully handled.
     if (m.guid != null && _hasProcessed(m.guid!)) {
-      Logger.debug('Skipping already-processed new-message ${m.guid}', tag: _tag);
+      Logger.debug('[new-message] skipping already-processed ${m.guid}', tag: _tag);
       return;
     }
 
@@ -330,16 +324,8 @@ class IncomingMessageHandler {
     //    field refresh.
     final existsByTempGuid = tempGuid != null ? Message.findOne(guid: tempGuid) : null;
     final existsByRealGuid = m.guid != null ? Message.findOne(guid: m.guid) : null;
-    Logger.debug(
-      '[new-message] DB lookup — existsByTempGuid=${existsByTempGuid?.guid} existsByRealGuid=${existsByRealGuid?.guid}',
-      tag: _tag,
-    );
     if (existsByTempGuid != null || existsByRealGuid != null) {
-      Logger.debug(
-        '[new-message] ${m.guid} already in DB — routing to updated-message pipeline '
-        '(foundViaTempGuid=${existsByTempGuid != null}, foundViaRealGuid=${existsByRealGuid != null})',
-        tag: _tag,
-      );
+      Logger.debug('[new-message] ${m.guid} already in DB — routing to updated-message pipeline', tag: _tag);
       await _processUpdatedMessage(payload.copyWith(type: MessageEventType.updatedMessage));
       return;
     }
@@ -355,14 +341,12 @@ class IncomingMessageHandler {
     //    Only suppress the "from me" notification clear for reactions so that a
     //    notification-triggered reaction doesn't lose its source notification.
     final clearNotificationFromMe = (m.isFromMe ?? false) && m.associatedMessageGuid == null;
-    Logger.debug('[new-message] calling addMessage for guid=${m.guid}', tag: _tag);
     final result = await c.addMessage(
       m,
       clearNotificationsIfFromMe: clearNotificationFromMe,
       attachments: incomingAttachments,
     );
     final saved = result.message;
-    Logger.debug('[new-message] addMessage complete — saved.guid=${saved.guid} id=${saved.id}', tag: _tag);
 
     // 5. Mark as processed before any async I/O so a duplicate delivery that
     //    races in while we're playing a sound or sending a notification skips.
@@ -451,15 +435,7 @@ class IncomingMessageHandler {
     //    (read-receipt, edit, or a re-delivery of an already-saved message).
     Message? existing;
     if (tempGuid != null) existing = Message.findOne(guid: tempGuid);
-    Logger.debug(
-      '[updated-message] DB lookup by tempGuid=$tempGuid — found=${existing?.guid}',
-      tag: _tag,
-    );
     if (existing == null && m.guid != null) existing = Message.findOne(guid: m.guid);
-    Logger.debug(
-      '[updated-message] DB lookup by realGuid=${m.guid} — found=${existing?.guid} id=${existing?.id}',
-      tag: _tag,
-    );
 
     // 3. Out-of-order buffering.
     //    The new-message event hasn't arrived yet — park this payload and
@@ -483,10 +459,6 @@ class IncomingMessageHandler {
 
     // 5. Persist the GUID swap / field update.
     final existingGuid = tempGuid ?? existing.guid!;
-    Logger.debug(
-      '[updated-message] resolved existingGuid=$existingGuid for replacement guid=${m.guid}',
-      tag: _tag,
-    );
     await _replaceMessage(c, existingGuid, existing, m);
 
     // 6. Persist attachment GUID swaps (e.g. temp attachment → real GUID).
@@ -521,7 +493,6 @@ class IncomingMessageHandler {
   Future<({Chat chat, List<int> affectedHandleIds})> _hydrateChat(Chat partial, Message m) async {
     // Group events always need fresh server data.
     if (m.isGroupEvent) {
-      Logger.debug('Message ${m.guid} is a group event, forcing chat hydration via server fetch', tag: _tag);
       partial = (await ChatsSvc.fetchChat(partial.guid)) ?? partial;
     } else {
       // If we have a local copy and the local copy has participants, use it — no need to fetch.
@@ -532,7 +503,6 @@ class IncomingMessageHandler {
         // * Local chat exists but has no participants (incomplete data).
         // * Local chat doesn't exist at all (new chat).
       } else if ((local != null && local.handles.isEmpty) || local == null) {
-        Logger.debug('Chat ${partial.guid} is missing participant data, forcing hydration via server fetch', tag: _tag);
         partial = (await ChatsSvc.fetchChat(partial.guid)) ?? partial;
       }
     }
@@ -558,68 +528,32 @@ class IncomingMessageHandler {
     Message existing,
     Message replacement,
   ) async {
-    Logger.debug(
-      '[_replaceMessage] START existingGuid=$existingGuid → replacementGuid=${replacement.guid} '
-      'existingId=${existing.id} chat=${chat.guid}',
-      tag: _tag,
-    );
-
     final alreadyPresent = Message.findOne(guid: replacement.guid);
-    Logger.debug(
-      '[_replaceMessage] alreadyPresent check for ${replacement.guid} → found=${alreadyPresent != null} '
-      '(id=${alreadyPresent?.id})',
-      tag: _tag,
-    );
 
     if (alreadyPresent != null) {
       // The replacement record already exists (parallel delivery).
       // Only overwrite if the incoming payload is newer.
-      final isNewer = replacement.isNewerThan(alreadyPresent);
-      Logger.debug(
-        '[_replaceMessage] parallel-delivery path: replacement.isNewerThan(alreadyPresent)=$isNewer',
-        tag: _tag,
-      );
-      if (isNewer) {
-        Logger.debug('[_replaceMessage] overwriting alreadyPresent with newer replacement ${replacement.guid}',
-            tag: _tag);
+      if (replacement.isNewerThan(alreadyPresent)) {
         await Message.replaceMessage(replacement.guid, replacement);
       }
 
       // Clean up the stale temp record when the real one is now present.
-      // MessagesService is notified once by _dispatchUpdatedMessage after all
-      // DB work completes — no intermediate call needed here.
       if (existingGuid != replacement.guid) {
         final stale = Message.findOne(guid: existingGuid);
-        Logger.debug(
-          '[_replaceMessage] stale cleanup: existingGuid=$existingGuid staleFound=${stale != null}',
-          tag: _tag,
-        );
-        if (stale != null) {
-          Logger.debug('[_replaceMessage] deleting stale record $existingGuid', tag: _tag);
-          Message.delete(stale.guid!);
-        }
-      } else {
-        Logger.debug('[_replaceMessage] existingGuid == replacementGuid — no stale cleanup needed', tag: _tag);
+        if (stale != null) Message.delete(stale.guid!);
       }
     } else {
-      Logger.debug(
-        '[_replaceMessage] normal path: calling replaceMessage $existingGuid → ${replacement.guid}',
-        tag: _tag,
-      );
       try {
         await Message.replaceMessage(existingGuid, replacement);
-        Logger.debug('[_replaceMessage] replaceMessage succeeded: $existingGuid → ${replacement.guid}', tag: _tag);
       } catch (ex, st) {
         Logger.warn(
-          '[_replaceMessage] FAILED: $existingGuid → ${replacement.guid}',
+          '[_replaceMessage] failed: $existingGuid → ${replacement.guid}',
           error: ex,
           trace: st,
           tag: _tag,
         );
       }
     }
-
-    Logger.debug('[_replaceMessage] END existingGuid=$existingGuid → replacementGuid=${replacement.guid}', tag: _tag);
   }
 
   /// Swaps attachment GUIDs on the replacement message's attachments.
@@ -648,19 +582,9 @@ class IncomingMessageHandler {
     Message replacement,
     List<Attachment?> replacementAttachments,
   ) async {
-    Logger.debug(
-      '[_replaceAttachments] START existingGuid=$existingGuid '
-      'attachmentCount=${replacement.dbAttachments.length} '
-      'existingDbAttachmentCount=${existing.dbAttachments.length}',
-      tag: _tag,
-    );
-
     for (int i = 0; i < replacementAttachments.length; i++) {
       final newAttachment = replacementAttachments[i];
-      if (newAttachment == null) {
-        Logger.debug('[_replaceAttachments] index=$i newAttachment is null — skipping', tag: _tag);
-        continue;
-      }
+      if (newAttachment == null) continue;
 
       // Resolve which local GUID currently owns this attachment slot.
       final String attachmentExistingGuid;
@@ -672,56 +596,22 @@ class IncomingMessageHandler {
         attachmentExistingGuid = existingGuid;
       }
 
-      Logger.debug(
-        '[_replaceAttachments] index=$i resolvedExistingGuid=$attachmentExistingGuid '
-        'newGuid=${newAttachment.guid} '
-        '(reason: existingStartsWithTemp=${existingGuid.startsWith("temp-")} '
-        'dbAttachmentCount=${existing.dbAttachments.length})',
-        tag: _tag,
-      );
-
       try {
         // Parallel-delivery check: if the real GUID is already in the DB
         // (HTTP response saved it while socket event was in-flight), update
         // that record and clean up the stale temp attachment.
         final alreadyPresent = await Attachment.findOneAsync(newAttachment.guid!);
-        Logger.debug(
-          '[_replaceAttachments] index=$i alreadyPresent check for ${newAttachment.guid} → found=${alreadyPresent != null}',
-          tag: _tag,
-        );
         if (alreadyPresent != null) {
-          Logger.debug(
-            '[_replaceAttachments] index=$i parallel-delivery path: updating ${newAttachment.guid} in place',
-            tag: _tag,
-          );
           await Attachment.replaceAttachmentAsync(newAttachment.guid, newAttachment);
 
           // Delete the stale temp record if it's distinct from the real one.
           if (attachmentExistingGuid != newAttachment.guid) {
             final staleTemp = await Attachment.findOneAsync(attachmentExistingGuid);
-            Logger.debug(
-              '[_replaceAttachments] index=$i stale cleanup: $attachmentExistingGuid staleFound=${staleTemp != null}',
-              tag: _tag,
-            );
-            if (staleTemp != null) {
-              Logger.debug('[_replaceAttachments] index=$i deleting stale attachment $attachmentExistingGuid',
-                  tag: _tag);
-              await Attachment.deleteAsync(staleTemp.guid!);
-            }
-          } else {
-            Logger.debug('[_replaceAttachments] index=$i existingGuid == newGuid — no stale cleanup needed', tag: _tag);
+            if (staleTemp != null) await Attachment.deleteAsync(staleTemp.guid!);
           }
         } else {
           // Normal path: rename the temp attachment to the real GUID.
-          Logger.debug(
-            '[_replaceAttachments] index=$i normal path: replaceAttachmentAsync $attachmentExistingGuid → ${newAttachment.guid}',
-            tag: _tag,
-          );
           await Attachment.replaceAttachmentAsync(attachmentExistingGuid, newAttachment);
-          Logger.debug(
-            '[_replaceAttachments] index=$i replaceAttachmentAsync succeeded: $attachmentExistingGuid → ${newAttachment.guid}',
-            tag: _tag,
-          );
 
           // Rename the AttachmentState so UI listeners get the real GUID.
           if (attachmentExistingGuid != newAttachment.guid && Get.isRegistered<MessagesService>(tag: chat.guid)) {
@@ -739,7 +629,7 @@ class IncomingMessageHandler {
         // unnecessary intermediate redraws.
       } catch (ex, st) {
         Logger.warn(
-          '[_replaceAttachments] index=$i FAILED: $attachmentExistingGuid → ${newAttachment.guid}',
+          '[_replaceAttachments] failed: $attachmentExistingGuid → ${newAttachment.guid}',
           error: ex,
           trace: st,
           tag: _tag,
@@ -747,19 +637,12 @@ class IncomingMessageHandler {
       }
     }
 
-    Logger.debug('[_replaceAttachments] END existingGuid=$existingGuid', tag: _tag);
-
     // After all DB swaps complete, notify MessagesService so the MessageState
     // for this message gets the updated attachment list (real GUIDs replacing temp ones).
     if (replacementAttachments.isNotEmpty && Get.isRegistered<MessagesService>(tag: chat.guid)) {
       // Re-fetch from DB so the attachment relations reflect the post-swap state.
       final freshMessage = Message.findOne(guid: replacement.guid!);
       if (freshMessage != null) {
-        Logger.debug(
-          '[_replaceAttachments] notifying MessagesService with fresh message guid=${freshMessage.guid} '
-          'attachmentCount=${freshMessage.dbAttachments.length} oldGuid=$existingGuid',
-          tag: _tag,
-        );
         MessagesSvc(chat.guid).updateMessage(
           freshMessage,
           oldGuid: existingGuid != freshMessage.guid ? existingGuid : null,
@@ -789,25 +672,29 @@ class IncomingMessageHandler {
   /// counts, and any other cross-cutting listeners can react.
   Future<void> _dispatchNewMessage(Chat chat, Message message, {String? tempGuid}) async {
     final msvcRegistered = Get.isRegistered<MessagesService>(tag: chat.guid);
-    Logger.debug(
-      '[_dispatchNewMessage] guid=${message.guid} tempGuid=$tempGuid '
-      'chat=${chat.guid} msvcRegistered=$msvcRegistered',
-      tag: _tag,
-    );
-    if (tempGuid != null && msvcRegistered) {
+    // A tempGuid in the payload means this was an outgoing send from *some*
+    // BlueBubbles client, but not necessarily *this* device.  Only treat it as
+    // a GUID swap (updateMessage) if the temp entry is already known to this
+    // device's MessagesService.  If it isn't (sent from another client), fall
+    // through and add it as a new message instead.
+    final svc = msvcRegistered ? MessagesSvc(chat.guid) : null;
+    final tempExistsLocally = tempGuid != null && svc != null && svc.struct.getMessage(tempGuid) != null;
+    final realExistsLocally = message.guid != null && svc != null && svc.struct.getMessage(message.guid!) != null;
+
+    if (tempExistsLocally) {
       // Our outgoing message echoed back — swap the temp bubble in-place.
-      Logger.debug(
-        '[_dispatchNewMessage] calling updateMessage with oldGuid=$tempGuid → ${message.guid}',
-        tag: _tag,
-      );
-      MessagesSvc(chat.guid).updateMessage(message, oldGuid: tempGuid);
-    } else if (msvcRegistered) {
-      // Pure incoming message — push it into the active chat view explicitly.
-      Logger.debug(
-        '[_dispatchNewMessage] calling addNewMessage for incoming guid=${message.guid}',
-        tag: _tag,
-      );
-      await MessagesSvc(chat.guid).addNewMessage(message);
+      svc.updateMessage(message, oldGuid: tempGuid);
+    } else if (realExistsLocally) {
+      // Real GUID already present (e.g. a prior event already inserted it),
+      // refresh fields in-place without duplicating.
+      svc.updateMessage(message);
+    } else if (svc != null) {
+      // Pure incoming message (or sent from another device), push it into the
+      // active chat view explicitly.
+      if (tempGuid != null) {
+        Logger.debug('[_dispatchNewMessage] tempGuid=$tempGuid not in local struct — treating as new message', tag: _tag);
+      }
+      await svc.addNewMessage(message);
     }
 
     EventDispatcherSvc.emit('new-message', {
@@ -818,17 +705,7 @@ class IncomingMessageHandler {
 
   /// Notifies the UI layer about an update to an existing message.
   void _dispatchUpdatedMessage(Chat chat, Message message, {String? oldGuid}) {
-    final msvcRegistered = Get.isRegistered<MessagesService>(tag: chat.guid);
-    Logger.debug(
-      '[_dispatchUpdatedMessage] guid=${message.guid} oldGuid=$oldGuid '
-      'chat=${chat.guid} msvcRegistered=$msvcRegistered',
-      tag: _tag,
-    );
-    if (msvcRegistered) {
-      Logger.debug(
-        '[_dispatchUpdatedMessage] calling updateMessage with oldGuid=$oldGuid → ${message.guid}',
-        tag: _tag,
-      );
+    if (Get.isRegistered<MessagesService>(tag: chat.guid)) {
       MessagesSvc(chat.guid).updateMessage(message, oldGuid: oldGuid);
     }
 
