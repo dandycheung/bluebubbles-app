@@ -54,6 +54,10 @@ class MessagesViewState extends State<MessagesView> with MessagesServiceMixin, T
   // Notifier for list structure changes only (add/remove)
   final ValueNotifier<int> _listVersion = ValueNotifier<int>(0);
 
+  // Per-message GlobalKeys so that element state (e.g. UrlPreview) survives
+  // index shifts when a new message is inserted at the front of the list.
+  final Map<String, GlobalKey> _messageKeys = {};
+
   // Debounce setState calls to prevent rapid rebuilds
   Timer? _setStateDebouncer;
 
@@ -97,6 +101,7 @@ class MessagesViewState extends State<MessagesView> with MessagesServiceMixin, T
         // Clear state items
         noMoreMessages = false;
         _messages = [];
+        _messageKeys.clear();
         // Reload the state after refreshing
         await reloadMessagesService(
           chat,
@@ -476,6 +481,7 @@ class MessagesViewState extends State<MessagesView> with MessagesServiceMixin, T
     final index = _messages.indexWhere((e) => e.guid == message.guid);
     if (index != -1) {
       _messages.removeAt(index);
+      _messageKeys.remove(message.guid);
       Logger.debug("handleDeletedMessage: Removed message at index $index");
       _listVersion.value++;
       _setStateDebouncer?.cancel();
@@ -626,12 +632,13 @@ class MessagesViewState extends State<MessagesView> with MessagesServiceMixin, T
                                     }
 
                                     final message = _messages[index];
+                                    final messageId = message.guid ?? 'unknown-$index';
                                     final messageWidget = RepaintBoundary(
+                                      key: _messageKeys.putIfAbsent(messageId, () => GlobalKey()),
                                       child: Padding(
-                                        key: ValueKey(message.guid ?? 'unknown-$index'),
                                         padding: const EdgeInsets.only(left: 5.0, right: 5.0),
                                         child: AutoScrollTag(
-                                          key: ValueKey("${message.guid ?? 'unknown-$index'}-scrolling"),
+                                          key: ValueKey("$messageId-scrolling"),
                                           index: index,
                                           controller: scrollController,
                                           highlightColor: context.theme.colorScheme.surface.withValues(alpha: 0.7),
