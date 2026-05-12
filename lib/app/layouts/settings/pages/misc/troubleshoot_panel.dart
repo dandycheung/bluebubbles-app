@@ -172,7 +172,19 @@ class _TroubleshootPanelState extends State<TroubleshootPanel> with ThemeHelpers
                           try {
                             showSnackbar("Please Wait", "Compressing ${logFileCount.value} log file(s)...");
                             String filePath = await Logger.compressLogs();
-                            Share.files([filePath], mimeType: 'application/zip');
+                            final String fileName = File(filePath).uri.pathSegments.last;
+
+                            try {
+                              final String savedPath = await FilesystemSvc.saveToDownloads(
+                                File(filePath),
+                                mimeType: 'application/zip',
+                              );
+                              showSnackbar("Logs Saved", "Saved $fileName to your Downloads folder.");
+                              if (kIsDesktop) await launchUrl(Uri.file(savedPath));
+                            } catch (_) {
+                              // saveToDownloads failed on Android — fall back to share sheet.
+                              Share.files([filePath], mimeType: 'application/zip');
+                            }
                           } catch (ex, stacktrace) {
                             Logger.error("Failed to export logs!", error: ex, trace: stacktrace);
                             showSnackbar("Failed to export logs!", "Error: ${ex.toString()}");

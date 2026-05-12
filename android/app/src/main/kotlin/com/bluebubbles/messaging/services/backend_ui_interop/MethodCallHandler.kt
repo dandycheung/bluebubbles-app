@@ -23,6 +23,7 @@ import com.bluebubbles.messaging.services.system.OpenCalendarRequestHandler
 import com.bluebubbles.messaging.services.system.OpenConversationNotificationSettingsHandler
 import com.bluebubbles.messaging.services.system.OpenExistingContactRequestHandler
 import com.bluebubbles.messaging.services.system.PushShareTargetsHandler
+import com.bluebubbles.messaging.services.system.SaveFileToDownloadsHandler
 import com.bluebubbles.messaging.services.system.StartGoogleDuoRequestHandler
 import com.bluebubbles.messaging.services.foreground.StartForegroundServiceHandler
 import com.bluebubbles.messaging.services.foreground.StopForegroundServiceHandler
@@ -61,6 +62,7 @@ class MethodCallHandler {
             OpenExistingContactRequestHandler.tag -> OpenExistingContactRequestHandler().handleMethodCall(call, result, context)
             OpenCalendarRequestHandler.tag -> OpenCalendarRequestHandler().handleMethodCall(call, result, context)
             StartGoogleDuoRequestHandler.tag -> StartGoogleDuoRequestHandler().handleMethodCall(call, result, context)
+            SaveFileToDownloadsHandler.tag -> SaveFileToDownloadsHandler().handleMethodCall(call, result, context)
             CheckChromeOsHandler.tag -> CheckChromeOsHandler().handleMethodCall(call, result, context)
             NotificationListenerPermissionRequestHandler.tag -> {
                 getNotificationListenerResult = result
