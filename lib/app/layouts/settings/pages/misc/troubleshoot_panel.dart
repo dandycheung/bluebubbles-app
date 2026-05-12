@@ -172,7 +172,7 @@ class _TroubleshootPanelState extends State<TroubleshootPanel> with ThemeHelpers
                           try {
                             showSnackbar("Please Wait", "Compressing ${logFileCount.value} log file(s)...");
                             String filePath = await Logger.compressLogs();
-                            Share.files([filePath]);
+                            Share.files([filePath], mimeType: 'application/zip');
                           } catch (ex, stacktrace) {
                             Logger.error("Failed to export logs!", error: ex, trace: stacktrace);
                             showSnackbar("Failed to export logs!", "Error: ${ex.toString()}");
