@@ -204,7 +204,7 @@ class BaseLogger {
     _logger = createLogger();
   }
 
-  String compressLogs() {
+  Future<String> compressLogs() async {
     try {
       final Directory logDir = Directory(Logger.logDir);
       if (!logDir.existsSync()) {
@@ -227,9 +227,9 @@ class BaseLogger {
       final encoder = ZipFileEncoder();
       encoder.create(zippedLogFile.path);
       for (final logPath in logPaths) {
-        encoder.addFile(File(logPath));
+        await encoder.addFile(File(logPath));
       }
-      encoder.close();
+      await encoder.close();
 
       return zippedLogFile.path;
     } catch (e, stackTrace) {
