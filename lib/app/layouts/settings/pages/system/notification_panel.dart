@@ -203,6 +203,7 @@ class _NotificationPanelState extends State<NotificationPanel> with SingleTicker
 
     return Obx(() => BBScaffold(
           backgroundColor: material ? tileColor : headerColor,
+          extendBodyBehindAppBar: false,
           appBar: samsung && index.value == 0
               ? null
               : BBAppBar(
