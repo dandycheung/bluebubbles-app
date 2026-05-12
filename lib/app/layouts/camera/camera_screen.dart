@@ -84,6 +84,24 @@ class _CameraScreenState extends State<CameraScreen> {
       ),
       availableFilters: [],
       enablePhysicalButton: true,
+      // Override the default scale handler so pinch-to-zoom always starts from
+      // the actual current zoom rather than the gesture detector's stale base.
+      onPreviewScaleBuilder: (state) {
+        double? _prevScale;
+        return OnPreviewScale(
+          onScale: (scale) {
+            if (_prevScale == null) {
+              _prevScale = scale;
+              return;
+            }
+            final delta = scale - _prevScale!;
+            _prevScale = scale;
+            if (delta == 0) return;
+            final newLinear = (state.sensorConfig.zoom + delta).clamp(0.0, 1.0);
+            state.sensorConfig.setZoom(newLinear);
+          },
+        );
+      },
       middleContentBuilder: (state) => Column(
         children: [
           const Spacer(),
@@ -222,10 +240,17 @@ class _ZoomPillState extends State<_ZoomPill> with WidgetsBindingObserver {
   double? _maxZoom;
   List<double> _levels = const [];
 
-  /// Set to true once [_loadZoomRange] completes so [sensorConfig$] events
-  /// during initialisation don't prematurely trigger a zoom reset.
+  /// Source of truth for the active pill and live label.
+  double _currentRatio = 1.0;
+
+  /// True while we are programmatically setting zoom (init, reset, pill tap).
+  /// The zoom$ listener ignores emissions during this window so it can't
+  /// replay the old value and override a reset.
+  bool _programmaticZoom = false;
+
   bool _zoomReady = false;
-  StreamSubscription<SensorConfig>? _sensorConfigSub;
+  StreamSubscription<CameraAspectRatios>? _aspectRatioSub;
+  StreamSubscription<double>? _zoomSub;
 
   @override
   void initState() {
@@ -233,10 +258,26 @@ class _ZoomPillState extends State<_ZoomPill> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     _loadZoomRange().then((_) {
       if (!mounted) return;
-      // Start listening AFTER init so we don't react to the initial emission.
-      _sensorConfigSub = widget.state.sensorConfig$.listen((_) {
+      final sensorConfig = widget.state.sensorConfig;
+      // aspectRatio$ is a BehaviorSubject — skip(1) ignores the initial replay
+      // so we only fire on actual aspect-ratio changes.
+      _aspectRatioSub = sensorConfig.aspectRatio$.skip(1).listen((_) {
         if (_zoomReady) _reapplyDefaultZoom();
       });
+      _subscribeZoom(sensorConfig);
+    });
+  }
+
+  /// Subscribes to [sensorConfig]'s zoom$ stream so pinch-to-zoom events
+  /// update _currentRatio.  Uses skip(1) to ignore the BehaviorSubject replay.
+  void _subscribeZoom(SensorConfig sensorConfig) {
+    _zoomSub?.cancel();
+    _zoomSub = sensorConfig.zoom$.skip(1).listen((linear) {
+      if (_programmaticZoom || !mounted || _minZoom == null || _maxZoom == null) return;
+      final ratio = _linearToRatio(linear);
+      if ((ratio - _currentRatio).abs() > 0.02) {
+        setState(() => _currentRatio = ratio);
+      }
     });
   }
 
@@ -247,40 +288,38 @@ class _ZoomPillState extends State<_ZoomPill> with WidgetsBindingObserver {
 
     final List<double> levels = [];
 
-    // Use the actual hardware minimum as the ultrawide button when the device
-    // supports below 1×.  Never synthesise a fake "0.5×" label.
     if (min < 0.95) levels.add(min);
-
-    // Always include 1× when it falls within the device's range.
     if (max >= 1.0) levels.add(1.0);
-
-    // Add higher tiers that are meaningfully above 1× and within range.
-    // Cap at 5× — beyond that the active pill shows the live pinch ratio.
     for (final candidate in [2.0, 5.0]) {
       if (candidate > 1.05 && candidate <= max + 0.05) levels.add(candidate);
     }
+
+    final defaultRatio = max >= 1.0 ? 1.0 : min;
 
     if (mounted) {
       setState(() {
         _minZoom = min;
         _maxZoom = max;
         _levels = levels;
+        _currentRatio = defaultRatio;
       });
     }
 
-    // Apply 1× (or device min if <1) so the camera doesn't open at ultrawide.
-    await _applyZoom(max >= 1.0 ? 1.0 : min, min: min, max: max);
+    await _applyZoom(defaultRatio, min: min, max: max);
     _zoomReady = true;
   }
 
-  /// Re-applies the default zoom (1× or device minimum) after a config reset
-  /// (aspect-ratio change or app resume).
+  /// Re-applies the default zoom after a config reset (aspect-ratio change or
+  /// app resume).  Sets _currentRatio immediately so the pill updates at once.
   Future<void> _reapplyDefaultZoom() async {
     if (_minZoom == null || _maxZoom == null || !mounted) return;
-    await _applyZoom(_maxZoom! >= 1.0 ? 1.0 : _minZoom!);
+    final defaultRatio = _maxZoom! >= 1.0 ? 1.0 : _minZoom!;
+    setState(() => _currentRatio = defaultRatio);
+    await _applyZoom(defaultRatio);
   }
 
-  /// Converts [ratio] to a CameraX FOV-linear value and applies it.
+  /// Converts [ratio] to a CameraX FOV-linear value, blocks the zoom$ listener
+  /// during the call, then applies it.
   Future<void> _applyZoom(double ratio, {double? min, double? max}) async {
     final effectiveMin = min ?? _minZoom;
     final effectiveMax = max ?? _maxZoom;
@@ -288,33 +327,27 @@ class _ZoomPillState extends State<_ZoomPill> with WidgetsBindingObserver {
     final invMin = 1.0 / effectiveMin;
     final invMax = 1.0 / effectiveMax;
     final linear = invMin == invMax ? 0.0 : (((1.0 / ratio) - invMin) / (invMax - invMin)).clamp(0.0, 1.0);
+    _programmaticZoom = true;
     await widget.state.sensorConfig.setZoom(linear);
+    // Brief hold to absorb any synchronous BehaviorSubject replay before
+    // re-enabling pinch-driven updates.
+    await Future.delayed(const Duration(milliseconds: 150));
+    _programmaticZoom = false;
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _sensorConfigSub?.cancel();
+    _aspectRatioSub?.cancel();
+    _zoomSub?.cancel();
     super.dispose();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed && _zoomReady) {
-      // Camera session restarts on resume; wait for it before re-applying zoom.
       Future.delayed(const Duration(milliseconds: 800), _reapplyDefaultZoom);
     }
-  }
-
-  /// Converts an optical zoom ratio to the linear 0.0–1.0 value that
-  /// [SensorConfig.setZoom] / CameraX setLinearZoom expects.
-  /// CameraX uses FOV-linear (1/ratio) mapping:
-  ///   linearZoom = (1/ratio - 1/minRatio) / (1/maxRatio - 1/minRatio)
-  double _ratioToLinear(double ratio) {
-    final invMin = 1.0 / _minZoom!;
-    final invMax = 1.0 / _maxZoom!;
-    if (invMax == invMin) return 0.0;
-    return (((1.0 / ratio) - invMin) / (invMax - invMin)).clamp(0.0, 1.0);
   }
 
   /// Converts a CameraX linear value back to the optical zoom ratio.
@@ -333,58 +366,46 @@ class _ZoomPillState extends State<_ZoomPill> with WidgetsBindingObserver {
       return const SizedBox.shrink();
     }
 
-    return StreamBuilder<SensorConfig>(
-      stream: widget.state.sensorConfig$,
-      builder: (context, sensorSnap) {
-        if (!sensorSnap.hasData) return const SizedBox.shrink();
-        final sensorConfig = sensorSnap.requireData;
+    final activeLevel = _closestLevel(_currentRatio);
 
-        return StreamBuilder<double>(
-          stream: sensorConfig.zoom$,
-          builder: (context, zoomSnap) {
-            final currentLinear = zoomSnap.data ?? _ratioToLinear(1.0);
-            final currentRatio = _linearToRatio(currentLinear);
-            final activeLevel = _closestLevel(currentRatio);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
+        children: _levels.map((level) {
+          final isActive = level == activeLevel;
+          final label = isActive
+              ? '${_currentRatio.toStringAsFixed(_currentRatio < 10 ? 1 : 0)}×'
+              : '${level.toStringAsFixed(level >= 1 && level % 1 == 0 ? 0 : 1)}×';
 
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.min,
-                children: _levels.map((level) {
-                  final isActive = level == activeLevel;
-                  final label = isActive
-                      ? '${currentRatio.toStringAsFixed(currentRatio < 10 ? 1 : 0)}×'
-                      : '${level.toStringAsFixed(level >= 1 && level % 1 == 0 ? 0 : 1)}×';
-
-                  return GestureDetector(
-                    onTap: () => sensorConfig.setZoom(_ratioToLinear(level)),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 150),
-                      margin: const EdgeInsets.symmetric(horizontal: 4),
-                      padding:
-                          isActive ? const EdgeInsets.symmetric(horizontal: 10, vertical: 6) : const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: Colors.black54,
-                        borderRadius: BorderRadius.circular(20),
-                        border: isActive ? Border.all(color: Colors.white54, width: 1) : null,
-                      ),
-                      child: Text(
-                        label,
-                        style: TextStyle(
-                          color: isActive ? Colors.white : Colors.white60,
-                          fontSize: 13,
-                          fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
-                        ),
-                      ),
-                    ),
-                  );
-                }).toList(),
+          return GestureDetector(
+            onTap: () {
+              setState(() => _currentRatio = level);
+              _applyZoom(level);
+            },
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              margin: const EdgeInsets.symmetric(horizontal: 4),
+              padding:
+                  isActive ? const EdgeInsets.symmetric(horizontal: 10, vertical: 6) : const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.black54,
+                borderRadius: BorderRadius.circular(20),
+                border: isActive ? Border.all(color: Colors.white54, width: 1) : null,
               ),
-            );
-          },
-        );
-      },
+              child: Text(
+                label,
+                style: TextStyle(
+                  color: isActive ? Colors.white : Colors.white60,
+                  fontSize: 13,
+                  fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
     );
   }
 }
