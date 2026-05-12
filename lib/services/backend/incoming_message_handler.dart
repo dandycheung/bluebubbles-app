@@ -692,7 +692,8 @@ class IncomingMessageHandler {
       // Pure incoming message (or sent from another device), push it into the
       // active chat view explicitly.
       if (tempGuid != null) {
-        Logger.debug('[_dispatchNewMessage] tempGuid=$tempGuid not in local struct — treating as new message', tag: _tag);
+        Logger.debug('[_dispatchNewMessage] tempGuid=$tempGuid not in local struct — treating as new message',
+            tag: _tag);
       }
       await svc.addNewMessage(message);
     }

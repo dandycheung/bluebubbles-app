@@ -149,9 +149,7 @@ class _CameraScreenState extends State<CameraScreen> {
               maxScale: 4.0,
               boundaryMargin: EdgeInsets.zero,
               child: Center(
-                child: _isVideo
-                    ? _VideoPreview(file: file)
-                    : Image.file(File(file.path), fit: BoxFit.contain),
+                child: _isVideo ? _VideoPreview(file: file) : Image.file(File(file.path), fit: BoxFit.contain),
               ),
             ),
           ),
@@ -289,9 +287,7 @@ class _ZoomPillState extends State<_ZoomPill> with WidgetsBindingObserver {
     if (effectiveMin == null || effectiveMax == null) return;
     final invMin = 1.0 / effectiveMin;
     final invMax = 1.0 / effectiveMax;
-    final linear = invMin == invMax
-        ? 0.0
-        : (((1.0 / ratio) - invMin) / (invMax - invMin)).clamp(0.0, 1.0);
+    final linear = invMin == invMax ? 0.0 : (((1.0 / ratio) - invMin) / (invMax - invMin)).clamp(0.0, 1.0);
     await widget.state.sensorConfig.setZoom(linear);
   }
 
@@ -329,8 +325,7 @@ class _ZoomPillState extends State<_ZoomPill> with WidgetsBindingObserver {
   }
 
   /// Returns the preset level closest to [ratio].
-  double _closestLevel(double ratio) =>
-      _levels.reduce((a, b) => (a - ratio).abs() < (b - ratio).abs() ? a : b);
+  double _closestLevel(double ratio) => _levels.reduce((a, b) => (a - ratio).abs() < (b - ratio).abs() ? a : b);
 
   @override
   Widget build(BuildContext context) {
@@ -367,9 +362,8 @@ class _ZoomPillState extends State<_ZoomPill> with WidgetsBindingObserver {
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 150),
                       margin: const EdgeInsets.symmetric(horizontal: 4),
-                      padding: isActive
-                          ? const EdgeInsets.symmetric(horizontal: 10, vertical: 6)
-                          : const EdgeInsets.all(10),
+                      padding:
+                          isActive ? const EdgeInsets.symmetric(horizontal: 10, vertical: 6) : const EdgeInsets.all(10),
                       decoration: BoxDecoration(
                         color: Colors.black54,
                         borderRadius: BorderRadius.circular(20),

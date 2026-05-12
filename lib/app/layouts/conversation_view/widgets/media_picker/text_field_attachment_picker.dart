@@ -210,48 +210,48 @@ class _AttachmentPickerState extends State<AttachmentPicker> with ThemeHelpers {
             padding: EdgeInsets.zero,
             physics: const BouncingScrollPhysics(),
             children: [
-            _QuickActionItem(
-              icon: Icons.camera_alt_rounded,
-              label: 'Camera',
-              color: const Color(0xFF34C759),
-              onTap: () => openFullCamera(type: 'camera'),
-            ),
-            _QuickActionItem(
-              icon: Icons.photo_library_rounded,
-              label: 'Gallery',
-              color: const Color(0xFF5856D6),
-              onTap: _handleGallery,
-            ),
-            _QuickActionItem(
-              icon: Icons.folder_rounded,
-              label: 'Files',
-              color: const Color(0xFF007AFF),
-              onTap: _handleFilePicker,
-            ),
-            _QuickActionItem(
-              icon: Icons.location_on_rounded,
-              label: 'Location',
-              color: const Color(0xFF32ADE6),
-              onTap: _handleLocation,
-            ),
-            _QuickActionItem(
-              icon: Icons.schedule_rounded,
-              label: 'Schedule',
-              color: const Color(0xFFFF9500),
-              onTap: () => _handleSchedule(context),
-            ),
-            _QuickActionItem(
-              icon: Icons.draw_rounded,
-              label: 'Handwritten',
-              color: const Color(0xFFAF52DE),
-              onTap: () => _handleHandwritten(context),
-            ),
-          ],
+              _QuickActionItem(
+                icon: Icons.camera_alt_rounded,
+                label: 'Camera',
+                color: const Color(0xFF34C759),
+                onTap: () => openFullCamera(type: 'camera'),
+              ),
+              _QuickActionItem(
+                icon: Icons.photo_library_rounded,
+                label: 'Gallery',
+                color: const Color(0xFF5856D6),
+                onTap: _handleGallery,
+              ),
+              _QuickActionItem(
+                icon: Icons.folder_rounded,
+                label: 'Files',
+                color: const Color(0xFF007AFF),
+                onTap: _handleFilePicker,
+              ),
+              _QuickActionItem(
+                icon: Icons.location_on_rounded,
+                label: 'Location',
+                color: const Color(0xFF32ADE6),
+                onTap: _handleLocation,
+              ),
+              _QuickActionItem(
+                icon: Icons.schedule_rounded,
+                label: 'Schedule',
+                color: const Color(0xFFFF9500),
+                onTap: () => _handleSchedule(context),
+              ),
+              _QuickActionItem(
+                icon: Icons.draw_rounded,
+                label: 'Handwritten',
+                color: const Color(0xFFAF52DE),
+                onTap: () => _handleHandwritten(context),
+              ),
+            ],
+          ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   Future<void> _handleGallery() async {
     if (kIsDesktop || kIsWeb) return;
