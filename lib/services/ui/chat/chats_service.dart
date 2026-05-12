@@ -503,9 +503,11 @@ class ChatsService {
       // Check if sort-order-relevant fields have changed
       final latestMessageChanged = updated.dbLatestMessage.target?.guid != currentLatestMessage?.guid ||
           updated.dbOnlyLatestMessageDate != currentLatestMessage?.dateCreated;
+      final latestMessageTimestampChanged = updated.dbOnlyLatestMessageDate != currentLatestMessage?.dateCreated;
       final pinIndexChanged = updated.pinIndex != currentPinIndex;
       final isPinnedChanged = (updated.isPinned ?? false) != currentIsPinned;
-      final sortOrderChanged = latestMessageChanged || pinIndexChanged || isPinnedChanged;
+      final sortOrderChanged =
+          latestMessageChanged || latestMessageTimestampChanged || pinIndexChanged || isPinnedChanged;
 
       if (updated != state.chat || override) {
         state.updateFromChat(updated);
