@@ -42,7 +42,7 @@ class NetworkTasks {
     // When we re-connect, try an incremental sync.
     // The sync function has a guard based on time to ensure that it doesn't
     // get invoked multiple times in quick succession.
-    unawaited(SyncSvc.startIncrementalSync(useGlobalIsolate: true));
+    unawaited(SyncSvc.startIncrementalSync());
   }
 
   static Future<void> detectLocalhost({bool createSnackbar = false}) {

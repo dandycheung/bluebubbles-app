@@ -181,9 +181,10 @@ class StartupTasks {
     Logger.info(
         "Startup services initialization complete! Running localhost detection then starting incremental sync...");
 
-    // For the initial incremental sync, use the global isolate.
-    // When the app resumes from the background, use the lighter incremental sync isolate.
-    unawaited(NetworkTasks.detectLocalhost().then((_) => SyncSvc.startIncrementalSync(useGlobalIsolate: true)));
+    // Don't use the global isolate on startup as it'll likely cause a crash
+    // if there is no network connection. The cause is not 100% known, but it likely
+    // has to do with processing pressure, stale ports, or port binding exhaustion.
+    unawaited(NetworkTasks.detectLocalhost().then((_) => SyncSvc.startIncrementalSync()));
   }
 
   static Future<void> initGlobalIsolateServices(RootIsolateToken? rootIsolateToken) async {
@@ -558,13 +559,12 @@ class StartupTasks {
       await NetworkTasks.detectLocalhost();
     }
 
-    // On app resume, don't use the global isolate.
-    // Only use the GlobalIsolate when invoked on startup or on app reconnect.
+    // On app resume, use the global isolate so it's ready for other tasks.
     if (!Platform.isAndroid) {
-      unawaited(SyncSvc.startIncrementalSync());
+      unawaited(SyncSvc.startIncrementalSync(useGlobalIsolate: true));
     } else if (!LifecycleSvc.hasResumed ||
         (LifecycleSvc.currentState == AppLifecycleState.resumed && LifecycleSvc.wasPaused)) {
-      unawaited(SyncSvc.startIncrementalSync());
+      unawaited(SyncSvc.startIncrementalSync(useGlobalIsolate: true));
     }
 
     if (Platform.isAndroid) {

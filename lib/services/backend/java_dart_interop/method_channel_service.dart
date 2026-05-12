@@ -52,7 +52,11 @@ class MethodChannelService {
       } catch (_) {}
     }
 
-    unawaited(createAllNotificationChannels());
+    // Only create notification channels when running on the main engine connection.
+    // The GlobalIsolate passes a BackgroundIsolateBinaryMessenger whose reply ports are
+    // invalidated by concurrent isolate work, causing a fatal SIGABRT. The DartWorker
+    // and the main isolate both pass null (direct engine), so they are safe to call this.
+    if (binaryMessenger == null) unawaited(createAllNotificationChannels());
 
     Logger.debug("MethodChannelService initialized");
   }
