@@ -96,7 +96,6 @@ dependencies:
   hand_signature: ^3.1.0+2
   idb_shim: ^2.6.1+7
   image: ^4.5.4
-  camerawesome: ^2.5.0
   image_picker: ^1.2.0
   image_size_getter: ^2.4.1
   in_app_review: ^2.0.11
