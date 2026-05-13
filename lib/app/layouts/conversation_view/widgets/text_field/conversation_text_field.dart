@@ -3,7 +3,6 @@ import 'dart:math';
 
 import 'package:audio_waveforms/audio_waveforms.dart';
 import 'package:bluebubbles/app/components/custom_text_editing_controllers.dart';
-import 'package:bluebubbles/app/layouts/camera/camera_screen.dart';
 import 'package:bluebubbles/app/layouts/conversation_view/widgets/media_picker/text_field_attachment_picker.dart';
 import 'package:bluebubbles/app/layouts/conversation_view/widgets/message/send_animation.dart';
 import 'package:bluebubbles/app/layouts/conversation_view/widgets/text_field/conversation_text_field_local_controller.dart';
@@ -429,16 +428,10 @@ class ConversationTextFieldState extends CustomState<ConversationTextField, void
     }
 
     final XFile? file;
-    if (Platform.isAndroid && !kIsWeb) {
-      file = await Navigator.of(context).push<XFile?>(
-        MaterialPageRoute(
-          builder: (_) => CameraScreen(initialMode: type == 'video' ? 'video' : 'photo'),
-        ),
-      );
-    } else if (type == 'camera') {
-      file = await ImagePicker().pickImage(source: ImageSource.camera);
-    } else {
+    if (type == 'video') {
       file = await ImagePicker().pickVideo(source: ImageSource.camera);
+    } else {
+      file = await ImagePicker().pickImage(source: ImageSource.camera);
     }
 
     if (file != null) {

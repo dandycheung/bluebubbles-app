@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:bluebubbles/app/layouts/camera/camera_screen.dart';
 import 'package:bluebubbles/app/layouts/chat_creator/new_chat_creator.dart';
 import 'package:bluebubbles/app/layouts/conversation_list/widgets/conversation_list_fab.dart';
 import 'package:bluebubbles/app/layouts/conversation_list/widgets/footer/samsung_footer.dart';
@@ -17,11 +16,9 @@ import 'package:bluebubbles/app/wrappers/tablet_mode_wrapper.dart';
 import 'package:bluebubbles/database/models.dart';
 import 'package:bluebubbles/services/services.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' hide context;
 import 'package:permission_handler/permission_handler.dart';
-import 'package:universal_io/io.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/app/layouts/conversation_list/pages/cupertino_conversation_list.dart';
 import 'package:bluebubbles/app/layouts/conversation_list/pages/material_conversation_list.dart';
@@ -77,14 +74,7 @@ class ConversationListController extends StatefulController {
       }
     }
 
-    final XFile? file;
-    if (Platform.isAndroid && !kIsWeb) {
-      file = await Navigator.of(context).push<XFile?>(
-        MaterialPageRoute(builder: (_) => const CameraScreen()),
-      );
-    } else {
-      file = await ImagePicker().pickImage(source: ImageSource.camera);
-    }
+    final XFile? file = await ImagePicker().pickImage(source: ImageSource.camera);
     if (file == null) return;
 
     openNewChatCreator(context, existing: [

@@ -1,16 +1,15 @@
 import 'dart:async';
 
-import 'package:camerawesome/camerawesome_plugin.dart';
-import 'package:camerawesome/pigeon.dart';
 import 'package:cross_file/cross_file.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:universal_io/io.dart';
 import 'package:video_player/video_player.dart';
 
-/// Full-screen in-app camera screen using CameraAwesome (CameraX under the
-/// hood on Android). Supports both photo and video modes via the built-in UI.
+/// Full-screen camera review screen. Launches the native system camera via
+/// [ImagePicker] immediately on push, then presents the captured photo/video
+/// for review with pinch-to-zoom, double-tap-to-zoom, and a Retake / Use bar.
 ///
 /// Returns the captured [XFile] via [Navigator.pop], or `null` if the user
 /// cancels. Only rendered on Android; callers should guard with
@@ -33,9 +32,41 @@ class _CameraScreenState extends State<CameraScreen> {
   Offset _previewDoubleTapPosition = Offset.zero;
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _captureMedia());
+  }
+
+  @override
   void dispose() {
     _previewTransformController.dispose();
     super.dispose();
+  }
+
+  Future<void> _captureMedia() async {
+    final picker = ImagePicker();
+    final XFile? file;
+    if (widget.initialMode == 'video') {
+      file = await picker.pickVideo(source: ImageSource.camera);
+    } else {
+      // imageQuality is intentionally omitted — any value, including 100,
+      // causes image_picker to re-encode the JPEG which loses native processing
+      // (HDR tone-mapping, computational photography, etc.).  Omitting it
+      // returns the file exactly as the camera app wrote it.
+      file = await picker.pickImage(source: ImageSource.camera);
+    }
+
+    if (!mounted) return;
+
+    if (file == null) {
+      Navigator.of(context).pop(null);
+      return;
+    }
+
+    setState(() {
+      _isVideo = widget.initialMode == 'video';
+      _previewFile = file;
+    });
   }
 
   @override
@@ -44,95 +75,7 @@ class _CameraScreenState extends State<CameraScreen> {
 
     return Scaffold(
       backgroundColor: Colors.black,
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          _buildCameraAwesome(),
-          if (_previewFile != null) _buildConfirmOverlay(_previewFile!),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCameraAwesome() {
-    return CameraAwesomeBuilder.awesome(
-      saveConfig: SaveConfig.photoAndVideo(
-        initialCaptureMode: widget.initialMode == 'video' ? CaptureMode.video : CaptureMode.photo,
-        photoPathBuilder: (sensors) async {
-          final dir = await getTemporaryDirectory();
-          final ts = DateTime.now().millisecondsSinceEpoch;
-          return SingleCaptureRequest('${dir.path}/bb_photo_$ts.jpg', sensors.first);
-        },
-        videoPathBuilder: (sensors) async {
-          final dir = await getTemporaryDirectory();
-          final ts = DateTime.now().millisecondsSinceEpoch;
-          return SingleCaptureRequest('${dir.path}/bb_video_$ts.mp4', sensors.first);
-        },
-        videoOptions: VideoOptions(
-          enableAudio: true,
-          android: AndroidVideoOptions(
-            bitrate: 6000000,
-            fallbackStrategy: QualityFallbackStrategy.lower,
-          ),
-        ),
-      ),
-      sensorConfig: SensorConfig.single(
-        sensor: Sensor.position(SensorPosition.back),
-        flashMode: FlashMode.none,
-        aspectRatio: CameraAspectRatios.ratio_4_3,
-        zoom: 0.0,
-      ),
-      availableFilters: [],
-      enablePhysicalButton: true,
-      // Override the default scale handler so pinch-to-zoom always starts from
-      // the actual current zoom rather than the gesture detector's stale base.
-      onPreviewScaleBuilder: (state) {
-        double? _prevScale;
-        return OnPreviewScale(
-          onScale: (scale) {
-            if (_prevScale == null) {
-              _prevScale = scale;
-              return;
-            }
-            final delta = scale - _prevScale!;
-            _prevScale = scale;
-            if (delta == 0) return;
-            final newLinear = (state.sensorConfig.zoom + delta).clamp(0.0, 1.0);
-            state.sensorConfig.setZoom(newLinear);
-          },
-        );
-      },
-      middleContentBuilder: (state) => Column(
-        children: [
-          const Spacer(),
-          _ZoomPill(state: state),
-          AwesomeCameraModeSelector(state: state),
-        ],
-      ),
-      onMediaCaptureEvent: (event) {
-        if (event.status == MediaCaptureStatus.success) {
-          event.captureRequest.when(
-            single: (req) {
-              final path = req.file?.path;
-              if (path != null && mounted) {
-                setState(() {
-                  _isVideo = path.toLowerCase().endsWith('.mp4');
-                  _previewFile = XFile(path);
-                });
-              }
-            },
-            multiple: (req) {
-              final path = req.fileBySensor.values.first?.path;
-              if (path != null && mounted) {
-                setState(() {
-                  _isVideo = path.toLowerCase().endsWith('.mp4');
-                  _previewFile = XFile(path);
-                });
-              }
-            },
-          );
-        }
-      },
+      body: _previewFile != null ? _buildConfirmOverlay(_previewFile!) : const SizedBox.shrink(),
     );
   }
 
@@ -202,6 +145,7 @@ class _CameraScreenState extends State<CameraScreen> {
                       onPressed: () {
                         _previewTransformController.value = Matrix4.identity();
                         setState(() => _previewFile = null);
+                        _captureMedia();
                       },
                     ),
                     TextButton.icon(
@@ -215,196 +159,6 @@ class _CameraScreenState extends State<CameraScreen> {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Zoom pill — shows discrete optical zoom levels (0.5×, 1×, 2×, …) filtered
-// to the device's actual range. The active pill displays the live ratio so
-// pinch-to-zoom updates are reflected in real time.
-// ---------------------------------------------------------------------------
-
-class _ZoomPill extends StatefulWidget {
-  final CameraState state;
-
-  const _ZoomPill({required this.state});
-
-  @override
-  State<_ZoomPill> createState() => _ZoomPillState();
-}
-
-class _ZoomPillState extends State<_ZoomPill> with WidgetsBindingObserver {
-  double? _minZoom;
-  double? _maxZoom;
-  List<double> _levels = const [];
-
-  /// Source of truth for the active pill and live label.
-  double _currentRatio = 1.0;
-
-  /// True while we are programmatically setting zoom (init, reset, pill tap).
-  /// The zoom$ listener ignores emissions during this window so it can't
-  /// replay the old value and override a reset.
-  bool _programmaticZoom = false;
-
-  bool _zoomReady = false;
-  StreamSubscription<CameraAspectRatios>? _aspectRatioSub;
-  StreamSubscription<double>? _zoomSub;
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addObserver(this);
-    _loadZoomRange().then((_) {
-      if (!mounted) return;
-      final sensorConfig = widget.state.sensorConfig;
-      // aspectRatio$ is a BehaviorSubject — skip(1) ignores the initial replay
-      // so we only fire on actual aspect-ratio changes.
-      _aspectRatioSub = sensorConfig.aspectRatio$.skip(1).listen((_) {
-        if (_zoomReady) _reapplyDefaultZoom();
-      });
-      _subscribeZoom(sensorConfig);
-    });
-  }
-
-  /// Subscribes to [sensorConfig]'s zoom$ stream so pinch-to-zoom events
-  /// update _currentRatio.  Uses skip(1) to ignore the BehaviorSubject replay.
-  void _subscribeZoom(SensorConfig sensorConfig) {
-    _zoomSub?.cancel();
-    _zoomSub = sensorConfig.zoom$.skip(1).listen((linear) {
-      if (_programmaticZoom || !mounted || _minZoom == null || _maxZoom == null) return;
-      final ratio = _linearToRatio(linear);
-      if ((ratio - _currentRatio).abs() > 0.02) {
-        setState(() => _currentRatio = ratio);
-      }
-    });
-  }
-
-  Future<void> _loadZoomRange() async {
-    final min = await CamerawesomePlugin.getMinZoom();
-    final max = await CamerawesomePlugin.getMaxZoom();
-    if (min == null || max == null || !mounted) return;
-
-    final List<double> levels = [];
-
-    if (min < 0.95) levels.add(min);
-    if (max >= 1.0) levels.add(1.0);
-    for (final candidate in [2.0, 5.0]) {
-      if (candidate > 1.05 && candidate <= max + 0.05) levels.add(candidate);
-    }
-
-    final defaultRatio = max >= 1.0 ? 1.0 : min;
-
-    if (mounted) {
-      setState(() {
-        _minZoom = min;
-        _maxZoom = max;
-        _levels = levels;
-        _currentRatio = defaultRatio;
-      });
-    }
-
-    await _applyZoom(defaultRatio, min: min, max: max);
-    _zoomReady = true;
-  }
-
-  /// Re-applies the default zoom after a config reset (aspect-ratio change or
-  /// app resume).  Sets _currentRatio immediately so the pill updates at once.
-  Future<void> _reapplyDefaultZoom() async {
-    if (_minZoom == null || _maxZoom == null || !mounted) return;
-    final defaultRatio = _maxZoom! >= 1.0 ? 1.0 : _minZoom!;
-    setState(() => _currentRatio = defaultRatio);
-    await _applyZoom(defaultRatio);
-  }
-
-  /// Converts [ratio] to a CameraX FOV-linear value, blocks the zoom$ listener
-  /// during the call, then applies it.
-  Future<void> _applyZoom(double ratio, {double? min, double? max}) async {
-    final effectiveMin = min ?? _minZoom;
-    final effectiveMax = max ?? _maxZoom;
-    if (effectiveMin == null || effectiveMax == null) return;
-    final invMin = 1.0 / effectiveMin;
-    final invMax = 1.0 / effectiveMax;
-    final linear = invMin == invMax ? 0.0 : (((1.0 / ratio) - invMin) / (invMax - invMin)).clamp(0.0, 1.0);
-    _programmaticZoom = true;
-    await widget.state.sensorConfig.setZoom(linear);
-    // Brief hold to absorb any synchronous BehaviorSubject replay before
-    // re-enabling pinch-driven updates.
-    await Future.delayed(const Duration(milliseconds: 150));
-    _programmaticZoom = false;
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    _aspectRatioSub?.cancel();
-    _zoomSub?.cancel();
-    super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed && _zoomReady) {
-      Future.delayed(const Duration(milliseconds: 800), _reapplyDefaultZoom);
-    }
-  }
-
-  /// Converts a CameraX linear value back to the optical zoom ratio.
-  double _linearToRatio(double linear) {
-    final invMin = 1.0 / _minZoom!;
-    final invMax = 1.0 / _maxZoom!;
-    return 1.0 / (invMin + linear * (invMax - invMin));
-  }
-
-  /// Returns the preset level closest to [ratio].
-  double _closestLevel(double ratio) => _levels.reduce((a, b) => (a - ratio).abs() < (b - ratio).abs() ? a : b);
-
-  @override
-  Widget build(BuildContext context) {
-    if (_minZoom == null || _maxZoom == null || _levels.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    final activeLevel = _closestLevel(_currentRatio);
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        mainAxisSize: MainAxisSize.min,
-        children: _levels.map((level) {
-          final isActive = level == activeLevel;
-          final label = isActive
-              ? '${_currentRatio.toStringAsFixed(_currentRatio < 10 ? 1 : 0)}×'
-              : '${level.toStringAsFixed(level >= 1 && level % 1 == 0 ? 0 : 1)}×';
-
-          return GestureDetector(
-            onTap: () {
-              setState(() => _currentRatio = level);
-              _applyZoom(level);
-            },
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 150),
-              margin: const EdgeInsets.symmetric(horizontal: 4),
-              padding:
-                  isActive ? const EdgeInsets.symmetric(horizontal: 10, vertical: 6) : const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Colors.black54,
-                borderRadius: BorderRadius.circular(20),
-                border: isActive ? Border.all(color: Colors.white54, width: 1) : null,
-              ),
-              child: Text(
-                label,
-                style: TextStyle(
-                  color: isActive ? Colors.white : Colors.white60,
-                  fontSize: 13,
-                  fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
-                ),
-              ),
-            ),
-          );
-        }).toList(),
       ),
     );
   }

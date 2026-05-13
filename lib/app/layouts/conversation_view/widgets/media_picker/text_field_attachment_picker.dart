@@ -15,7 +15,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:hand_signature/signature.dart';
-import 'package:bluebubbles/app/layouts/camera/camera_screen.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:photo_manager/photo_manager.dart';
@@ -123,16 +122,10 @@ class _AttachmentPickerState extends State<AttachmentPicker> with ThemeHelpers {
     }
 
     final XFile? file;
-    if (Platform.isAndroid && !kIsWeb) {
-      file = await Navigator.of(context).push<XFile?>(
-        MaterialPageRoute(
-          builder: (_) => CameraScreen(initialMode: type == 'video' ? 'video' : 'photo'),
-        ),
-      );
-    } else if (type == 'camera') {
-      file = await ImagePicker().pickImage(source: ImageSource.camera);
-    } else {
+    if (type == 'video') {
       file = await ImagePicker().pickVideo(source: ImageSource.camera);
+    } else {
+      file = await ImagePicker().pickImage(source: ImageSource.camera);
     }
 
     if (file != null) {
@@ -212,9 +205,15 @@ class _AttachmentPickerState extends State<AttachmentPicker> with ThemeHelpers {
             children: [
               _QuickActionItem(
                 icon: Icons.camera_alt_rounded,
-                label: 'Camera',
+                label: 'Photo',
                 color: const Color(0xFF34C759),
                 onTap: () => openFullCamera(type: 'camera'),
+              ),
+              _QuickActionItem(
+                icon: Icons.videocam_rounded,
+                label: 'Video',
+                color: const Color(0xFFFF3B30),
+                onTap: () => openFullCamera(type: 'video'),
               ),
               _QuickActionItem(
                 icon: Icons.photo_library_rounded,
