@@ -169,17 +169,14 @@ class _MessageHolderState extends State<MessageHolder> with ThemeHelpers {
         }
 
         // Use MessageState observables for proper reactivity
-        final isTempMessage = controller.isSending.value;
         final isFromMe = controller.message.isFromMe!;
 
         return AnimatedPadding(
           duration: const Duration(milliseconds: 100),
-          padding: isTempMessage
-              ? EdgeInsets.zero
-              : EdgeInsets.only(
-                  top: olderMessage != null && !message.sameSender(olderMessage!) ? 5.0 : 0,
-                  bottom: newerMessage != null && !message.sameSender(newerMessage!) ? 5.0 : 0,
-                ),
+          padding: EdgeInsets.only(
+            top: olderMessage != null && !message.sameSender(olderMessage!) ? 5.0 : 0,
+            bottom: newerMessage != null && !message.sameSender(newerMessage!) ? 5.0 : 0,
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -196,7 +193,7 @@ class _MessageHolderState extends State<MessageHolder> with ThemeHelpers {
                       children: [
                         // message column
                         ...messageParts.mapIndexed((index, e) => Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 2.0),
+                              padding: const EdgeInsets.symmetric(vertical: 1.0),
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
                                 crossAxisAlignment: isFromMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,

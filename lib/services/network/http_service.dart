@@ -120,7 +120,7 @@ class HttpService implements BaseApi {
 
   Future<void> init() async {
     dio = Dio(BaseOptions(
-      connectTimeout: const Duration(milliseconds: 15000),
+      connectTimeout: Duration(milliseconds: SettingsSvc.settings.apiTimeout.value),
       receiveTimeout: Duration(milliseconds: SettingsSvc.settings.apiTimeout.value),
       sendTimeout: Duration(milliseconds: SettingsSvc.settings.apiTimeout.value),
       headers: headers,
