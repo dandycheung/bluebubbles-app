@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:bluebubbles/helpers/backend/settings_helpers.dart';
 import 'package:bluebubbles/utils/crypto_utils.dart';
@@ -32,6 +33,19 @@ class SocketService {
   RxString lastError = "".obs;
   Timer? _reconnectTimer;
   Socket? socket;
+  bool _isScheduledRestartInProgress = false;
+  DateTime? _lastSocketExceptionLogAt;
+  String? _lastSocketExceptionSignature;
+  int _suppressedSocketExceptionCount = 0;
+  int _scheduledRestartAttempt = 0;
+
+  static const Duration _socketExceptionLogThrottle = Duration(minutes: 1);
+  static const List<Duration> _scheduledRestartBackoff = [
+    Duration.zero,
+    Duration(seconds: 5),
+    Duration(seconds: 10),
+    Duration(seconds: 20),
+  ];
 
   InternetConnection? internetConnection;
   StreamSubscription<InternetStatus>? internetConnectionListener;
@@ -61,6 +75,12 @@ class SocketService {
   }
 
   void startSocket() {
+    if (socket != null) {
+      Logger.warn("Socket already exists, disposing previous instance before starting a new connection");
+      socket?.dispose();
+      socket = null;
+    }
+
     // Validate server address before attempting to connect
     if (isNullOrEmpty(serverAddress)) {
       Logger.warn("Cannot start socket: server address is empty");
@@ -190,6 +210,15 @@ class SocketService {
     startSocket();
   }
 
+  void resetScheduledRestartBackoff({bool cancelPendingTimer = false}) {
+    _scheduledRestartAttempt = 0;
+    _isScheduledRestartInProgress = false;
+    if (cancelPendingTimer) {
+      _reconnectTimer?.cancel();
+      _reconnectTimer = null;
+    }
+  }
+
   void forgetConnection() {
     closeSocket();
     SettingsSvc.settings.guidAuthKey.value = "";
@@ -227,6 +256,10 @@ class SocketService {
           state.value = SocketState.connected;
           _reconnectTimer?.cancel();
           _reconnectTimer = null;
+          resetScheduledRestartBackoff();
+          _suppressedSocketExceptionCount = 0;
+          _lastSocketExceptionLogAt = null;
+          _lastSocketExceptionSignature = null;
           NetworkTasks.onConnect();
           Logger.info("Socket connected successfully to $serverAddress");
         }
@@ -248,17 +281,21 @@ class SocketService {
       case SocketState.error:
         // Parse and log the error details
         String errorDetails = "Unknown error";
+        bool shouldLogGenericError = true;
 
         if (data is SocketException) {
           handleSocketException(data);
           errorDetails = lastError.value;
+          shouldLogGenericError = false;
         } else if (data is Map) {
           errorDetails = data.toString();
         } else if (data != null) {
           errorDetails = data.toString();
         }
 
-        Logger.error("Socket error connecting to $serverAddress: $errorDetails");
+        if (shouldLogGenericError) {
+          Logger.error("Socket error connecting to $serverAddress: $errorDetails");
+        }
         lastError.value = errorDetails;
         state.value = SocketState.error;
     }
@@ -267,22 +304,34 @@ class SocketService {
   /// Called when socket.io exhausts all reconnect attempts. Schedules a
   /// restart after a short delay so we can refresh the server URL first.
   void _handleReconnectFailed(dynamic data) {
-    Logger.warn("Socket exhausted reconnect attempts — scheduling restart");
+    if ((_reconnectTimer?.isActive ?? false) || _isScheduledRestartInProgress) {
+      return;
+    }
+
+    final int index = min(_scheduledRestartAttempt, _scheduledRestartBackoff.length - 1);
+    final Duration delay = _scheduledRestartBackoff[index];
+    _scheduledRestartAttempt++;
+
+    Logger.warn("Socket exhausted reconnect attempts — scheduling restart in ${delay.inSeconds}s");
     handleStatusUpdate(SocketState.error, data);
 
-    if (_reconnectTimer != null && _reconnectTimer!.isActive) return;
-    _reconnectTimer = Timer(const Duration(seconds: 10), () async {
+    _reconnectTimer = Timer(delay, () async {
       if (state.value == SocketState.connected) {
         return;
       }
 
-      Logger.info("Attempting to fetch new URL and restart socket...");
-      final String? newUrl = await fdb.fetchNewUrl();
-      if (newUrl != null && newUrl != serverAddress) {
-        Logger.info("Server URL changed from $serverAddress to $newUrl");
-      }
+      _isScheduledRestartInProgress = true;
+      try {
+        Logger.info("Attempting to fetch new URL and restart socket...");
+        final String? newUrl = await fdb.fetchNewUrl();
+        if (newUrl != null && newUrl != serverAddress) {
+          Logger.info("Server URL changed from $serverAddress to $newUrl");
+        }
 
-      restartSocket();
+        restartSocket();
+      } finally {
+        _isScheduledRestartInProgress = false;
+      }
     });
   }
 
@@ -302,6 +351,26 @@ class SocketService {
       lastError.value = msg;
     }
 
-    Logger.error("Socket exception: ${lastError.value}", error: e);
+    final DateTime now = DateTime.now();
+    final String signature = '${e.address?.host ?? ''}|${e.osError?.errorCode ?? ''}|$msg';
+    final bool isSameError = signature == _lastSocketExceptionSignature;
+    final bool isWithinThrottle = _lastSocketExceptionLogAt != null &&
+        now.difference(_lastSocketExceptionLogAt!) < _socketExceptionLogThrottle;
+
+    if (isSameError && isWithinThrottle) {
+      _suppressedSocketExceptionCount++;
+      return;
+    }
+
+    String summary = '';
+    if (isSameError && _suppressedSocketExceptionCount > 0) {
+      summary =
+          ' (suppressed $_suppressedSocketExceptionCount similar errors in the last ${_socketExceptionLogThrottle.inSeconds}s)';
+    }
+
+    Logger.error("Socket exception: ${lastError.value}$summary", error: e);
+    _suppressedSocketExceptionCount = 0;
+    _lastSocketExceptionSignature = signature;
+    _lastSocketExceptionLogAt = now;
   }
 }

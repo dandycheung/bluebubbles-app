@@ -69,6 +69,8 @@ class LifecycleService with WidgetsBindingObserver {
 
     if (state == AppLifecycleState.resumed) {
       await Database.waitForInit();
+      SocketSvc.resetScheduledRestartBackoff(cancelPendingTimer: true);
+      Logger.info(tag: "LifecycleService", "Reset socket scheduled restart backoff on app resume");
       open();
     } else if (state != AppLifecycleState.inactive) {
       SystemChannels.textInput.invokeMethod('TextInput.hide').catchError((e, stack) {
