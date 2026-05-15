@@ -37,12 +37,9 @@ class TypingIndicatorRow extends StatelessWidget {
                   borderThickness: 0.1,
                 ),
               ),
-            Padding(
-              padding: const EdgeInsets.only(top: 5),
-              child: TypingIndicator(
-                controller: controller,
-              ),
-            ),
+            TypingIndicator(
+              controller: controller,
+            )
           ],
         ));
   }
