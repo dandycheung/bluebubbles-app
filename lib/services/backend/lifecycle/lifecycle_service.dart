@@ -123,7 +123,7 @@ class LifecycleService with WidgetsBindingObserver {
   }
 
   void close() {
-    // DO NOT remove observer here - it needs to stay registered to receive resumed events.
+    // DO NOT remove observer here, it needs to stay registered to receive resumed events.
     // Leaving this commented out as a reminder.
     // WidgetsBinding.instance.removeObserver(this);
 
