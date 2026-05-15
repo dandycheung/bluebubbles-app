@@ -79,7 +79,9 @@ class _FullscreenVideoState extends State<FullscreenVideo> with AutomaticKeepAli
       await videoController.player.setVolume(muted.value ? 0 : 100);
     } else {
       // Create new controller
-      videoController = VideoController(Player());
+      final player = Player();
+      await _configureAndroidVideoColorPipeline(player);
+      videoController = VideoController(player);
 
       late final Media media;
       if (widget.file.path == null) {
@@ -110,6 +112,25 @@ class _FullscreenVideoState extends State<FullscreenVideo> with AutomaticKeepAli
     }
 
     setState(() {});
+  }
+
+  Future<void> _configureAndroidVideoColorPipeline(Player player) async {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return;
+    final platform = player.platform;
+    if (platform is! NativePlayer) return;
+
+    try {
+      // Force SDR target conversion for HDR content to avoid washed-out colors
+      // on some Android GPU driver + mpv combinations.
+      await platform.setProperty('target-colorspace-hint', 'no', waitForInitialization: false);
+      await platform.setProperty('target-prim', 'bt.709', waitForInitialization: false);
+      await platform.setProperty('target-trc', 'bt.1886', waitForInitialization: false);
+      await platform.setProperty('tone-mapping', 'bt.2446a', waitForInitialization: false);
+      await platform.setProperty('hdr-compute-peak', 'yes', waitForInitialization: false);
+    } catch (e, s) {
+      debugPrint('FullscreenVideo: Failed to apply Android video color pipeline: $e');
+      debugPrint(s.toString());
+    }
   }
 
   void createListener(VideoController controller) {
