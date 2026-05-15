@@ -28,8 +28,7 @@ class CustomErrorWidget extends StatelessWidget {
     this.message = '',
     this.stackTrace,
     FlutterError? error,
-  })
-      : _flutterError = error,
+  })  : _flutterError = error,
         super(key: UniqueKey());
 
   /// The configurable factory for [CustomErrorWidget].

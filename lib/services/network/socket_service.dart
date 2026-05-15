@@ -354,8 +354,8 @@ class SocketService {
     final DateTime now = DateTime.now();
     final String signature = '${e.address?.host ?? ''}|${e.osError?.errorCode ?? ''}|$msg';
     final bool isSameError = signature == _lastSocketExceptionSignature;
-    final bool isWithinThrottle = _lastSocketExceptionLogAt != null &&
-        now.difference(_lastSocketExceptionLogAt!) < _socketExceptionLogThrottle;
+    final bool isWithinThrottle =
+        _lastSocketExceptionLogAt != null && now.difference(_lastSocketExceptionLogAt!) < _socketExceptionLogThrottle;
 
     if (isSameError && isWithinThrottle) {
       _suppressedSocketExceptionCount++;
