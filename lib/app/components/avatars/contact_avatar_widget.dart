@@ -152,12 +152,16 @@ class _ContactAvatarWidgetState extends State<ContactAvatarWidget> with ThemeHel
               ? null
               : () async {
                   if (contactV2 != null && contactV2!.isNative) {
-                    await MethodChannelSvc.invokeMethod("view-contact-form", {'id': contactV2!.nativeContactId});
+                    try {
+                      await MethodChannelSvc.actions.viewContactForm(nativeContactId: contactV2!.nativeContactId);
+                    } catch (_) {
+                      showSnackbar("Error", "Failed to find contact on device!");
+                    }
                   } else if (widget.handle != null) {
-                    await MethodChannelSvc.invokeMethod("open-contact-form", {
-                      'address': widget.handle!.address,
-                      'address_type': widget.handle!.address.isEmail ? 'email' : 'phone'
-                    });
+                    await MethodChannelSvc.actions.openContactForm(
+                      address: widget.handle!.address,
+                      isEmail: widget.handle!.address.isEmail,
+                    );
                   }
                 },
           onLongPress: !widget.editable || widget.handle == null ? null : onAvatarTap,

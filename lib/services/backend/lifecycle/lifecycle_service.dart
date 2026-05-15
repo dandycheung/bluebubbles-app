@@ -99,10 +99,10 @@ class LifecycleService with WidgetsBindingObserver {
       // We only want the foreground service to run when the app is not active
       if (state == AppLifecycleState.resumed) {
         Logger.info(tag: "LifecycleService", "Stopping foreground service");
-        MethodChannelSvc.invokeMethod("stop-foreground-service");
+        MethodChannelSvc.actions.stopForegroundService();
       } else if ([AppLifecycleState.paused, AppLifecycleState.detached].contains(state)) {
         Logger.info(tag: "LifecycleService", "Starting foreground service");
-        MethodChannelSvc.invokeMethod("start-foreground-service");
+        MethodChannelSvc.actions.startForegroundService();
       }
     }
   }

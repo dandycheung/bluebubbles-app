@@ -158,22 +158,22 @@ class NotificationsService {
             message.associatedMessageGuid == null;
         final String reactionType = SettingsSvc.settings.notificationReactionActionType.value;
 
-        await MethodChannelSvc.invokeMethod("create-incoming-message-notification", {
-          "channel_id": NEW_MESSAGE_CHANNEL,
-          "chat_id": chat.id,
-          "chat_guid": guid,
-          "chat_is_group": isGroup,
-          "chat_title": title,
-          "chat_icon": isGroup ? chatIcon : contactIcon,
-          "contact_name": contactName,
-          "contact_avatar": contactIcon,
-          "message_guid": message.guid!,
-          "message_text": text,
-          "message_date": message.dateCreated!.millisecondsSinceEpoch,
-          "message_is_from_me": false,
-          "show_reaction_action": showReactionAction,
-          "reaction_type": reactionType,
-        });
+        await MethodChannelSvc.actions.createIncomingMessageNotification(
+          channelId: NEW_MESSAGE_CHANNEL,
+          chatId: chat.id,
+          chatGuid: guid,
+          chatIsGroup: isGroup,
+          chatTitle: title,
+          chatIcon: isGroup ? chatIcon : contactIcon,
+          contactName: contactName,
+          contactAvatar: contactIcon,
+          messageGuid: message.guid!,
+          messageText: text,
+          messageDate: message.dateCreated!.millisecondsSinceEpoch,
+          messageIsFromMe: false,
+          showReactionAction: showReactionAction,
+          reactionType: reactionType,
+        );
       }
     }
   }
@@ -221,16 +221,16 @@ class NotificationsService {
       _lock.synchronized(() async => await showPersistentDesktopFaceTimeNotif(callUuid, caller, chatIcon, isAudio));
     } else {
       final numeric = callUuid?.numericOnly();
-      await MethodChannelSvc.invokeMethod("create-incoming-facetime-notification", {
-        "channel_id": FACETIME_CHANNEL,
-        "notification_id":
+      await MethodChannelSvc.actions.createIncomingFaceTimeNotification(
+        channelId: FACETIME_CHANNEL,
+        notificationId:
             numeric != null ? int.parse(numeric.substring(0, min(8, numeric.length))) : Random().nextInt(9998) + 1,
-        "title": title,
-        "body": text,
-        "caller_avatar": chatIcon,
-        "caller": caller,
-        "call_uuid": callUuid
-      });
+        title: title,
+        body: text,
+        callerAvatar: chatIcon,
+        caller: caller,
+        callUuid: callUuid,
+      );
     }
   }
 
@@ -239,8 +239,10 @@ class NotificationsService {
       await clearDesktopFaceTimeNotif(callUuid);
     } else if (!kIsWeb) {
       final numeric = callUuid.numericOnly();
-      MethodChannelSvc.invokeMethod("delete-notification",
-          {"notification_id": int.parse(numeric.substring(0, min(8, numeric.length))), "tag": NEW_FACETIME_TAG});
+      MethodChannelSvc.actions.deleteNotification(
+        notificationId: int.parse(numeric.substring(0, min(8, numeric.length))),
+        tag: NEW_FACETIME_TAG,
+      );
     }
   }
 

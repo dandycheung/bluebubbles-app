@@ -1,5 +1,6 @@
 import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/database/database.dart';
+import 'package:bluebubbles/services/backend/java_dart_interop/method_channel_service.dart';
 import 'package:characters/characters.dart';
 import 'package:crypto/crypto.dart';
 import 'package:collection/collection.dart';
@@ -222,14 +223,12 @@ class FilesystemService {
       return newPath;
     } else {
       // On Android, use MediaStore.Downloads (API 29+) or direct file copy (older).
-      // We invoke the channel directly to avoid a circular import with MethodChannelService.
-      const channel = MethodChannel('com.bluebubbles.messaging');
       try {
-        await channel.invokeMethod('save-file-to-downloads', {
-          'filePath': file.path,
-          'fileName': filename,
-          'mimeType': mimeType,
-        });
+        await MethodChannelSvc.actions.saveFileToDownloads(
+          filePath: file.path,
+          fileName: filename,
+          mimeType: mimeType,
+        );
         return filename;
       } catch (_) {
         // Fallback: direct file copy to the public Downloads directory.

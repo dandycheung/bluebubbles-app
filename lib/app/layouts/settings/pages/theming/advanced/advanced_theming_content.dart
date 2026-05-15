@@ -178,9 +178,9 @@ class _AdvancedThemingContentState extends State<AdvancedThemingContent> with Th
                     // disable monet theming if music theme enabled
                     SettingsSvc.settings.monetTheming.value = Monet.none;
                     toSave.add('monetTheming');
-                    await MethodChannelSvc.invokeMethod("request-notification-listener-permission");
+                    await MethodChannelSvc.actions.requestNotificationListenerPermission();
                     try {
-                      await MethodChannelSvc.invokeMethod("start-notification-listener");
+                      await MethodChannelSvc.actions.startNotificationListener();
                       SettingsSvc.settings.colorsFromMedia.value = true;
                       toSave.add('colorsFromMedia');
                     } catch (e) {

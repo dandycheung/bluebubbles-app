@@ -894,8 +894,9 @@ mixin ConnectionPanelHelpersMixin {
                     try {
                       if (Platform.isAndroid) {
                         try {
-                          await MethodChannelSvc.invokeMethod(
-                              "set-next-restart", {"value": DateTime.now().toUtc().millisecondsSinceEpoch});
+                          await MethodChannelSvc.actions.setNextRestart(
+                            value: DateTime.now().toUtc().millisecondsSinceEpoch,
+                          );
                         } catch (e, s) {
                           Logger.error("Failed to update Firebase Database!", error: e, trace: s);
                           showSnackbar("Error", "Something went wrong when updating Firebase Database!");

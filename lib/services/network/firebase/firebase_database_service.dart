@@ -104,8 +104,8 @@ class FirebaseDatabaseService extends GetxService {
       } else {
         // First, try to auth with FCM with the current data
         Logger.info('Authenticating with FCM', tag: 'FCM-Auth');
-        await MethodChannelSvc.invokeMethod('firebase-auth', SettingsSvc.fcmData.toMap());
-        url = sanitizeServerAddress(address: await MethodChannelSvc.invokeMethod("get-server-url"));
+        await MethodChannelSvc.actions.firebaseAuth(fcmData: SettingsSvc.fcmData.toMap());
+        url = sanitizeServerAddress(address: await MethodChannelSvc.actions.getServerUrl());
       }
 
       await saveNewServerUrl(url ?? SettingsSvc.settings.serverAddress.value, force: true);

@@ -392,7 +392,7 @@ class _FirebasePanelState extends State<FirebasePanel> with ThemeHelpers {
                                           // Delete the Firebase FCM token
                                           try {
                                             if (FirebaseSvc.token != null) {
-                                              await MethodChannelSvc.invokeMethod("firebase-delete-token");
+                                              await MethodChannelSvc.actions.firebaseDeleteToken();
                                             }
                                           } catch (e, s) {
                                             Logger.error("Failed to delete Firebase FCM token", error: e, trace: s);

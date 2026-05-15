@@ -65,7 +65,7 @@ class IntentsService {
           if (data is List) {
             for (String? s in data) {
               if (s == null) continue;
-              final path = await MethodChannelSvc.invokeMethod("get-content-uri-path", {"uri": s});
+              final path = await MethodChannelSvc.actions.getContentUriPath(uri: s);
               final bytes = await File(path).readAsBytes();
               files.add(PlatformFile(
                 path: path,
@@ -75,7 +75,7 @@ class IntentsService {
               ));
             }
           } else if (data != null) {
-            final path = await MethodChannelSvc.invokeMethod("get-content-uri-path", {"uri": data});
+            final path = await MethodChannelSvc.actions.getContentUriPath(uri: data.toString());
             final bytes = await File(path).readAsBytes();
             files.add(PlatformFile(
               path: path,

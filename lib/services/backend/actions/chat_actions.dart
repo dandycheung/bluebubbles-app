@@ -11,7 +11,7 @@ class ChatActions {
   static Future<void> clearNotificationForChat(dynamic data) async {
     final chatId = data['chatId'] as int;
 
-    await MethodChannelSvc.invokeMethod("delete-notification", {"notification_id": chatId, "tag": "new_message"});
+    await MethodChannelSvc.actions.deleteNotification(notificationId: chatId, tag: 'new_message');
   }
 
   static Future<void> markChatReadUnread(dynamic data) async {

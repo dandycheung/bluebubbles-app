@@ -81,7 +81,7 @@ class CloudMessagingService {
     try {
       // First, try to auth with FCM with the current data
       Logger.info('Authenticating with FCM', tag: 'FCM-Auth');
-      result = await MethodChannelSvc.invokeMethod('firebase-auth', SettingsSvc.fcmData.toMap());
+      result = await MethodChannelSvc.actions.firebaseAuth(fcmData: SettingsSvc.fcmData.toMap());
     } on PlatformException catch (ex, stack) {
       // Don't try to re-auth if device is de-Googled
       if (ex.toString().contains("Google Play Services is not available")) return;
@@ -106,7 +106,7 @@ class CloudMessagingService {
           // Parse and save new FCM data, then retry auth with FCM
           FCMData fcmData = FCMData.fromMap(fcmMeta);
           await SettingsSvc.saveFCMData(fcmData);
-          result = await MethodChannelSvc.invokeMethod('firebase-auth', fcmData.toMap());
+          result = await MethodChannelSvc.actions.firebaseAuth(fcmData: fcmData.toMap());
         } on PlatformException catch (e, stack) {
           // If we fail a second time, error out
           Logger.error("Failed to register with FCM", error: e, trace: stack, tag: 'FCM-Auth');

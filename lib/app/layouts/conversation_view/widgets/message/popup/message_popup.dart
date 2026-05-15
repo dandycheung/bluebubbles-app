@@ -478,7 +478,7 @@ class _MessagePopupState extends State<MessagePopup> with SingleTickerProviderSt
 
   void openLink() {
     String? url = part.url;
-    MethodChannelSvc.invokeMethod("open-browser", {"link": url ?? part.text});
+    MethodChannelSvc.actions.openBrowser(link: (url ?? part.text) ?? '');
     popDetails();
   }
 
@@ -708,10 +708,10 @@ class _MessagePopupState extends State<MessagePopup> with SingleTickerProviderSt
 
   void createContact() async {
     popDetails();
-    await MethodChannelSvc.invokeMethod("open-contact-form", {
-      'address': message.handleRelation.target!.address,
-      'address_type': message.handleRelation.target!.address.isEmail ? 'email' : 'phone'
-    });
+    await MethodChannelSvc.actions.openContactForm(
+      address: message.handleRelation.target!.address,
+      isEmail: message.handleRelation.target!.address.isEmail,
+    );
   }
 
   void showThread() {

@@ -371,9 +371,9 @@ class _ThemingPanelState extends CustomState<ThemingPanel, void, ThemingPanelCon
                         () => SettingsSwitch(
                           onChanged: (bool val) async {
                             if (val) {
-                              await MethodChannelSvc.invokeMethod("request-notification-listener-permission");
+                              await MethodChannelSvc.actions.requestNotificationListenerPermission();
                               try {
-                                await MethodChannelSvc.invokeMethod("start-notification-listener");
+                                await MethodChannelSvc.actions.startNotificationListener();
                                 // disable monet theming if music theme enabled
                                 SettingsSvc.settings.monetTheming.value = Monet.none;
                                 await SettingsSvc.settings.saveOneAsync('monetTheming');

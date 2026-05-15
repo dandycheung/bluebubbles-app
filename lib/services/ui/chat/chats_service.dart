@@ -557,8 +557,12 @@ class ChatsService {
     final _chats = Database.chats.query(Chat_.hasUnreadMessage.equals(true)).build().find();
     for (Chat c in _chats) {
       c.hasUnreadMessage = false;
-      MethodChannelSvc.invokeMethod(
-          "delete-notification", {"notification_id": c.id, "tag": NotificationsService.NEW_MESSAGE_TAG});
+      if (c.id != null) {
+        MethodChannelSvc.actions.deleteNotification(
+          notificationId: c.id!,
+          tag: NotificationsService.NEW_MESSAGE_TAG,
+        );
+      }
       if (SettingsSvc.settings.enablePrivateAPI.value && SettingsSvc.settings.privateMarkChatAsRead.value) {
         HttpSvc.chat.markRead(c.guid);
       }
@@ -623,11 +627,11 @@ class ChatsService {
         final chatList = getSortedChats();
         final chatSnapshot = chatList.where((e) => !isNullOrEmpty(e.displayName ?? e.chatIdentifier)).take(4).toList();
         for (Chat c in chatSnapshot) {
-          await MethodChannelSvc.invokeMethod("push-share-targets", {
-            "title": c.getTitle(),
-            "guid": c.guid,
-            "icon": await avatarAsBytes(chat: c, quality: 256),
-          });
+          await MethodChannelSvc.actions.pushShareTarget(
+            title: c.getTitle(),
+            guid: c.guid,
+            icon: await avatarAsBytes(chat: c, quality: 256),
+          );
         }
       });
     }
