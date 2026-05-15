@@ -330,6 +330,12 @@ class ChatActions {
                 Logger.warn('[addMessageToChat] UniqueViolationException for attachment ${attachment.guid}');
               }
             }
+
+            // Populate the ToMany relationship so getNotificationText() immediately
+            // sees the attachments without waiting for lazy-load
+            dbMessage.dbAttachments.addAll(inputAttachments.where((a) => a.id != null));
+            dbMessage.dbAttachments.applyToDb();
+            needsUpdate = true;
           }
 
           // Single final put if any relationships were modified

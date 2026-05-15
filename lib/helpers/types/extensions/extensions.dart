@@ -329,6 +329,10 @@ extension MessageNotificationExtension on Message {
       if (realAttachments.isNotEmpty) {
         if (isSticker) return "${sender}1 Sticker";
         return "$sender${_getAttachmentText(realAttachments)}";
+      } else if (hasAttachments) {
+        // Fallback: message is marked as having attachments but they haven't loaded yet
+        // (can happen with outgoing messages before the attachment links are fully persisted)
+        return "${sender}Attachment";
       } else if (!isNullOrEmpty(associatedMessageGuid)) {
         // It's a reaction message, get the sender
         String reactionSender = isFromMe!
