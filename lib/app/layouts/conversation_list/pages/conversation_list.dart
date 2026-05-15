@@ -147,9 +147,10 @@ class _ConversationListState extends CustomState<ConversationList, void, Convers
 
     // Extra safety check to make sure Android doesn't open the last chat when opening the app
     if (kIsDesktop || kIsWeb) {
-      if (PrefsSvc.i.getString('lastOpenedChat') != null &&
+      final lastOpenedChat = PrefsSvc.messaging.getLastOpenedChat();
+      if (lastOpenedChat != null &&
           showAltLayoutContextless &&
-          ChatsSvc.activeChat?.chat.guid != PrefsSvc.i.getString('lastOpenedChat') &&
+          ChatsSvc.activeChat?.chat.guid != lastOpenedChat &&
           !LifecycleSvc.isBubble) {
         WidgetsBinding.instance.addPostFrameCallback((_) async {
           if (kIsWeb) {
@@ -158,9 +159,7 @@ class _ConversationListState extends CustomState<ConversationList, void, Convers
           NavigationSvc.pushAndRemoveUntil(
             context,
             ConversationView(
-                chat: kIsWeb
-                    ? (await Chat.findOneWeb(guid: PrefsSvc.i.getString('lastOpenedChat')))!
-                    : Chat.findOne(guid: PrefsSvc.i.getString('lastOpenedChat'))!),
+                chat: kIsWeb ? (await Chat.findOneWeb(guid: lastOpenedChat))! : Chat.findOne(guid: lastOpenedChat)!),
             (route) => route.isFirst,
           );
         });

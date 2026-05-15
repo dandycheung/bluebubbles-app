@@ -76,8 +76,8 @@ Future<String?> googleOAuth(BuildContext context) async {
       scope: defaultScopes.join(' '),
     );
     try {
-      final width = PrefsSvc.i.getDouble('window-width')?.toInt();
-      final height = PrefsSvc.i.getDouble('window-height')?.toInt();
+      final width = PrefsSvc.desktop.getWindowWidth()?.toInt();
+      final height = PrefsSvc.desktop.getWindowHeight()?.toInt();
       final result = await DesktopWebviewAuth.signIn(
         args,
         width: width != null ? (width * 0.9).ceil() : null,

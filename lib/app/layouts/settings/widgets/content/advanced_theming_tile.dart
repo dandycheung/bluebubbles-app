@@ -52,9 +52,9 @@ class _AdvancedThemingTileState extends State<AdvancedThemingTile> {
                         map["data"]["colorScheme"][widget.colorEntry.primary.key] = result.toARGB32();
                         widget.currentTheme.data = ThemeStruct.fromMap(map).data;
                         widget.currentTheme.save();
-                        if (widget.currentTheme.name == PrefsSvc.i.getString("selected-dark")) {
+                        if (widget.currentTheme.name == PrefsSvc.theme.getSelectedDarkTheme()) {
                           await ThemeSvc.changeTheme(_context, dark: widget.currentTheme);
-                        } else if (widget.currentTheme.name == PrefsSvc.i.getString("selected-light")) {
+                        } else if (widget.currentTheme.name == PrefsSvc.theme.getSelectedLightTheme()) {
                           await ThemeSvc.changeTheme(_context, light: widget.currentTheme);
                         }
                       }
@@ -76,9 +76,9 @@ class _AdvancedThemingTileState extends State<AdvancedThemingTile> {
                               map["data"]["colorScheme"][widget.colorEntry.textColor!.key] = result.toARGB32();
                               widget.currentTheme.data = ThemeStruct.fromMap(map).data;
                               widget.currentTheme.save();
-                              if (widget.currentTheme.name == PrefsSvc.i.getString("selected-dark")) {
+                              if (widget.currentTheme.name == PrefsSvc.theme.getSelectedDarkTheme()) {
                                 await ThemeSvc.changeTheme(_context, dark: widget.currentTheme);
-                              } else if (widget.currentTheme.name == PrefsSvc.i.getString("selected-light")) {
+                              } else if (widget.currentTheme.name == PrefsSvc.theme.getSelectedLightTheme()) {
                                 await ThemeSvc.changeTheme(_context, light: widget.currentTheme);
                               }
                             }

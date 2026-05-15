@@ -242,26 +242,26 @@ class ThemesService {
 
   Future<ThemeStruct> revertToPreviousDarkTheme() async {
     List<ThemeStruct> allThemes = ThemeStruct.getThemes();
-    final darkName = PrefsSvc.i.getString("previous-dark");
+    final darkName = PrefsSvc.theme.getPreviousDarkTheme();
     ThemeStruct? previous = allThemes.firstWhereOrNull((e) => e.name == darkName);
 
     previous ??= defaultThemes.firstWhere((element) => element.name == "OLED Dark");
 
     // Remove the previous flags
-    await PrefsSvc.i.remove("previous-dark");
+    await PrefsSvc.theme.clearPreviousDarkTheme();
 
     return previous;
   }
 
   Future<ThemeStruct> revertToPreviousLightTheme() async {
     List<ThemeStruct> allThemes = ThemeStruct.getThemes();
-    final lightName = PrefsSvc.i.getString("previous-light");
+    final lightName = PrefsSvc.theme.getPreviousLightTheme();
     ThemeStruct? previous = allThemes.firstWhereOrNull((e) => e.name == lightName);
 
     previous ??= defaultThemes.firstWhere((element) => element.name == "Bright White");
 
     // Remove the previous flags
-    await PrefsSvc.i.remove("previous-light");
+    await PrefsSvc.theme.clearPreviousLightTheme();
 
     return previous;
   }
@@ -269,8 +269,10 @@ class ThemesService {
   Future<void> changeTheme(BuildContext context, {ThemeStruct? light, ThemeStruct? dark}) async {
     light?.save();
     dark?.save();
-    if (light != null) await PrefsSvc.i.setString("selected-light", light.name);
-    if (dark != null) await PrefsSvc.i.setString("selected-dark", dark.name);
+    await PrefsSvc.theme.setSelectedThemes(
+      lightTheme: light?.name,
+      darkTheme: dark?.name,
+    );
 
     _loadTheme(context);
   }

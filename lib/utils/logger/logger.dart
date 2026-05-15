@@ -43,8 +43,8 @@ class BaseLogger {
     final baseFileOutput = RotatingFileOutput(
       dirPath: logDir,
       latestFileName: latestLogName,
-      maxFileSizeKB: 1024 * 5,  // 5 MB
-      maxRotatedFilesCount: 5,  // Total: 25 MB of logs before old logs are deleted
+      maxFileSizeKB: 1024 * 5, // 5 MB
+      maxRotatedFilesCount: 5, // Total: 25 MB of logs before old logs are deleted
       encoding: utf8,
       fileNameFormatter: (_) {
         final now = DateTime.now();

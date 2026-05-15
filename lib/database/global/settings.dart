@@ -197,19 +197,19 @@ class Settings {
 
   Future<void> _savePref(String key, dynamic value) async {
     if (value is bool) {
-      await PrefsSvc.i.setBool(key, value);
+      await PrefsSvc.admin.setBool(key, value);
     } else if (value is String) {
-      await PrefsSvc.i.setString(key, value);
+      await PrefsSvc.admin.setString(key, value);
     } else if (value is int) {
-      await PrefsSvc.i.setInt(key, value);
+      await PrefsSvc.admin.setInt(key, value);
     } else if (value is double) {
-      await PrefsSvc.i.setDouble(key, value);
+      await PrefsSvc.admin.setDouble(key, value);
     } else if (value is List<DetailsMenuAction>) {
-      await PrefsSvc.i.setString(key, jsonEncode(value.map((action) => action.name).toList()));
+      await PrefsSvc.admin.setString(key, jsonEncode(value.map((action) => action.name).toList()));
     } else if (value is List || value is Map) {
-      await PrefsSvc.i.setString(key, jsonEncode(value));
+      await PrefsSvc.admin.setString(key, jsonEncode(value));
     } else if (value == null) {
-      await PrefsSvc.i.remove(key);
+      await PrefsSvc.admin.remove(key);
     }
   }
 
@@ -263,11 +263,11 @@ class Settings {
   }
 
   static Settings getSettings() {
-    Set<String> keys = PrefsSvc.i.getKeys();
+    Set<String> keys = PrefsSvc.admin.getKeys();
 
     Map<String, dynamic> items = {};
     for (String s in keys) {
-      items[s] = PrefsSvc.i.get(s);
+      items[s] = PrefsSvc.admin.get(s);
     }
     if (items.isNotEmpty) {
       return Settings.fromMap(items);

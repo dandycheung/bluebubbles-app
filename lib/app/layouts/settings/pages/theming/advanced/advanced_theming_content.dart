@@ -201,8 +201,10 @@ class _AdvancedThemingContentState extends State<AdvancedThemingContent> with Th
                     var allThemes = ThemeStruct.getThemes();
                     var currentLight = ThemeStruct.getLightTheme();
                     var currentDark = ThemeStruct.getDarkTheme();
-                    await PrefsSvc.i.setString("previous-light", currentLight.name);
-                    await PrefsSvc.i.setString("previous-dark", currentDark.name);
+                    await PrefsSvc.theme.setPreviousThemes(
+                      lightTheme: currentLight.name,
+                      darkTheme: currentDark.name,
+                    );
                     await ThemeSvc.changeTheme(context,
                         light: allThemes.firstWhere((element) => element.name == "Music Theme ☀"),
                         dark: allThemes.firstWhere((element) => element.name == "Music Theme 🌙"));
@@ -383,9 +385,9 @@ class _AdvancedThemingContentState extends State<AdvancedThemingContent> with Th
                     map["data"]["textTheme"]["font"] = value;
                     currentTheme.data = ThemeStruct.fromMap(map).data;
                     currentTheme.save();
-                    if (currentTheme.name == PrefsSvc.i.getString("selected-dark")) {
+                    if (currentTheme.name == PrefsSvc.theme.getSelectedDarkTheme()) {
                       await ThemeSvc.changeTheme(context, dark: currentTheme);
-                    } else if (currentTheme.name == PrefsSvc.i.getString("selected-light")) {
+                    } else if (currentTheme.name == PrefsSvc.theme.getSelectedLightTheme()) {
                       await ThemeSvc.changeTheme(context, light: currentTheme);
                     }
                   },
@@ -424,9 +426,9 @@ class _AdvancedThemingContentState extends State<AdvancedThemingContent> with Th
                           }
                           currentTheme.data = ThemeStruct.fromMap(map).data;
                           currentTheme.save();
-                          if (currentTheme.name == PrefsSvc.i.getString("selected-dark")) {
+                          if (currentTheme.name == PrefsSvc.theme.getSelectedDarkTheme()) {
                             await ThemeSvc.changeTheme(context, dark: currentTheme);
-                          } else if (currentTheme.name == PrefsSvc.i.getString("selected-light")) {
+                          } else if (currentTheme.name == PrefsSvc.theme.getSelectedLightTheme()) {
                             await ThemeSvc.changeTheme(context, light: currentTheme);
                           }
                         },
@@ -455,9 +457,9 @@ class _AdvancedThemingContentState extends State<AdvancedThemingContent> with Th
                         ThemeStruct.defaultTextSizes.values.toList()[index] * val;
                     currentTheme.data = ThemeStruct.fromMap(map).data;
                     currentTheme.save();
-                    if (currentTheme.name == PrefsSvc.i.getString("selected-dark")) {
+                    if (currentTheme.name == PrefsSvc.theme.getSelectedDarkTheme()) {
                       await ThemeSvc.changeTheme(context, dark: currentTheme);
-                    } else if (currentTheme.name == PrefsSvc.i.getString("selected-light")) {
+                    } else if (currentTheme.name == PrefsSvc.theme.getSelectedLightTheme()) {
                       await ThemeSvc.changeTheme(context, light: currentTheme);
                     }
                   },

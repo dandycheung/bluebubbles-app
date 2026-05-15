@@ -227,12 +227,16 @@ class MethodChannelHandlers {
     final Map<String, dynamic>? data = arguments;
     if (data == null) return _ok();
 
-    final recentReplyGuid = PrefsSvc.i.getString('recent-reply')?.split('/').first;
-    final recentReplyText = PrefsSvc.i.getString('recent-reply')?.split('/').last;
+    final recentReply = PrefsSvc.messaging.getRecentReply();
+    final recentReplyGuid = recentReply?.messageGuid;
+    final recentReplyText = recentReply?.text;
     if (recentReplyGuid == data['messageGuid'] && recentReplyText == data['text']) return _retry();
 
-    await PrefsSvc.i.setString('recent-reply', '${data['messageGuid']}/${data['text']}');
-    Logger.info('Updated recent reply cache to ${PrefsSvc.i.getString('recent-reply')}');
+    await PrefsSvc.messaging.setRecentReply(
+      messageGuid: data['messageGuid'],
+      text: data['text'],
+    );
+    Logger.info('Updated recent reply cache to ${PrefsSvc.messaging.getRecentReplyRaw()}');
 
     final Chat? chat = Chat.findOne(guid: data['chatGuid']);
     if (chat == null) return _retry();

@@ -334,7 +334,7 @@ class _TroubleshootPanelState extends State<TroubleshootPanel> with ThemeHelpers
                   const SettingsDivider(padding: EdgeInsets.only(left: 16.0)),
                   SettingsTile(
                       onTap: () async {
-                        await PrefsSvc.i.remove("lastOpenedChat");
+                        await PrefsSvc.messaging.clearLastOpenedChat();
                         showSnackbar("Success", "Successfully cleared the last opened chat!");
                       },
                       leading: const SettingsLeadingIcon(

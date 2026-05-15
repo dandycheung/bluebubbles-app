@@ -70,7 +70,7 @@ class ThemeStruct {
   }
 
   static ThemeStruct getLightTheme() {
-    final name = PrefsSvc.i.getString("selected-light");
+    final name = PrefsSvc.theme.getSelectedLightTheme();
     final query = Database.themes.query(ThemeStruct_.name.equals(name ?? "Bright White")).build();
     query.limit = 1;
     final result = query.findFirst();
@@ -81,7 +81,7 @@ class ThemeStruct {
   }
 
   static ThemeStruct getDarkTheme() {
-    final name = PrefsSvc.i.getString("selected-dark");
+    final name = PrefsSvc.theme.getSelectedDarkTheme();
     final query = Database.themes.query(ThemeStruct_.name.equals(name ?? "OLED Dark")).build();
     query.limit = 1;
     final result = query.findFirst();

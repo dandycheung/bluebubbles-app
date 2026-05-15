@@ -200,11 +200,11 @@ class ThemeStudioController extends StatefulController {
     final oldName = activeTheme.name;
     activeTheme.name = newName;
     activeTheme.save();
-    if (PrefsSvc.i.getString("selected-light") == oldName) {
-      await PrefsSvc.i.setString("selected-light", newName);
+    if (PrefsSvc.theme.getSelectedLightTheme() == oldName) {
+      await PrefsSvc.theme.setSelectedLightTheme(newName);
     }
-    if (PrefsSvc.i.getString("selected-dark") == oldName) {
-      await PrefsSvc.i.setString("selected-dark", newName);
+    if (PrefsSvc.theme.getSelectedDarkTheme() == oldName) {
+      await PrefsSvc.theme.setSelectedDarkTheme(newName);
     }
     // Keep applied name tracking in sync if the applied theme was renamed.
     if (appliedLightName == oldName) appliedLightName = newName;

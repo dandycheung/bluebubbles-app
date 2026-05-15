@@ -984,9 +984,11 @@ List<Widget> buildSettingItemList({
                             SettingsSvc.settings = Settings();
                             await SettingsSvc.settings.saveAsync();
 
-                            await PrefsSvc.i.clear();
-                            await PrefsSvc.i.setString("selected-dark", "OLED Dark");
-                            await PrefsSvc.i.setString("selected-light", "Bright White");
+                            await PrefsSvc.admin.clearAll();
+                            await PrefsSvc.theme.setSelectedThemes(
+                              darkTheme: "OLED Dark",
+                              lightTheme: "Bright White",
+                            );
                             Database.themes.putMany(ThemesService.defaultThemes);
 
                             await FCMData.deleteFcmData();

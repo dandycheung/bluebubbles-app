@@ -207,7 +207,7 @@ class _ThemingPanelState extends CustomState<ThemingPanel, void, ThemingPanelCon
                             SettingsSvc.settings.windowEffectCustomOpacityDark.value =
                                 WindowEffects.defaultOpacity(dark: true);
                           }
-                          await PrefsSvc.i.setString('window-effect', effect.toString());
+                          await PrefsSvc.desktop.setWindowEffect(effect.toString());
                           await WindowEffects.setEffect(color: context.theme.colorScheme.surface);
                           await SettingsSvc.settings.saveManyAsync(
                               ['windowEffect', 'windowEffectCustomOpacityLight', 'windowEffectCustomOpacityDark']);
@@ -380,8 +380,10 @@ class _ThemingPanelState extends CustomState<ThemingPanel, void, ThemingPanelCon
                                 var allThemes = ThemeStruct.getThemes();
                                 var currentLight = ThemeStruct.getLightTheme();
                                 var currentDark = ThemeStruct.getDarkTheme();
-                                await PrefsSvc.i.setString("previous-light", currentLight.name);
-                                await PrefsSvc.i.setString("previous-dark", currentDark.name);
+                                await PrefsSvc.theme.setPreviousThemes(
+                                  lightTheme: currentLight.name,
+                                  darkTheme: currentDark.name,
+                                );
                                 await ThemeSvc.changeTheme(context,
                                     light: allThemes.firstWhere((element) => element.name == "Music Theme ☀"),
                                     dark: allThemes.firstWhere((element) => element.name == "Music Theme 🌙"));
@@ -393,12 +395,12 @@ class _ThemingPanelState extends CustomState<ThemingPanel, void, ThemingPanelCon
                               }
                             } else {
                               var allThemes = ThemeStruct.getThemes();
-                              final lightName = PrefsSvc.i.getString("previous-light");
-                              final darkName = PrefsSvc.i.getString("previous-dark");
+                              final lightName = PrefsSvc.theme.getPreviousLightTheme();
+                              final darkName = PrefsSvc.theme.getPreviousDarkTheme();
                               var previousLight = allThemes.firstWhere((e) => e.name == lightName);
                               var previousDark = allThemes.firstWhere((e) => e.name == darkName);
-                              await PrefsSvc.i.remove("previous-light");
-                              await PrefsSvc.i.remove("previous-dark");
+                              await PrefsSvc.theme.clearPreviousLightTheme();
+                              await PrefsSvc.theme.clearPreviousDarkTheme();
                               await ThemeSvc.changeTheme(context, light: previousLight, dark: previousDark);
                               SettingsSvc.settings.colorsFromMedia.value = val;
                               await SettingsSvc.settings.saveOneAsync('colorsFromMedia');

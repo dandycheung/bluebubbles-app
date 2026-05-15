@@ -744,20 +744,20 @@ class ChatsService {
 
     if (save) {
       EventDispatcherSvc.emit("update-highlight", null);
-      Future(() async => await PrefsSvc.i.remove('lastOpenedChat'));
+      unawaited(PrefsSvc.messaging.clearLastOpenedChat());
     }
   }
 
   /// Set all chats to inactive asynchronously
   Future<void> setAllInactive() async {
     Logger.debug('Setting all chats to inactive');
-    await PrefsSvc.i.remove('lastOpenedChat');
+    await PrefsSvc.messaging.clearLastOpenedChat();
     setAllInactiveSync(save: false);
   }
 
   /// Set a chat as the active chat
   Future<void> setActiveChat(Chat chat, {bool clearNotifications = true}) async {
-    await PrefsSvc.i.setString('lastOpenedChat', chat.guid);
+    await PrefsSvc.messaging.setLastOpenedChat(chat.guid);
     setActiveChatSync(chat, clearNotifications: clearNotifications, save: false);
   }
 
@@ -784,7 +784,7 @@ class ChatsService {
       }
 
       if (save) {
-        Future(() async => await PrefsSvc.i.setString('lastOpenedChat', chat.guid));
+        unawaited(PrefsSvc.messaging.setLastOpenedChat(chat.guid));
       }
     }
   }

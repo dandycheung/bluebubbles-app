@@ -68,7 +68,7 @@ class Database {
         setupFinished = SettingsSvc.settings.finishedSetup.value;
       }
 
-      bool setupFinished2 = PrefsSvc.i.getBool('finishedSetup') ?? false;
+      bool setupFinished2 = PrefsSvc.database.getFinishedSetup();
       Logger.info(
           "Database init: SettingsSvc.finishedSetup = $setupFinished, PrefsSvc.finishedSetup = $setupFinished2");
 
@@ -91,7 +91,7 @@ class Database {
 
     try {
       await _performDatabaseMigrations();
-      await PrefsSvc.i.setInt('dbVersion', version);
+      await PrefsSvc.database.setDbVersion(version);
     } catch (e, s) {
       Logger.error("Failed to perform database migrations!", error: e, trace: s);
     }
@@ -133,14 +133,14 @@ class Database {
 
     try {
       objectBoxDirectory.createSync(recursive: true);
-      if (PrefsSvc.i.getBool('use-custom-path') == true && PrefsSvc.i.getString('custom-path') != null) {
-        Directory oldCustom = Directory(join(PrefsSvc.i.getString('custom-path')!, 'objectbox'));
+      final customPath = PrefsSvc.database.getCustomPath();
+      if (PrefsSvc.database.shouldUseCustomPath() && customPath != null) {
+        Directory oldCustom = Directory(join(customPath, 'objectbox'));
         if (oldCustom.existsSync()) {
           Logger.info("Detected prior use of custom path option. Migrating...");
           await copyPath(oldCustom.path, objectBoxDirectory.path);
         }
-        await PrefsSvc.i.remove('use-custom-path');
-        await PrefsSvc.i.remove('custom-path');
+        await PrefsSvc.database.clearCustomPathConfig();
       }
 
       Logger.info("Opening ObjectBox store from path: ${objectBoxDirectory.path}");
@@ -160,7 +160,7 @@ class Database {
 
   static Future<void> _performDatabaseMigrations({int? versionOverride}) async {
     int version = versionOverride ??
-        PrefsSvc.i.getInt('dbVersion') ??
+        PrefsSvc.database.getDbVersion() ??
         (SettingsSvc.settings.finishedSetup.value ? 1 : Database.version);
     if (version >= Database.version) return;
 
@@ -257,7 +257,7 @@ class Database {
 
       // Update the current version and save it
       currentVersion = nextVersion;
-      await PrefsSvc.i.setInt('dbVersion', currentVersion);
+      await PrefsSvc.database.setDbVersion(currentVersion);
       Logger.info("Successfully migrated to version $currentVersion", tag: "DB-Migration");
     }
 
@@ -268,11 +268,13 @@ class Database {
   static Future<void> seedThemes() async {
     try {
       final isFirstRun = Database.themes.isEmpty();
-      final storedThemesVersion = PrefsSvc.i.getInt('themesVersion') ?? 0;
+      final storedThemesVersion = PrefsSvc.database.getThemesVersion();
       final needsReseed = isFirstRun || storedThemesVersion < Database.themesVersion;
       if (isFirstRun) {
-        await PrefsSvc.i.setString("selected-dark", "OLED Dark");
-        await PrefsSvc.i.setString("selected-light", "Bright White");
+        await PrefsSvc.theme.setSelectedThemes(
+          darkTheme: "OLED Dark",
+          lightTheme: "Bright White",
+        );
       }
       if (needsReseed) {
         for (final preset in ThemesService.defaultThemes) {
@@ -280,7 +282,7 @@ class Database {
           if (existing != null) preset.id = existing.id;
           Database.themes.put(preset);
         }
-        await PrefsSvc.i.setInt('themesVersion', Database.themesVersion);
+        await PrefsSvc.database.setThemesVersion(Database.themesVersion);
       }
     } catch (e, s) {
       Logger.error("Failed to seed themes!", error: e, trace: s);
