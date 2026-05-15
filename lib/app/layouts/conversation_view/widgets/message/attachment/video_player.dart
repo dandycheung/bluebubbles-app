@@ -235,10 +235,10 @@ class _VideoPlayerState extends State<VideoPlayer> with AutomaticKeepAliveClient
     }
 
     final player = Player();
-    await _configureAndroidVideoColorPipeline(player);
     videoController = VideoController(player);
     await videoController!.player.setPlaylistMode(PlaylistMode.none);
     await videoController!.player.open(media, play: false);
+    await _configureAndroidVideoColorPipeline(videoController!.player);
     await videoController!.player.setVolume(muted.value ? 0 : 100);
     createListener(videoController!);
 
@@ -258,13 +258,14 @@ class _VideoPlayerState extends State<VideoPlayer> with AutomaticKeepAliveClient
     if (platform is! NativePlayer) return;
 
     try {
-      // Force SDR target conversion for HDR content to avoid washed-out colors
-      // on some Android GPU driver + mpv combinations.
-      await platform.setProperty('target-colorspace-hint', 'no', waitForInitialization: false);
-      await platform.setProperty('target-prim', 'bt.709', waitForInitialization: false);
-      await platform.setProperty('target-trc', 'bt.1886', waitForInitialization: false);
-      await platform.setProperty('tone-mapping', 'bt.2446a', waitForInitialization: false);
-      await platform.setProperty('hdr-compute-peak', 'yes', waitForInitialization: false);
+      // Force conservative HDR->SDR conversion for iPhone HDR clips, which can
+      // otherwise appear over-bright on some Android GPU + mpv combinations.
+      await platform.setProperty('target-colorspace-hint', 'yes');
+      await platform.setProperty('target-prim', 'bt.709');
+      await platform.setProperty('target-trc', 'srgb');
+      await platform.setProperty('tone-mapping', 'hable');
+      await platform.setProperty('target-peak', '203');
+      await platform.setProperty('hdr-compute-peak', 'no');
     } catch (e, s) {
       debugPrint('VideoPlayer: Failed to apply Android video color pipeline: $e');
       debugPrint(s.toString());

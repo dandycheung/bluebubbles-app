@@ -193,7 +193,7 @@ class _MessageHolderState extends State<MessageHolder> with ThemeHelpers {
                       children: [
                         // message column
                         ...messageParts.mapIndexed((index, e) => Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 1.0),
+                              padding: const EdgeInsets.symmetric(vertical: 2.0),
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
                                 crossAxisAlignment: isFromMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
