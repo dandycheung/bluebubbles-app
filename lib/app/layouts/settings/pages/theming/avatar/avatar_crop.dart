@@ -52,45 +52,6 @@ class _AvatarCropState extends State<AvatarCrop> with ThemeHelpers {
     await _handlePickedImage(res.files.first.bytes!, fileName: res.files.first.name);
   }
 
-  Future<void> _showImageSourcePicker() async {
-    if (kIsDesktop || kIsWeb) {
-      await _pickImageFromFiles();
-      return;
-    }
-
-    await showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
-      builder: (context) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.photo_library_outlined),
-                title: const Text('Gallery'),
-                subtitle: const Text('Choose from your photos or photo apps'),
-                onTap: () async {
-                  Navigator.of(context).pop();
-                  await _pickImageFromGallery();
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.folder_open_outlined),
-                title: const Text('Files'),
-                subtitle: const Text('Choose from your filesystem'),
-                onTap: () async {
-                  Navigator.of(context).pop();
-                  await _pickImageFromFiles();
-                },
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
   Future<void> _handlePickedImage(Uint8List bytes, {String? fileName}) async {
     final lowerName = (fileName ?? '').toLowerCase();
     if (lowerName.endsWith('.gif')) {
@@ -227,7 +188,7 @@ class _AvatarCropState extends State<AvatarCrop> with ThemeHelpers {
                       side: BorderSide(color: context.theme.colorScheme.onPrimaryContainer)),
                   backgroundColor: context.theme.colorScheme.primaryContainer,
                 ),
-                onPressed: _showImageSourcePicker,
+                onPressed: _pickImageFromGallery,
                 child: Text(_imageData != null ? "Pick New Image" : "Pick Image",
                     style: context.theme.textTheme.bodyLarge!
                         .copyWith(color: context.theme.colorScheme.onPrimaryContainer)),
