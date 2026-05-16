@@ -11,7 +11,7 @@ import 'package:get/get.dart';
 /// - `backgroundColor` defaults to `context.headerColor`
 /// - `centerTitle` defaults to `context.iOS`
 /// - `surfaceTintColor` defaults to `context.theme.colorScheme.primary`
-/// - `systemOverlayStyle` is auto-computed from color scheme brightness
+/// - `systemOverlayStyle` defers to Flutter's AppBar behavior unless provided
 /// - `toolbarHeight` defaults to 80 on desktop, 50 on mobile
 /// - `automaticallyImplyLeading` defaults to false
 ///
@@ -59,8 +59,10 @@ class BBAppBar extends StatelessWidget implements PreferredSizeWidget {
   /// Defaults to `context.iOS`.
   final bool? centerTitle;
 
-  /// Auto-computed from brightness when null:
-  /// dark brightness → [SystemUiOverlayStyle.light], light → [SystemUiOverlayStyle.dark].
+  /// Optional manual override for the status/navigation bar overlay style.
+  ///
+  /// When null, Flutter's [AppBar] chooses the overlay style from the effective
+  /// app bar background color and theme defaults.
   final SystemUiOverlayStyle? systemOverlayStyle;
 
   /// Defaults to false.
@@ -102,10 +104,6 @@ class BBAppBar extends StatelessWidget implements PreferredSizeWidget {
     final effectiveBg = backgroundColor ?? context.headerColor;
     final effectiveCenterTitle = centerTitle ?? context.iOS;
     final effectiveSurfaceTint = surfaceTintColor ?? context.theme.colorScheme.primary;
-    final effectiveOverlayStyle = systemOverlayStyle ??
-        (context.theme.colorScheme.brightness == Brightness.dark
-            ? SystemUiOverlayStyle.light
-            : SystemUiOverlayStyle.dark);
     final effectiveTitle =
         title ?? (titleText != null ? Text(titleText!, style: titleStyle ?? context.theme.textTheme.titleLarge) : null);
 
@@ -119,7 +117,7 @@ class BBAppBar extends StatelessWidget implements PreferredSizeWidget {
       scrolledUnderElevation: scrolledUnderElevation,
       surfaceTintColor: effectiveSurfaceTint,
       centerTitle: effectiveCenterTitle,
-      systemOverlayStyle: effectiveOverlayStyle,
+      systemOverlayStyle: systemOverlayStyle,
       automaticallyImplyLeading: automaticallyImplyLeading,
       leadingWidth: leadingWidth,
       iconTheme: iconTheme,
