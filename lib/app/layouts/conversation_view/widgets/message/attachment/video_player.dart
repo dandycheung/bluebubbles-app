@@ -352,11 +352,12 @@ class _VideoPlayerState extends State<VideoPlayer> with AutomaticKeepAliveClient
                         ),
                       ),
                     );
+                    // Sync overlay state with actual playing state when returning from fullscreen
+                    showPlayPauseOverlay.value = !videoController!.player.state.playing;
                   }
                 }
               : () async {
                   if (attachment.id == null) return;
-                  await videoController!.player.pause();
                   await Navigator.of(Get.context!).push(
                     ThemeSwitcher.buildPageRoute(
                       builder: (context) => FullscreenMediaHolder(
@@ -368,6 +369,8 @@ class _VideoPlayerState extends State<VideoPlayer> with AutomaticKeepAliveClient
                       ),
                     ),
                   );
+                  // Sync overlay state with actual playing state when returning from fullscreen
+                  showPlayPauseOverlay.value = !videoController!.player.state.playing;
                 },
           onDoubleTap: () {
             // Stub to prevent doubleTap events on parent from happening
