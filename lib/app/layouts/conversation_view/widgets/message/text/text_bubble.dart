@@ -148,7 +148,7 @@ class _TextBubbleState extends State<TextBubble> with ThemeHelpers {
               colorOverride: selected
                   ? context.theme.colorScheme.onTertiaryContainer
                   : SettingsSvc.settings.colorfulBubbles.value && !isFromMe
-                      ? getBubbleColors(selected).first.oppositeLightenOrDarken(75)
+                      ? getBubbleColors(selected).first.oppositeLightenOrDarken(90)
                       : null,
               hideBodyText: widget.subjectOnly,
             ),
@@ -159,7 +159,7 @@ class _TextBubbleState extends State<TextBubble> with ThemeHelpers {
               colorOverride: selected
                   ? context.theme.colorScheme.onTertiaryContainer
                   : SettingsSvc.settings.colorfulBubbles.value && !isFromMe
-                      ? getBubbleColors(selected).first.oppositeLightenOrDarken(75)
+                      ? getBubbleColors(selected).first.oppositeLightenOrDarken(90)
                       : null,
               hideBodyText: widget.subjectOnly,
             ),
