@@ -1,4 +1,5 @@
 import 'package:bluebubbles/app/layouts/settings/pages/theming/theme_studio/theme_studio_panel.dart';
+import 'package:bluebubbles/app/layouts/settings/pages/theming/theme_studio/widgets/preset_theme_dialogs.dart';
 import 'package:bluebubbles/database/models.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:file_picker/file_picker.dart';
@@ -115,6 +116,12 @@ class _ModeGroup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final dialogs = PresetThemeDialogs(
+      controller: controller,
+      isForDark: isForDark,
+      showImportDialog: _showImportDialog,
+    );
+
     // Presets before custom in the scroll row
     final presets = otherThemes.where((t) => t.isPreset).toList();
     final custom = otherThemes.where((t) => !t.isPreset).toList();
@@ -136,7 +143,7 @@ class _ModeGroup extends StatelessWidget {
             ),
             const Spacer(),
             TextButton.icon(
-              onPressed: () => _showImportDialog(context),
+              onPressed: () => dialogs.showImportDialog(context),
               style: TextButton.styleFrom(
                 visualDensity: VisualDensity.compact,
                 foregroundColor: context.theme.colorScheme.secondary,
@@ -147,7 +154,7 @@ class _ModeGroup extends StatelessWidget {
             ),
             const SizedBox(width: 4),
             FilledButton.icon(
-              onPressed: () => _showCreateDialog(context),
+              onPressed: () => dialogs.showCreateDialog(context),
               style: FilledButton.styleFrom(
                 visualDensity: VisualDensity.compact,
                 padding: const EdgeInsets.symmetric(horizontal: 10),
@@ -184,8 +191,8 @@ class _ModeGroup extends StatelessWidget {
             isApplied: appliedThemeName == defaultTheme!.name,
             selectionIsPending: _selectionIsPending,
             onTap: () => controller.applyTheme(context, defaultTheme!),
-            onLongPress: () => _showContextMenu(context, defaultTheme!),
-            onSecondaryTap: () => _showContextMenu(context, defaultTheme!),
+            onLongPress: () => dialogs.showContextMenu(context, defaultTheme!),
+            onSecondaryTap: () => dialogs.showContextMenu(context, defaultTheme!),
           ),
           const SizedBox(height: 14),
         ],
@@ -209,8 +216,8 @@ class _ModeGroup extends StatelessWidget {
                     isApplied: appliedThemeName == t.name,
                     selectionIsPending: _selectionIsPending,
                     onTap: () => controller.applyTheme(context, t),
-                    onLongPress: () => _showContextMenu(context, t),
-                    onSecondaryTap: () => _showContextMenu(context, t),
+                    onLongPress: () => dialogs.showContextMenu(context, t),
+                    onSecondaryTap: () => dialogs.showContextMenu(context, t),
                   ),
                 );
               },
@@ -238,8 +245,8 @@ class _ModeGroup extends StatelessWidget {
                     isApplied: appliedThemeName == t.name,
                     selectionIsPending: _selectionIsPending,
                     onTap: () => controller.applyTheme(context, t),
-                    onLongPress: () => _showContextMenu(context, t),
-                    onSecondaryTap: () => _showContextMenu(context, t),
+                    onLongPress: () => dialogs.showContextMenu(context, t),
+                    onSecondaryTap: () => dialogs.showContextMenu(context, t),
                   ),
                 );
               },
@@ -248,223 +255,6 @@ class _ModeGroup extends StatelessWidget {
         ],
       ],
     );
-  }
-
-  void _showContextMenu(BuildContext context, ThemeStruct theme) {
-    final isCustom = !theme.isPreset;
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (ctx) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-                child: Row(
-                  children: [
-                    const Icon(Icons.palette_outlined, size: 18),
-                    const SizedBox(width: 8),
-                    Text(
-                      theme.name,
-                      style: context.theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
-                    ),
-                  ],
-                ),
-              ),
-              const Divider(height: 8),
-              ListTile(
-                leading: const Icon(Icons.copy_outlined),
-                title: const Text("Clone"),
-                subtitle: const Text("Create a copy of this theme"),
-                onTap: () {
-                  Navigator.of(ctx).pop();
-                  _showCloneDialog(context, theme);
-                },
-              ),
-              if (isCustom) ...[
-                ListTile(
-                  leading: const Icon(Icons.edit_outlined),
-                  title: const Text("Rename"),
-                  onTap: () {
-                    Navigator.of(ctx).pop();
-                    _showRenameDialogForTheme(context, theme);
-                  },
-                ),
-                ListTile(
-                  leading: Icon(Icons.delete_outline, color: context.theme.colorScheme.error),
-                  title: Text("Delete", style: TextStyle(color: context.theme.colorScheme.error)),
-                  onTap: () {
-                    Navigator.of(ctx).pop();
-                    _confirmDelete(context, theme);
-                  },
-                ),
-              ],
-              const SizedBox(height: 8),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  void _showCloneDialog(BuildContext context, ThemeStruct source) {
-    final textController = TextEditingController(text: "${source.name} Copy");
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
-        title: Text("Clone \"${source.name}\"", style: context.theme.textTheme.titleLarge),
-        content: TextField(
-          controller: textController,
-          autofocus: true,
-          decoration: InputDecoration(
-            labelText: "New Theme Name",
-            enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: context.theme.colorScheme.outline)),
-            focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: context.theme.colorScheme.primary)),
-          ),
-          onSubmitted: (_) => _doClone(ctx, context, source, textController.text),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: Text("Cancel", style: TextStyle(color: context.theme.colorScheme.primary)),
-          ),
-          TextButton(
-            onPressed: () => _doClone(ctx, context, source, textController.text),
-            child: Text("Clone", style: TextStyle(color: context.theme.colorScheme.primary)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _doClone(BuildContext dialogCtx, BuildContext pageCtx, ThemeStruct source, String name) {
-    if (name.trim().isEmpty) {
-      showSnackbar("Error", "Please enter a theme name");
-      return;
-    }
-    if (ThemeStruct.findOne(name.trim()) != null) {
-      showSnackbar("Error", "A theme with that name already exists");
-      return;
-    }
-    Navigator.of(dialogCtx).pop();
-    controller.cloneTheme(name.trim(), source);
-  }
-
-  void _showRenameDialogForTheme(BuildContext context, ThemeStruct theme) {
-    // Rename only works on the active theme via the controller, so select it first
-    controller.applyTheme(context, theme);
-    final textController = TextEditingController(text: theme.name);
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
-        title: Text("Rename \"${theme.name}\"", style: context.theme.textTheme.titleLarge),
-        content: TextField(
-          controller: textController,
-          autofocus: true,
-          decoration: InputDecoration(
-            labelText: "New Name",
-            enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: context.theme.colorScheme.outline)),
-            focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: context.theme.colorScheme.primary)),
-          ),
-          onSubmitted: (_) => _doRename(ctx, context, textController.text),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: Text("Cancel", style: TextStyle(color: context.theme.colorScheme.primary)),
-          ),
-          TextButton(
-            onPressed: () => _doRename(ctx, context, textController.text),
-            child: Text("Rename", style: TextStyle(color: context.theme.colorScheme.primary)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _doRename(BuildContext dialogCtx, BuildContext pageCtx, String newName) async {
-    Navigator.of(dialogCtx).pop();
-    final ok = await controller.renameTheme(pageCtx, newName.trim());
-    if (!ok) showSnackbar("Error", "Could not rename — name is empty or already taken");
-  }
-
-  void _confirmDelete(BuildContext context, ThemeStruct theme) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text("Delete Theme"),
-        content: Text("Delete \"${theme.name}\"? This cannot be undone."),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: Text("Cancel", style: TextStyle(color: context.theme.colorScheme.primary)),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.of(ctx).pop();
-              // Select it so deleteTheme acts on the right one, then delete
-              controller.applyTheme(context, theme);
-              controller.deleteTheme(context);
-            },
-            child: Text("Delete", style: TextStyle(color: context.theme.colorScheme.error)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showCreateDialog(BuildContext context) {
-    final textController = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
-        title: Text(
-          "New ${isForDark ? 'Dark' : 'Light'} Theme",
-          style: context.theme.textTheme.titleLarge,
-        ),
-        content: TextField(
-          controller: textController,
-          autofocus: true,
-          decoration: InputDecoration(
-            labelText: "Theme Name",
-            hintText: "e.g. My Custom Theme",
-            enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: context.theme.colorScheme.outline)),
-            focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: context.theme.colorScheme.primary)),
-          ),
-          onSubmitted: (_) => _doCreate(ctx, context, textController.text),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: Text("Cancel", style: TextStyle(color: context.theme.colorScheme.primary)),
-          ),
-          TextButton(
-            onPressed: () => _doCreate(ctx, context, textController.text),
-            child: Text("Create", style: TextStyle(color: context.theme.colorScheme.primary)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _doCreate(BuildContext dialogCtx, BuildContext pageCtx, String name) {
-    if (name.trim().isEmpty) {
-      showSnackbar("Error", "Please enter a theme name");
-      return;
-    }
-    if (ThemeStruct.findOne(name.trim()) != null) {
-      showSnackbar("Error", "A theme with that name already exists");
-      return;
-    }
-    Navigator.of(dialogCtx).pop();
-    controller.createTheme(pageCtx, name.trim(), forDark: isForDark);
   }
 
   void _showImportDialog(BuildContext context) {

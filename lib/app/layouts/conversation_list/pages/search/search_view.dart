@@ -6,10 +6,8 @@ import 'package:bluebubbles/app/layouts/handle_selector_view/handle_selector_vie
 import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/app/layouts/conversation_view/pages/conversation_view.dart';
 import 'package:bluebubbles/app/layouts/settings/widgets/settings_widgets.dart';
-import 'package:bluebubbles/database/database.dart';
 import 'package:bluebubbles/database/models.dart';
 import 'package:bluebubbles/services/services.dart';
-import 'package:collection/collection.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -17,23 +15,19 @@ import 'package:flutter/services.dart';
 import 'package:flutter_acrylic/flutter_acrylic.dart';
 import 'package:get/get.dart';
 import 'package:flutter_sliding_up_panel/flutter_sliding_up_panel.dart';
-import 'package:objectbox/src/native/query/query.dart' as obx;
 
-class _SearchResult {
-  final Chat chat;
-  final Message message;
-  const _SearchResult({required this.chat, required this.message});
-}
+import 'search_models.dart';
+import 'search_query_helper.dart';
 
 class SearchResult {
   final String search;
   final String chatGuidFilter;
-  final String method;
-  final List<_SearchResult> results;
+  final SearchMode mode;
+  final List<SearchResultItem> results;
 
   SearchResult({
     required this.search,
-    required this.method,
+    required this.mode,
     required this.results,
     this.chatGuidFilter = "",
   });
@@ -90,7 +84,9 @@ class SearchViewState extends State<SearchView> with ThemeHelpers {
 
     // If we've already searched for the results and there are none, set no results and return
     if (pastSearches
-            .firstWhereOrNull((e) => e.search == newSearch && e.method == (local.value ? "local" : "network"))
+            .firstWhereOrNull(
+              (e) => e.search == newSearch && e.mode == (local.value ? SearchMode.local : SearchMode.network),
+            )
             ?.results
             .isEmpty ??
         false) {
@@ -102,110 +98,32 @@ class SearchViewState extends State<SearchView> with ThemeHelpers {
 
     final search = SearchResult(
       search: currentSearchTerm.value!,
-      method: local.value ? "local" : "network",
+      mode: local.value ? SearchMode.local : SearchMode.network,
       results: [],
     );
 
     if (local.value) {
-      obx.Condition<Message> condition = Message_.text
-          .contains(currentSearchTerm.value!, caseSensitive: false)
-          .and(Message_.associatedMessageGuid.isNull())
-          .and(Message_.dateDeleted.isNull())
-          .and(Message_.dateCreated.notNull());
-
-      if (isFromMe.value) {
-        condition = condition.and(Message_.isFromMe.equals(true));
-      } else if (isNotFromMe.value) {
-        condition = condition.and(Message_.isFromMe.equals(false));
-      } else if (selectedHandle.value != null) {
-        condition = condition.and(Message_.handleId.equals(selectedHandle.value!.originalROWID!));
-      }
-
-      if (sinceDate.value != null) {
-        condition = condition.and(Message_.dateCreated.greaterOrEqual(sinceDate.value!.millisecondsSinceEpoch));
-      }
-
-      QueryBuilder<Message> qBuilder = Database.messages.query(condition);
-
-      if (selectedChat.value != null) {
-        qBuilder = qBuilder..link(Message_.chat, Chat_.guid.equals(selectedChat.value!.guid));
-      }
-
-      final query = qBuilder.order(Message_.dateCreated, flags: Order.descending).build();
-      query.limit = 50;
-      final results = query.find();
-      query.close();
-
-      List<Chat?> chats = [];
-      List<Message> messages = [];
-      messages = results.map((e) {
-        // grab attachments, associated messages, and handle
-        e.realAttachments;
-        e.fetchAssociatedMessages();
-        return e;
-      }).toList();
-      chats = results.map((e) => e.chat.target).toList();
-      chats.forEachIndexed((index, element) {
-        if (element == null) return;
-        search.results.add(_SearchResult(chat: element, message: messages[index]));
-      });
-    } else {
-      final whereClause = [
-        {
-          'statement': 'message.text LIKE :term COLLATE NOCASE',
-          'args': {'term': "%$currentSearchTerm%"}
-        },
-        {'statement': 'message.associated_message_guid IS NULL', 'args': null}
-      ];
-
-      if (selectedChat.value != null) {
-        whereClause.add({
-          'statement': 'chat.guid = :guid',
-          'args': {'guid': selectedChat.value!.guid}
-        });
-      }
-
-      if (isFromMe.value) {
-        whereClause.add({
-          'statement': 'message.is_from_me = :isFromMe',
-          'args': {'isFromMe': 1}
-        });
-      } else if (isNotFromMe.value) {
-        whereClause.add({
-          'statement': 'message.is_from_me = :isFromMe',
-          'args': {'isFromMe': 0}
-        });
-      } else if (selectedHandle.value != null) {
-        whereClause.add({
-          'statement': 'handle.id = :addr',
-          'args': {'addr': selectedHandle.value!.address}
-        });
-      }
-
-      final results = await MessagesService.getMessages(
-        limit: 50,
-        after: sinceDate.value?.millisecondsSinceEpoch,
-        withChats: true,
-        withHandles: true,
-        withAttachments: true,
-        withChatParticipants: true,
-        where: whereClause,
+      search.results.addAll(
+        await SearchQueryHelper.runLocal(
+          term: currentSearchTerm.value!,
+          selectedChat: selectedChat.value,
+          selectedHandle: selectedHandle.value,
+          isFromMe: isFromMe.value,
+          isNotFromMe: isNotFromMe.value,
+          sinceDate: sinceDate.value,
+        ),
       );
-      // ignore: prefer_const_constructors
-      final List<Chat> itemChats = [];
-      final List<Message> itemMessages = [];
-      for (dynamic item in results) {
-        final chat = Chat.fromMap(item['chats'][0]);
-        final message = Message.fromMap(item);
-        itemChats.add(chat);
-        itemMessages.add(message);
-      }
-      final chatsToGet = itemChats.map((e) => e.guid).toList();
-      final dbChats = Database.chats.query(Chat_.guid.oneOf(chatsToGet)).build().find();
-      for (int i = 0; i < itemChats.length; i++) {
-        final chat = dbChats.firstWhereOrNull((e) => e.guid == itemChats[i].guid) ?? itemChats[i];
-        search.results.add(_SearchResult(chat: chat, message: itemMessages[i]));
-      }
+    } else {
+      search.results.addAll(
+        await SearchQueryHelper.runNetwork(
+          term: currentSearchTerm.value!,
+          selectedChat: selectedChat.value,
+          selectedHandle: selectedHandle.value,
+          isFromMe: isFromMe.value,
+          isNotFromMe: isNotFromMe.value,
+          sinceDate: sinceDate.value,
+        ),
+      );
     }
 
     pastSearches.add(search);
@@ -527,7 +445,7 @@ class SearchViewState extends State<SearchView> with ThemeHelpers {
                             ),
                             onTap: () {
                               final service = MessagesSvc(chat.guid);
-                              service.method = local.value ? "local" : "network";
+                              service.method = local.value ? SearchMode.local.name : SearchMode.network.name;
                               service.struct.addMessages([message]);
                               NavigationSvc.pushAndRemoveUntil(
                                 context,
