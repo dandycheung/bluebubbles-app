@@ -525,32 +525,34 @@ class StartupTasks {
   }
 
   static Future<void> onAppResume() async {
-    // Observer is permanently registered in init() and should never be removed
-    if (!kIsDesktop || LifecycleSvc.wasActiveAliveBefore != false) {
-      ChatsSvc.setActiveToAlive();
-    }
-
-    final activeChat = ChatsSvc.activeChat;
-    if (activeChat != null) {
-      // Skip marking the active chat as read when we know a notification-tap
-      // is about to redirect us to a *different* chat.  pendingOpenChatGuid is
-      // set synchronously in IntentsService.openChat before the first await, so
-      // it is always visible here even though we are inside an async callback.
-      final pendingGuid = (!kIsWeb && !kIsDesktop && GetIt.I.isRegistered<IntentsService>())
-          ? GetIt.I<IntentsService>().pendingOpenChatGuid
-          : null;
-      final redirectingAway = pendingGuid != null && pendingGuid != activeChat.chat.guid;
-      if (!redirectingAway) {
-        ChatsSvc.setChatHasUnread(activeChat.chat, false);
+    if (GetIt.I.isRegistered<ChatsService>()) {
+      // Observer is permanently registered in init() and should never be removed
+      if (!kIsDesktop || LifecycleSvc.wasActiveAliveBefore != false) {
+        ChatsSvc.setActiveToAlive();
       }
 
-      // On desktop, always restore focus when the app is resumed (window regains focus).
-      // On mobile, only refocus if the user has auto-open keyboard enabled AND the
-      // conversation view is the active route (not obscured by ConversationDetails etc.).
-      if (kIsDesktop || SettingsSvc.settings.autoOpenKeyboard.value) {
-        ConversationViewController _cvc = cvc(activeChat.chat);
-        if (!_cvc.showingOverlays && !_cvc.showingSubRoute && _cvc.editing.isEmpty) {
-          _cvc.lastFocusedNode.requestFocus();
+      final activeChat = ChatsSvc.activeChat;
+      if (activeChat != null) {
+        // Skip marking the active chat as read when we know a notification-tap
+        // is about to redirect us to a *different* chat.  pendingOpenChatGuid is
+        // set synchronously in IntentsService.openChat before the first await, so
+        // it is always visible here even though we are inside an async callback.
+        final pendingGuid = (!kIsWeb && !kIsDesktop && GetIt.I.isRegistered<IntentsService>())
+            ? GetIt.I<IntentsService>().pendingOpenChatGuid
+            : null;
+        final redirectingAway = pendingGuid != null && pendingGuid != activeChat.chat.guid;
+        if (!redirectingAway) {
+          ChatsSvc.setChatHasUnread(activeChat.chat, false);
+        }
+
+        // On desktop, always restore focus when the app is resumed (window regains focus).
+        // On mobile, only refocus if the user has auto-open keyboard enabled AND the
+        // conversation view is the active route (not obscured by ConversationDetails etc.).
+        if (kIsDesktop || SettingsSvc.settings.autoOpenKeyboard.value) {
+          ConversationViewController _cvc = cvc(activeChat.chat);
+          if (!_cvc.showingOverlays && !_cvc.showingSubRoute && _cvc.editing.isEmpty) {
+            _cvc.lastFocusedNode.requestFocus();
+          }
         }
       }
     }
@@ -560,11 +562,13 @@ class StartupTasks {
     }
 
     // On app resume, use the global isolate so it's ready for other tasks.
-    if (!Platform.isAndroid) {
-      unawaited(SyncSvc.startIncrementalSync(useGlobalIsolate: true));
-    } else if (!LifecycleSvc.hasResumed ||
-        (LifecycleSvc.currentState == AppLifecycleState.resumed && LifecycleSvc.wasPaused)) {
-      unawaited(SyncSvc.startIncrementalSync(useGlobalIsolate: true));
+    if (GetIt.I.isRegistered<SyncService>()) {
+      if (!Platform.isAndroid) {
+        unawaited(SyncSvc.startIncrementalSync(useGlobalIsolate: true));
+      } else if (!LifecycleSvc.hasResumed ||
+          (LifecycleSvc.currentState == AppLifecycleState.resumed && LifecycleSvc.wasPaused)) {
+        unawaited(SyncSvc.startIncrementalSync(useGlobalIsolate: true));
+      }
     }
 
     if (Platform.isAndroid) {

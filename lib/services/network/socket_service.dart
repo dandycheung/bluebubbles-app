@@ -211,6 +211,7 @@ class SocketService {
   }
 
   void resetScheduledRestartBackoff({bool cancelPendingTimer = false}) {
+    Logger.info(tag: "LifecycleService", "Reset socket scheduled restart backoff on app resume");
     _scheduledRestartAttempt = 0;
     _isScheduledRestartInProgress = false;
     if (cancelPendingTimer) {

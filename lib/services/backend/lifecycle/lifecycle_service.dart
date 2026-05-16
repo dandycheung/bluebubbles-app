@@ -68,9 +68,19 @@ class LifecycleService with WidgetsBindingObserver {
     statesSinceLastResume.add(state);
 
     if (state == AppLifecycleState.resumed) {
+      // Restore active-chat liveness immediately to avoid a race where
+      // incoming messages are processed while lifecycle is already resumed
+      // but chat state is still marked dead from the previous close().
+      // This also happens in the `open -> StartupTasks.onAppResume` flow.
+      // We still want to do it here to avoid any race conditions.
+      if (GetIt.I.isRegistered<ChatsService>()) {
+        if (!kIsDesktop || wasActiveAliveBefore != false) {
+          ChatsSvc.setActiveToAlive();
+        }
+      }
+
       await Database.waitForInit();
       SocketSvc.resetScheduledRestartBackoff(cancelPendingTimer: true);
-      Logger.info(tag: "LifecycleService", "Reset socket scheduled restart backoff on app resume");
       open();
     } else if (state != AppLifecycleState.inactive) {
       SystemChannels.textInput.invokeMethod('TextInput.hide').catchError((e, stack) {
