@@ -7,7 +7,7 @@ class MessageListAnimationConfig {
   ///
   /// Slightly longer duration delays the outgoing fade-in handoff so the
   /// temporary send bubble and list row don't visually overlap as tightly.
-  static const Duration insertionDuration = Duration(milliseconds: 450);
+  static const Duration insertionDuration = Duration(milliseconds: 475);
 
   /// Curve for insertion slide animation
   static const Curve insertionSlideCurve = Curves.easeOut;

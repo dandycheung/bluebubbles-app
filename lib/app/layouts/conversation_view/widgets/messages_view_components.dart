@@ -24,6 +24,7 @@ class TypingIndicatorRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final chat = ChatStateScope.chatOf(context);
     return Obx(() => Row(
+          key: controller.typingInfoKey,
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
             if (controller.showTypingIndicator.value && SettingsSvc.settings.alwaysShowAvatars.value && iOS)
@@ -140,23 +141,32 @@ class SmartRepliesRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Obx(() => AnimatedSize(
-          duration: const Duration(milliseconds: 400),
-          child: smartReplies.isNotEmpty || internalSmartReplies.isNotEmpty
-              ? Padding(
-                  padding: EdgeInsets.only(top: iOS ? 8.0 : 0.0, right: 5),
-                  child: SizedBox(
-                    height: context.theme.extension<BubbleText>()!.bubbleText.fontSize! + 35,
-                    child: ListView(
-                      scrollDirection: Axis.horizontal,
-                      reverse: true,
-                      children: smartReplies.map((suggestion) => _buildReplyWidget(context, suggestion)).toList()
-                        ..addAll(internalSmartReplies.values),
-                    ),
+    return Obx(() {
+      final bool visible = smartReplies.isNotEmpty || internalSmartReplies.isNotEmpty;
+      final double rowHeight = context.theme.extension<BubbleText>()!.bubbleText.fontSize! + 35;
+      final double topPadding = iOS ? 8.0 : 0.0;
+      final double totalHeight = visible ? rowHeight + topPadding : 0.0;
+
+      controller.updateSmartReplyLayout(visible: visible, height: totalHeight);
+
+      return AnimatedSize(
+        duration: const Duration(milliseconds: 400),
+        child: visible
+            ? Padding(
+                padding: EdgeInsets.only(top: topPadding, right: 5),
+                child: SizedBox(
+                  height: rowHeight,
+                  child: ListView(
+                    scrollDirection: Axis.horizontal,
+                    reverse: true,
+                    children: smartReplies.map((suggestion) => _buildReplyWidget(context, suggestion)).toList()
+                      ..addAll(internalSmartReplies.values),
                   ),
-                )
-              : const SizedBox.shrink(),
-        ));
+                ),
+              )
+            : const SizedBox.shrink(),
+      );
+    });
   }
 
   Widget _buildReplyWidget(BuildContext context, String suggestion) => Container(

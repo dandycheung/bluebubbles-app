@@ -33,8 +33,8 @@ class _SendAnimationState extends CustomState<SendAnimation, SendData, Conversat
   // the visual gap between the text field top edge and the bottom of the message list.
   static const double _textFieldVerticalPadding = 17.5;
 
-  // Fixed height of the TypingIndicatorRow when visible.
-  static const double _typingIndicatorHeight = 50.0;
+  // Fallback typing-indicator height when the row hasn't been laid out yet.
+  static const double _typingIndicatorFallbackHeight = 50.0;
 
   // Height of the text field component at its resting (empty, single-line) size,
   // measured from the RenderBox once after the first frame. We avoid using a
@@ -49,17 +49,32 @@ class _SendAnimationState extends CustomState<SendAnimation, SendData, Conversat
       (controller.focusInfoKey.currentContext?.findRenderObject() as RenderBox?)?.size.height ?? 0;
 
   // Extra vertical offset that differs between the iOS skin and Material/Samsung skins.
-  double get _platformVerticalOffset => iOS ? 1.0 : 18.5;
+  double get _platformVerticalOffset => iOS ? -4.0 : 14.5;
 
   // Offset for typing indicator when it is visible.
-  double get _typingIndicatorOffset => controller.showTypingIndicator.value ? _typingIndicatorHeight : 0;
+  double get _typingIndicatorOffset {
+    final measured =
+        (controller.typingInfoKey.currentContext?.findRenderObject() as RenderBox?)?.size.height;
+    if (measured != null && measured > 0) {
+      return measured;
+    }
+    return controller.showTypingIndicator.value ? _typingIndicatorFallbackHeight : 0;
+  }
+
+  // Offset for smart reply row when it is visible.
+  double get _smartReplyOffset => controller.showSmartReplyRow.value ? controller.smartReplyRowHeight.value : 0;
 
   // Total bottom offset for the AnimatedPositioned — how far above the bottom
   // of the Stack the animation bubble should land at the end of its travel.
   // Uses the stored resting text field height (_textFieldSize) so the target
   // never changes during the animation, even while the field shrinks.
   double get _animationBottomOffset =>
-      _textFieldSize + focusInfoSize + _textFieldVerticalPadding + _typingIndicatorOffset + _platformVerticalOffset;
+      _textFieldSize +
+      focusInfoSize +
+      _textFieldVerticalPadding +
+      _typingIndicatorOffset +
+      _smartReplyOffset +
+      _platformVerticalOffset;
 
   @override
   void initState() {
