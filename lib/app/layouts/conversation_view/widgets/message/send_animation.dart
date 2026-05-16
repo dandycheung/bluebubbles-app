@@ -53,8 +53,7 @@ class _SendAnimationState extends CustomState<SendAnimation, SendData, Conversat
 
   // Offset for typing indicator when it is visible.
   double get _typingIndicatorOffset {
-    final measured =
-        (controller.typingInfoKey.currentContext?.findRenderObject() as RenderBox?)?.size.height;
+    final measured = (controller.typingInfoKey.currentContext?.findRenderObject() as RenderBox?)?.size.height;
     if (measured != null && measured > 0) {
       return measured;
     }
