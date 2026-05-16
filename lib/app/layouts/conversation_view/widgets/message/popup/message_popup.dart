@@ -35,6 +35,7 @@ import 'package:flutter_svg/svg.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:pasteboard/pasteboard.dart';
+import 'package:open_filex/open_filex.dart';
 import 'package:path/path.dart' hide context;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:sprung/sprung.dart';
@@ -121,6 +122,9 @@ class _MessagePopupState extends State<MessagePopup> with SingleTickerProviderSt
           part.attachments.isNotEmpty &&
           part.attachments.where((element) => AttachmentsSvc.getContent(element) is PlatformFile).isNotEmpty) ||
       isEmbeddedMedia;
+
+    bool get canOpenInImageViewer =>
+      kIsDesktop && !kIsWeb && part.attachments.length == 1 && part.attachments.first.mimeStart == "image";
 
   late bool isEmbeddedMedia = (message.balloonBundleId == "com.apple.Handwriting.HandwritingProvider" ||
           message.balloonBundleId == "com.apple.DigitalTouchBalloonProvider") &&
@@ -485,6 +489,36 @@ class _MessagePopupState extends State<MessagePopup> with SingleTickerProviderSt
   Future<void> openAttachmentWeb() async {
     await launchUrlString("${part.attachments.first.webUrl!}?guid=${SettingsSvc.settings.guidAuthKey}");
     popDetails();
+  }
+
+  Future<void> openInImageViewer() async {
+    try {
+      final content = AttachmentsSvc.getContent(part.attachments.first);
+      if (content is! PlatformFile || isNullOrEmptyString(content.path)) {
+        showSnackbar("Open Error", "Failed to find image file path!");
+        return;
+      }
+
+      final response = await OpenFilex.open(content.path!, type: part.attachments.first.mimeType);
+      if (response.type == ResultType.done) {
+        popDetails();
+        return;
+      }
+
+      if (response.type == ResultType.noAppToOpen) {
+        showSnackbar("Open Error", "No app found to open this image!");
+        return;
+      }
+
+      Logger.warn(
+        "Failed to open image in viewer (${response.type}): ${response.message}",
+        tag: "MessagePopup",
+      );
+      showSnackbar("Open Error", response.message);
+    } catch (ex, trace) {
+      Logger.error("Failed to open image in viewer!", error: ex, trace: trace);
+      showSnackbar("Open Error", "Failed to open image!");
+    }
   }
 
   void copyText() {
@@ -914,6 +948,11 @@ class _MessagePopupState extends State<MessagePopup> with SingleTickerProviderSt
         DetailsMenuActionWidget(
           onTap: download,
           action: DetailsMenuAction.Save,
+        ),
+      if (canOpenInImageViewer)
+        DetailsMenuActionWidget(
+          onTap: openInImageViewer,
+          action: DetailsMenuAction.OpenInImageViewer,
         ),
       if ((part.text?.hasUrl ?? false) && !kIsWeb && !kIsDesktop && !LifecycleSvc.isBubble)
         DetailsMenuActionWidget(
