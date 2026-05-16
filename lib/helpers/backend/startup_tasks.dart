@@ -101,6 +101,12 @@ class StartupTasks {
     GetIt.I.registerSingleton<HttpService>(HttpService());
     await HttpSvc.init();
 
+    Logger.info("Registering IncomingMessageHandler...");
+    GetIt.I.registerSingleton<IncomingMessageHandler>(
+      IncomingMessageHandler(),
+      dispose: (svc) => svc.dispose(),
+    );
+
     // We then have to initialize all the services that the app will use.
     // Order matters here as some services may rely on others. For instance,
     // The MethodChannel service needs the database to be initialized to handle events.
@@ -165,12 +171,6 @@ class StartupTasks {
     await GetIt.I.isReady<NotificationsService>();
 
     GetIt.I.registerSingleton<EventDispatcher>(EventDispatcher());
-
-    Logger.info("Registering IncomingMessageHandler...");
-    GetIt.I.registerSingleton<IncomingMessageHandler>(
-      IncomingMessageHandler(),
-      dispose: (svc) => svc.dispose(),
-    );
 
     Logger.info("Registering OutgoingMessageHandler...");
     GetIt.I.registerSingleton<OutgoingMessageHandler>(
@@ -434,6 +434,16 @@ class StartupTasks {
     await GetIt.I.isReady<NotificationsService>();
     Logger.info("NotificationsService ready");
 
+    Logger.info("Registering HttpService...");
+    GetIt.I.registerSingleton<HttpService>(HttpService());
+    await HttpSvc.init();
+
+    Logger.info("Registering IncomingMessageHandler...");
+    GetIt.I.registerSingleton<IncomingMessageHandler>(
+      IncomingMessageHandler(),
+      dispose: (svc) => svc.dispose(),
+    );
+
     Logger.info("Registering MethodChannelService...");
     GetIt.I.registerSingletonAsync<MethodChannelService>(() async {
       final channelService = MethodChannelService();
@@ -450,16 +460,6 @@ class StartupTasks {
       return lifecycleService;
     });
     await GetIt.I.isReady<LifecycleService>();
-
-    Logger.info("Registering HttpService...");
-    GetIt.I.registerSingleton<HttpService>(HttpService());
-    await HttpSvc.init();
-
-    Logger.info("Registering IncomingMessageHandler...");
-    GetIt.I.registerSingleton<IncomingMessageHandler>(
-      IncomingMessageHandler(),
-      dispose: (svc) => svc.dispose(),
-    );
 
     Logger.info("Background isolate services initialization complete");
   }

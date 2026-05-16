@@ -10,6 +10,7 @@ import 'package:bluebubbles/utils/logger/logger.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:get_it/get_it.dart';
 
 import 'method_channel_constants.dart';
 
@@ -74,6 +75,12 @@ class MethodChannelHandlers {
   Future<bool> _handleNewMessage(MethodCall _, Map<String, dynamic>? arguments) async {
     await Database.waitForInit();
     Logger.info('Received new message from MethodChannel');
+
+    if (!GetIt.I.isRegistered<IncomingMessageHandler>()) {
+      Logger.warn('IncomingMessageHandler not registered yet, requesting method channel retry');
+      return _retry();
+    }
+
     try {
       if (!service.headless &&
           LifecycleSvc.isAlive &&
@@ -114,6 +121,11 @@ class MethodChannelHandlers {
   Future<bool> _handleUpdatedMessage(MethodCall _, Map<String, dynamic>? arguments) async {
     await Database.waitForInit();
     Logger.info('Received updated message from MethodChannel');
+
+    if (!GetIt.I.isRegistered<IncomingMessageHandler>()) {
+      Logger.warn('IncomingMessageHandler not registered yet, requesting method channel retry');
+      return _retry();
+    }
 
     if (!service.headless && !LifecycleSvc.isAlive && SettingsSvc.settings.keepAppAlive.value) {
       Logger.debug('Ignoring FCM message while app is not alive, but keepAppAlive is enabled');
