@@ -84,7 +84,8 @@ class ChatCreatorDialogs {
       ),
       actions: [
         TextButton(
-          child: Text("OK", style: context.theme.textTheme.bodyLarge!.copyWith(color: Get.context!.theme.colorScheme.primary)),
+          child: Text("OK",
+              style: context.theme.textTheme.bodyLarge!.copyWith(color: Get.context!.theme.colorScheme.primary)),
           onPressed: () => Navigator.of(context).pop(),
         )
       ],
