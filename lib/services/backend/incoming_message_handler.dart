@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:collection';
+import 'dart:io';
 
 import 'package:audio_waveforms/audio_waveforms.dart';
 import 'package:bluebubbles/database/models.dart';
@@ -843,15 +844,14 @@ class IncomingMessageHandler {
   // ── Receive sound ────────────────────────────────────────────────────────
 
   /// Plays the configured receive sound, mirroring the original ActionHandler behaviour:
-  /// * Desktop: guarded by [LifecycleSvc.isAlive] — no point playing a sound the user can't hear.
-  /// * Mobile: plays regardless of lifecycle state (e.g. heads-up notification while screen is on).
-  /// * Web: no audio support here.
+  /// * Android: only while the app process is alive, so headless wake-ups do not play audio.
+  /// * Desktop: may play regardless of window focus.
   Future<void> _playReceiveSound() async {
     if (SettingsSvc.settings.receiveSoundPath.value == null) return;
     if (SettingsSvc.settings.soundVolume.value == 0) return;
+    if (Platform.isAndroid && !LifecycleSvc.isAlive) return;
 
     if (kIsDesktop) {
-      if (!LifecycleSvc.isAlive) return;
       final player = Player();
       player.stream.completed
           .firstWhere((done) => done)
