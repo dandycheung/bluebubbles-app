@@ -183,10 +183,15 @@ class _LoggingPanel extends State<LoggingPanel> {
                   Icon(
                     checked ? Icons.check_box : Icons.check_box_outline_blank,
                     size: 20,
-                    color: checked ? context.theme.colorScheme.primary : context.theme.colorScheme.outline,
+                    color: checked ? context.theme.colorScheme.primary : context.theme.colorScheme.onSurfaceVariant,
                   ),
                   const SizedBox(width: 12),
-                  Text(label),
+                  Text(
+                    label,
+                    style: context.theme.textTheme.bodyMedium!.copyWith(
+                      color: checked ? context.theme.colorScheme.primary : context.theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -303,15 +308,15 @@ class _LoggingPanel extends State<LoggingPanel> {
                       log = log.split(' ').sublist(1).join(' ');
 
                       Color textColor = context.theme.colorScheme.primary;
-                      if (log.startsWith('[ERROR]')) {
+                      if (log.contains('[ERROR]')) {
                         textColor = Colors.red;
-                      } else if (log.startsWith('[WARNING]')) {
+                      } else if (log.contains('[WARNING]')) {
                         textColor = Colors.orange;
-                      } else if (log.startsWith('[TRACE]')) {
+                      } else if (log.contains('[TRACE]')) {
                         textColor = context.theme.colorScheme.primary;
-                      } else if (log.startsWith('[FATAL]')) {
+                      } else if (log.contains('[FATAL]')) {
                         textColor = Colors.red;
-                      } else if (log.startsWith('[DEBUG]')) {
+                      } else if (log.contains('[DEBUG]')) {
                         textColor = context.theme.colorScheme.secondary;
                       }
 
