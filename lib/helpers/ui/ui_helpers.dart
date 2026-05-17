@@ -114,8 +114,8 @@ Widget buildProgressIndicator(BuildContext context, {double size = 20, double st
       ? CupertinoActivityIndicator(
           radius: size / 2,
           color: SettingsSvc.settings.monetTheming.value != Monet.none
-            ? context.theme.colorScheme.primary
-            : context.theme.colorScheme.onSurfaceVariant,
+              ? context.theme.colorScheme.primary
+              : context.theme.colorScheme.onSurfaceVariant,
         )
       : Container(
           alignment: Alignment.center,
