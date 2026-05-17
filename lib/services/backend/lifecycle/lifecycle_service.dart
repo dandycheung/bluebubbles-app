@@ -145,17 +145,21 @@ class LifecycleService with WidgetsBindingObserver {
       ChatsSvc.setActiveToDead();
     }
 
-    if (!kIsDesktop && !kIsWeb) {
+    // Only stop the isolate and disconnect if the app is paused.
+    // This is when the app is actually in the background. If it's inactive or hidden,
+    // the app is still technically in the foregronud, but might just be obscured.
+    if (Platform.isAndroid && currentState == AppLifecycleState.paused) {
       IsolateNameServer.removePortNameMapping('bg_isolate');
       SocketSvc.disconnect();
 
-      // Stop the background isolate so its idle-poll timer does not keep the
-      // Dart event loop alive while the app is in the background. It will be
-      // restarted lazily on the next request via _ensureStarted().
+      // Request graceful isolate shutdown. Do not force-kill on timeout:
+      // in-flight MethodChannel handlers may still need to post their reply,
+      // and killing early can trigger a fatal platform reply-port abort.
       if (GetIt.I.isRegistered<GlobalIsolate>()) {
-        unawaited(GetIt.I<GlobalIsolate>().drainAndStop(timeout: const Duration(seconds: 30)));
+        unawaited(GetIt.I<GlobalIsolate>().drainAndStop());
       }
     }
+
     final activeChat = ChatsSvc.activeChat;
     if (activeChat != null) {
       ConversationViewController _cvc = cvc(activeChat.chat);

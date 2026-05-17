@@ -76,7 +76,7 @@ class SocketService {
 
   void startSocket() {
     if (socket != null) {
-      Logger.warn("Socket already exists, disposing previous instance before starting a new connection");
+      Logger.debug("Socket already exists, disposing previous instance before starting a new connection");
       socket?.dispose();
       socket = null;
     }
@@ -211,7 +211,10 @@ class SocketService {
   }
 
   void resetScheduledRestartBackoff({bool cancelPendingTimer = false}) {
-    Logger.info(tag: "LifecycleService", "Reset socket scheduled restart backoff on app resume");
+    if (_isScheduledRestartInProgress) {
+      Logger.info(tag: "SocketService", "Reset socket scheduled restart backoff on app resume");
+    }
+
     _scheduledRestartAttempt = 0;
     _isScheduledRestartInProgress = false;
     if (cancelPendingTimer) {
