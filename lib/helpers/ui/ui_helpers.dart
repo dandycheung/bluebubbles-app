@@ -111,14 +111,11 @@ Widget buildBackButton(BuildContext context,
 
 Widget buildProgressIndicator(BuildContext context, {double size = 20, double strokeWidth = 2}) {
   return SettingsSvc.settings.skin.value == Skins.iOS
-      ? Theme(
-          data: ThemeData(
-            cupertinoOverrideTheme:
-                CupertinoThemeData(brightness: ThemeData.estimateBrightnessForColor(context.theme.colorScheme.surface)),
-          ),
-          child: CupertinoActivityIndicator(
-            radius: size / 2,
-          ),
+      ? CupertinoActivityIndicator(
+          radius: size / 2,
+          color: SettingsSvc.settings.monetTheming.value != Monet.none
+            ? context.theme.colorScheme.primary
+            : context.theme.colorScheme.onSurfaceVariant,
         )
       : Container(
           alignment: Alignment.center,
@@ -128,7 +125,9 @@ Widget buildProgressIndicator(BuildContext context, {double size = 20, double st
             height: size,
             child: CircularProgressIndicator(
               strokeWidth: strokeWidth,
-              valueColor: AlwaysStoppedAnimation<Color>(context.theme.colorScheme.primary),
+              valueColor: AlwaysStoppedAnimation<Color>(SettingsSvc.settings.monetTheming.value != Monet.none
+                  ? context.theme.colorScheme.primary
+                  : context.theme.colorScheme.onSurfaceVariant),
             ),
           ),
         );
