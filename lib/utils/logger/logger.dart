@@ -250,7 +250,11 @@ class BaseLogger {
       final File logFile = logFiles.first as File;
       if (!logFile.existsSync()) return [];
 
-      List<String> lines = await logFile.readAsLines(encoding: utf8);
+      final List<String> lines = await logFile
+          .openRead()
+          .transform(const Utf8Decoder(allowMalformed: true))
+          .transform(const LineSplitter())
+          .toList();
 
       // Combine lines that are part of the same log message
       List<String> logs = [];
