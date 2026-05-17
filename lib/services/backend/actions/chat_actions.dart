@@ -294,6 +294,8 @@ class ChatActions {
         retryQuery.close();
         inputMessage.id = retryResult?.id;
         messageId = retryResult?.id;
+      } catch (e, s) {
+        Logger.error('[addMessageToChat] Failed to save message!', error: e, trace: s);
       }
 
       // Fetch the DB-connected message object once to set all relationships
@@ -328,6 +330,8 @@ class ChatActions {
                 attachmentBox.put(attachment);
               } on UniqueViolationException catch (_) {
                 Logger.warn('[addMessageToChat] UniqueViolationException for attachment ${attachment.guid}');
+              } catch (e, s) {
+                Logger.error('[addMessageToChat] Failed to save attachment!', error: e, trace: s);
               }
             }
 

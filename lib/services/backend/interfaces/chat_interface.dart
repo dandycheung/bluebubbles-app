@@ -4,6 +4,7 @@ import 'package:bluebubbles/env.dart';
 import 'package:bluebubbles/services/backend/actions/chat_actions.dart';
 import 'package:bluebubbles/models/models.dart' show MessageSaveResult;
 import 'package:bluebubbles/services/services.dart';
+import 'package:bluebubbles/utils/logger/logger.dart';
 import 'package:flutter/foundation.dart';
 import 'package:get_it/get_it.dart';
 import 'package:bluebubbles/services/isolates/global_isolate.dart';
@@ -148,8 +149,33 @@ class ChatInterface {
           await GetIt.I<GlobalIsolate>().send<Map<String, dynamic>>(IsolateRequestType.addMessageToChat, input: data);
     }
 
-    final message = Database.messages.get(result['messageId'] as int)!;
-    final isNewer = result['isNewer'] as bool;
+    final messageId = result['messageId'] as int?;
+    final isNewer = result['isNewer'] as bool? ?? false;
+
+    Message? message;
+    if (messageId != null) {
+      message = Database.messages.get(messageId);
+    }
+
+    // Fallback: resolve by GUID when ObjectBox put collided / retried and ID
+    // is absent or stale by the time we hydrate on this isolate.
+    if (message == null) {
+      Logger.warn('[addMessageToChat] Message ID was null or not found, attempting to resolve by GUID');
+      final guid = messageData['guid'] as String?;
+      if (guid != null) {
+        message = Message.findOne(guid: guid);
+        if (message != null) {
+          Logger.info('[addMessageToChat] Successfully resolved message by GUID');
+        } else {
+          Logger.error('[addMessageToChat] Failed to resolve message by GUID: $guid');
+        }
+      }
+    }
+
+    // Last resort: keep pipeline moving and let downstream save/reload logic
+    // reconcile this object without crashing on a null force-unwrap.
+    message ??= Message.fromMap(messageData);
+
     return MessageSaveResult(message, isNewer);
   }
 
