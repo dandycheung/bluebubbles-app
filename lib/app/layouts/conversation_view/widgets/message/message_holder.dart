@@ -248,7 +248,7 @@ class _MessageHolderState extends State<MessageHolder> with ThemeHelpers {
                                       padding: showAvatar || alwaysShowAvatars
                                           ? EdgeInsets.only(left: 35.0 * avatarScale)
                                           : EdgeInsets.zero,
-                                      child: iOS && message.threadOriginatorGuid != null
+                                      child: iOS && !widget.isReplyThread && message.threadOriginatorGuid != null
                                           ? SizedBox(
                                               width: double.infinity,
                                               child: CustomPaint(
@@ -262,7 +262,11 @@ class _MessageHolderState extends State<MessageHolder> with ThemeHelpers {
                                           : MessageSender(olderMessage: olderMessage),
                                     ),
                                   // add a box to account for height of reactions
-                                  iOS && message.threadOriginatorGuid != null
+                                  iOS &&
+                                          !widget.isReplyThread &&
+                                          message.threadOriginatorGuid != null &&
+                                          replyTo != null &&
+                                          replyTo!.isFromMe!
                                       ? SizedBox(
                                           width: double.infinity,
                                           child: CustomPaint(
@@ -274,6 +278,7 @@ class _MessageHolderState extends State<MessageHolder> with ThemeHelpers {
                                               messageParts: messageParts,
                                               part: e,
                                               reactionsForPart: reactionsForPart,
+                                              minHeightWhenNoReactions: message.isFromMe! ? 8 : 0,
                                             ),
                                           ),
                                         )
@@ -281,6 +286,12 @@ class _MessageHolderState extends State<MessageHolder> with ThemeHelpers {
                                           messageParts: messageParts,
                                           part: e,
                                           reactionsForPart: reactionsForPart,
+                                          minHeightWhenNoReactions: iOS &&
+                                                  !widget.isReplyThread &&
+                                                  message.threadOriginatorGuid != null &&
+                                                  message.isFromMe!
+                                              ? 8
+                                              : 0,
                                         ),
                                   if (!iOS &&
                                       index == 0 &&
@@ -566,8 +577,8 @@ class _ReplyLinePainter extends CustomPainter {
     // Position depends on message direction: left side if from me, right side if not
     final x = isFromMe ? 35.0 : size.width - 35;
     canvas.drawLine(
-      Offset(x, 0),
-      Offset(x, size.height),
+      Offset(x, -5),
+      Offset(x, size.height - (!isFromMe ? 0 : 5)),
       paint,
     );
   }
