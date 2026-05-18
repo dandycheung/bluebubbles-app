@@ -348,6 +348,7 @@ class Main extends StatelessWidget {
                             .then((result) {
                           isAuthing = false;
                           if (result) {
+                            if (!context.mounted) return;
                             SecureApplicationProvider.of(context, listen: false)!.authSuccess(unlock: true);
                             if (kIsDesktop) {
                               Future.delayed(Duration.zero, () {
