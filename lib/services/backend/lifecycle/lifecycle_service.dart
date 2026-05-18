@@ -80,7 +80,11 @@ class LifecycleService with WidgetsBindingObserver {
       }
 
       await Database.waitForInit();
-      SocketSvc.resetScheduledRestartBackoff(cancelPendingTimer: true);
+
+      if (GetIt.I.isRegistered<SocketService>()) {
+        GetIt.I<SocketService>().resetScheduledRestartBackoff(cancelPendingTimer: true);
+      }
+
       open();
     } else if (state != AppLifecycleState.inactive) {
       SystemChannels.textInput.invokeMethod('TextInput.hide').catchError((e, stack) {
@@ -111,10 +115,14 @@ class LifecycleService with WidgetsBindingObserver {
       // We only want the foreground service to run when the app is not active
       if (state == AppLifecycleState.resumed) {
         Logger.info(tag: "LifecycleService", "Stopping foreground service");
-        MethodChannelSvc.actions.stopForegroundService();
+        if (GetIt.I.isRegistered<MethodChannelService>()) {
+          unawaited(GetIt.I<MethodChannelService>().actions.stopForegroundService());
+        }
       } else if ([AppLifecycleState.paused, AppLifecycleState.detached].contains(state)) {
         Logger.info(tag: "LifecycleService", "Starting foreground service");
-        MethodChannelSvc.actions.startForegroundService();
+        if (GetIt.I.isRegistered<MethodChannelService>()) {
+          unawaited(GetIt.I<MethodChannelService>().actions.startForegroundService());
+        }
       }
     }
   }
@@ -137,11 +145,11 @@ class LifecycleService with WidgetsBindingObserver {
     // Leaving this commented out as a reminder.
     // WidgetsBinding.instance.removeObserver(this);
 
-    if (kIsDesktop) {
+    if (kIsDesktop && GetIt.I.isRegistered<ChatsService>()) {
       wasActiveAliveBefore = ChatsSvc.activeChat?.isAlive.value;
     }
 
-    if (!kIsDesktop || wasActiveAliveBefore != false) {
+    if ((!kIsDesktop || wasActiveAliveBefore != false) && GetIt.I.isRegistered<ChatsService>()) {
       ChatsSvc.setActiveToDead();
     }
 
@@ -150,7 +158,9 @@ class LifecycleService with WidgetsBindingObserver {
     // the app is still technically in the foregronud, but might just be obscured.
     if (Platform.isAndroid && currentState == AppLifecycleState.paused) {
       IsolateNameServer.removePortNameMapping('bg_isolate');
-      SocketSvc.disconnect();
+      if (GetIt.I.isRegistered<SocketService>()) {
+        GetIt.I<SocketService>().disconnect();
+      }
 
       // Request graceful isolate shutdown. Do not force-kill on timeout:
       // in-flight MethodChannel handlers may still need to post their reply,
@@ -160,18 +170,26 @@ class LifecycleService with WidgetsBindingObserver {
       }
     }
 
-    final activeChat = ChatsSvc.activeChat;
-    if (activeChat != null) {
-      ConversationViewController _cvc = cvc(activeChat.chat);
-      _cvc.lastFocusedNode.unfocus();
+    if (GetIt.I.isRegistered<ChatsService>()) {
+      final activeChat = ChatsSvc.activeChat;
+      if (activeChat != null) {
+        ConversationViewController _cvc = cvc(activeChat.chat);
+        _cvc.lastFocusedNode.unfocus();
+      }
     }
+
     if (kIsDesktop) {
       windowFocused = false;
     }
   }
 
   void closeBubble() {
-    ChatsSvc.setActiveToDead();
-    SocketSvc.disconnect();
+    if (GetIt.I.isRegistered<ChatsService>()) {
+      GetIt.I<ChatsService>().setActiveToDead();
+    }
+
+    if (GetIt.I.isRegistered<SocketService>()) {
+      GetIt.I<SocketService>().disconnect();
+    }
   }
 }

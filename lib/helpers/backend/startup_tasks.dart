@@ -101,6 +101,14 @@ class StartupTasks {
     GetIt.I.registerSingleton<HttpService>(HttpService());
     await HttpSvc.init();
 
+    Logger.info("Registering LifecycleService...");
+    GetIt.I.registerSingletonAsync<LifecycleService>(() async {
+      final lifecycleService = LifecycleService();
+      await lifecycleService.init(isBubble: isBubble);
+      return lifecycleService;
+    });
+    await GetIt.I.isReady<LifecycleService>();
+
     Logger.info("Registering IncomingMessageHandler...");
     GetIt.I.registerSingleton<IncomingMessageHandler>(
       IncomingMessageHandler(),
@@ -120,13 +128,6 @@ class StartupTasks {
     });
     await GetIt.I.isReady<MethodChannelService>();
 
-    Logger.info("Registering LifecycleService...");
-    GetIt.I.registerSingletonAsync<LifecycleService>(() async {
-      final lifecycleService = LifecycleService();
-      await lifecycleService.init(isBubble: isBubble);
-      return lifecycleService;
-    });
-
     Logger.info("Registering CloudMessagingService...");
     GetIt.I.registerSingleton<CloudMessagingService>(CloudMessagingService());
 
@@ -145,7 +146,6 @@ class StartupTasks {
     // Parallelize independent services for faster startup
     Logger.info("Waiting for services to be ready...");
     await Future.wait([
-      GetIt.I.isReady<LifecycleService>(),
       ThemeSvc.init(),
       IntentsSvc.init(),
       GetIt.I.isReady<ContactServiceV2>(),
@@ -425,6 +425,14 @@ class StartupTasks {
     await ChatsSvc.init(headless: true);
     Logger.info("ChatsService ready");
 
+    Logger.info("Registering LifecycleService...");
+    GetIt.I.registerSingletonAsync<LifecycleService>(() async {
+      final lifecycleService = LifecycleService();
+      await lifecycleService.init(headless: true);
+      return lifecycleService;
+    });
+    await GetIt.I.isReady<LifecycleService>();
+
     Logger.info("Registering NotificationsService...");
     GetIt.I.registerSingletonAsync<NotificationsService>(() async {
       final notificationsService = NotificationsService();
@@ -452,14 +460,6 @@ class StartupTasks {
     });
     await GetIt.I.isReady<MethodChannelService>();
     Logger.info("MethodChannelService ready");
-
-    Logger.info("Registering LifecycleService...");
-    GetIt.I.registerSingletonAsync<LifecycleService>(() async {
-      final lifecycleService = LifecycleService();
-      await lifecycleService.init(headless: true);
-      return lifecycleService;
-    });
-    await GetIt.I.isReady<LifecycleService>();
 
     Logger.info("Background isolate services initialization complete");
   }
