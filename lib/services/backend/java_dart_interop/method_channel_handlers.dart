@@ -219,7 +219,13 @@ class MethodChannelHandlers {
 
   Future<bool> _handleScheduledMessageError(MethodCall _, Map<String, dynamic>? arguments) async {
     Logger.info('Received scheduled message error from FCM');
+    if (!GetIt.I.isRegistered<NotificationsService>()) {
+      Logger.warn('NotificationsService not registered yet, requesting method channel retry');
+      return _retry();
+    }
+
     try {
+      await GetIt.I.isReady<NotificationsService>();
       if (arguments == null) return _ok();
       final payload = ServerPayload.fromJson(arguments);
       final Chat? chat = Chat.findOne(guid: payload.data['payload']['chatGuid']);
@@ -374,7 +380,12 @@ class MethodChannelHandlers {
   }
 
   Future<bool> _handleAliasesRemoved(MethodCall _, Map<String, dynamic>? arguments) async {
+    if (!GetIt.I.isRegistered<NotificationsService>()) {
+      Logger.warn('NotificationsService not registered yet, requesting method channel retry');
+      return _retry();
+    }
     try {
+      await GetIt.I.isReady<NotificationsService>();
       final Map<String, dynamic>? data = arguments;
       if (!isNullOrEmpty(data)) {
         final payload = ServerPayload.fromJson(data!);

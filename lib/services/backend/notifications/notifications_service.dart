@@ -72,7 +72,7 @@ class NotificationsService {
 
   Future<void> init({bool headless = false}) async {
     this.headless = headless;
-    if (!kIsWeb && !kIsDesktop) {
+    if (!kIsWeb && !kIsDesktop && !headless) {
       const AndroidInitializationSettings initializationSettingsAndroid = AndroidInitializationSettings('ic_stat_icon');
       const InitializationSettings initializationSettings =
           InitializationSettings(android: initializationSettingsAndroid);
@@ -80,12 +80,20 @@ class NotificationsService {
           settings: initializationSettings,
           onDidReceiveNotificationResponse: (NotificationResponse? response) {
             if (response?.payload != null) {
-              IntentsSvc.openChat(response!.payload);
+              if (GetIt.I.isRegistered<IntentsService>()) {
+                IntentsSvc.openChat(response!.payload);
+              } else {
+                Logger.warn('IntentsService not registered, cannot open chat from notification tap');
+              }
             }
           });
       final details = await flnp.getNotificationAppLaunchDetails();
       if (details != null && details.didNotificationLaunchApp && details.notificationResponse?.payload != null) {
-        IntentsSvc.openChat(details.notificationResponse!.payload!);
+        if (GetIt.I.isRegistered<IntentsService>()) {
+          IntentsSvc.openChat(details.notificationResponse!.payload!);
+        } else {
+          Logger.warn('IntentsService not registered, cannot process notification launch payload');
+        }
       }
     }
   }
@@ -138,6 +146,15 @@ class NotificationsService {
           () => showDesktopNotif(text, chat, title, contactName, message, isReaction, message.isGroupEvent));
     } else {
       if (message.guid != null && message.dateCreated != null) {
+        if (!GetIt.I.isRegistered<MethodChannelService>()) {
+          Logger.warn('MethodChannelService not registered; skipping incoming message notification');
+          return;
+        }
+        if (!GetIt.I.isReadySync<MethodChannelService>()) {
+          Logger.warn('MethodChannelService not ready; skipping incoming message notification');
+          return;
+        }
+
         final personIcon = (await rootBundle.load("assets/images/person64.png")).buffer.asUint8List();
         Uint8List chatIcon = await avatarAsBytes(chat: chat, quality: 256);
         final isFromMe = message.isFromMe ?? false;

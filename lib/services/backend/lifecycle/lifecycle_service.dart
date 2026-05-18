@@ -44,7 +44,11 @@ class LifecycleService with WidgetsBindingObserver {
 
   Future<void> init({bool headless = false, bool isBubble = false}) async {
     Logger.debug("Initializing LifecycleService${headless ? " in headless mode" : ""}");
-    WidgetsBinding.instance.addObserver(this);
+
+    if (!headless) {
+      WidgetsFlutterBinding.ensureInitialized();
+      WidgetsBinding.instance.addObserver(this);
+    }
 
     this.headless = headless;
     this.isBubble = isBubble;

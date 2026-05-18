@@ -72,7 +72,27 @@ class StartupTasks {
     });
     await GetIt.I.isReady<BaseLogger>();
     Logger.info("BaseLogger ready - switching to Logger for remaining logs");
-    Logger.info("BaseLogger ready - switching to Logger for remaining logs");
+
+    final startupInteropReady = Completer<void>();
+    Logger.info("Pre-registering LifecycleService, NotificationsService, and MethodChannelService...");
+    GetIt.I.registerSingletonAsync<LifecycleService>(() async {
+      await startupInteropReady.future;
+      final lifecycleService = LifecycleService();
+      await lifecycleService.init(isBubble: isBubble);
+      return lifecycleService;
+    });
+    GetIt.I.registerSingletonAsync<NotificationsService>(() async {
+      await startupInteropReady.future;
+      final notificationsService = NotificationsService();
+      await notificationsService.init();
+      return notificationsService;
+    });
+    GetIt.I.registerSingletonAsync<MethodChannelService>(() async {
+      await startupInteropReady.future;
+      final channelService = MethodChannelService();
+      await channelService.init(isBubble: isBubble);
+      return channelService;
+    });
 
     // Check if another instance is running (Linux Only).
     // Automatically handled on Windows (I think)
@@ -84,6 +104,7 @@ class StartupTasks {
     Logger.info("Initializing database...");
     await Database.init();
     Logger.info("Database initialized");
+    startupInteropReady.complete();
 
     // Register the global isolate
     Logger.info("Registering isolates...");
@@ -101,12 +122,7 @@ class StartupTasks {
     GetIt.I.registerSingleton<HttpService>(HttpService());
     await HttpSvc.init();
 
-    Logger.info("Registering LifecycleService...");
-    GetIt.I.registerSingletonAsync<LifecycleService>(() async {
-      final lifecycleService = LifecycleService();
-      await lifecycleService.init(isBubble: isBubble);
-      return lifecycleService;
-    });
+    Logger.info("Waiting for LifecycleService...");
     await GetIt.I.isReady<LifecycleService>();
 
     Logger.info("Registering IncomingMessageHandler...");
@@ -120,12 +136,7 @@ class StartupTasks {
     // The MethodChannel service needs the database to be initialized to handle events.
     // The Lifecycle service needs the MethodChannel service to be initialized to send events.
 
-    Logger.info("Registering MethodChannelService...");
-    GetIt.I.registerSingletonAsync<MethodChannelService>(() async {
-      final channelService = MethodChannelService();
-      await channelService.init(isBubble: isBubble);
-      return channelService;
-    });
+    Logger.info("Waiting for MethodChannelService...");
     await GetIt.I.isReady<MethodChannelService>();
 
     Logger.info("Registering CloudMessagingService...");
@@ -163,11 +174,7 @@ class StartupTasks {
     Logger.info("Registering ChatsService, SocketService, and NotificationsService...");
     GetIt.I.registerSingleton<ChatsService>(ChatsService());
     GetIt.I.registerSingleton<SocketService>(SocketService());
-    GetIt.I.registerSingletonAsync<NotificationsService>(() async {
-      final notificationsService = NotificationsService();
-      await notificationsService.init();
-      return notificationsService;
-    });
+    Logger.info("Waiting for NotificationsService...");
     await GetIt.I.isReady<NotificationsService>();
 
     GetIt.I.registerSingleton<EventDispatcher>(EventDispatcher());
@@ -234,9 +241,31 @@ class StartupTasks {
     await GetIt.I.isReady<BaseLogger>();
     Logger.info("BaseLogger ready - switching to Logger for remaining logs");
 
+    final globalInteropReady = Completer<void>();
+    Logger.info("Pre-registering LifecycleService, NotificationsService, and MethodChannelService...");
+    GetIt.I.registerSingletonAsync<LifecycleService>(() async {
+      await globalInteropReady.future;
+      final lifecycleService = LifecycleService();
+      await lifecycleService.init(headless: true);
+      return lifecycleService;
+    });
+    GetIt.I.registerSingletonAsync<NotificationsService>(() async {
+      await globalInteropReady.future;
+      final notificationsService = NotificationsService();
+      await notificationsService.init(headless: true);
+      return notificationsService;
+    });
+    GetIt.I.registerSingletonAsync<MethodChannelService>(() async {
+      await globalInteropReady.future;
+      final channelService = MethodChannelService();
+      await channelService.init(headless: true, binaryMessenger: messenger);
+      return channelService;
+    });
+
     Logger.info("Initializing database...");
     await Database.init();
     Logger.info("Database initialized");
+    globalInteropReady.complete();
 
     // Since we are starting it headless, it can safely be started early on in the startup.
     Logger.info("Registering ContactServiceV2...");
@@ -259,12 +288,7 @@ class StartupTasks {
     await ChatsSvc.init(headless: true);
     Logger.info("ChatsService ready");
 
-    Logger.info("Registering MethodChannelService...");
-    GetIt.I.registerSingletonAsync<MethodChannelService>(() async {
-      final channelService = MethodChannelService();
-      await channelService.init(headless: true, binaryMessenger: messenger);
-      return channelService;
-    });
+    Logger.info("Waiting for MethodChannelService...");
     await GetIt.I.isReady<MethodChannelService>();
     Logger.info("MethodChannelService ready");
 
@@ -279,9 +303,11 @@ class StartupTasks {
   static Future<void> initSyncIsolateServices(RootIsolateToken? rootIsolateToken) async {
     debugPrint("Initializing sync isolate services...");
 
+    BinaryMessenger? messenger;
     if (rootIsolateToken != null) {
       debugPrint("Initializing Background Isolate Binary Messenger");
       BackgroundIsolateBinaryMessenger.ensureInitialized(rootIsolateToken);
+      messenger = BackgroundIsolateBinaryMessenger.instance;
     }
 
     debugPrint("Registering FilesystemService...");
@@ -321,9 +347,31 @@ class StartupTasks {
     await GetIt.I.isReady<BaseLogger>();
     Logger.info("BaseLogger ready - switching to Logger for remaining logs");
 
+    final syncInteropReady = Completer<void>();
+    Logger.info("Pre-registering LifecycleService, NotificationsService, and MethodChannelService...");
+    GetIt.I.registerSingletonAsync<LifecycleService>(() async {
+      await syncInteropReady.future;
+      final lifecycleService = LifecycleService();
+      await lifecycleService.init(headless: true);
+      return lifecycleService;
+    });
+    GetIt.I.registerSingletonAsync<NotificationsService>(() async {
+      await syncInteropReady.future;
+      final notificationsService = NotificationsService();
+      await notificationsService.init(headless: true);
+      return notificationsService;
+    });
+    GetIt.I.registerSingletonAsync<MethodChannelService>(() async {
+      await syncInteropReady.future;
+      final channelService = MethodChannelService();
+      await channelService.init(headless: true, binaryMessenger: messenger);
+      return channelService;
+    });
+
     Logger.info("Initializing database...");
     await Database.init();
     Logger.info("Database initialized");
+    syncInteropReady.complete();
 
     // Sync operations need ContactServiceV2
     Logger.info("Registering ContactServiceV2...");
@@ -400,9 +448,31 @@ class StartupTasks {
     await GetIt.I.isReady<BaseLogger>();
     Logger.info("BaseLogger ready - switching to Logger for remaining logs");
 
+    final backgroundInteropReady = Completer<void>();
+    Logger.info("Pre-registering LifecycleService, NotificationsService, and MethodChannelService...");
+    GetIt.I.registerSingletonAsync<LifecycleService>(() async {
+      await backgroundInteropReady.future;
+      final lifecycleService = LifecycleService();
+      await lifecycleService.init(headless: true);
+      return lifecycleService;
+    });
+    GetIt.I.registerSingletonAsync<NotificationsService>(() async {
+      await backgroundInteropReady.future;
+      final notificationsService = NotificationsService();
+      await notificationsService.init(headless: true);
+      return notificationsService;
+    });
+    GetIt.I.registerSingletonAsync<MethodChannelService>(() async {
+      await backgroundInteropReady.future;
+      final channelService = MethodChannelService();
+      await channelService.init(headless: true);
+      return channelService;
+    });
+
     Logger.info("Initializing database...");
     await Database.init();
     Logger.info("Database initialized");
+    backgroundInteropReady.complete();
 
     // Since we are starting it headless, it can safely be started early on in the startup.
     Logger.info("Registering ContactServiceV2...");
@@ -425,17 +495,17 @@ class StartupTasks {
     await ChatsSvc.init(headless: true);
     Logger.info("ChatsService ready");
 
-    Logger.info("Registering LifecycleService...");
-    GetIt.I.registerSingletonAsync<LifecycleService>(() async {
-      final lifecycleService = LifecycleService();
-      await lifecycleService.init(headless: true);
-      return lifecycleService;
-    });
+    Logger.info("Waiting for LifecycleService...");
     await GetIt.I.isReady<LifecycleService>();
+    Logger.info("LifecycleService ready");
 
     Logger.info("Registering HttpService...");
     GetIt.I.registerSingleton<HttpService>(HttpService());
     await HttpSvc.init();
+
+    Logger.info("Waiting for NotificationsService...");
+    await GetIt.I.isReady<NotificationsService>();
+    Logger.info("NotificationsService ready");
 
     Logger.info("Registering IncomingMessageHandler...");
     GetIt.I.registerSingleton<IncomingMessageHandler>(
@@ -443,23 +513,9 @@ class StartupTasks {
       dispose: (svc) => svc.dispose(),
     );
 
-    Logger.info("Registering MethodChannelService...");
-    GetIt.I.registerSingletonAsync<MethodChannelService>(() async {
-      final channelService = MethodChannelService();
-      await channelService.init(headless: true);
-      return channelService;
-    });
+    Logger.info("Waiting for MethodChannelService...");
     await GetIt.I.isReady<MethodChannelService>();
     Logger.info("MethodChannelService ready");
-
-    Logger.info("Registering NotificationsService...");
-    GetIt.I.registerSingletonAsync<NotificationsService>(() async {
-      final notificationsService = NotificationsService();
-      await notificationsService.init(headless: true);
-      return notificationsService;
-    });
-    await GetIt.I.isReady<NotificationsService>();
-    Logger.info("NotificationsService ready");
 
     Logger.info("Background isolate services initialization complete");
   }

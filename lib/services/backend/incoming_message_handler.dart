@@ -387,7 +387,15 @@ class IncomingMessageHandler {
     // Must be awaited: the notification pipeline posts a MethodChannel call back
     // to Android. Without await, the DartWorker engine can be destroyed before
     // that call fires, silently dropping the notification.
-    await NotificationsSvc.tryCreateNewMessageNotification(saved, c);
+    if (GetIt.I.isRegistered<NotificationsService>()) {
+      await GetIt.I.isReady<NotificationsService>();
+      await NotificationsSvc.tryCreateNewMessageNotification(saved, c);
+    } else {
+      Logger.warn(
+        'NotificationsService not registered yet; skipping notification for ${saved.guid}',
+        tag: _tag,
+      );
+    }
 
     // 10.5. Group photo changes — fetch/clear icon from server now that the
     //       message is safely in the DB.  This runs regardless of isolate mode

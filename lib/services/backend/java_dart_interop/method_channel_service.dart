@@ -8,6 +8,7 @@ import 'package:bluebubbles/utils/logger/logger.dart';
 import 'package:bluebubbles/services/services.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 import 'package:get_it/get_it.dart';
 
 // ignore: non_constant_identifier_names
@@ -17,17 +18,31 @@ class MethodChannelService implements MethodChannelServiceDelegate {
   late final MethodChannel channel;
   late final MethodChannelActions actions;
   late final MethodChannelHandlers _handlers;
+
+  @override
   bool headless = false;
   bool isBubble = false;
 
   // music theme
+  @override
   bool isRunning = false;
+  @override
   Uint8List? previousArt;
 
-  bool get shouldIgnoreMessage => !headless && !LifecycleSvc.isAlive && SettingsSvc.settings.keepAppAlive.value;
+  @override
+  bool get shouldIgnoreMessage {
+    if (headless) return false;
+    final hasLifecycle = GetIt.I.isRegistered<LifecycleService>();
+    final hasSettings = GetIt.I.isRegistered<SettingsService>();
+    if (!hasLifecycle || !hasSettings) return false;
+    return !LifecycleSvc.isAlive && SettingsSvc.settings.keepAppAlive.value;
+  }
 
   Future<void> init({bool headless = false, bool isBubble = false, BinaryMessenger? binaryMessenger}) async {
     if (kIsWeb || kIsDesktop) return;
+    if (binaryMessenger == null) {
+      WidgetsFlutterBinding.ensureInitialized();
+    }
     Logger.debug("Initializing MethodChannelService${headless ? " in headless mode" : ""}");
 
     this.headless = headless;
@@ -37,10 +52,11 @@ class MethodChannelService implements MethodChannelServiceDelegate {
     actions = MethodChannelActions(this);
     _handlers = MethodChannelHandlers(this);
 
-    // Only send the ready signal if we are in the BackgroundIsolate/UI (not the GlobalIsolate)
+    // Only set a method call handler on direct-engine connections. Isolates
+    // using BackgroundIsolateBinaryMessenger should not own a channel handler.
     if (binaryMessenger == null) {
       channel.setMethodCallHandler(_callHandler);
-      await actions.signalReady();
+      unawaited(actions.signalReady());
     }
 
     if (!kIsWeb && !kIsDesktop && !headless) {
@@ -59,7 +75,7 @@ class MethodChannelService implements MethodChannelServiceDelegate {
     // The GlobalIsolate passes a BackgroundIsolateBinaryMessenger whose reply ports are
     // invalidated by concurrent isolate work, causing a fatal SIGABRT. The DartWorker
     // and the main isolate both pass null (direct engine), so they are safe to call this.
-    if (binaryMessenger == null) unawaited(createAllNotificationChannels());
+    if (binaryMessenger == null && !headless) unawaited(createAllNotificationChannels());
 
     Logger.debug("MethodChannelService initialized");
   }
