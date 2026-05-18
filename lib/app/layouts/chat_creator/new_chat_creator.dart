@@ -164,7 +164,6 @@ class _ContentArea extends StatelessWidget {
       } else {
         final isIMsg = activeCVC.chat.isIMessage;
         final colorScheme = context.theme.colorScheme;
-        final monetTheming = SettingsSvc.settings.monetTheming.value;
         final bubbleColorsExt = context.theme.extensions[BubbleColors] as BubbleColors?;
 
         child = Theme(
@@ -174,8 +173,8 @@ class _ContentArea extends StatelessWidget {
             colorScheme: colorScheme.copyWith(
               primary: colorScheme.bubble(context, isIMsg),
               onPrimary: colorScheme.onBubble(context, isIMsg),
-              surface: monetTheming == Monet.full ? null : bubbleColorsExt?.receivedBubbleColor,
-              onSurface: monetTheming == Monet.full ? null : bubbleColorsExt?.onReceivedBubbleColor,
+              surface: ThemeSvc.isMaterialYouActive(context) ? null : bubbleColorsExt?.receivedBubbleColor,
+              onSurface: ThemeSvc.isMaterialYouActive(context) ? null : bubbleColorsExt?.onReceivedBubbleColor,
             ),
           ),
           child: ChatStateScope(
@@ -223,10 +222,10 @@ class _TextFieldArea extends StatelessWidget {
             colorScheme: context.theme.colorScheme.copyWith(
               primary: context.theme.colorScheme.bubble(context, isIMsg),
               onPrimary: context.theme.colorScheme.onBubble(context, isIMsg),
-              surface: SettingsSvc.settings.monetTheming.value == Monet.full
+              surface: ThemeSvc.isMaterialYouActive(context)
                   ? null
                   : (context.theme.extensions[BubbleColors] as BubbleColors?)?.receivedBubbleColor,
-              onSurface: SettingsSvc.settings.monetTheming.value == Monet.full
+              onSurface: ThemeSvc.isMaterialYouActive(context)
                   ? null
                   : (context.theme.extensions[BubbleColors] as BubbleColors?)?.onReceivedBubbleColor,
             ),

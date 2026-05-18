@@ -21,9 +21,12 @@ class MentionEntity extends Entity {
 List<InlineSpan> buildMessageSpans(BuildContext context, MessagePart part, Message message,
     {Color? colorOverride, bool hideBodyText = false}) {
   final textSpans = <InlineSpan>[];
+  final bubbleColors = context.theme.extensions[BubbleColors] as BubbleColors?;
   final textStyle = (context.theme.extensions[BubbleText] as BubbleText).bubbleText.apply(
         color: colorOverride ??
-            (message.isFromMe! ? context.theme.colorScheme.onPrimary : context.theme.colorScheme.onSurfaceVariant),
+            (message.isFromMe!
+                ? context.theme.colorScheme.onBubble(context, true)
+                : bubbleColors?.onReceivedBubbleColor ?? context.theme.colorScheme.onSurfaceVariant),
         fontSizeFactor: message.isBigEmoji ? 3 : 1,
       );
 
@@ -82,9 +85,12 @@ List<InlineSpan> buildMessageSpans(BuildContext context, MessagePart part, Messa
 Future<List<InlineSpan>> buildEnrichedMessageSpans(BuildContext context, MessagePart part, Message message,
     {Color? colorOverride, bool hideBodyText = false}) async {
   final textSpans = <InlineSpan>[];
+  final bubbleColors = context.theme.extensions[BubbleColors] as BubbleColors?;
   final textStyle = (context.theme.extensions[BubbleText] as BubbleText).bubbleText.apply(
         color: colorOverride ??
-            (message.isFromMe! ? context.theme.colorScheme.onPrimary : context.theme.colorScheme.onSurfaceVariant),
+            (message.isFromMe!
+                ? context.theme.colorScheme.onBubble(context, true)
+                : bubbleColors?.onReceivedBubbleColor ?? context.theme.colorScheme.onSurfaceVariant),
         fontSizeFactor: message.isBigEmoji ? 3 : 1,
       );
 

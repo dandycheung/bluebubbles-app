@@ -64,7 +64,6 @@ class Settings {
   final RxBool notifyOnChatList = false.obs;
   final RxBool notifyReactions = true.obs;
   final RxBool colorsFromMedia = false.obs;
-  final Rx<Monet> monetTheming = Monet.none.obs;
   final RxString globalTextDetection = "".obs;
   final RxBool filterUnknownSenders = false.obs;
   final RxBool tabletMode = true.obs;
@@ -407,7 +406,6 @@ class Settings {
         'finishedSetup': finishedSetup.value,
         'reachedConversationList': reachedConversationList.value,
         'colorsFromMedia': colorsFromMedia.value,
-        'monetTheming': monetTheming.value.index,
         'userAvatarPath': userAvatarPath.value,
         'firstFcmRegisterDate': firstFcmRegisterDate.value,
         'sendSoundPath': sendSoundPath.value,
@@ -497,8 +495,6 @@ class Settings {
         map['notifyOnChatList'] ?? SettingsSvc.settings.notifyOnChatList.value;
     SettingsSvc.settings.notifyReactions.value = map['notifyReactions'] ?? SettingsSvc.settings.notifyReactions.value;
     SettingsSvc.settings.colorsFromMedia.value = map['colorsFromMedia'] ?? SettingsSvc.settings.colorsFromMedia.value;
-    SettingsSvc.settings.monetTheming.value =
-        map['monetTheming'] != null ? Monet.values[map['monetTheming']] : SettingsSvc.settings.monetTheming.value;
     SettingsSvc.settings.globalTextDetection.value =
         map['globalTextDetection'] ?? SettingsSvc.settings.globalTextDetection.value;
     SettingsSvc.settings.filterUnknownSenders.value =
@@ -710,7 +706,6 @@ class Settings {
     s.notifyOnChatList.value = map['notifyOnChatList'] ?? false;
     s.notifyReactions.value = map['notifyReactions'] ?? true;
     s.colorsFromMedia.value = map['colorsFromMedia'] ?? false;
-    s.monetTheming.value = map['monetTheming'] != null ? Monet.values[map['monetTheming']] : Monet.none;
     s.globalTextDetection.value = map['globalTextDetection'] ?? "";
     s.filterUnknownSenders.value = map['filterUnknownSenders'] ?? false;
     s.tabletMode.value = kIsDesktop || (map['tabletMode'] ?? true);

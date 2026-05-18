@@ -113,7 +113,7 @@ Widget buildProgressIndicator(BuildContext context, {double size = 20, double st
   return SettingsSvc.settings.skin.value == Skins.iOS
       ? CupertinoActivityIndicator(
           radius: size / 2,
-          color: SettingsSvc.settings.monetTheming.value != Monet.none
+          color: ThemeSvc.isAnyMaterialYouSelected
               ? context.theme.colorScheme.primary
               : context.theme.colorScheme.onSurfaceVariant,
         )
@@ -125,7 +125,7 @@ Widget buildProgressIndicator(BuildContext context, {double size = 20, double st
             height: size,
             child: CircularProgressIndicator(
               strokeWidth: strokeWidth,
-              valueColor: AlwaysStoppedAnimation<Color>(SettingsSvc.settings.monetTheming.value != Monet.none
+              valueColor: AlwaysStoppedAnimation<Color>(ThemeSvc.isAnyMaterialYouSelected
                   ? context.theme.colorScheme.primary
                   : context.theme.colorScheme.onSurfaceVariant),
             ),

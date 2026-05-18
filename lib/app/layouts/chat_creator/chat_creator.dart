@@ -401,10 +401,10 @@ class ChatCreatorState extends State<ChatCreator> with ThemeHelpers {
                       colorScheme: context.theme.colorScheme.copyWith(
                         primary: context.theme.colorScheme.bubble(context, selectedService.value.isIMessageService),
                         onPrimary: context.theme.colorScheme.onBubble(context, selectedService.value.isIMessageService),
-                        surface: SettingsSvc.settings.monetTheming.value == Monet.full
+                        surface: ThemeSvc.isMaterialYouActive(context)
                             ? null
                             : (context.theme.extensions[BubbleColors] as BubbleColors?)?.receivedBubbleColor,
-                        onSurface: SettingsSvc.settings.monetTheming.value == Monet.full
+                        onSurface: ThemeSvc.isMaterialYouActive(context)
                             ? null
                             : (context.theme.extensions[BubbleColors] as BubbleColors?)?.onReceivedBubbleColor,
                       ),
@@ -451,10 +451,10 @@ class ChatCreatorState extends State<ChatCreator> with ThemeHelpers {
                       colorScheme: context.theme.colorScheme.copyWith(
                         primary: context.theme.colorScheme.bubble(context, selectedService.value.isIMessageService),
                         onPrimary: context.theme.colorScheme.onBubble(context, selectedService.value.isIMessageService),
-                        surface: SettingsSvc.settings.monetTheming.value == Monet.full
+                        surface: ThemeSvc.isMaterialYouActive(context)
                             ? null
                             : (context.theme.extensions[BubbleColors] as BubbleColors?)?.receivedBubbleColor,
-                        onSurface: SettingsSvc.settings.monetTheming.value == Monet.full
+                        onSurface: ThemeSvc.isMaterialYouActive(context)
                             ? null
                             : (context.theme.extensions[BubbleColors] as BubbleColors?)?.onReceivedBubbleColor,
                       ),

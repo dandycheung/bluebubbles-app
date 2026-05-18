@@ -73,10 +73,10 @@ class _MessagePopupHolderState extends State<MessagePopupHolder> with ThemeHelpe
                 colorScheme: ctx.theme.colorScheme.copyWith(
                   primary: ctx.theme.colorScheme.bubble(ctx, true),
                   onPrimary: ctx.theme.colorScheme.onBubble(ctx, true),
-                  surface: SettingsSvc.settings.monetTheming.value == Monet.full
+                  surface: ThemeSvc.isMaterialYouActive(context)
                       ? null
                       : (ctx.theme.extensions[BubbleColors] as BubbleColors?)?.receivedBubbleColor,
-                  onSurface: SettingsSvc.settings.monetTheming.value == Monet.full
+                  onSurface: ThemeSvc.isMaterialYouActive(context)
                       ? null
                       : (ctx.theme.extensions[BubbleColors] as BubbleColors?)?.onReceivedBubbleColor,
                 ),

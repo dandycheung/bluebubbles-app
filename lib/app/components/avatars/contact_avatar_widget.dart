@@ -140,7 +140,7 @@ class _ContactAvatarWidgetState extends State<ContactAvatarWidget> with ThemeHel
       final iOS = SettingsSvc.settings.skin.value == Skins.iOS;
       final colorfulAvatars = !iOS ||
           SettingsSvc.settings.colorfulAvatars.value ||
-          (SettingsSvc.settings.skin.value == Skins.Material && SettingsSvc.settings.monetTheming.value != Monet.none);
+          (SettingsSvc.settings.skin.value == Skins.Material && ThemeSvc.isAnyMaterialYouSelected);
       final userAvatarPath = SettingsSvc.settings.userAvatarPath.value;
 
       return MouseRegion(

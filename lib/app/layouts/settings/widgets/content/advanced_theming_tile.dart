@@ -59,7 +59,7 @@ class _AdvancedThemingTileState extends State<AdvancedThemingTile> {
                         }
                       }
                     } else {
-                      if (SettingsSvc.settings.monetTheming.value != Monet.none) {
+                      if (ThemeSvc.isAnyMaterialYouSelected) {
                         showSnackbar('Notice', "Turn off Material You to start customizing!");
                       } else {
                         showSnackbar('Notice', "Create a new theme to start customizing!");
@@ -83,7 +83,7 @@ class _AdvancedThemingTileState extends State<AdvancedThemingTile> {
                               }
                             }
                           } else {
-                            if (SettingsSvc.settings.monetTheming.value != Monet.none) {
+                            if (ThemeSvc.isAnyMaterialYouSelected) {
                               showSnackbar('Notice', "Turn off Material You to start customizing!");
                             } else {
                               showSnackbar('Notice', "Create a new theme to start customizing!");

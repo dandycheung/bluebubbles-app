@@ -75,7 +75,7 @@ class ThemeStruct {
     query.limit = 1;
     final result = query.findFirst();
     if (result == null) {
-      return ThemesService.defaultThemes[1];
+      return ThemesService.defaultThemes.firstWhere((t) => t.name == "Bright White");
     }
     return result;
   }
@@ -86,7 +86,7 @@ class ThemeStruct {
     query.limit = 1;
     final result = query.findFirst();
     if (result == null) {
-      return ThemesService.defaultThemes[0];
+      return ThemesService.defaultThemes.firstWhere((t) => t.name == "OLED Dark");
     }
     return result;
   }

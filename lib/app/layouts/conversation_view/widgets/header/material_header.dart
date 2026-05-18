@@ -21,12 +21,12 @@ class MaterialHeader extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Rx<Color> _backgroundColor = (SettingsSvc.settings.monetTheming.value != Monet.none
+    final Rx<Color> _backgroundColor = (ThemeSvc.isAnyMaterialYouSelected
             ? context.theme.colorScheme.surfaceContainerHighest
             : context.theme.colorScheme.surface)
         .withValues(alpha: (kIsDesktop && SettingsSvc.settings.windowEffect.value != WindowEffect.disabled) ? 0.4 : 1)
         .obs;
-    final Color _foregroundColor = SettingsSvc.settings.monetTheming.value != Monet.none
+    final Color _foregroundColor = ThemeSvc.isAnyMaterialYouSelected
         ? context.theme.colorScheme.onSurfaceVariant
         : context.theme.colorScheme.onSurface;
 

@@ -433,15 +433,6 @@ class StartupTasks {
     });
     await GetIt.I.isReady<LifecycleService>();
 
-    Logger.info("Registering NotificationsService...");
-    GetIt.I.registerSingletonAsync<NotificationsService>(() async {
-      final notificationsService = NotificationsService();
-      await notificationsService.init(headless: true);
-      return notificationsService;
-    });
-    await GetIt.I.isReady<NotificationsService>();
-    Logger.info("NotificationsService ready");
-
     Logger.info("Registering HttpService...");
     GetIt.I.registerSingleton<HttpService>(HttpService());
     await HttpSvc.init();
@@ -460,6 +451,15 @@ class StartupTasks {
     });
     await GetIt.I.isReady<MethodChannelService>();
     Logger.info("MethodChannelService ready");
+
+    Logger.info("Registering NotificationsService...");
+    GetIt.I.registerSingletonAsync<NotificationsService>(() async {
+      final notificationsService = NotificationsService();
+      await notificationsService.init(headless: true);
+      return notificationsService;
+    });
+    await GetIt.I.isReady<NotificationsService>();
+    Logger.info("NotificationsService ready");
 
     Logger.info("Background isolate services initialization complete");
   }

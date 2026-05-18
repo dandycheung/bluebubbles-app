@@ -171,10 +171,10 @@ class _MessagePopupState extends State<MessagePopup> with SingleTickerProviderSt
         colorScheme: context.theme.colorScheme.copyWith(
           primary: context.theme.colorScheme.bubble(context, chat.isIMessage),
           onPrimary: context.theme.colorScheme.onBubble(context, chat.isIMessage),
-          surface: SettingsSvc.settings.monetTheming.value == Monet.full
+          surface: ThemeSvc.isMaterialYouActive(context)
               ? null
               : (context.theme.extensions[BubbleColors] as BubbleColors?)?.receivedBubbleColor,
-          onSurface: SettingsSvc.settings.monetTheming.value == Monet.full
+          onSurface: ThemeSvc.isMaterialYouActive(context)
               ? null
               : (context.theme.extensions[BubbleColors] as BubbleColors?)?.onReceivedBubbleColor,
         ),

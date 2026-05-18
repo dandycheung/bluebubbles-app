@@ -14,11 +14,11 @@ import 'package:io/io.dart';
 import 'package:path/path.dart';
 
 class Database {
-  static int version = 8;
+  static int version = 9;
 
   /// Bump this whenever preset theme definitions change (colors, font sizes,
   /// etc.) to force existing installs to re-seed preset themes on next launch.
-  static int themesVersion = 3;
+  static int themesVersion = 6;
 
   static late final Store store;
   static late final Box<Attachment> attachments;
@@ -252,6 +252,19 @@ class Database {
         case 8:
           Logger.info("Executing chat latest message backfill...", tag: "DB-Migration");
           ChatLatestMessageMigration.migrate();
+          break;
+
+        // Version 9: move legacy Monet overlay users to the new Material You
+        // presets so selected theme becomes the single source of truth.
+        case 9:
+          final monetModeRaw = PrefsSvc.admin.get('monetTheming') as int?;
+          if (monetModeRaw == 1 || monetModeRaw == 2) {
+            await PrefsSvc.theme.setSelectedThemes(
+              lightTheme: ThemesService.materialYouLightName,
+              darkTheme: ThemesService.materialYouDarkName,
+            );
+          }
+          await PrefsSvc.admin.remove('monetTheming');
           break;
       }
 

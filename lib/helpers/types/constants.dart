@@ -140,12 +140,6 @@ enum SecurityLevel {
   locked_and_secured,
 }
 
-enum Monet {
-  none,
-  harmonize,
-  full,
-}
-
 enum MessageStatusIndicator { READ, DELIVERED, SENT, NONE }
 
 enum LoadMessageResult { RETRIEVED_MESSAGES, FAILED_TO_RETRIEVE, RETRIEVED_LAST_PAGE }
