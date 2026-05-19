@@ -9,7 +9,6 @@ import 'package:bluebubbles/services/services.dart';
 import 'package:bluebubbles/utils/logger/logger.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_contacts/flutter_contacts.dart' as fc;
-import 'package:get/get.dart';
 import 'package:get_it/get_it.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:universal_io/io.dart';
@@ -22,11 +21,6 @@ ContactServiceV2 get ContactsSvcV2 => GetIt.I<ContactServiceV2>();
 /// Follows the architecture outlined in FR-1.md Section III
 class ContactServiceV2 {
   final tag = "ContactServiceV2";
-
-  /// Reactive map to track handle updates by Handle ID
-  /// When a handle's contact information changes, we update this map
-  /// with a timestamp. UI components can observe specific handle IDs.
-  final RxMap<int, int> handleUpdateStatus = RxMap<int, int>();
 
   /// Whether we have permission to access contacts
   bool _hasContactAccess = false;
@@ -48,7 +42,7 @@ class ContactServiceV2 {
   /// Check if we can access contacts
   Future<bool> _canAccessContacts() async {
     if (kIsWeb || kIsDesktop) {
-      return (await SettingsSvc.getServerDetails()).supportsContactsApi;
+      return SettingsSvc.getServerDetails().supportsContactsApi;
     } else {
       return (await Permission.contacts.status).isGranted;
     }
@@ -164,15 +158,9 @@ class ContactServiceV2 {
   }
 
   /// Notify the UI that certain handles have been updated.
-  /// Stamps the handleUpdateStatus map (backward-compat) and pushes fresh
-  /// DB data into the HandleState registry so reactive Obx() widgets rebuild.
+  /// Pushes fresh DB data into the HandleState registry so reactive Obx() widgets rebuild.
   void notifyHandlesUpdated(List<int> handleIds) {
     if (handleIds.isEmpty) return;
-
-    final timestamp = DateTime.now().millisecondsSinceEpoch;
-    for (final id in handleIds) {
-      handleUpdateStatus[id] = timestamp;
-    }
 
     // Push refreshed Handle data into the HandleState registry
     if (!kIsWeb) {
@@ -211,33 +199,12 @@ class ContactServiceV2 {
         // Update each chat in the ChatsService to trigger UI updates
         for (final chat in chatsWithHandle) {
           ChatsService chats = GetIt.I<ChatsService>();
-          chats.updateChat(chat);
+          chats.updateChat(chat, override: true);
         }
       }
     } catch (e, stack) {
       Logger.error('[ContactServiceV2] Error updating chats for handles', error: e, trace: stack);
     }
-  }
-
-  /// Clear the update status for a specific handle
-  void clearHandleUpdateStatus(int handleId) {
-    handleUpdateStatus.remove(handleId);
-  }
-
-  /// Clear all update statuses
-  void clearAllUpdateStatuses() {
-    handleUpdateStatus.clear();
-  }
-
-  /// Get the timestamp of the last update for a specific handle
-  /// Returns null if the handle has never been updated
-  int? getLastUpdateTimestamp(int handleId) {
-    return handleUpdateStatus[handleId];
-  }
-
-  /// Check if a handle has been updated (exists in the update status map)
-  bool isHandleUpdated(int handleId) {
-    return handleUpdateStatus.containsKey(handleId);
   }
 
   /// Get a contact by address (email or phone number)

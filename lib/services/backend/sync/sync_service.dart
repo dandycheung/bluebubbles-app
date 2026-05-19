@@ -115,6 +115,28 @@ class SyncService {
       errors += 1;
     }
 
+    final contactSyncResult = await performContactSyncToHandles();
+    if (!contactSyncResult) {
+      errors += 1;
+    }
+
+    final contactUploadResult = await performContactSyncToServer();
+    if (!contactUploadResult) {
+      errors += 1;
+    }
+
+    if (SettingsSvc.settings.showIncrementalSync.value) {
+      if (errors > 0) {
+        showSnackbar('Error', '⚠️ Incremental sync completed with $errors errors ⚠️');
+      } else {
+        showSnackbar('Success', '🔄 Incremental sync complete 🔄');
+      }
+    }
+
+    isIncrementalSyncing.value = false;
+  }
+
+  Future<bool> performContactSyncToHandles() async {
     try {
       Logger.info('Starting contact refresh', tag: 'Incremental Contact Sync');
       final contactStopwatch = Stopwatch()..start();
@@ -127,11 +149,15 @@ class SyncService {
       if (refreshedHandleIds.isNotEmpty) {
         ContactsSvcV2.notifyHandlesUpdated(refreshedHandleIds);
       }
+
+      return true;
     } catch (ex, stack) {
       Logger.error('Contacts refresh failed!', error: ex, trace: stack, tag: 'Incremental Contact Sync');
-      errors += 1;
+      return false;
     }
+  }
 
+  Future<bool> performContactSyncToServer() async {
     try {
       // Auto upload contacts if requested
       if (Platform.isAndroid && SettingsSvc.settings.syncContactsAutomatically.value) {
@@ -149,19 +175,11 @@ class SyncService {
         Logger.debug("Contact upload complete in ${contactUploadStopwatch.elapsedMilliseconds}ms",
             tag: "Contact Upload");
       }
+
+      return true;
     } catch (e, stack) {
       Logger.error("Failed to upload contacts!", error: e, trace: stack, tag: "Contact Upload");
-      errors += 1;
+      return false;
     }
-
-    if (SettingsSvc.settings.showIncrementalSync.value) {
-      if (errors > 0) {
-        showSnackbar('Error', '⚠️ Incremental sync completed with $errors errors ⚠️');
-      } else {
-        showSnackbar('Success', '🔄 Incremental sync complete 🔄');
-      }
-    }
-
-    isIncrementalSyncing.value = false;
   }
 }

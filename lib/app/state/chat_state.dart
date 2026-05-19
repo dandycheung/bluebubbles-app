@@ -179,7 +179,6 @@ class ChatState {
   void updateDisplayNameInternal(String? value) {
     if (displayName.value != value) {
       displayName.value = value;
-      updateTitleInternal(_computeTitle());
     }
   }
 
@@ -215,7 +214,6 @@ class ChatState {
   void updateChatCreatorSubtitleInternal(String? value) {
     if (chatCreatorSubtitle.value != value) {
       chatCreatorSubtitle.value = value;
-      updateTitleInternal(_computeTitle());
     }
   }
 
@@ -339,8 +337,9 @@ class ChatState {
     // we never read the stale cached ToMany on the original ChatState.chat.
     _updateParticipantsInternal(updatedChat.handles.toList());
     updateLatestMessageInternal(updatedChat.dbLatestMessage.target);
-    // Refresh the subtitle so it reflects any updated handle display names
+    // Refresh the title & subtitle so it reflects any updated handle display names
     // (e.g. a group-event whose sender handle was just added to the DB).
+    updateTitleInternal(_computeTitle());
     updateSubtitleInternal(_computeSubtitle(updatedChat.dbLatestMessage.target));
 
     // NOTE: textFieldText and textFieldAttachments are intentionally NOT synced here.
