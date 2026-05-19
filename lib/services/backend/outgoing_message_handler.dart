@@ -126,7 +126,12 @@ class OutgoingMessageHandler {
   /// Completes the registered completer early and drives the progress
   /// animation to its final state so the UI doesn't wait for the HTTP
   /// response.
-  void completeSendProgressIfExists(String tempGuid, Origin origin) {
+  void completeSendProgressIfExists(
+    String tempGuid,
+    Origin origin, {
+    Object? error,
+    StackTrace? stack,
+  }) {
     final tracker = _sendProgressTrackers.remove(tempGuid);
     if (tracker == null) return;
 
@@ -145,7 +150,11 @@ class OutgoingMessageHandler {
       });
     }
     if (!completer.isCompleted) {
-      completer.complete();
+      if (error != null) {
+        completer.completeError(error, stack);
+      } else {
+        completer.complete();
+      }
     }
   }
 
@@ -315,7 +324,12 @@ class OutgoingMessageHandler {
       }
       if (!race.isCompleted) race.complete();
     }, onError: (Object error, StackTrace stack) async {
-      completeSendProgressIfExists(tempGuid, Origin.outgoingMessageHandler);
+      completeSendProgressIfExists(
+        tempGuid,
+        Origin.outgoingMessageHandler,
+        error: error,
+        stack: stack,
+      );
       try {
         await onError(error, stack);
       } catch (ex, st) {
