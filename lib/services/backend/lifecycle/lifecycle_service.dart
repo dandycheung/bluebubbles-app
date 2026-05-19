@@ -22,6 +22,7 @@ LifecycleService get LifecycleSvc => GetIt.I<LifecycleService>();
 class LifecycleService with WidgetsBindingObserver {
   bool isBubble = false;
   bool headless = false;
+  bool hasResumedOnce = false;
   bool windowFocused = true;
   bool? wasActiveAliveBefore;
 
@@ -59,6 +60,7 @@ class LifecycleService with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) async {
+    if (headless) return;
     Logger.debug("App State changed to $state");
 
     // If the current state is resume, and we've already had a resume, clear states from before the last resume
@@ -72,6 +74,15 @@ class LifecycleService with WidgetsBindingObserver {
     statesSinceLastResume.add(state);
 
     if (state == AppLifecycleState.resumed) {
+      // Startup guard: the first resumed callback is part of app bootstrapping.
+      // Skip open()/onAppResume work on this pass to avoid startup re-entrancy
+      // against services that may still be transitioning to ready in GetIt.
+      if (!hasResumedOnce) {
+        hasResumedOnce = true;
+        handleForegroundService(state);
+        return;
+      }
+
       // Restore active-chat liveness immediately to avoid a race where
       // incoming messages are processed while lifecycle is already resumed
       // but chat state is still marked dead from the previous close().

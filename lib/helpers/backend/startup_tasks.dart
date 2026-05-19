@@ -581,9 +581,14 @@ class StartupTasks {
   }
 
   static Future<void> onAppResume() async {
+    final LifecycleService? lifecycle =
+        (GetIt.I.isRegistered<LifecycleService>() && GetIt.I.isReadySync<LifecycleService>())
+            ? GetIt.I<LifecycleService>()
+            : null;
+
     if (GetIt.I.isRegistered<ChatsService>()) {
       // Observer is permanently registered in init() and should never be removed
-      if (!kIsDesktop || LifecycleSvc.wasActiveAliveBefore != false) {
+      if (!kIsDesktop || lifecycle?.wasActiveAliveBefore != false) {
         ChatsSvc.setActiveToAlive();
       }
 
@@ -621,15 +626,16 @@ class StartupTasks {
     if (GetIt.I.isRegistered<SyncService>()) {
       if (!Platform.isAndroid) {
         unawaited(SyncSvc.startIncrementalSync(useGlobalIsolate: true));
-      } else if (!LifecycleSvc.hasResumed ||
-          (LifecycleSvc.currentState == AppLifecycleState.resumed && LifecycleSvc.wasPaused)) {
+      } else if (lifecycle == null ||
+          !lifecycle.hasResumed ||
+          (lifecycle.currentState == AppLifecycleState.resumed && lifecycle.wasPaused)) {
         unawaited(SyncSvc.startIncrementalSync(useGlobalIsolate: true));
       }
     }
 
     if (Platform.isAndroid) {
-      if (!LifecycleSvc.isBubble) {
-        LifecycleSvc.createFakePort();
+      if (!(lifecycle?.isBubble ?? false)) {
+        lifecycle?.createFakePort();
       }
 
       // On Android, always restart the socket rather than just reconnecting.
@@ -641,8 +647,8 @@ class StartupTasks {
       SocketSvc.restartSocket();
     }
 
-    if (kIsDesktop) {
-      LifecycleSvc.windowFocused = true;
+    if (kIsDesktop && lifecycle != null) {
+      lifecycle.windowFocused = true;
     }
   }
 
