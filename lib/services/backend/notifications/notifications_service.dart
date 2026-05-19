@@ -125,6 +125,10 @@ class NotificationsService {
   }
 
   Future<void> createNotification(Chat chat, Message message) async {
+    if (GetIt.I.isRegistered<LifecycleService>()) {
+      await GetIt.I.isReady<LifecycleService>();
+    }
+
     if (chat.shouldMuteNotification(message) || message.isFromMe!) return;
     final isGroup = chat.isGroup;
     final guid = chat.guid;
@@ -150,10 +154,6 @@ class NotificationsService {
           Logger.warn('MethodChannelService not registered; skipping incoming message notification');
           return;
         }
-        if (!GetIt.I.isReadySync<MethodChannelService>()) {
-          Logger.warn('MethodChannelService not ready; skipping incoming message notification');
-          return;
-        }
 
         final personIcon = (await rootBundle.load("assets/images/person64.png")).buffer.asUint8List();
         Uint8List chatIcon = await avatarAsBytes(chat: chat, quality: 256);
@@ -175,6 +175,7 @@ class NotificationsService {
             message.associatedMessageGuid == null;
         final String reactionType = SettingsSvc.settings.notificationReactionActionType.value;
 
+        await GetIt.I.isReady<MethodChannelService>();
         await MethodChannelSvc.actions.createIncomingMessageNotification(
           channelId: NEW_MESSAGE_CHANNEL,
           chatId: chat.id,

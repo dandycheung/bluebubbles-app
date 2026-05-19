@@ -13,6 +13,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:gesture_x_detector/gesture_x_detector.dart';
 import 'package:get/get.dart';
+import 'package:get_it/get_it.dart';
 import 'package:image/image.dart' as img;
 import 'package:universal_io/io.dart';
 
@@ -508,7 +509,8 @@ Future<void> paintGroupAvatar({
 }) async {
   late final ThemeData theme;
   final bool systemDark = PlatformDispatcher.instance.platformBrightness == Brightness.dark;
-  if (!LifecycleSvc.isAlive) {
+  final isAlive = GetIt.I.isRegistered<LifecycleService>() ? GetIt.I<LifecycleService>().isAlive : false;
+  if (!isAlive) {
     if (systemDark) {
       theme = ThemeStruct.getDarkTheme().data;
     } else {
