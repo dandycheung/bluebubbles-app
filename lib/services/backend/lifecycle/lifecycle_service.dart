@@ -22,7 +22,6 @@ LifecycleService get LifecycleSvc => GetIt.I<LifecycleService>();
 class LifecycleService with WidgetsBindingObserver {
   bool isBubble = false;
   bool headless = false;
-  bool hasResumedOnce = false;
   bool windowFocused = true;
   bool? wasActiveAliveBefore;
 
@@ -54,7 +53,7 @@ class LifecycleService with WidgetsBindingObserver {
     this.headless = headless;
     this.isBubble = isBubble;
 
-    handleForegroundService(AppLifecycleState.resumed);
+    unawaited(handleForegroundService(AppLifecycleState.resumed));
     Logger.debug("LifecycleService initialized");
   }
 
@@ -74,15 +73,6 @@ class LifecycleService with WidgetsBindingObserver {
     statesSinceLastResume.add(state);
 
     if (state == AppLifecycleState.resumed) {
-      // Startup guard: the first resumed callback is part of app bootstrapping.
-      // Skip open()/onAppResume work on this pass to avoid startup re-entrancy
-      // against services that may still be transitioning to ready in GetIt.
-      if (!hasResumedOnce) {
-        hasResumedOnce = true;
-        handleForegroundService(state);
-        return;
-      }
-
       // Restore active-chat liveness immediately to avoid a race where
       // incoming messages are processed while lifecycle is already resumed
       // but chat state is still marked dead from the previous close().
@@ -112,10 +102,10 @@ class LifecycleService with WidgetsBindingObserver {
       }
     }
 
-    handleForegroundService(state);
+    unawaited(handleForegroundService(state));
   }
 
-  void handleForegroundService(AppLifecycleState state) {
+  Future<void> handleForegroundService(AppLifecycleState state) async {
     // If an isolate is invoking this, we don't want to start/stop the foreground service.
     // It should already be running. We don't need to stop it because the socket service
     // is not started when in headless mode.
@@ -131,11 +121,13 @@ class LifecycleService with WidgetsBindingObserver {
       if (state == AppLifecycleState.resumed) {
         Logger.info(tag: "LifecycleService", "Stopping foreground service");
         if (GetIt.I.isRegistered<MethodChannelService>()) {
+          await GetIt.I.isReady<MethodChannelService>();
           unawaited(GetIt.I<MethodChannelService>().actions.stopForegroundService());
         }
       } else if ([AppLifecycleState.paused, AppLifecycleState.detached].contains(state)) {
         Logger.info(tag: "LifecycleService", "Starting foreground service");
         if (GetIt.I.isRegistered<MethodChannelService>()) {
+          await GetIt.I.isReady<MethodChannelService>();
           unawaited(GetIt.I<MethodChannelService>().actions.startForegroundService());
         }
       }
