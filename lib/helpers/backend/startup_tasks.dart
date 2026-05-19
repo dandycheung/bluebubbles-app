@@ -34,13 +34,41 @@ class StartupTasks {
     await uiReady.future;
   }
 
-  static Future<void> initStartupServices({bool isBubble = false}) async {
-    debugPrint("Initializing startup services...");
+  static Completer<void> _preRegisterInteropServices({
+    required bool headless,
+    required bool isBubble,
+    BinaryMessenger? binaryMessenger,
+  }) {
+    final interopReady = Completer<void>();
+    Logger.info("Pre-registering LifecycleService, NotificationsService, and MethodChannelService...");
 
+    GetIt.I.registerSingletonAsync<LifecycleService>(() async {
+      await interopReady.future;
+      final lifecycleService = LifecycleService();
+      await lifecycleService.init(headless: headless, isBubble: isBubble);
+      return lifecycleService;
+    });
+    GetIt.I.registerSingletonAsync<NotificationsService>(() async {
+      await interopReady.future;
+      final notificationsService = NotificationsService();
+      await notificationsService.init(headless: headless);
+      return notificationsService;
+    });
+    GetIt.I.registerSingletonAsync<MethodChannelService>(() async {
+      await interopReady.future;
+      final channelService = MethodChannelService();
+      await channelService.init(headless: headless, isBubble: isBubble, binaryMessenger: binaryMessenger);
+      return channelService;
+    });
+
+    return interopReady;
+  }
+
+  static Future<void> _initCoreServices({required bool headless}) async {
     debugPrint("Registering FilesystemService...");
     GetIt.I.registerSingletonAsync<FilesystemService>(() async {
       final fsService = FilesystemService();
-      await fsService.init(headless: true);
+      await fsService.init(headless: headless);
       return fsService;
     });
     await GetIt.I.isReady<FilesystemService>();
@@ -58,7 +86,7 @@ class StartupTasks {
     debugPrint("Registering SettingsService...");
     GetIt.I.registerSingletonAsync<SettingsService>(() async {
       final settingsService = SettingsService();
-      await settingsService.init();
+      await settingsService.init(headless: headless);
       return settingsService;
     });
     await GetIt.I.isReady<SettingsService>();
@@ -72,27 +100,63 @@ class StartupTasks {
     });
     await GetIt.I.isReady<BaseLogger>();
     Logger.info("BaseLogger ready - switching to Logger for remaining logs");
+  }
 
-    final startupInteropReady = Completer<void>();
-    Logger.info("Pre-registering LifecycleService, NotificationsService, and MethodChannelService...");
-    GetIt.I.registerSingletonAsync<LifecycleService>(() async {
-      await startupInteropReady.future;
-      final lifecycleService = LifecycleService();
-      await lifecycleService.init(isBubble: isBubble);
-      return lifecycleService;
+  static Future<void> _initContactHandleChats({required bool headless}) async {
+    Logger.info("Registering ContactServiceV2...");
+    GetIt.I.registerSingletonAsync<ContactServiceV2>(() async {
+      final contactServiceV2 = ContactServiceV2();
+      await contactServiceV2.init(headless: headless);
+      return contactServiceV2;
     });
-    GetIt.I.registerSingletonAsync<NotificationsService>(() async {
-      await startupInteropReady.future;
-      final notificationsService = NotificationsService();
-      await notificationsService.init();
-      return notificationsService;
-    });
-    GetIt.I.registerSingletonAsync<MethodChannelService>(() async {
-      await startupInteropReady.future;
-      final channelService = MethodChannelService();
-      await channelService.init(isBubble: isBubble);
-      return channelService;
-    });
+    await GetIt.I.isReady<ContactServiceV2>();
+    Logger.info("ContactServiceV2 ready");
+
+    Logger.info("Registering HandleService...");
+    GetIt.I.registerSingleton<HandleService>(HandleService());
+    HandleSvc.init();
+
+    Logger.info("Registering ChatsService...");
+    GetIt.I.registerSingleton<ChatsService>(ChatsService());
+    await ChatsSvc.init(headless: headless);
+    Logger.info("ChatsService ready");
+  }
+
+  static Future<void> _initHttpService() async {
+    Logger.info("Registering HttpService...");
+    GetIt.I.registerSingleton<HttpService>(HttpService());
+    await HttpSvc.init();
+  }
+
+  static Future<void> _waitForInterop({
+    bool lifecycle = false,
+    bool notifications = false,
+    bool methodChannel = false,
+  }) async {
+    if (lifecycle) {
+      Logger.info("Waiting for LifecycleService...");
+      await GetIt.I.isReady<LifecycleService>();
+    }
+    if (notifications) {
+      Logger.info("Waiting for NotificationsService...");
+      await GetIt.I.isReady<NotificationsService>();
+      Logger.info("NotificationsService ready");
+    }
+    if (methodChannel) {
+      Logger.info("Waiting for MethodChannelService...");
+      await GetIt.I.isReady<MethodChannelService>();
+      Logger.info("MethodChannelService ready");
+    }
+  }
+
+  static Future<void> initStartupServices({bool isBubble = false}) async {
+    debugPrint("Initializing startup services...");
+    await _initCoreServices(headless: false);
+
+    final startupInteropReady = _preRegisterInteropServices(
+      headless: false,
+      isBubble: isBubble,
+    );
 
     // Check if another instance is running (Linux Only).
     // Automatically handled on Windows (I think)
@@ -118,12 +182,8 @@ class StartupTasks {
     Logger.info("Loading FCM data...");
     SettingsSvc.loadFcmDataFromDatabase();
 
-    Logger.info("Registering HttpService...");
-    GetIt.I.registerSingleton<HttpService>(HttpService());
-    await HttpSvc.init();
-
-    Logger.info("Waiting for LifecycleService...");
-    await GetIt.I.isReady<LifecycleService>();
+    await _initHttpService();
+    await _waitForInterop(lifecycle: true);
 
     Logger.info("Registering IncomingMessageHandler...");
     GetIt.I.registerSingleton<IncomingMessageHandler>(
@@ -136,8 +196,7 @@ class StartupTasks {
     // The MethodChannel service needs the database to be initialized to handle events.
     // The Lifecycle service needs the MethodChannel service to be initialized to send events.
 
-    Logger.info("Waiting for MethodChannelService...");
-    await GetIt.I.isReady<MethodChannelService>();
+    await _waitForInterop(methodChannel: true);
 
     Logger.info("Registering CloudMessagingService...");
     GetIt.I.registerSingleton<CloudMessagingService>(CloudMessagingService());
@@ -174,8 +233,7 @@ class StartupTasks {
     Logger.info("Registering ChatsService, SocketService, and NotificationsService...");
     GetIt.I.registerSingleton<ChatsService>(ChatsService());
     GetIt.I.registerSingleton<SocketService>(SocketService());
-    Logger.info("Waiting for NotificationsService...");
-    await GetIt.I.isReady<NotificationsService>();
+    await _waitForInterop(notifications: true);
 
     GetIt.I.registerSingleton<EventDispatcher>(EventDispatcher());
 
@@ -204,97 +262,22 @@ class StartupTasks {
       messenger = BackgroundIsolateBinaryMessenger.instance;
     }
 
-    debugPrint("Registering FilesystemService...");
-    GetIt.I.registerSingletonAsync<FilesystemService>(() async {
-      final fsService = FilesystemService();
-      await fsService.init(headless: true);
-      return fsService;
-    });
-    await GetIt.I.isReady<FilesystemService>();
-    debugPrint("FilesystemService ready");
+    await _initCoreServices(headless: true);
 
-    debugPrint("Registering SharedPreferencesService...");
-    GetIt.I.registerSingletonAsync<SharedPreferencesService>(() async {
-      final prefsService = SharedPreferencesService();
-      await prefsService.init();
-      return prefsService;
-    });
-    await GetIt.I.isReady<SharedPreferencesService>();
-    debugPrint("SharedPreferencesService ready");
-
-    debugPrint("Registering SettingsService...");
-    GetIt.I.registerSingletonAsync<SettingsService>(() async {
-      final settingsService = SettingsService();
-      await settingsService.init(headless: true);
-      return settingsService;
-    });
-    await GetIt.I.isReady<SettingsService>();
-    debugPrint("SettingsService ready");
-
-    // Initialize the logger so we can start logging things immediately
-    debugPrint("Registering BaseLogger...");
-    GetIt.I.registerSingletonAsync<BaseLogger>(() async {
-      final logService = BaseLogger();
-      await logService.init();
-      return logService;
-    });
-    await GetIt.I.isReady<BaseLogger>();
-    Logger.info("BaseLogger ready - switching to Logger for remaining logs");
-
-    final globalInteropReady = Completer<void>();
-    Logger.info("Pre-registering LifecycleService, NotificationsService, and MethodChannelService...");
-    GetIt.I.registerSingletonAsync<LifecycleService>(() async {
-      await globalInteropReady.future;
-      final lifecycleService = LifecycleService();
-      await lifecycleService.init(headless: true);
-      return lifecycleService;
-    });
-    GetIt.I.registerSingletonAsync<NotificationsService>(() async {
-      await globalInteropReady.future;
-      final notificationsService = NotificationsService();
-      await notificationsService.init(headless: true);
-      return notificationsService;
-    });
-    GetIt.I.registerSingletonAsync<MethodChannelService>(() async {
-      await globalInteropReady.future;
-      final channelService = MethodChannelService();
-      await channelService.init(headless: true, binaryMessenger: messenger);
-      return channelService;
-    });
+    final globalInteropReady = _preRegisterInteropServices(
+      headless: true,
+      isBubble: false,
+      binaryMessenger: messenger,
+    );
 
     Logger.info("Initializing database...");
     await Database.init();
     Logger.info("Database initialized");
     globalInteropReady.complete();
 
-    // Since we are starting it headless, it can safely be started early on in the startup.
-    Logger.info("Registering ContactServiceV2...");
-    GetIt.I.registerSingletonAsync<ContactServiceV2>(() async {
-      final contactServiceV2 = ContactServiceV2();
-      await contactServiceV2.init(headless: true);
-      return contactServiceV2;
-    });
-    await GetIt.I.isReady<ContactServiceV2>();
-    Logger.info("ContactServiceV2 ready");
-
-    // Since we are starting it headless, it can safely be started early on in the startup.
-    Logger.info("Registering HandleService...");
-    GetIt.I.registerSingleton<HandleService>(HandleService());
-    HandleSvc.init();
-
-    // Since we are starting it headless, it can safely be started early on in the startup.
-    Logger.info("Registering ChatsService...");
-    GetIt.I.registerSingleton<ChatsService>(ChatsService());
-    await ChatsSvc.init(headless: true);
-    Logger.info("ChatsService ready");
-
-    Logger.info("Waiting for MethodChannelService...");
-    await GetIt.I.isReady<MethodChannelService>();
-    Logger.info("MethodChannelService ready");
-
-    Logger.info("Registering HttpService...");
-    GetIt.I.registerSingleton<HttpService>(HttpService());
-    await HttpSvc.init();
+    await _initContactHandleChats(headless: true);
+    await _initHttpService();
+    await _waitForInterop(methodChannel: true);
 
     Logger.info("Global isolate services initialization complete");
   }
@@ -310,92 +293,21 @@ class StartupTasks {
       messenger = BackgroundIsolateBinaryMessenger.instance;
     }
 
-    debugPrint("Registering FilesystemService...");
-    GetIt.I.registerSingletonAsync<FilesystemService>(() async {
-      final fsService = FilesystemService();
-      await fsService.init(headless: true);
-      return fsService;
-    });
-    await GetIt.I.isReady<FilesystemService>();
-    debugPrint("FilesystemService ready");
+    await _initCoreServices(headless: true);
 
-    debugPrint("Registering SharedPreferencesService...");
-    GetIt.I.registerSingletonAsync<SharedPreferencesService>(() async {
-      final prefsService = SharedPreferencesService();
-      await prefsService.init();
-      return prefsService;
-    });
-    await GetIt.I.isReady<SharedPreferencesService>();
-    debugPrint("SharedPreferencesService ready");
-
-    debugPrint("Registering SettingsService...");
-    GetIt.I.registerSingletonAsync<SettingsService>(() async {
-      final settingsService = SettingsService();
-      await settingsService.init(headless: true);
-      return settingsService;
-    });
-    await GetIt.I.isReady<SettingsService>();
-    debugPrint("SettingsService ready");
-
-    // Initialize the logger so we can start logging things immediately
-    debugPrint("Registering BaseLogger...");
-    GetIt.I.registerSingletonAsync<BaseLogger>(() async {
-      final logService = BaseLogger();
-      await logService.init();
-      return logService;
-    });
-    await GetIt.I.isReady<BaseLogger>();
-    Logger.info("BaseLogger ready - switching to Logger for remaining logs");
-
-    final syncInteropReady = Completer<void>();
-    Logger.info("Pre-registering LifecycleService, NotificationsService, and MethodChannelService...");
-    GetIt.I.registerSingletonAsync<LifecycleService>(() async {
-      await syncInteropReady.future;
-      final lifecycleService = LifecycleService();
-      await lifecycleService.init(headless: true);
-      return lifecycleService;
-    });
-    GetIt.I.registerSingletonAsync<NotificationsService>(() async {
-      await syncInteropReady.future;
-      final notificationsService = NotificationsService();
-      await notificationsService.init(headless: true);
-      return notificationsService;
-    });
-    GetIt.I.registerSingletonAsync<MethodChannelService>(() async {
-      await syncInteropReady.future;
-      final channelService = MethodChannelService();
-      await channelService.init(headless: true, binaryMessenger: messenger);
-      return channelService;
-    });
+    final syncInteropReady = _preRegisterInteropServices(
+      headless: true,
+      isBubble: false,
+      binaryMessenger: messenger,
+    );
 
     Logger.info("Initializing database...");
     await Database.init();
     Logger.info("Database initialized");
     syncInteropReady.complete();
 
-    // Sync operations need ContactServiceV2
-    Logger.info("Registering ContactServiceV2...");
-    GetIt.I.registerSingletonAsync<ContactServiceV2>(() async {
-      final contactServiceV2 = ContactServiceV2();
-      await contactServiceV2.init(headless: true);
-      return contactServiceV2;
-    });
-    await GetIt.I.isReady<ContactServiceV2>();
-    Logger.info("ContactServiceV2 ready");
-
-    // Sync operations need ChatsService
-    Logger.info("Registering HandleService...");
-    GetIt.I.registerSingleton<HandleService>(HandleService());
-    HandleSvc.init();
-
-    Logger.info("Registering ChatsService...");
-    GetIt.I.registerSingleton<ChatsService>(ChatsService());
-    await ChatsSvc.init(headless: true);
-    Logger.info("ChatsService ready");
-
-    Logger.info("Registering HttpService...");
-    GetIt.I.registerSingleton<HttpService>(HttpService());
-    await HttpSvc.init();
+    await _initContactHandleChats(headless: true);
+    await _initHttpService();
     Logger.info("HttpService ready");
 
     Logger.info("Sync isolate services initialization complete");
@@ -411,101 +323,22 @@ class StartupTasks {
     // Override the log label so entries are identifiable as coming from the DartWorker.
     isolateNameOverride = 'DartWorker';
 
-    debugPrint("Registering FilesystemService...");
-    GetIt.I.registerSingletonAsync<FilesystemService>(() async {
-      final fsService = FilesystemService();
-      await fsService.init(headless: true);
-      return fsService;
-    });
-    await GetIt.I.isReady<FilesystemService>();
-    debugPrint("FilesystemService ready");
+    await _initCoreServices(headless: true);
 
-    debugPrint("Registering SharedPreferencesService...");
-    GetIt.I.registerSingletonAsync<SharedPreferencesService>(() async {
-      final prefsService = SharedPreferencesService();
-      await prefsService.init();
-      return prefsService;
-    });
-    await GetIt.I.isReady<SharedPreferencesService>();
-    debugPrint("SharedPreferencesService ready");
-
-    debugPrint("Registering SettingsService...");
-    GetIt.I.registerSingletonAsync<SettingsService>(() async {
-      final settingsService = SettingsService();
-      await settingsService.init(headless: true);
-      return settingsService;
-    });
-    await GetIt.I.isReady<SettingsService>();
-    debugPrint("SettingsService ready");
-
-    // Initialize the logger so we can start logging things immediately
-    debugPrint("Registering BaseLogger...");
-    GetIt.I.registerSingletonAsync<BaseLogger>(() async {
-      final logService = BaseLogger();
-      await logService.init();
-      return logService;
-    });
-    await GetIt.I.isReady<BaseLogger>();
-    Logger.info("BaseLogger ready - switching to Logger for remaining logs");
-
-    final backgroundInteropReady = Completer<void>();
-    Logger.info("Pre-registering LifecycleService, NotificationsService, and MethodChannelService...");
-    GetIt.I.registerSingletonAsync<LifecycleService>(() async {
-      await backgroundInteropReady.future;
-      final lifecycleService = LifecycleService();
-      await lifecycleService.init(headless: true);
-      return lifecycleService;
-    });
-    GetIt.I.registerSingletonAsync<NotificationsService>(() async {
-      await backgroundInteropReady.future;
-      final notificationsService = NotificationsService();
-      await notificationsService.init(headless: true);
-      return notificationsService;
-    });
-    GetIt.I.registerSingletonAsync<MethodChannelService>(() async {
-      await backgroundInteropReady.future;
-      final channelService = MethodChannelService();
-      await channelService.init(headless: true);
-      return channelService;
-    });
+    final backgroundInteropReady = _preRegisterInteropServices(
+      headless: true,
+      isBubble: false,
+    );
 
     Logger.info("Initializing database...");
     await Database.init();
     Logger.info("Database initialized");
     backgroundInteropReady.complete();
 
-    // Since we are starting it headless, it can safely be started early on in the startup.
-    Logger.info("Registering ContactServiceV2...");
-    GetIt.I.registerSingletonAsync<ContactServiceV2>(() async {
-      final contactServiceV2 = ContactServiceV2();
-      await contactServiceV2.init(headless: true);
-      return contactServiceV2;
-    });
-    await GetIt.I.isReady<ContactServiceV2>();
-    Logger.info("ContactServiceV2 ready");
-
-    // Since we are starting it headless, it can safely be started early on in the startup.
-    Logger.info("Registering HandleService...");
-    GetIt.I.registerSingleton<HandleService>(HandleService());
-    HandleSvc.init();
-
-    // Since we are starting it headless, it can safely be started early on in the startup.
-    Logger.info("Registering ChatsService...");
-    GetIt.I.registerSingleton<ChatsService>(ChatsService());
-    await ChatsSvc.init(headless: true);
-    Logger.info("ChatsService ready");
-
-    Logger.info("Waiting for LifecycleService...");
-    await GetIt.I.isReady<LifecycleService>();
-    Logger.info("LifecycleService ready");
-
-    Logger.info("Registering HttpService...");
-    GetIt.I.registerSingleton<HttpService>(HttpService());
-    await HttpSvc.init();
-
-    Logger.info("Waiting for NotificationsService...");
-    await GetIt.I.isReady<NotificationsService>();
-    Logger.info("NotificationsService ready");
+    await _initContactHandleChats(headless: true);
+    await _waitForInterop(lifecycle: true);
+    await _initHttpService();
+    await _waitForInterop(notifications: true);
 
     Logger.info("Registering IncomingMessageHandler...");
     GetIt.I.registerSingleton<IncomingMessageHandler>(
@@ -513,9 +346,7 @@ class StartupTasks {
       dispose: (svc) => svc.dispose(),
     );
 
-    Logger.info("Waiting for MethodChannelService...");
-    await GetIt.I.isReady<MethodChannelService>();
-    Logger.info("MethodChannelService ready");
+    await _waitForInterop(methodChannel: true);
 
     Logger.info("Background isolate services initialization complete");
   }
