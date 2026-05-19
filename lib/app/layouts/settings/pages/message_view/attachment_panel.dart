@@ -111,14 +111,14 @@ class _AttachmentPanelState extends State<AttachmentPanel> with ThemeHelpers {
                               final TextEditingController pathController = TextEditingController();
                               await showDialog(
                                   context: context,
-                                  builder: (_) {
+                                  builder: (dialogContext) {
                                     return AlertDialog(
                                       actions: [
                                         TextButton(
                                           child: Text("Cancel",
                                               style: context.theme.textTheme.bodyLarge!
                                                   .copyWith(color: context.theme.colorScheme.primary)),
-                                          onPressed: () => Get.back(),
+                                          onPressed: () => Navigator.of(dialogContext).pop(),
                                         ),
                                         TextButton(
                                           child: Text("OK",
