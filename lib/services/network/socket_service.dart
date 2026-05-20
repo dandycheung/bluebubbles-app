@@ -69,7 +69,7 @@ class SocketService {
           !event.contains(ConnectivityResult.ethernet) &&
           HttpSvc.originOverride != null) {
         Logger.info("Detected switch off wifi, removing localhost address...");
-        HttpSvc.originOverride = null;
+        NetworkTasks.setOriginOverride(null);
       }
     });
   }
