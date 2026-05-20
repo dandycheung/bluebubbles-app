@@ -11,6 +11,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:gesture_x_detector/gesture_x_detector.dart';
 import 'package:get/get.dart';
 import 'package:get_it/get_it.dart';
@@ -459,6 +460,20 @@ void showSnackbar(String title, String message,
           if (Get.isSnackbarOpen) Get.back();
         },
   );
+}
+
+Future<void> showToast(String message, {bool isError = false}) async {
+  if (message.trim().isEmpty) return;
+  try {
+    await Fluttertoast.showToast(
+      msg: message,
+      toastLength: isError ? Toast.LENGTH_LONG : Toast.LENGTH_SHORT,
+      gravity: ToastGravity.BOTTOM,
+    );
+  } catch (e, s) {
+    Logger.warn("Failed to show toast: $e");
+    Logger.debug(s.toString());
+  }
 }
 
 Widget getSocketStateIndicatorIcon(SocketState socketState, {double size = 24, bool showAlpha = true}) {

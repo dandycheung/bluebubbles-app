@@ -125,12 +125,10 @@ class SyncService {
       errors += 1;
     }
 
-    if (SettingsSvc.settings.showIncrementalSync.value) {
-      if (errors > 0) {
-        showSnackbar('Error', '⚠️ Incremental sync completed with $errors errors ⚠️');
-      } else {
-        showSnackbar('Success', '🔄 Incremental sync complete 🔄');
-      }
+    if (errors > 0) {
+      await showToast('Incremental sync completed with $errors errors', isError: true);
+    } else if (SettingsSvc.settings.showIncrementalSync.value) {
+      await showToast('Incremental sync complete');
     }
 
     isIncrementalSyncing.value = false;

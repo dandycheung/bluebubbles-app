@@ -339,7 +339,7 @@ class _ExportDialog extends StatelessWidget {
           onPressed: () async {
             await Clipboard.setData(ClipboardData(text: json));
             if (context.mounted) {
-              showSnackbar("Copied", "Theme JSON copied to clipboard");
+              showToast("Theme JSON copied to clipboard");
               Navigator.of(context).pop();
             }
           },

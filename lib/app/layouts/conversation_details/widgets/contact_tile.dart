@@ -45,7 +45,7 @@ class ContactTile extends StatelessWidget {
         onLongPress: () {
           Clipboard.setData(ClipboardData(text: handle.address));
           if (!Platform.isAndroid || (FilesystemSvc.androidInfo?.version.sdkInt ?? 0) < 33) {
-            showSnackbar("Copied", "Address copied to clipboard!");
+            showToast("Address copied to clipboard");
           }
         },
         onTap: () async {

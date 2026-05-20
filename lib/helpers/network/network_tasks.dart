@@ -90,7 +90,9 @@ class NetworkTasks {
 
     if (HttpSvc.originOverride != null) {
       Logger.debug('Localhost detected at ${HttpSvc.originOverride}', tag: 'NetworkTasks');
-      if (createSnackbar) showSnackbar('Localhost Detected', 'Connected to ${HttpSvc.originOverride}');
+      if (createSnackbar) {
+        showToast('Connected to ${HttpSvc.originOverride}');
+      }
       syncOriginOverrideToIsolate();
       return;
     }
@@ -129,7 +131,7 @@ class NetworkTasks {
       onDone: () async {
         HttpSvc.originOverride = await _probeAddresses(hosts.map((h) => h.address).toList(), port);
         if (createSnackbar && HttpSvc.originOverride != null) {
-          showSnackbar('Localhost Detected', 'Connected to ${HttpSvc.originOverride}');
+          showToast('Connected to ${HttpSvc.originOverride}');
         }
         completer.complete();
       },
