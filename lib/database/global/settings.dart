@@ -16,6 +16,7 @@ import 'package:logger/logger.dart' show Level;
 import 'package:universal_io/io.dart';
 
 class Settings {
+  final RxString iMessageStatsSource = "server".obs;
   final RxInt firstFcmRegisterDate = 0.obs;
   final RxString iCloudAccount = "".obs;
   final RxString guidAuthKey = "".obs;
@@ -395,6 +396,7 @@ class Settings {
       'replaceEmoticonsWithEmoji': replaceEmoticonsWithEmoji.value,
       'lastReviewRequestTimestamp': lastReviewRequestTimestamp.value,
       'serverPrivateAPI': serverPrivateAPI.value,
+      'iMessageStatsSource': iMessageStatsSource.value,
     };
 
     if (includeAll) {
@@ -548,6 +550,8 @@ class Settings {
         map['enablePrivateAPI'] ?? SettingsSvc.settings.enablePrivateAPI.value;
     SettingsSvc.settings.serverPrivateAPI.value =
         map['serverPrivateAPI'] ?? SettingsSvc.settings.serverPrivateAPI.value;
+    SettingsSvc.settings.iMessageStatsSource.value =
+        (map['iMessageStatsSource'] == 'local') ? 'local' : 'server';
     SettingsSvc.settings.privateSendTypingIndicators.value =
         map['privateSendTypingIndicators'] ?? SettingsSvc.settings.privateSendTypingIndicators.value;
     SettingsSvc.settings.privateMarkChatAsRead.value =
@@ -741,6 +745,7 @@ class Settings {
     s.privateAPIAttachmentSend.value = map['privateAPIAttachmentSend'] ?? false;
     s.enablePrivateAPI.value = map['enablePrivateAPI'] ?? false;
     s.serverPrivateAPI.value = map['serverPrivateAPI'];
+    s.iMessageStatsSource.value = (map['iMessageStatsSource'] == 'local') ? 'local' : 'server';
     s.privateSendTypingIndicators.value = map['privateSendTypingIndicators'] ?? false;
     s.privateMarkChatAsRead.value = map['privateMarkChatAsRead'] ?? false;
     s.privateManualMarkAsRead.value = map['privateManualMarkAsRead'] ?? false;
