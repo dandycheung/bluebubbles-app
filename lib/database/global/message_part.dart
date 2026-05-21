@@ -50,6 +50,19 @@ class MessagePart {
   bool get isEdited => edits.isNotEmpty;
   String? get url => text?.replaceAll("\n", " ").split(" ").firstWhereOrNull((String e) => e.hasUrl);
   String get fullText => sanitizeString([subject, text].where((e) => !isNullOrEmpty(e)).join("\n"));
+
+  /// True when this part contains only images or videos with no text or subject.
+  /// Used to determine whether adjacent parts can be collapsed into a gallery.
+  bool get isMediaOnlyPart =>
+      attachments.isNotEmpty &&
+      text == null &&
+      subject == null &&
+      attachments.every((a) => a.mimeStart == 'image' || a.mimeStart == 'video');
+
+  /// True when this part's attachments form a multi-item media gallery (>1 images/videos).
+  /// Used to route the part to [MessageImageGallery] instead of [AttachmentHolder].
+  bool get isMediaGallery =>
+      attachments.length > 1 && attachments.every((a) => a.mimeStart == 'image' || a.mimeStart == 'video');
 }
 
 class Mention {

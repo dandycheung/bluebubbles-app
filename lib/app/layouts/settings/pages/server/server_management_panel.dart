@@ -42,8 +42,9 @@ class ServerManagementPanelController extends StatefulController {
   void onInit() {
     super.onInit();
     serverDetails.value = SettingsSvc.serverDetails;
-    selectedStatsSource.value =
-        SettingsSvc.settings.iMessageStatsSource.value == 'local' ? IMessageStatsSource.local : IMessageStatsSource.server;
+    selectedStatsSource.value = SettingsSvc.settings.iMessageStatsSource.value == 'local'
+        ? IMessageStatsSource.local
+        : IMessageStatsSource.server;
   }
 
   @override

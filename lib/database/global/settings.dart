@@ -550,8 +550,7 @@ class Settings {
         map['enablePrivateAPI'] ?? SettingsSvc.settings.enablePrivateAPI.value;
     SettingsSvc.settings.serverPrivateAPI.value =
         map['serverPrivateAPI'] ?? SettingsSvc.settings.serverPrivateAPI.value;
-    SettingsSvc.settings.iMessageStatsSource.value =
-        (map['iMessageStatsSource'] == 'local') ? 'local' : 'server';
+    SettingsSvc.settings.iMessageStatsSource.value = (map['iMessageStatsSource'] == 'local') ? 'local' : 'server';
     SettingsSvc.settings.privateSendTypingIndicators.value =
         map['privateSendTypingIndicators'] ?? SettingsSvc.settings.privateSendTypingIndicators.value;
     SettingsSvc.settings.privateMarkChatAsRead.value =

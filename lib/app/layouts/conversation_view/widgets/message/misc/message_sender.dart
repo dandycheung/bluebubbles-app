@@ -16,7 +16,7 @@ class MessageSender extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 25).add(const EdgeInsets.only(bottom: 3)),
       // Obx makes the sender name reactive: updates when contact data syncs.
       child: Obx(() => Text(
-            state.sender?.displayName.value ?? state.message.handleRelation.target?.displayName ?? "",
+            state.senderDisplayName,
             style: context.theme.textTheme.labelMedium!
                 .copyWith(color: context.theme.colorScheme.outline, fontWeight: FontWeight.normal),
             maxLines: 1,

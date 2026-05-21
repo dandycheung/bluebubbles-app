@@ -651,7 +651,6 @@ List<Widget> buildSettingItemList({
             "Open App Data Location",
             "Disable Battery Optimizations",
             "Clear Last Opened Chat",
-            "Sync Handles & Contacts",
             "Sync Chat Info"
           ], // Tags to search
           onTap: () async {
