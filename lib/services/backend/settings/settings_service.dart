@@ -96,46 +96,13 @@ class SettingsService {
   /// Returns true if LaunchAtStartup is enabled and false if it is disabled
   Future<bool> setupLaunchAtStartup(bool launchAtStartup, bool minimized) async {
     // Can't use fs here because it hasn't been initialized yet
-    if (!isMsix) {
-      LaunchAtStartup.setup((await PackageInfo.fromPlatform()).appName, minimized);
-      if (launchAtStartup) {
-        await LaunchAtStartup.enable();
-        return true;
-      }
-      await LaunchAtStartup.disable();
-      return false;
-    } else if (launchAtStartup) {
-      /// Copied from https://github.com/Merrit/nyrna/pull/172/files
-      /// Custom because LaunchAtStartup's implementation doesn't support args yet.
-      String script = '''
-        \$TargetPath = "shell:AppsFolder\\$windowsAppPackageName"
-        \$ShortcutFile = "\$env:USERPROFILE\\Start Menu\\Programs\\Startup\\$appName.lnk"
-        \$WScriptShell = New-Object -ComObject WScript.Shell
-        \$Shortcut = \$WScriptShell.CreateShortcut(\$ShortcutFile)
-        \$Shortcut.TargetPath = \$TargetPath
-        \$Shortcut.Arguments = "${minimized ? 'minimized' : ''}"
-        \$Shortcut.Save()
-        ''';
-      await Process.run(
-        'powershell',
-        ['-Command', script],
-      );
-    } else {
-      const String script = '''
-        Remove-Item -Path "\$env:USERPROFILE\\Start Menu\\Programs\\Startup\\$appName.lnk"
-      ''';
-      await Process.run(
-        'powershell',
-        ['-Command', script],
-      );
+    LaunchAtStartup.setup((await PackageInfo.fromPlatform()).appName, minimized);
+    if (launchAtStartup) {
+      await LaunchAtStartup.enable();
+      return true;
     }
-    final createdShortcut = File(
-      '${Platform.environment['USERPROFILE']}\\Start Menu\\Programs\\Startup\\$appName.lnk',
-    );
-    if (!createdShortcut.existsSync()) {
-      return false;
-    }
-    return true;
+    await LaunchAtStartup.disable();
+    return false;
   }
 
   void loadFcmDataFromDatabase() {
