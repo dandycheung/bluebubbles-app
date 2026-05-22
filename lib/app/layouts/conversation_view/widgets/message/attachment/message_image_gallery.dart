@@ -4,6 +4,7 @@ import 'package:bluebubbles/app/layouts/conversation_view/widgets/message/attach
 import 'package:bluebubbles/database/models.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/services/services.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -36,11 +37,27 @@ class MessageImageGallery extends StatefulWidget {
 
 class _MessageImageGalleryState extends State<MessageImageGallery> with ThemeHelpers {
   static const int _visibleFanSlots = 5;
+  static const int _maxPastCards = 3;
   static const double _swipeCommitThreshold = 70;
   static const double _maxDragDx = 140;
   static const double _maxWiggleDx = 20.0;
+
+  static const _fanSlotDx = <double>[0, 10, 17, 23, 28];
+  static const _fanSlotDy = <double>[0, 4, 9, 14, 20];
+  static const _fanSlotAngle = <double>[0, 0.08, 0.175, 0.3, 0.425];
+  static const _fanSlotScale = <double>[1.0, 0.9, 0.8, 0.7, 0.6];
+
+  static const _pastSlotDx = <double>[14, 20, 25];
+  static const _pastSlotDy = <double>[5, 11, 17];
+  static const _pastSlotAngle = <double>[0.1, 0.19, 0.28];
+  static const _pastSlotScale = <double>[0.82, 0.72, 0.62];
+  static const _pastSlotOpacity = <double>[0.55, 0.35, 0.2];
+
+  static const double _scrollAdvanceThreshold = 50.0;
+
   int _currentIndex = 0;
   double _dragDx = 0;
+  double _scrollAccumulator = 0;
   bool _hapticGivenForCurrentEnd = false;
 
   List<Attachment> get _attachments => widget.attachments;
@@ -112,6 +129,8 @@ class _MessageImageGalleryState extends State<MessageImageGallery> with ThemeHel
         ((fanCanvasWidth - baseCardWidth) / 2) + (widget.fanDirection == GalleryFanDirection.left ? 36 : -50);
     final fanDirectionSign = widget.fanDirection == GalleryFanDirection.left ? -1.0 : 1.0;
     final textOffset = (baseOffset + 25 + fanDirectionSign * 10.0).clamp(0.0, double.infinity);
+    final direction = widget.fanDirection == GalleryFanDirection.left ? -1.0 : 1.0;
+    final mirroredBias = direction * 10.0;
     final photoCount = _attachments.where((a) => a.mimeStart == 'image').length;
     final videoCount = _attachments.where((a) => a.mimeStart == 'video').length;
     final galleryLabel = photoCount > 0 && videoCount > 0
@@ -120,7 +139,108 @@ class _MessageImageGalleryState extends State<MessageImageGallery> with ThemeHel
             ? '$videoCount ${videoCount == 1 ? 'Video' : 'Videos'}'
             : '$photoCount ${photoCount == 1 ? 'Photo' : 'Photos'}';
 
-    return GestureDetector(
+    final stackChildren = <Widget>[];
+
+    // Peeking-zone tap overlay: sits at the bottom of z-order so it is
+    // tested LAST in hit testing. It only wins when every card's SizedBox
+    // misses (i.e. the rotated corner that peeks past the card's layout
+    // bounds). Uses _advance(1) which is "bring next card to front" for
+    // both fan directions.
+    if (_attachments.length > 1 && (widget.infiniteScroll || _currentIndex < _attachments.length - 1)) {
+      stackChildren.add(
+        Positioned.fill(
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () {
+              HapticFeedback.lightImpact();
+              setState(() {
+                _advance(1);
+                _dragDx = 0;
+              });
+            },
+          ),
+        ),
+      );
+    }
+
+    if (widget.infiniteScroll) {
+      stackChildren.addAll(List.generate(_attachments.length, (i) {
+        final attachment = _attachmentAtOffset(i);
+        return _buildFanCard(
+          attachment: attachment,
+          slotIndex: i,
+          baseCardWidth: baseCardWidth,
+          baseCardHeight: baseCardHeight,
+          baseOffset: baseOffset,
+          direction: direction,
+          mirroredBias: mirroredBias,
+          isCurrent: i == 0,
+        );
+      }).reversed);
+    } else {
+      final futureCount = _attachments.length - _currentIndex - 1;
+      final pastCount = _currentIndex;
+      final visiblePast = min(pastCount, _maxPastCards);
+      final visibleFuture = min(futureCount, _visibleFanSlots - 1);
+
+      for (int p = visiblePast; p >= 1; p--) {
+        final attachment = _attachments[_currentIndex - p];
+        final slot = (p - 1).clamp(0, _maxPastCards - 1);
+        stackChildren.add(_buildPastCard(
+          attachment: attachment,
+          slotIndex: slot,
+          baseCardWidth: baseCardWidth,
+          baseCardHeight: baseCardHeight,
+          baseOffset: baseOffset,
+          direction: direction,
+        ));
+      }
+
+      for (int f = visibleFuture; f >= 1; f--) {
+        final attachment = _attachments[_currentIndex + f];
+        stackChildren.add(_buildFanCard(
+          attachment: attachment,
+          slotIndex: f,
+          baseCardWidth: baseCardWidth,
+          baseCardHeight: baseCardHeight,
+          baseOffset: baseOffset,
+          direction: direction,
+          mirroredBias: mirroredBias,
+          isCurrent: false,
+        ));
+      }
+
+      stackChildren.add(_buildFanCard(
+        attachment: _attachments[_currentIndex],
+        slotIndex: 0,
+        baseCardWidth: baseCardWidth,
+        baseCardHeight: baseCardHeight,
+        baseOffset: baseOffset,
+        direction: direction,
+        mirroredBias: mirroredBias,
+        isCurrent: true,
+      ));
+    }
+
+    return Listener(
+      onPointerSignal: (event) {
+        if (event is PointerScrollEvent && _attachments.length > 1) {
+          _scrollAccumulator += event.scrollDelta.dy;
+          if (_scrollAccumulator.abs() >= _scrollAdvanceThreshold) {
+            final scrollDir = _scrollAccumulator > 0 ? 1 : -1;
+            _scrollAccumulator = 0;
+            final oldIndex = _currentIndex;
+            setState(() {
+              _advance(scrollDir);
+              _dragDx = 0;
+            });
+            if (_currentIndex == oldIndex && !widget.infiniteScroll) {
+              HapticFeedback.lightImpact();
+            }
+          }
+        }
+      },
+      child: GestureDetector(
       onHorizontalDragUpdate: (details) {
         if (_attachments.length <= 1) return;
         if (!widget.infiniteScroll) {
@@ -137,7 +257,6 @@ class _MessageImageGalleryState extends State<MessageImageGallery> with ThemeHel
               HapticFeedback.lightImpact();
               _hapticGivenForCurrentEnd = true;
             }
-            // Rubber-band: allow limited overscroll in the blocked direction with friction.
             setState(() {
               _dragDx += details.delta.dx * 0.3;
               if (blockedPositive) _dragDx = _dragDx.clamp(0.0, _maxWiggleDx);
@@ -179,113 +298,146 @@ class _MessageImageGalleryState extends State<MessageImageGallery> with ThemeHel
           _dragDx = 0;
         });
       },
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment:
-            widget.fanDirection == GalleryFanDirection.left ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: fanCanvasWidth,
-            height: fanCanvasHeight,
-            child: Stack(
-              alignment: Alignment.center,
-              clipBehavior: Clip.none,
-              children: [
-                // Peeking-zone tap overlay: sits at the bottom of z-order so it is
-                // tested LAST in hit testing. It only wins when every card's SizedBox
-                // misses (i.e. the rotated corner that peeks past the card's layout
-                // bounds). Uses _advance(1) which is "bring next card to front" for
-                // both fan directions.
-                if (_attachments.length > 1 && (widget.infiniteScroll || _currentIndex < _attachments.length - 1))
-                  Positioned.fill(
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTap: () {
-                        HapticFeedback.lightImpact();
-                        setState(() {
-                          _advance(1);
-                          _dragDx = 0;
-                        });
-                      },
-                    ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment:
+              widget.fanDirection == GalleryFanDirection.left ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              width: fanCanvasWidth,
+              height: fanCanvasHeight,
+              child: Stack(
+                alignment: Alignment.center,
+                clipBehavior: Clip.none,
+                children: stackChildren,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Padding(
+              padding: (widget.fanDirection == GalleryFanDirection.left
+                  ? const EdgeInsets.only(right: 20)
+                  : EdgeInsets.only(left: textOffset)),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.grid_view_rounded,
+                    size: 10,
+                    color: Theme.of(context).colorScheme.primary,
                   ),
-                ...List.generate(_attachments.length, (i) {
-                  final attachment = _attachmentAtOffset(i);
-                  final slot = i < _visibleFanSlots ? i : (_visibleFanSlots - 1);
-                  final direction = widget.fanDirection == GalleryFanDirection.left ? -1.0 : 1.0;
-                  const slotDx = <double>[0, 10, 17, 23, 28];
-                  const slotDy = <double>[0, 4, 9, 14, 20];
-                  const slotAngle = <double>[0, 0.08, 0.175, 0.3, 0.425];
-                  const slotScale = <double>[1.0, 0.9, 0.8, 0.7, 0.6];
-                  final overflowDepth = i >= _visibleFanSlots ? ((i - (_visibleFanSlots - 1)).clamp(0, 6) * 0.7) : 0.0;
-                  final angle = slot == 0 ? 0.0 : direction * slotAngle[slot];
-                  final dy = slotDy[slot] + overflowDepth;
-                  final dx = direction * slotDx[slot];
-                  final scale = slotScale[slot];
-                  final cardWidth = baseCardWidth * scale;
-                  final cardHeight = baseCardHeight * scale;
-                  final centeredLeft = baseOffset + ((baseCardWidth - cardWidth) / 2);
-                  final dragOffset = i == 0 ? _dragDx : 0.0;
-                  final dragRotate = i == 0 ? (_dragDx / 700) : 0.0;
-                  final mirroredBias = direction * 10.0;
-                  return AnimatedPositioned(
-                    key: ValueKey(attachment.guid ?? attachment.id ?? '$i-${attachment.transferName}'),
-                    duration: const Duration(milliseconds: 180),
-                    curve: Curves.easeOutCubic,
-                    top: 1 + dy,
-                    left: centeredLeft + mirroredBias + dx + dragOffset,
-                    child: Transform.translate(
-                      offset: Offset.zero,
-                      child: SizedBox(
-                        width: cardWidth,
-                        height: cardHeight,
-                        child: Transform.rotate(
-                          angle: angle.toDouble() + dragRotate,
-                          alignment: widget.fanDirection == GalleryFanDirection.left
-                              ? Alignment.bottomRight
-                              : Alignment.bottomLeft,
-                          child: IgnorePointer(
-                            ignoring: i != 0,
-                            child: AttachmentHolder(
-                              message: _partForAttachment(attachment),
-                              transparentBackground: true,
-                              showCardShadow: true,
-                              galleryAttachments: _attachments,
-                            ),
-                          ),
+                  const SizedBox(width: 3),
+                  Text(
+                    galleryLabel,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: Theme.of(context).colorScheme.primary,
+                          fontWeight: FontWeight.bold,
                         ),
-                      ),
-                    ),
-                  );
-                }).reversed,
-              ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFanCard({
+    required Attachment attachment,
+    required int slotIndex,
+    required double baseCardWidth,
+    required double baseCardHeight,
+    required double baseOffset,
+    required double direction,
+    required double mirroredBias,
+    required bool isCurrent,
+  }) {
+    final slot = slotIndex < _visibleFanSlots ? slotIndex : (_visibleFanSlots - 1);
+    final overflowDepth = slotIndex >= _visibleFanSlots ? ((slotIndex - (_visibleFanSlots - 1)).clamp(0, 6) * 0.7) : 0.0;
+    final angle = slot == 0 ? 0.0 : direction * _fanSlotAngle[slot];
+    final dy = _fanSlotDy[slot] + overflowDepth;
+    final dx = direction * _fanSlotDx[slot];
+    final scale = _fanSlotScale[slot];
+    final cardWidth = baseCardWidth * scale;
+    final cardHeight = baseCardHeight * scale;
+    final centeredLeft = baseOffset + ((baseCardWidth - cardWidth) / 2);
+    final dragOffset = isCurrent ? _dragDx : 0.0;
+    final dragRotate = isCurrent ? (_dragDx / 700) : 0.0;
+
+    return AnimatedPositioned(
+      key: ValueKey(attachment.guid ?? attachment.id ?? '${attachment.transferName}'),
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeOutCubic,
+      top: 1 + dy,
+      left: centeredLeft + mirroredBias + dx + dragOffset,
+      child: Transform.translate(
+        offset: Offset.zero,
+        child: SizedBox(
+          width: cardWidth,
+          height: cardHeight,
+          child: Transform.rotate(
+            angle: angle.toDouble() + dragRotate,
+            alignment: widget.fanDirection == GalleryFanDirection.left ? Alignment.bottomRight : Alignment.bottomLeft,
+            child: IgnorePointer(
+              ignoring: !isCurrent,
+              child: AttachmentHolder(
+                message: _partForAttachment(attachment),
+                transparentBackground: true,
+                showCardShadow: true,
+                galleryAttachments: _attachments,
+              ),
             ),
           ),
-          const SizedBox(height: 4),
-          Padding(
-            padding: (widget.fanDirection == GalleryFanDirection.left
-                ? const EdgeInsets.only(right: 20)
-                : EdgeInsets.only(left: textOffset)),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.grid_view_rounded,
-                  size: 10,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-                const SizedBox(width: 3),
-                Text(
-                  galleryLabel,
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: Theme.of(context).colorScheme.primary,
-                        fontWeight: FontWeight.bold,
-                      ),
-                ),
-              ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPastCard({
+    required Attachment attachment,
+    required int slotIndex,
+    required double baseCardWidth,
+    required double baseCardHeight,
+    required double baseOffset,
+    required double direction,
+  }) {
+    final slot = slotIndex.clamp(0, _maxPastCards - 1);
+    final angle = -direction * _pastSlotAngle[slot];
+    final dx = -direction * _pastSlotDx[slot];
+    final scale = _pastSlotScale[slot];
+    final dy = _pastSlotDy[slot];
+    final opacity = _pastSlotOpacity[slot];
+    final cardWidth = baseCardWidth * scale;
+    final cardHeight = baseCardHeight * scale;
+    final centeredLeft = baseOffset + ((baseCardWidth - cardWidth) / 2);
+    final pastBias = -direction * 10.0;
+
+    return AnimatedPositioned(
+      key: ValueKey(attachment.guid ?? attachment.id ?? '${attachment.transferName}'),
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeOutCubic,
+      top: 1 + dy,
+      left: centeredLeft + pastBias + dx,
+      child: AnimatedOpacity(
+        duration: const Duration(milliseconds: 180),
+        opacity: opacity,
+        child: SizedBox(
+          width: cardWidth,
+          height: cardHeight,
+          child: Transform.rotate(
+            angle: angle.toDouble(),
+            alignment: widget.fanDirection == GalleryFanDirection.left ? Alignment.bottomLeft : Alignment.bottomRight,
+            child: IgnorePointer(
+              ignoring: true,
+              child: AttachmentHolder(
+                message: _partForAttachment(attachment),
+                transparentBackground: true,
+                showCardShadow: true,
+                galleryAttachments: _attachments,
+              ),
             ),
           ),
-        ],
+        ),
       ),
     );
   }
