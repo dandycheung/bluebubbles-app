@@ -99,6 +99,16 @@ class _MessageHolderState extends State<MessageHolder> with ThemeHelpers {
   List<RxDouble> replyOffsets = [];
   List<GlobalKey> keys = [];
   final RxBool tapped = false.obs;
+  final Map<int, ValueNotifier<int>> _galleryIndices = {};
+
+  @override
+  void dispose() {
+    for (final notifier in _galleryIndices.values) {
+      notifier.dispose();
+    }
+    super.dispose();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -135,11 +145,13 @@ class _MessageHolderState extends State<MessageHolder> with ThemeHelpers {
       }
 
       final groupedAttachments = <Attachment>[...current.attachments];
+      final groupedPartIndices = <int>[...List.filled(current.attachments.length, current.part)];
       int j = i + 1;
       while (j < parts.length) {
         final next = parts[j];
         if (!next.isMediaOnlyPart) break;
         groupedAttachments.addAll(next.attachments);
+        groupedPartIndices.addAll(List.filled(next.attachments.length, next.part));
         j++;
       }
 
@@ -151,6 +163,7 @@ class _MessageHolderState extends State<MessageHolder> with ThemeHelpers {
           mentions: const [],
           edits: const [],
           isUnsent: current.isUnsent,
+          attachmentPartIndices: groupedPartIndices,
         ));
       } else {
         collapsed.add(current);
@@ -478,6 +491,10 @@ class _MessageHolderState extends State<MessageHolder> with ThemeHelpers {
                                                                     cvController: widget.cvController,
                                                                     part: e,
                                                                     isEditing: isEditing(e.part),
+                                                                    galleryCurrentIndex: e.isMediaGallery
+                                                                        ? _galleryIndices.putIfAbsent(
+                                                                            e.part, () => ValueNotifier(0))
+                                                                        : null,
                                                                     child: SwipeToReplyWrapper(
                                                                       enabled: canSwipeToReply && !isEditing(e.part),
                                                                       partIndex: index,
@@ -491,6 +508,12 @@ class _MessageHolderState extends State<MessageHolder> with ThemeHelpers {
                                                                             children: [
                                                                               MessagePartContent(
                                                                                 messagePart: e,
+                                                                                galleryCurrentIndexNotifier:
+                                                                                    e.isMediaGallery
+                                                                                        ? _galleryIndices.putIfAbsent(
+                                                                                            e.part,
+                                                                                            () => ValueNotifier(0))
+                                                                                        : null,
                                                                               ),
                                                                               if (message.isFromMe!)
                                                                                 Obx(() {

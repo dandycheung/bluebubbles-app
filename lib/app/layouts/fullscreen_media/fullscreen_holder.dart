@@ -70,13 +70,14 @@ class FullscreenMediaHolderState extends State<FullscreenMediaHolder> with Theme
     if (kIsWeb || !widget.showInteractions) {
       controller = PageController(initialPage: 0);
     } else {
-      if (widget.currentChat != null) {
+      if (widget.currentChat != null || widget.galleryAttachments != null) {
         final targetGuid = widget.initialAttachmentGuid ?? attachment.guid;
         currentIndex = attachments.indexWhere((e) => e.guid == targetGuid);
-        if (currentIndex == -1) {
+        if (currentIndex == -1 && widget.currentChat != null) {
           attachments.add(attachment);
           currentIndex = attachments.indexWhere((e) => e.guid == attachment.guid);
         }
+        if (currentIndex == -1) currentIndex = 0;
       }
       controller = PageController(initialPage: currentIndex);
     }

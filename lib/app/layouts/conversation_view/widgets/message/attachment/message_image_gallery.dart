@@ -5,6 +5,7 @@ import 'package:bluebubbles/database/models.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/services/services.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 enum GalleryFanDirection {
   left,
@@ -19,6 +20,7 @@ class MessageImageGallery extends StatefulWidget {
     required this.isInReply,
     required this.fanDirection,
     this.infiniteScroll = false,
+    this.currentIndexNotifier,
   });
 
   final List<Attachment> attachments;
@@ -26,6 +28,7 @@ class MessageImageGallery extends StatefulWidget {
   final bool isInReply;
   final GalleryFanDirection fanDirection;
   final bool infiniteScroll;
+  final ValueNotifier<int>? currentIndexNotifier;
 
   @override
   State<MessageImageGallery> createState() => _MessageImageGalleryState();
@@ -35,8 +38,10 @@ class _MessageImageGalleryState extends State<MessageImageGallery> with ThemeHel
   static const int _visibleFanSlots = 5;
   static const double _swipeCommitThreshold = 70;
   static const double _maxDragDx = 140;
+  static const double _maxWiggleDx = 20.0;
   int _currentIndex = 0;
   double _dragDx = 0;
+  bool _hapticGivenForCurrentEnd = false;
 
   List<Attachment> get _attachments => widget.attachments;
 
@@ -56,6 +61,7 @@ class _MessageImageGalleryState extends State<MessageImageGallery> with ThemeHel
     } else {
       _currentIndex = (_currentIndex + direction).clamp(0, _attachments.length - 1);
     }
+    widget.currentIndexNotifier?.value = _currentIndex;
   }
 
   Attachment _attachmentAtOffset(int offset) {
@@ -106,28 +112,49 @@ class _MessageImageGalleryState extends State<MessageImageGallery> with ThemeHel
         ((fanCanvasWidth - baseCardWidth) / 2) + (widget.fanDirection == GalleryFanDirection.left ? 36 : -50);
     final fanDirectionSign = widget.fanDirection == GalleryFanDirection.left ? -1.0 : 1.0;
     final textOffset = (baseOffset + 25 + fanDirectionSign * 10.0).clamp(0.0, double.infinity);
+    final photoCount = _attachments.where((a) => a.mimeStart == 'image').length;
+    final videoCount = _attachments.where((a) => a.mimeStart == 'video').length;
+    final galleryLabel = photoCount > 0 && videoCount > 0
+        ? '${photoCount + videoCount} Photos & Videos'
+        : videoCount > 0
+            ? '$videoCount ${videoCount == 1 ? 'Video' : 'Videos'}'
+            : '$photoCount ${photoCount == 1 ? 'Photo' : 'Photos'}';
 
     return GestureDetector(
       onHorizontalDragUpdate: (details) {
         if (_attachments.length <= 1) return;
+        if (!widget.infiniteScroll) {
+          final fanFlip = widget.fanDirection == GalleryFanDirection.left ? -1 : 1;
+          final atStart = _currentIndex == 0;
+          final atEnd = _currentIndex == _attachments.length - 1;
+          final blockedPositive = (atStart && fanFlip > 0) || (atEnd && fanFlip < 0);
+          final blockedNegative = (atStart && fanFlip < 0) || (atEnd && fanFlip > 0);
+
+          final draggingIntoBlockedEnd =
+              (blockedPositive && details.delta.dx > 0) || (blockedNegative && details.delta.dx < 0);
+          if (draggingIntoBlockedEnd) {
+            if (!_hapticGivenForCurrentEnd) {
+              HapticFeedback.lightImpact();
+              _hapticGivenForCurrentEnd = true;
+            }
+            // Rubber-band: allow limited overscroll in the blocked direction with friction.
+            setState(() {
+              _dragDx += details.delta.dx * 0.3;
+              if (blockedPositive) _dragDx = _dragDx.clamp(0.0, _maxWiggleDx);
+              if (blockedNegative) _dragDx = _dragDx.clamp(-_maxWiggleDx, 0.0);
+            });
+            return;
+          } else {
+            _hapticGivenForCurrentEnd = false;
+          }
+        }
         setState(() {
           _dragDx += details.delta.dx;
           _dragDx = _dragDx.clamp(-_maxDragDx, _maxDragDx);
-          if (!widget.infiniteScroll) {
-            // Compute which drag directions are blocked at the current endpoint.
-            // dragDx > 0 with fanFlip=1 (or dragDx < 0 with fanFlip=-1) advances
-            // to the previous index; the inverse advances to the next.
-            final fanFlip = widget.fanDirection == GalleryFanDirection.left ? -1 : 1;
-            final atStart = _currentIndex == 0;
-            final atEnd = _currentIndex == _attachments.length - 1;
-            final blockedPositive = (atStart && fanFlip > 0) || (atEnd && fanFlip < 0);
-            final blockedNegative = (atStart && fanFlip < 0) || (atEnd && fanFlip > 0);
-            if (blockedPositive) _dragDx = _dragDx.clamp(-_maxDragDx, 0.0);
-            if (blockedNegative) _dragDx = _dragDx.clamp(0.0, _maxDragDx);
-          }
         });
       },
       onHorizontalDragEnd: (details) {
+        _hapticGivenForCurrentEnd = false;
         if (_attachments.length <= 1) return;
         final velocity = details.primaryVelocity ?? 0;
         final bool commit = _dragDx.abs() >= _swipeCommitThreshold || velocity.abs() > 700;
@@ -146,6 +173,7 @@ class _MessageImageGalleryState extends State<MessageImageGallery> with ThemeHel
         });
       },
       onHorizontalDragCancel: () {
+        _hapticGivenForCurrentEnd = false;
         if (_attachments.length <= 1) return;
         setState(() {
           _dragDx = 0;
@@ -162,55 +190,75 @@ class _MessageImageGalleryState extends State<MessageImageGallery> with ThemeHel
             child: Stack(
               alignment: Alignment.center,
               clipBehavior: Clip.none,
-              children: List.generate(_attachments.length, (i) {
-                final attachment = _attachmentAtOffset(i);
-                final slot = i < _visibleFanSlots ? i : (_visibleFanSlots - 1);
-                final direction = widget.fanDirection == GalleryFanDirection.left ? -1.0 : 1.0;
-                const slotDx = <double>[0, 10, 17, 23, 28];
-                const slotDy = <double>[0, 4, 9, 14, 20];
-                const slotAngle = <double>[0, 0.08, 0.175, 0.3, 0.425];
-                const slotScale = <double>[1.0, 0.9, 0.8, 0.7, 0.6];
-                final overflowDepth = i >= _visibleFanSlots ? ((i - (_visibleFanSlots - 1)).clamp(0, 6) * 0.7) : 0.0;
-                final angle = slot == 0 ? 0.0 : direction * slotAngle[slot];
-                final dy = slotDy[slot] + overflowDepth;
-                final dx = direction * slotDx[slot];
-                final scale = slotScale[slot];
-                final cardWidth = baseCardWidth * scale;
-                final cardHeight = baseCardHeight * scale;
-                final centeredLeft = baseOffset + ((baseCardWidth - cardWidth) / 2);
-                final dragOffset = i == 0 ? _dragDx : 0.0;
-                final dragRotate = i == 0 ? (_dragDx / 700) : 0.0;
-                final mirroredBias = direction * 10.0;
-                return AnimatedPositioned(
-                  key: ValueKey(attachment.guid ?? attachment.id ?? '$i-${attachment.transferName}'),
-                  duration: const Duration(milliseconds: 180),
-                  curve: Curves.easeOutCubic,
-                  top: 1 + dy,
-                  left: centeredLeft + mirroredBias + dx + dragOffset,
-                  child: Transform.translate(
-                    offset: Offset.zero,
-                    child: SizedBox(
-                      width: cardWidth,
-                      height: cardHeight,
-                      child: Transform.rotate(
-                        angle: angle.toDouble() + dragRotate,
-                        alignment: widget.fanDirection == GalleryFanDirection.left
-                            ? Alignment.bottomRight
-                            : Alignment.bottomLeft,
-                        child: IgnorePointer(
-                          ignoring: i != 0,
-                          child: AttachmentHolder(
-                            message: _partForAttachment(attachment),
-                            transparentBackground: true,
-                            showCardShadow: true,
-                            galleryAttachments: _attachments,
+              children: [
+                // Peeking-zone tap overlay: sits at the bottom of z-order so it is
+                // tested LAST in hit testing. It only wins when every card's SizedBox
+                // misses (i.e. the rotated corner that peeks past the card's layout
+                // bounds). Uses _advance(1) which is "bring next card to front" for
+                // both fan directions.
+                if (_attachments.length > 1 && (widget.infiniteScroll || _currentIndex < _attachments.length - 1))
+                  Positioned.fill(
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () {
+                        HapticFeedback.lightImpact();
+                        setState(() {
+                          _advance(1);
+                          _dragDx = 0;
+                        });
+                      },
+                    ),
+                  ),
+                ...List.generate(_attachments.length, (i) {
+                  final attachment = _attachmentAtOffset(i);
+                  final slot = i < _visibleFanSlots ? i : (_visibleFanSlots - 1);
+                  final direction = widget.fanDirection == GalleryFanDirection.left ? -1.0 : 1.0;
+                  const slotDx = <double>[0, 10, 17, 23, 28];
+                  const slotDy = <double>[0, 4, 9, 14, 20];
+                  const slotAngle = <double>[0, 0.08, 0.175, 0.3, 0.425];
+                  const slotScale = <double>[1.0, 0.9, 0.8, 0.7, 0.6];
+                  final overflowDepth = i >= _visibleFanSlots ? ((i - (_visibleFanSlots - 1)).clamp(0, 6) * 0.7) : 0.0;
+                  final angle = slot == 0 ? 0.0 : direction * slotAngle[slot];
+                  final dy = slotDy[slot] + overflowDepth;
+                  final dx = direction * slotDx[slot];
+                  final scale = slotScale[slot];
+                  final cardWidth = baseCardWidth * scale;
+                  final cardHeight = baseCardHeight * scale;
+                  final centeredLeft = baseOffset + ((baseCardWidth - cardWidth) / 2);
+                  final dragOffset = i == 0 ? _dragDx : 0.0;
+                  final dragRotate = i == 0 ? (_dragDx / 700) : 0.0;
+                  final mirroredBias = direction * 10.0;
+                  return AnimatedPositioned(
+                    key: ValueKey(attachment.guid ?? attachment.id ?? '$i-${attachment.transferName}'),
+                    duration: const Duration(milliseconds: 180),
+                    curve: Curves.easeOutCubic,
+                    top: 1 + dy,
+                    left: centeredLeft + mirroredBias + dx + dragOffset,
+                    child: Transform.translate(
+                      offset: Offset.zero,
+                      child: SizedBox(
+                        width: cardWidth,
+                        height: cardHeight,
+                        child: Transform.rotate(
+                          angle: angle.toDouble() + dragRotate,
+                          alignment: widget.fanDirection == GalleryFanDirection.left
+                              ? Alignment.bottomRight
+                              : Alignment.bottomLeft,
+                          child: IgnorePointer(
+                            ignoring: i != 0,
+                            child: AttachmentHolder(
+                              message: _partForAttachment(attachment),
+                              transparentBackground: true,
+                              showCardShadow: true,
+                              galleryAttachments: _attachments,
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                );
-              }).reversed.toList(),
+                  );
+                }).reversed,
+              ],
             ),
           ),
           const SizedBox(height: 4),
@@ -228,7 +276,7 @@ class _MessageImageGalleryState extends State<MessageImageGallery> with ThemeHel
                 ),
                 const SizedBox(width: 3),
                 Text(
-                  'Gallery',
+                  galleryLabel,
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
                         color: Theme.of(context).colorScheme.primary,
                         fontWeight: FontWeight.bold,

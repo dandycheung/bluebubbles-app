@@ -14,9 +14,11 @@ class MessagePartContent extends StatelessWidget {
   const MessagePartContent({
     super.key,
     required this.messagePart,
+    this.galleryCurrentIndexNotifier,
   });
 
   final MessagePart messagePart;
+  final ValueNotifier<int>? galleryCurrentIndexNotifier;
 
   @override
   Widget build(BuildContext context) {
@@ -44,6 +46,7 @@ class MessagePartContent extends StatelessWidget {
           partIndex: messagePart.part,
           isInReply: false,
           fanDirection: message.isFromMe == true ? GalleryFanDirection.left : GalleryFanDirection.right,
+          currentIndexNotifier: galleryCurrentIndexNotifier,
         );
       }
       return AttachmentHolder(
