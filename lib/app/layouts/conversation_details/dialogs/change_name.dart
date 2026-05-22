@@ -40,7 +40,7 @@ void showChangeName(Chat chat, String method, BuildContext context) {
                           ),
                         );
                       });
-                  final response = await HttpSvc.updateChat(chat.guid, controller.text);
+                  final response = await HttpSvc.chat.setDisplayName(chat.guid, controller.text);
                   if (response.statusCode == 200) {
                     Navigator.of(context, rootNavigator: true).pop();
                     Navigator.of(context, rootNavigator: true).pop();

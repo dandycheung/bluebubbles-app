@@ -364,11 +364,11 @@ void sendEffectAction(
                                     colorScheme: context.theme.colorScheme.copyWith(
                                       primary: context.theme.colorScheme.bubble(context, true),
                                       onPrimary: context.theme.colorScheme.onBubble(context, true),
-                                      surface: SettingsSvc.settings.monetTheming.value == Monet.full
+                                      surface: ThemeSvc.isMaterialYouActive(context)
                                           ? null
                                           : (context.theme.extensions[BubbleColors] as BubbleColors?)
                                               ?.receivedBubbleColor,
-                                      onSurface: SettingsSvc.settings.monetTheming.value == Monet.full
+                                      onSurface: ThemeSvc.isMaterialYouActive(context)
                                           ? null
                                           : (context.theme.extensions[BubbleColors] as BubbleColors?)
                                               ?.onReceivedBubbleColor,

@@ -20,9 +20,15 @@ class VideoPlayer extends StatefulWidget {
   final PlatformFile file;
   final Attachment attachment;
   final bool isFromMe;
+  final List<Attachment>? galleryAttachments;
 
   const VideoPlayer(
-      {super.key, required this.file, required this.attachment, required this.controller, required this.isFromMe});
+      {super.key,
+      required this.file,
+      required this.attachment,
+      required this.controller,
+      required this.isFromMe,
+      this.galleryAttachments});
 
   final ConversationViewController? controller;
 
@@ -234,9 +240,11 @@ class _VideoPlayerState extends State<VideoPlayer> with AutomaticKeepAliveClient
       media = Media(widget.file.path!);
     }
 
-    videoController = VideoController(Player());
+    final player = Player();
+    videoController = VideoController(player);
     await videoController!.player.setPlaylistMode(PlaylistMode.none);
     await videoController!.player.open(media, play: false);
+    await _configureAndroidVideoColorPipeline(videoController!.player);
     await videoController!.player.setVolume(muted.value ? 0 : 100);
     createListener(videoController!);
 
@@ -247,6 +255,26 @@ class _VideoPlayerState extends State<VideoPlayer> with AutomaticKeepAliveClient
 
     if (mounted) {
       setState(() {});
+    }
+  }
+
+  Future<void> _configureAndroidVideoColorPipeline(Player player) async {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return;
+    final platform = player.platform;
+    if (platform is! NativePlayer) return;
+
+    try {
+      // Force conservative HDR->SDR conversion for iPhone HDR clips, which can
+      // otherwise appear over-bright on some Android GPU + mpv combinations.
+      await platform.setProperty('target-colorspace-hint', 'yes');
+      await platform.setProperty('target-prim', 'bt.709');
+      await platform.setProperty('target-trc', 'srgb');
+      await platform.setProperty('tone-mapping', 'hable');
+      await platform.setProperty('target-peak', '203');
+      await platform.setProperty('hdr-compute-peak', 'no');
+    } catch (e, s) {
+      debugPrint('VideoPlayer: Failed to apply Android video color pipeline: $e');
+      debugPrint(s.toString());
     }
   }
 
@@ -327,14 +355,16 @@ class _VideoPlayerState extends State<VideoPlayer> with AutomaticKeepAliveClient
                           showInteractions: true,
                           videoController: videoController,
                           mute: muted,
+                          galleryAttachments: widget.galleryAttachments,
                         ),
                       ),
                     );
+                    // Sync overlay state with actual playing state when returning from fullscreen
+                    showPlayPauseOverlay.value = !videoController!.player.state.playing;
                   }
                 }
               : () async {
                   if (attachment.id == null) return;
-                  await videoController!.player.pause();
                   await Navigator.of(Get.context!).push(
                     ThemeSwitcher.buildPageRoute(
                       builder: (context) => FullscreenMediaHolder(
@@ -343,9 +373,12 @@ class _VideoPlayerState extends State<VideoPlayer> with AutomaticKeepAliveClient
                         showInteractions: true,
                         mute: muted,
                         videoController: videoController,
+                        galleryAttachments: widget.galleryAttachments,
                       ),
                     ),
                   );
+                  // Sync overlay state with actual playing state when returning from fullscreen
+                  showPlayPauseOverlay.value = !videoController!.player.state.playing;
                 },
           onDoubleTap: () {
             // Stub to prevent doubleTap events on parent from happening
@@ -387,6 +420,7 @@ class _VideoPlayerState extends State<VideoPlayer> with AutomaticKeepAliveClient
                   showInteractions: true,
                   mute: muted,
                   videoController: videoController,
+                  galleryAttachments: widget.galleryAttachments,
                 ),
               ),
             );

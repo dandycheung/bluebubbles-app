@@ -21,9 +21,12 @@ class MentionEntity extends Entity {
 List<InlineSpan> buildMessageSpans(BuildContext context, MessagePart part, Message message,
     {Color? colorOverride, bool hideBodyText = false}) {
   final textSpans = <InlineSpan>[];
+  final bubbleColors = context.theme.extensions[BubbleColors] as BubbleColors?;
   final textStyle = (context.theme.extensions[BubbleText] as BubbleText).bubbleText.apply(
         color: colorOverride ??
-            (message.isFromMe! ? context.theme.colorScheme.onPrimary : context.theme.colorScheme.onSurfaceVariant),
+            (message.isFromMe!
+                ? context.theme.colorScheme.onBubble(context, true)
+                : bubbleColors?.onReceivedBubbleColor ?? context.theme.colorScheme.onSurfaceVariant),
         fontSizeFactor: message.isBigEmoji ? 3 : 1,
       );
 
@@ -49,14 +52,17 @@ List<InlineSpan> buildMessageSpans(BuildContext context, MessagePart part, Messa
                   .firstWhereOrNull((e) => e.address == part.mentions[i].mentionedAddress);
               if (handle?.contactsV2.isNotEmpty == true && handle!.contactsV2.first.isNative) {
                 try {
-                  await MethodChannelSvc.invokeMethod(
-                      "view-contact-form", {'id': handle.contactsV2.first.nativeContactId});
+                  await MethodChannelSvc.actions.viewContactForm(
+                    nativeContactId: handle.contactsV2.first.nativeContactId,
+                  );
                 } catch (_) {
                   showSnackbar("Error", "Failed to find contact on device!");
                 }
               } else if (handle != null) {
-                await MethodChannelSvc.invokeMethod("open-contact-form",
-                    {'address': handle.address, 'address_type': handle.address.isEmail ? 'email' : 'phone'});
+                await MethodChannelSvc.actions.openContactForm(
+                  address: handle.address,
+                  isEmail: handle.address.isEmail,
+                );
               }
             }));
       if (i == part.mentions.length - 1) {
@@ -79,9 +85,12 @@ List<InlineSpan> buildMessageSpans(BuildContext context, MessagePart part, Messa
 Future<List<InlineSpan>> buildEnrichedMessageSpans(BuildContext context, MessagePart part, Message message,
     {Color? colorOverride, bool hideBodyText = false}) async {
   final textSpans = <InlineSpan>[];
+  final bubbleColors = context.theme.extensions[BubbleColors] as BubbleColors?;
   final textStyle = (context.theme.extensions[BubbleText] as BubbleText).bubbleText.apply(
         color: colorOverride ??
-            (message.isFromMe! ? context.theme.colorScheme.onPrimary : context.theme.colorScheme.onSurfaceVariant),
+            (message.isFromMe!
+                ? context.theme.colorScheme.onBubble(context, true)
+                : bubbleColors?.onReceivedBubbleColor ?? context.theme.colorScheme.onSurfaceVariant),
         fontSizeFactor: message.isBigEmoji ? 3 : 1,
       );
 
@@ -182,14 +191,17 @@ Future<List<InlineSpan>> buildEnrichedMessageSpans(BuildContext context, Message
                 final handle = ChatsSvc.activeChat!.chat.handles.firstWhereOrNull((e) => e.address == data!.first);
                 if (handle?.contactsV2.isNotEmpty == true && handle!.contactsV2.first.isNative) {
                   try {
-                    await MethodChannelSvc.invokeMethod(
-                        "view-contact-form", {'id': handle.contactsV2.first.nativeContactId});
+                    await MethodChannelSvc.actions.viewContactForm(
+                      nativeContactId: handle.contactsV2.first.nativeContactId,
+                    );
                   } catch (_) {
                     showSnackbar("Error", "Failed to find contact on device!");
                   }
                 } else if (handle != null) {
-                  await MethodChannelSvc.invokeMethod("open-contact-form",
-                      {'address': handle.address, 'address_type': handle.address.isEmail ? 'email' : 'phone'});
+                  await MethodChannelSvc.actions.openContactForm(
+                    address: handle.address,
+                    isEmail: handle.address.isEmail,
+                  );
                 }
               }));
       } else if (urlRegex.hasMatch(text) ||
@@ -217,7 +229,7 @@ Future<List<InlineSpan>> buildEnrichedMessageSpans(BuildContext context, Message
                 } else if (type == "email") {
                   await launchUrl(Uri(scheme: "mailto", path: text));
                 } else if (type == "date") {
-                  await MethodChannelSvc.invokeMethod("open-calendar", {"date": data!.first});
+                  await MethodChannelSvc.actions.openCalendar(dateEpochMillis: data!.first as int);
                 } else if (type == "tracking") {
                   final TrackingCarrier c = data!.first;
                   final String number = data.last;

@@ -70,10 +70,10 @@ class _ConversationDetailsState extends State<ConversationDetails> with WidgetsB
             colorScheme: context.theme.colorScheme.copyWith(
               primary: context.theme.colorScheme.bubble(context, chat.isIMessage),
               onPrimary: context.theme.colorScheme.onBubble(context, chat.isIMessage),
-              surface: SettingsSvc.settings.monetTheming.value == Monet.full
+              surface: ThemeSvc.isMaterialYouActive(context)
                   ? null
                   : (context.theme.extensions[BubbleColors] as BubbleColors?)?.receivedBubbleColor,
-              onSurface: SettingsSvc.settings.monetTheming.value == Monet.full
+              onSurface: ThemeSvc.isMaterialYouActive(context)
                   ? null
                   : (context.theme.extensions[BubbleColors] as BubbleColors?)?.onReceivedBubbleColor,
             ),
@@ -171,7 +171,7 @@ class _ConversationDetailsState extends State<ConversationDetails> with WidgetsB
                                     ),
                                   );
                                 });
-                            final response = await HttpSvc.leaveChat(chat.guid);
+                            final response = await HttpSvc.chat.leave(chat.guid);
                             if (!context.mounted) return;
                             if (response.statusCode == 200) {
                               Navigator.of(context, rootNavigator: true).pop();

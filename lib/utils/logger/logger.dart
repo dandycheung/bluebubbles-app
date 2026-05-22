@@ -43,8 +43,8 @@ class BaseLogger {
     final baseFileOutput = RotatingFileOutput(
       dirPath: logDir,
       latestFileName: latestLogName,
-      maxFileSizeKB: 1024,
-      maxRotatedFilesCount: 5,
+      maxFileSizeKB: 1024 * 5, // 5 MB
+      maxRotatedFilesCount: 5, // Total: 25 MB of logs before old logs are deleted
       encoding: utf8,
       fileNameFormatter: (_) {
         final now = DateTime.now();
@@ -204,7 +204,7 @@ class BaseLogger {
     _logger = createLogger();
   }
 
-  String compressLogs() {
+  Future<String> compressLogs() async {
     try {
       final Directory logDir = Directory(Logger.logDir);
       if (!logDir.existsSync()) {
@@ -227,9 +227,9 @@ class BaseLogger {
       final encoder = ZipFileEncoder();
       encoder.create(zippedLogFile.path);
       for (final logPath in logPaths) {
-        encoder.addFile(File(logPath));
+        await encoder.addFile(File(logPath));
       }
-      encoder.close();
+      await encoder.close();
 
       return zippedLogFile.path;
     } catch (e, stackTrace) {
@@ -250,7 +250,11 @@ class BaseLogger {
       final File logFile = logFiles.first as File;
       if (!logFile.existsSync()) return [];
 
-      List<String> lines = await logFile.readAsLines(encoding: utf8);
+      final List<String> lines = await logFile
+          .openRead()
+          .transform(const Utf8Decoder(allowMalformed: true))
+          .transform(const LineSplitter())
+          .toList();
 
       // Combine lines that are part of the same log message
       List<String> logs = [];

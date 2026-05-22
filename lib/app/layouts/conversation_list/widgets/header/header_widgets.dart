@@ -548,9 +548,11 @@ void logout(BuildContext context) {
               SocketSvc.forgetConnection();
               SettingsSvc.settings = Settings();
               SettingsSvc.fcmData = FCMData();
-              await PrefsSvc.i.clear();
-              await PrefsSvc.i.setString("selected-dark", "OLED Dark");
-              await PrefsSvc.i.setString("selected-light", "Bright White");
+              await PrefsSvc.admin.clearAll();
+              await PrefsSvc.theme.setSelectedThemes(
+                darkTheme: "OLED Dark",
+                lightTheme: "Bright White",
+              );
               Get.offAll(
                   () => const PopScope(
                         canPop: false,

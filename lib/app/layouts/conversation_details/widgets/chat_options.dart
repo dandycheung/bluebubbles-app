@@ -58,8 +58,10 @@ class _ChatOptionsState extends State<ChatOptions> with ThemeHelpers {
                     ),
                     isThreeLine: true,
                     onTap: () async {
-                      await MethodChannelSvc.invokeMethod("open-conversation-notification-settings",
-                          {"channel_id": chat.guid, "display_name": chat.getTitle()});
+                      await MethodChannelSvc.actions.openConversationNotificationSettings(
+                        channelId: chat.guid,
+                        displayName: chat.getTitle(),
+                      );
                     },
                   ),
                 if (!kIsWeb)

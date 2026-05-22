@@ -75,7 +75,7 @@ class BBScaffold extends StatelessWidget {
 
   /// Whether to apply bottom SafeArea padding to the body.
   ///
-  /// Defaults to true to accommodate the Android navigation bar.
+  /// Defaults to true to avoid content being obscured by system gesture areas on modern Android devices.
   final bool safeAreaBottom;
 
   /// Whether to apply left SafeArea padding to the body.
@@ -101,7 +101,7 @@ class BBScaffold extends StatelessWidget {
     this.persistentFooterButtons,
     this.persistentFooterAlignment,
     this.safeAreaTop = false,
-    this.safeAreaBottom = false,
+    this.safeAreaBottom = true,
     this.safeAreaLeft = true,
     this.safeAreaRight = true,
   });

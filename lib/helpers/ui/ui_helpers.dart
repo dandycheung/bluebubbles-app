@@ -11,8 +11,10 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:gesture_x_detector/gesture_x_detector.dart';
 import 'package:get/get.dart';
+import 'package:get_it/get_it.dart';
 import 'package:image/image.dart' as img;
 import 'package:universal_io/io.dart';
 
@@ -111,14 +113,11 @@ Widget buildBackButton(BuildContext context,
 
 Widget buildProgressIndicator(BuildContext context, {double size = 20, double strokeWidth = 2}) {
   return SettingsSvc.settings.skin.value == Skins.iOS
-      ? Theme(
-          data: ThemeData(
-            cupertinoOverrideTheme:
-                CupertinoThemeData(brightness: ThemeData.estimateBrightnessForColor(context.theme.colorScheme.surface)),
-          ),
-          child: CupertinoActivityIndicator(
-            radius: size / 2,
-          ),
+      ? CupertinoActivityIndicator(
+          radius: size / 2,
+          color: ThemeSvc.isAnyMaterialYouSelected
+              ? context.theme.colorScheme.primary
+              : context.theme.colorScheme.onSurfaceVariant,
         )
       : Container(
           alignment: Alignment.center,
@@ -128,7 +127,9 @@ Widget buildProgressIndicator(BuildContext context, {double size = 20, double st
             height: size,
             child: CircularProgressIndicator(
               strokeWidth: strokeWidth,
-              valueColor: AlwaysStoppedAnimation<Color>(context.theme.colorScheme.primary),
+              valueColor: AlwaysStoppedAnimation<Color>(ThemeSvc.isAnyMaterialYouSelected
+                  ? context.theme.colorScheme.primary
+                  : context.theme.colorScheme.onSurfaceVariant),
             ),
           ),
         );
@@ -462,13 +463,27 @@ void showSnackbar(String title, String message,
   );
 }
 
-Widget getIndicatorIcon(SocketState socketState, {double size = 24, bool showAlpha = true}) {
+Future<void> showToast(String message, {bool isError = false}) async {
+  if (message.trim().isEmpty) return;
+  try {
+    await Fluttertoast.showToast(
+      msg: message,
+      toastLength: isError ? Toast.LENGTH_LONG : Toast.LENGTH_SHORT,
+      gravity: ToastGravity.BOTTOM,
+    );
+  } catch (e, s) {
+    Logger.warn("Failed to show toast: $e");
+    Logger.debug(s.toString());
+  }
+}
+
+Widget getSocketStateIndicatorIcon(SocketState socketState, {double size = 24, bool showAlpha = true}) {
   return Icon(Icons.fiber_manual_record,
       color: getIndicatorColor(socketState).withAlpha(showAlpha ? 200 : 255), size: size);
 }
 
 Color getIndicatorColor(SocketState socketState) {
-  if (socketState == SocketState.connecting) {
+  if (socketState == SocketState.connecting || socketState == SocketState.reconnecting) {
     return HexColor('ffd500');
   } else if (socketState == SocketState.connected) {
     return HexColor('32CD32');
@@ -510,7 +525,8 @@ Future<void> paintGroupAvatar({
 }) async {
   late final ThemeData theme;
   final bool systemDark = PlatformDispatcher.instance.platformBrightness == Brightness.dark;
-  if (!LifecycleSvc.isAlive) {
+  final isAlive = GetIt.I.isRegistered<LifecycleService>() ? GetIt.I<LifecycleService>().isAlive : false;
+  if (!isAlive) {
     if (systemDark) {
       theme = ThemeStruct.getDarkTheme().data;
     } else {

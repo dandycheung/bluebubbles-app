@@ -8,6 +8,7 @@ import 'package:bluebubbles/app/wrappers/titlebar_wrapper.dart';
 import 'package:bluebubbles/database/models.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/services/services.dart';
+import 'package:bluebubbles/services/backend/interfaces/sync_interface.dart';
 import 'package:bluebubbles/services/ui/chat/send_data.dart';
 import 'package:bluebubbles/utils/string_utils.dart';
 import 'package:dio/dio.dart';
@@ -234,7 +235,7 @@ class ChatCreatorController extends StatefulController {
 
   Future<void> _fetchIMessageState(SelectedContact contact) async {
     try {
-      final response = await HttpSvc.handleiMessageState(contact.address);
+      final response = await HttpSvc.handle.handleiMessageState(contact.address);
       final available = response.data['data']['available'] as bool?;
       contact.serviceType.value = available == true
           ? ChatServiceType.iMessage
@@ -542,7 +543,7 @@ class ChatCreatorController extends StatefulController {
           // No existing chat found on the server — create one.
           // Message has already been validated above; it is delivered as part of
           // creation, so pendingSend must be skipped for this path.
-          final response = await HttpSvc.createChat(participants, messageText, method);
+          final response = await HttpSvc.chat.create(participants, messageText, method);
           serverChat = Chat.fromMap(response.data['data'] as Map<String, dynamic>);
           messageSentWithChat = true;
         }
@@ -561,11 +562,15 @@ class ChatCreatorController extends StatefulController {
         // isFromMe / no-tempGuid messages).
         if (messageSentWithChat) {
           try {
-            final msgResponse = await HttpSvc.chatMessages(resolvedChat.guid, limit: 1);
+            final msgResponse = await HttpSvc.chat.getMessages(resolvedChat.guid, limit: 1);
             final msgData = msgResponse.data['data'];
             if (msgData is List && msgData.isNotEmpty) {
-              final messages = msgData.map((e) => Message.fromMap(e as Map<String, dynamic>)).toList();
-              syncedMessages = await Chat.bulkSyncMessages(resolvedChat, messages);
+              final rawMessages = msgData.cast<Map<String, dynamic>>();
+              syncedMessages = (await SyncInterface.bulkSyncData(
+                chatData: resolvedChat.toMap(),
+                messagesData: rawMessages,
+              ))
+                  .messages;
             }
           } catch (_) {
             // Non-fatal: the socket echo will still arrive and display the message

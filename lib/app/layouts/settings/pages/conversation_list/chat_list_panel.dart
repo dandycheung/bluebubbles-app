@@ -36,17 +36,6 @@ class _ChatListPanelState extends State<ChatListPanel> with ThemeHelpers {
                   children: [
                     Obx(() => SettingsSwitch(
                           onChanged: (bool val) async {
-                            SettingsSvc.settings.showConnectionIndicator.value = val;
-                            await SettingsSvc.settings.saveOneAsync('showConnectionIndicator');
-                          },
-                          initialVal: SettingsSvc.settings.showConnectionIndicator.value,
-                          title: "Show Connection Indicator",
-                          subtitle: "Show a visual status indicator when the app is not connected to the server",
-                          backgroundColor: tileColor,
-                        )),
-                    const SettingsDivider(padding: EdgeInsets.only(left: 16.0)),
-                    Obx(() => SettingsSwitch(
-                          onChanged: (bool val) async {
                             SettingsSvc.settings.showSyncIndicator.value = val;
                             await SettingsSvc.settings.saveOneAsync('showSyncIndicator');
                           },

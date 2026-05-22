@@ -219,7 +219,6 @@ class ConversationViewState extends State<ConversationView> with ThemeHelpers<Co
             child: BBScaffold(
               backgroundColor: windowEffect != WindowEffect.disabled ? Colors.transparent : colorScheme.surface,
               extendBodyBehindAppBar: true,
-              safeAreaBottom: true,
               appBar: _appBar,
               body: Actions(
                 actions: _actionsMap,

@@ -16,6 +16,7 @@ import 'package:logger/logger.dart' show Level;
 import 'package:universal_io/io.dart';
 
 class Settings {
+  final RxString iMessageStatsSource = "server".obs;
   final RxInt firstFcmRegisterDate = 0.obs;
   final RxString iCloudAccount = "".obs;
   final RxString guidAuthKey = "".obs;
@@ -45,7 +46,6 @@ class Settings {
   final RxBool doubleTapForDetails = false.obs;
   final RxBool denseChatTiles = false.obs;
   final RxBool smartReply = false.obs;
-  final RxBool showConnectionIndicator = false.obs;
   final RxBool showSyncIndicator = true.obs;
   final RxInt sendDelay = 0.obs;
   final RxBool recipientAsPlaceholder = false.obs;
@@ -65,7 +65,6 @@ class Settings {
   final RxBool notifyOnChatList = false.obs;
   final RxBool notifyReactions = true.obs;
   final RxBool colorsFromMedia = false.obs;
-  final Rx<Monet> monetTheming = Monet.none.obs;
   final RxString globalTextDetection = "".obs;
   final RxBool filterUnknownSenders = false.obs;
   final RxBool tabletMode = true.obs;
@@ -198,19 +197,19 @@ class Settings {
 
   Future<void> _savePref(String key, dynamic value) async {
     if (value is bool) {
-      await PrefsSvc.i.setBool(key, value);
+      await PrefsSvc.admin.setBool(key, value);
     } else if (value is String) {
-      await PrefsSvc.i.setString(key, value);
+      await PrefsSvc.admin.setString(key, value);
     } else if (value is int) {
-      await PrefsSvc.i.setInt(key, value);
+      await PrefsSvc.admin.setInt(key, value);
     } else if (value is double) {
-      await PrefsSvc.i.setDouble(key, value);
+      await PrefsSvc.admin.setDouble(key, value);
     } else if (value is List<DetailsMenuAction>) {
-      await PrefsSvc.i.setString(key, jsonEncode(value.map((action) => action.name).toList()));
+      await PrefsSvc.admin.setString(key, jsonEncode(value.map((action) => action.name).toList()));
     } else if (value is List || value is Map) {
-      await PrefsSvc.i.setString(key, jsonEncode(value));
+      await PrefsSvc.admin.setString(key, jsonEncode(value));
     } else if (value == null) {
-      await PrefsSvc.i.remove(key);
+      await PrefsSvc.admin.remove(key);
     }
   }
 
@@ -264,11 +263,11 @@ class Settings {
   }
 
   static Settings getSettings() {
-    Set<String> keys = PrefsSvc.i.getKeys();
+    Set<String> keys = PrefsSvc.admin.getKeys();
 
     Map<String, dynamic> items = {};
     for (String s in keys) {
-      items[s] = PrefsSvc.i.get(s);
+      items[s] = PrefsSvc.admin.get(s);
     }
     if (items.isNotEmpty) {
       return Settings.fromMap(items);
@@ -301,7 +300,6 @@ class Settings {
       'doubleTapForDetails': doubleTapForDetails.value,
       'denseChatTiles': denseChatTiles.value,
       'smartReply': smartReply.value,
-      'showConnectionIndicator': showConnectionIndicator.value,
       'showSyncIndicator': showSyncIndicator.value,
       'sendDelay': sendDelay.value,
       'recipientAsPlaceholder': recipientAsPlaceholder.value,
@@ -398,6 +396,7 @@ class Settings {
       'replaceEmoticonsWithEmoji': replaceEmoticonsWithEmoji.value,
       'lastReviewRequestTimestamp': lastReviewRequestTimestamp.value,
       'serverPrivateAPI': serverPrivateAPI.value,
+      'iMessageStatsSource': iMessageStatsSource.value,
     };
 
     if (includeAll) {
@@ -409,7 +408,6 @@ class Settings {
         'finishedSetup': finishedSetup.value,
         'reachedConversationList': reachedConversationList.value,
         'colorsFromMedia': colorsFromMedia.value,
-        'monetTheming': monetTheming.value.index,
         'userAvatarPath': userAvatarPath.value,
         'firstFcmRegisterDate': firstFcmRegisterDate.value,
         'sendSoundPath': sendSoundPath.value,
@@ -466,8 +464,6 @@ class Settings {
         map['doubleTapForDetails'] ?? SettingsSvc.settings.doubleTapForDetails.value;
     SettingsSvc.settings.denseChatTiles.value = map['denseChatTiles'] ?? SettingsSvc.settings.denseChatTiles.value;
     SettingsSvc.settings.smartReply.value = map['smartReply'] ?? SettingsSvc.settings.smartReply.value;
-    SettingsSvc.settings.showConnectionIndicator.value =
-        map['showConnectionIndicator'] ?? SettingsSvc.settings.showConnectionIndicator.value;
     SettingsSvc.settings.showSyncIndicator.value =
         map['showSyncIndicator'] ?? SettingsSvc.settings.showSyncIndicator.value;
     SettingsSvc.settings.sendDelay.value = map['sendDelay'] ?? SettingsSvc.settings.sendDelay.value;
@@ -501,8 +497,6 @@ class Settings {
         map['notifyOnChatList'] ?? SettingsSvc.settings.notifyOnChatList.value;
     SettingsSvc.settings.notifyReactions.value = map['notifyReactions'] ?? SettingsSvc.settings.notifyReactions.value;
     SettingsSvc.settings.colorsFromMedia.value = map['colorsFromMedia'] ?? SettingsSvc.settings.colorsFromMedia.value;
-    SettingsSvc.settings.monetTheming.value =
-        map['monetTheming'] != null ? Monet.values[map['monetTheming']] : SettingsSvc.settings.monetTheming.value;
     SettingsSvc.settings.globalTextDetection.value =
         map['globalTextDetection'] ?? SettingsSvc.settings.globalTextDetection.value;
     SettingsSvc.settings.filterUnknownSenders.value =
@@ -556,6 +550,7 @@ class Settings {
         map['enablePrivateAPI'] ?? SettingsSvc.settings.enablePrivateAPI.value;
     SettingsSvc.settings.serverPrivateAPI.value =
         map['serverPrivateAPI'] ?? SettingsSvc.settings.serverPrivateAPI.value;
+    SettingsSvc.settings.iMessageStatsSource.value = (map['iMessageStatsSource'] == 'local') ? 'local' : 'server';
     SettingsSvc.settings.privateSendTypingIndicators.value =
         map['privateSendTypingIndicators'] ?? SettingsSvc.settings.privateSendTypingIndicators.value;
     SettingsSvc.settings.privateMarkChatAsRead.value =
@@ -695,7 +690,6 @@ class Settings {
     s.doubleTapForDetails.value = map['doubleTapForDetails'] ?? false;
     s.denseChatTiles.value = map['denseChatTiles'] ?? false;
     s.smartReply.value = map['smartReply'] ?? false;
-    s.showConnectionIndicator.value = map['showConnectionIndicator'] ?? false;
     s.showSyncIndicator.value = map['showSyncIndicator'] ?? true;
     s.sendDelay.value = map['sendDelay'] ?? 0;
     s.recipientAsPlaceholder.value = map['recipientAsPlaceholder'] ?? false;
@@ -715,7 +709,6 @@ class Settings {
     s.notifyOnChatList.value = map['notifyOnChatList'] ?? false;
     s.notifyReactions.value = map['notifyReactions'] ?? true;
     s.colorsFromMedia.value = map['colorsFromMedia'] ?? false;
-    s.monetTheming.value = map['monetTheming'] != null ? Monet.values[map['monetTheming']] : Monet.none;
     s.globalTextDetection.value = map['globalTextDetection'] ?? "";
     s.filterUnknownSenders.value = map['filterUnknownSenders'] ?? false;
     s.tabletMode.value = kIsDesktop || (map['tabletMode'] ?? true);
@@ -730,7 +723,7 @@ class Settings {
     s.minimizeToTray.value = map['minimizeToTray'] ?? false;
     s.askWhereToSave.value = map['askWhereToSave'] ?? false;
     s.statusIndicatorsOnChats.value = map['statusIndicatorsOnChats'] ?? false;
-    s.apiTimeout.value = map['apiTimeout'] ?? 15000;
+    s.apiTimeout.value = map['apiTimeout'] ?? 30000;
     s.allowUpsideDownRotation.value = map['allowUpsideDownRotation'] ?? false;
     s.cancelQueuedMessages.value = map['cancelQueuedMessages'] ?? false;
     s.repliesToPrevious.value = map['repliesToPrevious'] ?? false;
@@ -751,6 +744,7 @@ class Settings {
     s.privateAPIAttachmentSend.value = map['privateAPIAttachmentSend'] ?? false;
     s.enablePrivateAPI.value = map['enablePrivateAPI'] ?? false;
     s.serverPrivateAPI.value = map['serverPrivateAPI'];
+    s.iMessageStatsSource.value = (map['iMessageStatsSource'] == 'local') ? 'local' : 'server';
     s.privateSendTypingIndicators.value = map['privateSendTypingIndicators'] ?? false;
     s.privateMarkChatAsRead.value = map['privateMarkChatAsRead'] ?? false;
     s.privateManualMarkAsRead.value = map['privateManualMarkAsRead'] ?? false;

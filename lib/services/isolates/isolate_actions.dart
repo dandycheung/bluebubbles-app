@@ -47,8 +47,6 @@ class IsolateActons {
 
     // Messages — getMessages is no-arg, wrap to accept and ignore the data param
     IsolateRequestType.getMessages: (_) => MessageActions.getMessages(),
-    IsolateRequestType.bulkSaveNewMessages: MessageActions.bulkSaveNewMessages,
-    IsolateRequestType.bulkAddMessages: MessageActions.bulkAddMessages,
     IsolateRequestType.replaceMessage: MessageActions.replaceMessage,
     IsolateRequestType.deleteMessage: MessageActions.deleteMessage,
     IsolateRequestType.softDeleteMessage: MessageActions.softDeleteMessage,
@@ -60,6 +58,8 @@ class IsolateActons {
     // Chat
     IsolateRequestType.clearNotificationForChat: ChatActions.clearNotificationForChat,
     IsolateRequestType.markChatReadUnread: ChatActions.markChatReadUnread,
+    IsolateRequestType.startTyping: ChatActions.startTyping,
+    IsolateRequestType.stopTyping: ChatActions.stopTyping,
     IsolateRequestType.saveChat: ChatActions.saveChat,
     IsolateRequestType.deleteChat: ChatActions.deleteChat,
     IsolateRequestType.softDeleteChat: ChatActions.softDeleteChat,
@@ -69,7 +69,6 @@ class IsolateActons {
     IsolateRequestType.syncLatestMessages: ChatActions.syncLatestMessages,
     IsolateRequestType.bulkSyncChats: ChatActions.bulkSyncChats,
     IsolateRequestType.getMessagesAsync: ChatActions.getMessagesAsync,
-    IsolateRequestType.bulkSyncMessages: ChatActions.bulkSyncMessages,
     IsolateRequestType.getParticipantsAsync: ChatActions.getParticipantsAsync,
     IsolateRequestType.clearTranscriptAsync: ChatActions.clearTranscriptAsync,
     IsolateRequestType.getChatsAsync: ChatActions.getChatsAsync,
@@ -105,6 +104,7 @@ class IsolateActons {
 
     // Sync
     IsolateRequestType.performIncrementalSync: SyncActions.performIncrementalSync,
+    IsolateRequestType.bulkSyncData: SyncActions.bulkSyncData,
 
     // Send message (routed through isolate so sends survive backgrounding)
     IsolateRequestType.sendTextMessage: SendMessageActions.sendTextMessage,

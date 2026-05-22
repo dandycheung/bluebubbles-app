@@ -435,13 +435,13 @@ class _ReactionIconState extends CustomState<ReactionIcon, void, ConversationTil
   Widget build(BuildContext context) {
     return Obx(() {
       final unread = ChatsSvc.getChatState(controller.chat.guid)?.hasUnreadMessage.value ?? false;
-      final latestMsg = controller.chat.latestMessage;
-      final isReaction = !isNullOrEmpty(latestMsg.associatedMessageGuid);
+      final latestMsg = controller.chat.dbLatestMessage.target;
+      final isReaction = !isNullOrEmpty(latestMsg?.associatedMessageGuid);
       // Null-safe isFromMe: treat null as "from me" so we don't show the icon
       // for messages with unknown sender, mirroring the text-bubble behaviour.
-      final isNotFromMe = latestMsg.isFromMe == false;
+      final isNotFromMe = latestMsg?.isFromMe == false;
 
-      return unread && isReaction && isNotFromMe
+      return latestMsg != null && unread && isReaction && isNotFromMe
           ? controller.chat.isGroup
               // Groups: same anchor as the text bubble — bottom of sender avatar,
               // left edge of avatar area, growing rightward.

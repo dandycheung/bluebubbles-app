@@ -55,7 +55,10 @@ class ConversationViewController extends StatefulController with GetSingleTicker
   final RxList<Message> selected = <Message>[].obs;
   final RxList<MessageEditEntry> editing = <MessageEditEntry>[].obs;
   final GlobalKey focusInfoKey = GlobalKey();
+  final GlobalKey typingInfoKey = GlobalKey();
   final RxBool recipientNotifsSilenced = false.obs;
+  final RxBool showSmartReplyRow = false.obs;
+  final RxDouble smartReplyRowHeight = 0.0.obs;
   bool showingOverlays = false;
 
   /// True while any route is pushed on top of the conversation view route (e.g.
@@ -183,6 +186,7 @@ class ConversationViewController extends StatefulController with GetSingleTicker
 
   @override
   void onClose() {
+    updateSmartReplyLayout(visible: false, height: 0);
     for (PlayerController a in audioPlayers.values) {
       a.pausePlayer();
       a.dispose();
@@ -224,7 +228,19 @@ class ConversationViewController extends StatefulController with GetSingleTicker
     return editing.firstWhereOrNull((e) => e.message.guid == guid && e.part.part == part) != null;
   }
 
+  void updateSmartReplyLayout({required bool visible, required double height}) {
+    if (showSmartReplyRow.value != visible) {
+      showSmartReplyRow.value = visible;
+    }
+
+    final nextHeight = visible ? height : 0.0;
+    if (smartReplyRowHeight.value != nextHeight) {
+      smartReplyRowHeight.value = nextHeight;
+    }
+  }
+
   void close() {
+    updateSmartReplyLayout(visible: false, height: 0);
     EventDispatcherSvc.emit("update-highlight", null);
     ChatsSvc.setAllInactiveSync();
     Get.delete<ConversationViewController>(tag: tag);

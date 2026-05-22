@@ -45,17 +45,19 @@ class ContactTile extends StatelessWidget {
         onLongPress: () {
           Clipboard.setData(ClipboardData(text: handle.address));
           if (!Platform.isAndroid || (FilesystemSvc.androidInfo?.version.sdkInt ?? 0) < 33) {
-            showSnackbar("Copied", "Address copied to clipboard!");
+            showToast("Address copied to clipboard");
           }
         },
         onTap: () async {
           final contactV2 = handle.contactsV2.firstOrNull;
           if (contactV2 == null || !contactV2.isNative) {
-            await MethodChannelSvc.invokeMethod("open-contact-form",
-                {'address': handle.address, 'address_type': handle.address.isEmail ? 'email' : 'phone'});
+            await MethodChannelSvc.actions.openContactForm(
+              address: handle.address,
+              isEmail: handle.address.isEmail,
+            );
           } else {
             try {
-              await MethodChannelSvc.invokeMethod("view-contact-form", {'id': contactV2.nativeContactId});
+              await MethodChannelSvc.actions.viewContactForm(nativeContactId: contactV2.nativeContactId);
             } catch (_) {
               showSnackbar("Error", "Failed to find contact on device!");
             }
@@ -187,7 +189,7 @@ class ContactTile extends StatelessWidget {
                             );
                           });
 
-                      HttpSvc.chatParticipant("remove", chat.guid, handle.address).then((response) async {
+                      HttpSvc.chat.modifyParticipant("remove", chat.guid, handle.address).then((response) async {
                         navigator.pop();
                         if (response.statusCode == 200 && response.data != null && response.data['data'] != null) {
                           final result = await ChatInterface.bulkSyncChats(

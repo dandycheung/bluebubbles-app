@@ -146,7 +146,7 @@ mixin LivePhotoMixin<T extends StatefulWidget> on State<T> {
     livePhotoProgress.value = 0.0;
 
     try {
-      final response = await HttpSvc.downloadLivePhoto(
+      final response = await HttpSvc.attachment.downloadLivePhoto(
         livePhotoAttachment.guid!,
         onReceiveProgress: (count, total) {
           if (mounted) {

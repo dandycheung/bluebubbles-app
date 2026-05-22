@@ -54,8 +54,13 @@ class MessagesViewState extends State<MessagesView> with MessagesServiceMixin, T
   // Notifier for list structure changes only (add/remove)
   final ValueNotifier<int> _listVersion = ValueNotifier<int>(0);
 
+  // Per-message GlobalKeys so that element state (e.g. UrlPreview) survives
+  // index shifts when a new message is inserted at the front of the list.
+  final Map<String, GlobalKey> _messageKeys = {};
+
   // Debounce setState calls to prevent rapid rebuilds
   Timer? _setStateDebouncer;
+  StreamSubscription? _eventSubscription;
 
   // Managers for different responsibilities
   late final SmartRepliesManager smartRepliesManager;
@@ -92,11 +97,13 @@ class MessagesViewState extends State<MessagesView> with MessagesServiceMixin, T
       setState(() {});
     });
 
-    EventDispatcherSvc.stream.listen((e) async {
+    _eventSubscription = EventDispatcherSvc.stream.listen((e) async {
+      if (!mounted) return;
       if (e.type == "refresh-messagebloc" && e.data == chat.guid) {
         // Clear state items
         noMoreMessages = false;
         _messages = [];
+        _messageKeys.clear();
         // Reload the state after refreshing
         await reloadMessagesService(
           chat,
@@ -107,8 +114,10 @@ class MessagesViewState extends State<MessagesView> with MessagesServiceMixin, T
           onJumpToMessage: jumpToMessage,
           messages: _messages,
         );
+        if (!mounted) return;
         setState(() {});
       } else if (e.type == "add-custom-smartreply") {
+        if (!mounted) return;
         if (e.data != null && internalSmartReplies['attach-recent'] == null) {
           internalSmartReplies['attach-recent'] = _buildReply("Attach recent photo", onTap: () async {
             controller.pickedAttachments.add(e.data);
@@ -171,6 +180,7 @@ class MessagesViewState extends State<MessagesView> with MessagesServiceMixin, T
         // Recreate the list key to force SliverAnimatedList to rebuild with correct item count
         _listKey = GlobalKey<SliverAnimatedListState>();
         handlersInitialized = true;
+        if (!mounted) return;
         setState(() {});
 
         // Notify SendAnimation that handlers + list key are fully ready so that
@@ -188,6 +198,7 @@ class MessagesViewState extends State<MessagesView> with MessagesServiceMixin, T
       }
       if (SettingsSvc.settings.scrollToLastUnread.value && chat.lastReadMessageGuid != null) {
         Future.delayed(const Duration(milliseconds: 100), () {
+          if (!mounted) return;
           if (messageService.getMessageStateIfExists(chat.lastReadMessageGuid!)?.built ?? false) return;
           internalSmartReplies['scroll-last-read'] = _buildReply("Jump to oldest unread", onTap: () async {
             if (jumpingToOldestUnread.value) return;
@@ -227,6 +238,7 @@ class MessagesViewState extends State<MessagesView> with MessagesServiceMixin, T
 
     // Controllers are now disposed by MessagesService.onClose()
     _setStateDebouncer?.cancel();
+    _eventSubscription?.cancel();
     _listVersion.dispose();
     super.dispose();
   }
@@ -267,7 +279,8 @@ class MessagesViewState extends State<MessagesView> with MessagesServiceMixin, T
     if (!SettingsSvc.serverDetails.isMinMonterey) return;
     final recipient = chat.handles.firstOrNull;
     if (recipient != null) {
-      HttpSvc.handleFocusState(recipient.address).then((response) {
+      HttpSvc.handle.handleFocusState(recipient.address).then((response) {
+        if (!mounted) return;
         final status = response.data['data']['status'];
         controller.recipientNotifsSilenced.value = status != "none";
       }).catchError((error, stack) async {
@@ -476,6 +489,7 @@ class MessagesViewState extends State<MessagesView> with MessagesServiceMixin, T
     final index = _messages.indexWhere((e) => e.guid == message.guid);
     if (index != -1) {
       _messages.removeAt(index);
+      _messageKeys.remove(message.guid);
       Logger.debug("handleDeletedMessage: Removed message at index $index");
       _listVersion.value++;
       _setStateDebouncer?.cancel();
@@ -487,47 +501,52 @@ class MessagesViewState extends State<MessagesView> with MessagesServiceMixin, T
     }
   }
 
-  Widget _buildReply(String text, {Function()? onTap}) => Container(
-        margin: const EdgeInsets.all(5),
-        decoration: BoxDecoration(
-          border: Border.all(
-            width: 2,
-            style: BorderStyle.solid,
-            color: context.theme.colorScheme.surfaceContainerHighest,
-          ),
-          borderRadius: BorderRadius.circular(19),
-        ),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(19),
-          onTap: onTap ??
-              () {
-                OutgoingMsgHandler.queue(OutgoingMessage(
-                  chat: controller.chat,
-                  message: Message(
-                    text: text,
-                    dateCreated: DateTime.now(),
-                    hasAttachments: false,
-                    isFromMe: true,
-                    handleId: 0,
-                  ),
-                ));
-              },
-          child: Center(
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: 1.5, left: 13.0, right: 13.0),
-              child: Obx(() => RichText(
-                    text: TextSpan(
-                      children: MessageHelper.buildEmojiText(
-                        jumpingToOldestUnread.value && text == "Jump to oldest unread"
-                            ? "Jumping to oldest unread..."
-                            : text,
-                        context.theme.extension<BubbleText>()!.bubbleText,
-                      ),
-                    ),
-                  )),
+  Widget _buildReply(String text, {Function()? onTap}) => Builder(
+        builder: (replyContext) {
+          final theme = Theme.of(replyContext);
+          return Container(
+            margin: const EdgeInsets.all(5),
+            decoration: BoxDecoration(
+              border: Border.all(
+                width: 2,
+                style: BorderStyle.solid,
+                color: theme.colorScheme.surfaceContainerHighest,
+              ),
+              borderRadius: BorderRadius.circular(19),
             ),
-          ),
-        ),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(19),
+              onTap: onTap ??
+                  () {
+                    OutgoingMsgHandler.queue(OutgoingMessage(
+                      chat: controller.chat,
+                      message: Message(
+                        text: text,
+                        dateCreated: DateTime.now(),
+                        hasAttachments: false,
+                        isFromMe: true,
+                        handleId: 0,
+                      ),
+                    ));
+                  },
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 1.5, left: 13.0, right: 13.0),
+                  child: Obx(() => RichText(
+                        text: TextSpan(
+                          children: MessageHelper.buildEmojiText(
+                            jumpingToOldestUnread.value && text == "Jump to oldest unread"
+                                ? "Jumping to oldest unread..."
+                                : text,
+                            theme.extension<BubbleText>()!.bubbleText,
+                          ),
+                        ),
+                      )),
+                ),
+              ),
+            ),
+          );
+        },
       );
 
   @override
@@ -626,12 +645,13 @@ class MessagesViewState extends State<MessagesView> with MessagesServiceMixin, T
                                     }
 
                                     final message = _messages[index];
+                                    final messageId = message.guid ?? 'unknown-$index';
                                     final messageWidget = RepaintBoundary(
+                                      key: _messageKeys.putIfAbsent(messageId, () => GlobalKey()),
                                       child: Padding(
-                                        key: ValueKey(message.guid ?? 'unknown-$index'),
                                         padding: const EdgeInsets.only(left: 5.0, right: 5.0),
                                         child: AutoScrollTag(
-                                          key: ValueKey("${message.guid ?? 'unknown-$index'}-scrolling"),
+                                          key: ValueKey("$messageId-scrolling"),
                                           index: index,
                                           controller: scrollController,
                                           highlightColor: context.theme.colorScheme.surface.withValues(alpha: 0.7),

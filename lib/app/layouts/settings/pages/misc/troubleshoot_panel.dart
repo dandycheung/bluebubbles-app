@@ -4,7 +4,6 @@ import 'package:bluebubbles/app/layouts/settings/widgets/content/log_level_selec
 import 'package:bluebubbles/app/layouts/settings/widgets/content/next_button.dart';
 import 'package:bluebubbles/database/models.dart';
 import 'package:bluebubbles/helpers/backend/settings_helpers.dart';
-import 'package:bluebubbles/services/backend/sync/chat_sync_manager.dart';
 import 'package:bluebubbles/utils/logger/logger.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/app/layouts/settings/widgets/settings_widgets.dart';
@@ -28,7 +27,7 @@ class TroubleshootPanel extends StatefulWidget {
 class _TroubleshootPanelState extends State<TroubleshootPanel> with ThemeHelpers {
   final RxnBool resyncingHandles = RxnBool();
   final RxnBool resyncingChats = RxnBool();
-  final RxInt logFileCount = 1.obs;
+  final RxInt logFileCount = 0.obs;
   final RxInt logFileSize = 0.obs;
   final RxBool optimizationsDisabled = false.obs;
 
@@ -37,19 +36,7 @@ class _TroubleshootPanelState extends State<TroubleshootPanel> with ThemeHelpers
   @override
   void initState() {
     super.initState();
-
-    // Count how many .log files are in the log directory
-    final Directory logDir = Directory(Logger.logDir);
-    if (logDir.existsSync()) {
-      final List<FileSystemEntity> files = logDir.listSync();
-      final logFiles = files.where((file) => file.path.endsWith(".log")).toList();
-      logFileCount.value = logFiles.length;
-
-      // Size in KB
-      for (final file in logFiles) {
-        logFileSize.value += file.statSync().size ~/ 1024;
-      }
-    }
+    _refreshLogStats();
 
     // Check if battery optimizations are disabled
     if (Platform.isAndroid) {
@@ -57,6 +44,25 @@ class _TroubleshootPanelState extends State<TroubleshootPanel> with ThemeHelpers
         optimizationsDisabled.value = value ?? false;
       });
     }
+  }
+
+  void _refreshLogStats() {
+    int count = 0;
+    int sizeKb = 0;
+
+    final Directory logDir = Directory(Logger.logDir);
+    if (logDir.existsSync()) {
+      final List<FileSystemEntity> files = logDir.listSync();
+      final List<FileSystemEntity> logFiles = files.where((file) => file.path.endsWith(".log")).toList();
+      count = logFiles.length;
+
+      for (final file in logFiles) {
+        sizeKb += file.statSync().size ~/ 1024;
+      }
+    }
+
+    logFileCount.value = count;
+    logFileSize.value = sizeKb;
   }
 
   @override
@@ -152,50 +158,50 @@ class _TroubleshootPanelState extends State<TroubleshootPanel> with ThemeHelpers
                   ),
                   if (Platform.isAndroid) const SettingsDivider(padding: EdgeInsets.only(left: 16.0)),
                   if (Platform.isAndroid)
-                    SettingsTile(
-                        leading: const SettingsLeadingIcon(
-                          iosIcon: CupertinoIcons.share_up,
-                          materialIcon: Icons.share,
-                          containerColor: Colors.green,
-                        ),
-                        title: "Download / Share Logs",
-                        subtitle: "${logFileCount.value} log file(s) | ${logFileSize.value} KB",
-                        onTap: () async {
-                          if (logFileCount.value == 0) {
-                            showSnackbar("No Logs", "There are no logs to download!");
-                            return;
-                          }
+                    Obx(
+                      () => SettingsTile(
+                          leading: const SettingsLeadingIcon(
+                            iosIcon: CupertinoIcons.share_up,
+                            materialIcon: Icons.share,
+                            containerColor: Colors.green,
+                          ),
+                          title: "Download / Share Logs",
+                          subtitle: "${logFileCount.value} log file(s) | ${logFileSize.value} KB",
+                          onTap: () async {
+                            _refreshLogStats();
+                            if (logFileCount.value == 0) {
+                              showSnackbar("No Logs", "There are no logs to download!");
+                              return;
+                            }
 
-                          if (isExportingLogs) return;
-                          isExportingLogs = true;
+                            if (isExportingLogs) return;
+                            isExportingLogs = true;
 
-                          try {
-                            showSnackbar("Please Wait", "Compressing ${logFileCount.value} log file(s)...");
-                            String filePath = Logger.compressLogs();
-                            final File zippedLogFile = File(filePath);
+                            try {
+                              showSnackbar("Please Wait", "Compressing ${logFileCount.value} log file(s)...");
+                              String filePath = await Logger.compressLogs();
+                              final String fileName = File(filePath).uri.pathSegments.last;
 
-                            // Copy the file to downloads
-                            String newPath = await FilesystemSvc.saveToDownloads(zippedLogFile);
-
-                            // Delete the original file
-                            zippedLogFile.deleteSync();
-
-                            // Let the user know what happened
-                            showSnackbar(
-                              "Logs Exported",
-                              "Logs have been exported to your downloads folder. Tap here to share it.",
-                              durationMs: 5000,
-                              onTap: (snackbar) async {
-                                Share.files([newPath]);
-                              },
-                            );
-                          } catch (ex, stacktrace) {
-                            Logger.error("Failed to export logs!", error: ex, trace: stacktrace);
-                            showSnackbar("Failed to export logs!", "Error: ${ex.toString()}");
-                          } finally {
-                            isExportingLogs = false;
-                          }
-                        }),
+                              try {
+                                final String savedPath = await FilesystemSvc.saveToDownloads(
+                                  File(filePath),
+                                  mimeType: 'application/zip',
+                                );
+                                showSnackbar("Logs Saved", "Saved $fileName to your Downloads folder.");
+                                if (kIsDesktop) await launchUrl(Uri.file(savedPath));
+                              } catch (_) {
+                                // saveToDownloads failed on Android — fall back to share sheet.
+                                Share.files([filePath], mimeType: 'application/zip');
+                              }
+                            } catch (ex, stacktrace) {
+                              Logger.error("Failed to export logs!", error: ex, trace: stacktrace);
+                              showSnackbar("Failed to export logs!", "Error: ${ex.toString()}");
+                            } finally {
+                              isExportingLogs = false;
+                              _refreshLogStats();
+                            }
+                          }),
+                    ),
                   if (kIsDesktop) const SettingsDivider(padding: EdgeInsets.only(left: 16.0)),
                   if (kIsDesktop)
                     SettingsTile(
@@ -224,8 +230,7 @@ class _TroubleshootPanelState extends State<TroubleshootPanel> with ThemeHelpers
                       onTap: () async {
                         Logger.clearLogs();
                         showSnackbar("Logs Cleared", "All logs have been deleted.");
-                        logFileCount.value = 0;
-                        logFileSize.value = 0;
+                        _refreshLogStats();
                       }),
                   if (kIsDesktop) const SettingsDivider(),
                   if (kIsDesktop)
@@ -338,7 +343,7 @@ class _TroubleshootPanelState extends State<TroubleshootPanel> with ThemeHelpers
                   const SettingsDivider(padding: EdgeInsets.only(left: 16.0)),
                   SettingsTile(
                       onTap: () async {
-                        await PrefsSvc.i.remove("lastOpenedChat");
+                        await PrefsSvc.messaging.clearLastOpenedChat();
                         showSnackbar("Success", "Successfully cleared the last opened chat!");
                       },
                       leading: const SettingsLeadingIcon(
@@ -349,82 +354,6 @@ class _TroubleshootPanelState extends State<TroubleshootPanel> with ThemeHelpers
                       title: "Clear Last Opened Chat",
                       subtitle: "Use this if you are experiencing the app opening an incorrect chat")
                 ]),
-                if (!kIsWeb)
-                  SettingsHeader(
-                      iosSubtitle: iosSubtitle, materialSubtitle: materialSubtitle, text: "Database Re-syncing"),
-                if (!kIsWeb)
-                  SettingsSection(backgroundColor: tileColor, children: [
-                    SettingsTile(
-                        title: "Sync Handles & Contacts",
-                        subtitle:
-                            "Run this troubleshooter if you are experiencing issues with missing or incorrect contact names and photos",
-                        onTap: () async {
-                          resyncingHandles.value = true;
-                          try {
-                            final handleSyncer = HandleSyncManager();
-                            await handleSyncer.start();
-                            EventDispatcherSvc.emit("refresh-all", null);
-
-                            showSnackbar("Success",
-                                "Successfully re-synced handles! You may need to close and re-open the app for changes to take effect.");
-                          } catch (ex, stacktrace) {
-                            Logger.error("Failed to reset contacts!", error: ex, trace: stacktrace);
-
-                            showSnackbar("Failed to re-sync handles!", "Error: ${ex.toString()}");
-                          } finally {
-                            resyncingHandles.value = false;
-                          }
-                        },
-                        trailing: Obx(() => resyncingHandles.value == null
-                            ? const SizedBox.shrink()
-                            : resyncingHandles.value == true
-                                ? Container(
-                                    constraints: const BoxConstraints(
-                                      maxHeight: 20,
-                                      maxWidth: 20,
-                                    ),
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 3,
-                                      valueColor: AlwaysStoppedAnimation<Color>(context.theme.colorScheme.primary),
-                                    ))
-                                : Icon(Icons.check, color: context.theme.colorScheme.outline))),
-                    const SettingsDivider(padding: EdgeInsets.only(left: 16.0)),
-                    SettingsTile(
-                        title: "Sync Chat Info",
-                        subtitle:
-                            "This will re-sync all chat data & icons from the server to ensure that you have the most up-to-date information.\n\nNote: This will overwrite any group chat icons that are not locked!",
-                        onTap: () async {
-                          resyncingChats.value = true;
-                          try {
-                            showSnackbar("Please Wait...", "This may take a few minutes.");
-
-                            final chatSyncer = ChatSyncManager();
-                            await chatSyncer.start();
-                            EventDispatcherSvc.emit("refresh-all", null);
-
-                            showSnackbar("Success",
-                                "Successfully synced your chat info! You may need to close and re-open the app for changes to take effect.");
-                          } catch (ex, stacktrace) {
-                            Logger.error("Failed to sync chat info!", error: ex, trace: stacktrace);
-                            showSnackbar("Failed to sync chat info!", "Error: ${ex.toString()}");
-                          } finally {
-                            resyncingChats.value = false;
-                          }
-                        },
-                        trailing: Obx(() => resyncingChats.value == null
-                            ? const SizedBox.shrink()
-                            : resyncingChats.value == true
-                                ? Container(
-                                    constraints: const BoxConstraints(
-                                      maxHeight: 20,
-                                      maxWidth: 20,
-                                    ),
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 3,
-                                      valueColor: AlwaysStoppedAnimation<Color>(context.theme.colorScheme.primary),
-                                    ))
-                                : Icon(Icons.check, color: context.theme.colorScheme.outline)))
-                  ]),
                 if (kIsDesktop) const SizedBox(height: 100),
               ],
             ),

@@ -147,8 +147,10 @@ class _TypingIndicatorState extends State<TypingIndicator> with SingleTickerProv
               // Anchor the grow/shrink at the bottom-left — the tail of the
               // speech bubble — so it feels like a real iMessage bubble.
               alignment: Alignment.bottomLeft,
-              child: _buildBubble(context),
-            )
+              child: Padding(
+                padding: const EdgeInsets.only(top: 5),
+                child: _buildBubble(context),
+              ))
           : const SizedBox.shrink(),
     );
   }

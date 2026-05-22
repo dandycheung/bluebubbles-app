@@ -87,18 +87,16 @@ class _FindMyPageState extends State<FindMyPage> with SingleTickerProviderStateM
               child: Column(
                 children: [
                   if (!context.samsung)
-                    Container(
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 48,
-                            height: 48,
-                            margin: const EdgeInsets.symmetric(horizontal: 8),
-                            child: buildBackButton(context),
-                          ),
-                          Expanded(child: Text("Find My", style: context.theme.textTheme.titleLarge)),
-                        ],
-                      ),
+                    Row(
+                      children: [
+                        Container(
+                          width: 48,
+                          height: 48,
+                          margin: const EdgeInsets.symmetric(horizontal: 8),
+                          child: buildBackButton(context),
+                        ),
+                        Expanded(child: Text("Find My", style: context.theme.textTheme.titleLarge)),
+                      ],
                     ),
                   if (!context.samsung) _buildDesktopTabBar(),
                   Expanded(

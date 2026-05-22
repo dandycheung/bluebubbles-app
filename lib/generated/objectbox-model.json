@@ -104,7 +104,7 @@
     },
     {
       "id": "3:9017250848141753702",
-      "lastPropertyId": "29:439007349630700534",
+      "lastPropertyId": "30:5609008615344379625",
       "name": "Chat",
       "properties": [
         {
@@ -219,6 +219,14 @@
           "id": "29:439007349630700534",
           "name": "customBackgroundPath",
           "type": 9
+        },
+        {
+          "id": "30:5609008615344379625",
+          "name": "dbLatestMessageId",
+          "indexId": "19:7371282683088301083",
+          "type": 11,
+          "flags": 520,
+          "relationTarget": "Message"
         }
       ],
       "relations": [
@@ -801,7 +809,7 @@
     }
   ],
   "lastEntityId": "18:7539271658762089511",
-  "lastIndexId": "18:669353420101708385",
+  "lastIndexId": "19:7371282683088301083",
   "lastRelationId": "2:2117154782513366348",
   "lastSequenceId": "0:0",
   "modelVersion": 5,

@@ -49,6 +49,7 @@ class FindMyController extends GetxController {
   final RxBool hasMovedToCurrentLocation = false.obs;
 
   StreamSubscription? locationSub;
+  Timer? _refreshTimer;
 
   @override
   void onInit() {
@@ -58,13 +59,21 @@ class FindMyController extends GetxController {
     // Setup socket listener
     SocketSvc.socket?.on("new-findmy-location", _handleNewFindMyLocation);
 
-    // Allow users to refresh after 30sec
-    Future.delayed(const Duration(seconds: 30), () {
+    _scheduleRefreshGate();
+  }
+
+  bool get _isAlive => !isClosed;
+
+  void _scheduleRefreshGate() {
+    _refreshTimer?.cancel();
+    _refreshTimer = Timer(const Duration(seconds: 30), () {
+      if (!_isAlive) return;
       canRefresh.value = true;
     });
   }
 
   void _handleNewFindMyLocation(dynamic data) {
+    if (!_isAlive) return;
     try {
       final friend = FindMyFriend.fromJson(data);
       Logger.info("Received new location for ${friend.handle?.address}");
@@ -99,22 +108,28 @@ class FindMyController extends GetxController {
   /// will return the data for both endpoints. A server update will fix this, but for now,
   /// we will "patch" it by only "refreshing" devices when the user manually refreshes the data.
   Future<void> getLocations({bool refreshFriends = true, bool refreshDevices = false}) async {
+    if (!_isAlive) return;
+
     if (!(Platform.isLinux && !kIsWeb)) {
       LocationPermission granted = await Geolocator.checkPermission();
+      if (!_isAlive) return;
       if (granted == LocationPermission.denied) {
         granted = await Geolocator.requestPermission();
+        if (!_isAlive) return;
       }
 
       if (granted == LocationPermission.whileInUse || granted == LocationPermission.always) {
         Geolocator.getCurrentPosition().then((loc) {
+          if (!_isAlive) return;
           location.value = loc;
           buildLocationMarker(location.value!);
           if (!kIsDesktop) {
             locationSub = Geolocator.getPositionStream().listen((event) {
+              if (!_isAlive) return;
               buildLocationMarker(event);
 
               if (!hasMovedToCurrentLocation.value) {
-                mapController.move(LatLng(location.value!.latitude, location.value!.longitude), 10);
+                mapController.move(LatLng(event.latitude, event.longitude), 10);
                 hasMovedToCurrentLocation.value = true;
               }
             });
@@ -125,15 +140,18 @@ class FindMyController extends GetxController {
 
     // Fetch friends data
     final response2 = refreshFriends
-        ? await HttpSvc.refreshFindMyFriends().catchError((_) async {
+        ? await HttpSvc.icloud.refreshFriends().catchError((_) async {
+            if (!_isAlive) return Response(requestOptions: RequestOptions(path: ''));
             refreshing2.value = false;
             showSnackbar("Error", "Something went wrong refreshing FindMy Friends data!");
             return Response(requestOptions: RequestOptions(path: ''));
           })
-        : await HttpSvc.findMyFriends().catchError((_) async {
+        : await HttpSvc.icloud.getFriends().catchError((_) async {
+            if (!_isAlive) return Response(requestOptions: RequestOptions(path: ''));
             fetching2.value = null;
             return Response(requestOptions: RequestOptions(path: ''));
           });
+    if (!_isAlive) return;
 
     if (response2.statusCode == 200 && response2.data['data'] != null) {
       try {
@@ -163,15 +181,18 @@ class FindMyController extends GetxController {
 
     // Fetch devices data
     final response = refreshDevices
-        ? await HttpSvc.refreshFindMyDevices().catchError((_) async {
+        ? await HttpSvc.icloud.refreshDevices().catchError((_) async {
+            if (!_isAlive) return Response(requestOptions: RequestOptions(path: ''));
             refreshing.value = false;
             showSnackbar("Error", "Something went wrong refreshing FindMy Devices data!");
             return Response(requestOptions: RequestOptions(path: ''));
           })
-        : await HttpSvc.findMyDevices().catchError((_) async {
+        : await HttpSvc.icloud.getDevices().catchError((_) async {
+            if (!_isAlive) return Response(requestOptions: RequestOptions(path: ''));
             fetching.value = null;
             return Response(requestOptions: RequestOptions(path: ''));
           });
+    if (!_isAlive) return;
 
     if (response.statusCode == 200 && response.data['data'] != null) {
       try {
@@ -196,13 +217,10 @@ class FindMyController extends GetxController {
 
     // Call the FindMy Friends refresh anyways so that new data comes through the socket
     if (!refreshFriends) {
-      HttpSvc.refreshFindMyFriends();
+      HttpSvc.icloud.refreshFriends();
     } else {
       canRefresh.value = false;
-      // Allow users to refresh after 30sec
-      Future.delayed(const Duration(seconds: 30), () {
-        canRefresh.value = true;
-      });
+      _scheduleRefreshGate();
     }
   }
 
@@ -316,6 +334,7 @@ class FindMyController extends GetxController {
 
   @override
   void onClose() {
+    _refreshTimer?.cancel();
     locationSub?.cancel();
     mapController.dispose();
     popupController.dispose();

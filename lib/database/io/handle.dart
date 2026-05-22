@@ -56,10 +56,19 @@ class Handle {
     if (!kIsWeb && contactsV2.isNotEmpty) {
       // Prioritize native contacts, but fall back to any contact if no native ones exist (should be rare)
       final firstNativeContact = contactsV2.where((c) => c.isNative).firstOrNull;
-      return firstNativeContact?.nickname ?? firstNativeContact?.displayName ?? contactsV2.first.computedDisplayName;
+      final nativeNickname = firstNativeContact?.nickname;
+      if (!isNullOrEmpty(nativeNickname)) return nativeNickname!;
+
+      final nativeDisplayName = firstNativeContact?.displayName;
+      if (!isNullOrEmpty(nativeDisplayName)) return nativeDisplayName!;
+
+      final computedDisplayName = contactsV2.first.computedDisplayName;
+      if (!isNullOrEmpty(computedDisplayName)) return computedDisplayName;
     }
 
-    return address.contains("@") ? address : (formattedAddress ?? address);
+    // Formatted address should be filled out by sync. If it's missing,
+    // format on demand so UI callers still get a readable phone number.
+    return address.contains("@") ? address : (formattedAddress ?? formatPhoneNumber(address));
   }
 
   @Transient()
@@ -68,10 +77,17 @@ class Handle {
     if (!kIsWeb && contactsV2.isNotEmpty) {
       // Prioritize native contacts, but fall back to any contact if no native ones exist (should be rare)
       final firstNativeContact = contactsV2.where((c) => c.isNative).firstOrNull;
-      return firstNativeContact?.nickname ??
-          firstNativeContact?.firstName ??
-          firstNativeContact?.computedDisplayName ??
-          contactsV2.first.computedDisplayName;
+      final nativeNickname = firstNativeContact?.nickname;
+      if (!isNullOrEmpty(nativeNickname)) return nativeNickname!;
+
+      final nativeFirstName = firstNativeContact?.firstName;
+      if (!isNullOrEmpty(nativeFirstName)) return nativeFirstName!;
+
+      final nativeComputedDisplayName = firstNativeContact?.computedDisplayName;
+      if (!isNullOrEmpty(nativeComputedDisplayName)) return nativeComputedDisplayName!;
+
+      final computedDisplayName = contactsV2.first.computedDisplayName;
+      if (!isNullOrEmpty(computedDisplayName)) return computedDisplayName;
     }
 
     // For reactions, we want to show the formatted address for phone numbers, but the regular address for emails

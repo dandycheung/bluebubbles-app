@@ -1,8 +1,11 @@
 import 'package:bluebubbles/app/layouts/conversation_view/widgets/message/attachment/attachment_holder.dart';
+import 'package:bluebubbles/app/layouts/conversation_view/widgets/message/attachment/message_image_gallery.dart';
 import 'package:bluebubbles/app/layouts/conversation_view/widgets/message/interactive/interactive_holder.dart';
 import 'package:bluebubbles/app/state/message_state_scope.dart';
 import 'package:bluebubbles/app/layouts/conversation_view/widgets/message/text/text_bubble.dart';
 import 'package:bluebubbles/database/models.dart';
+import 'package:bluebubbles/helpers/helpers.dart';
+import 'package:bluebubbles/services/services.dart';
 import 'package:flutter/material.dart';
 
 /// Renders the appropriate content widget based on message type
@@ -34,6 +37,15 @@ class MessagePartContent extends StatelessWidget {
 
     // Messages with attachments
     if (messagePart.attachments.isNotEmpty) {
+      final iOS = SettingsSvc.settings.skin.value == Skins.iOS;
+      if (iOS && messagePart.isMediaGallery) {
+        return MessageImageGallery(
+          attachments: messagePart.attachments,
+          partIndex: messagePart.part,
+          isInReply: false,
+          fanDirection: message.isFromMe == true ? GalleryFanDirection.left : GalleryFanDirection.right,
+        );
+      }
       return AttachmentHolder(
         message: messagePart,
       );

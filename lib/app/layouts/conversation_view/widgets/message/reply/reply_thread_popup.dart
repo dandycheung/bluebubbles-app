@@ -56,10 +56,10 @@ void _buildThreadView(
                 colorScheme: context.theme.colorScheme.copyWith(
                   primary: context.theme.colorScheme.bubble(context, true),
                   onPrimary: context.theme.colorScheme.onBubble(context, true),
-                  surface: SettingsSvc.settings.monetTheming.value == Monet.full
+                  surface: ThemeSvc.isMaterialYouActive(context)
                       ? null
                       : (context.theme.extensions[BubbleColors] as BubbleColors?)?.receivedBubbleColor,
-                  onSurface: SettingsSvc.settings.monetTheming.value == Monet.full
+                  onSurface: ThemeSvc.isMaterialYouActive(context)
                       ? null
                       : (context.theme.extensions[BubbleColors] as BubbleColors?)?.onReceivedBubbleColor,
                 ),
@@ -90,43 +90,41 @@ void _buildThreadView(
                             color: context.theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
                           ),
                         ),
-                        Container(
-                          child: SafeArea(
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 8.0),
-                              child: Center(
-                                child: SingleChildScrollView(
-                                  controller: controller,
-                                  child: Column(
-                                    children: _messages
-                                        .mapIndexed((index, e) => GestureDetector(
-                                              onTap: () {
+                        SafeArea(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8.0),
+                            child: Center(
+                              child: SingleChildScrollView(
+                                controller: controller,
+                                child: Column(
+                                  children: _messages
+                                      .mapIndexed((index, e) => GestureDetector(
+                                            onTap: () {
+                                              Navigator.of(context).pop();
+                                              if (originatorPart == null &&
+                                                  SettingsSvc.settings.skin.value == Skins.iOS) {
+                                                // pop twice to remove convo details page
                                                 Navigator.of(context).pop();
-                                                if (originatorPart == null &&
-                                                    SettingsSvc.settings.skin.value == Skins.iOS) {
-                                                  // pop twice to remove convo details page
-                                                  Navigator.of(context).pop();
-                                                }
-                                                MessagesSvc(cvController.chat.guid).jumpToMessage.call(e.guid!);
-                                              },
-                                              child: AbsorbPointer(
-                                                absorbing: true,
-                                                child: Padding(
-                                                  padding: const EdgeInsets.only(left: 5.0, right: 5.0),
-                                                  child: MessageHolder(
-                                                    cvController: cvController,
-                                                    message: _messages[index],
-                                                    oldMessage: index > 0 ? _messages[index - 1] : null,
-                                                    newMessage:
-                                                        index < _messages.length - 1 ? _messages[index + 1] : null,
-                                                    isReplyThread: true,
-                                                    replyPart: index == 0 ? originatorPart : null,
-                                                  ),
+                                              }
+                                              MessagesSvc(cvController.chat.guid).jumpToMessage.call(e.guid!);
+                                            },
+                                            child: AbsorbPointer(
+                                              absorbing: true,
+                                              child: Padding(
+                                                padding: const EdgeInsets.only(left: 5.0, right: 5.0),
+                                                child: MessageHolder(
+                                                  cvController: cvController,
+                                                  message: _messages[index],
+                                                  oldMessage: index > 0 ? _messages[index - 1] : null,
+                                                  newMessage:
+                                                      index < _messages.length - 1 ? _messages[index + 1] : null,
+                                                  isReplyThread: true,
+                                                  replyPart: index == 0 ? originatorPart : null,
                                                 ),
                                               ),
-                                            ))
-                                        .toList(),
-                                  ),
+                                            ),
+                                          ))
+                                      .toList(),
                                 ),
                               ),
                             ),

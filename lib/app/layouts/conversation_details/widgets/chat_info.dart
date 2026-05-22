@@ -108,7 +108,7 @@ class _ChatInfoState extends State<ChatInfo> with ThemeHelpers {
               ),
             );
           });
-      final response = await HttpSvc.setChatIcon(chat.guid, result);
+      final response = await HttpSvc.chat.setIcon(chat.guid, result);
       if (response.statusCode == 200) {
         await ChatsSvc.setChatCustomAvatarPath(chat, result);
         Navigator.of(context, rootNavigator: true).pop();
@@ -140,7 +140,7 @@ class _ChatInfoState extends State<ChatInfo> with ThemeHelpers {
         SettingsSvc.settings.enablePrivateAPI.value &&
         SettingsSvc.serverDetails.isMinBigSur &&
         SettingsSvc.serverDetails.supportsGroupChatManagement) {
-      final response = await HttpSvc.deleteChatIcon(chat.guid);
+      final response = await HttpSvc.chat.removeIcon(chat.guid);
       if (response.statusCode == 200) {
         await ChatsSvc.setChatCustomAvatarPath(chat, null);
         showSnackbar("Notice", "Deleted group photo successfully!");
@@ -387,11 +387,13 @@ class InfoButton extends StatelessWidget {
             final contact = chat.handles.first.contactsV2.firstOrNull;
             final handle = chat.handles.first;
             if (contact == null || !contact.isNative) {
-              await MethodChannelSvc.invokeMethod("open-contact-form",
-                  {'address': handle.address, 'address_type': handle.address.isEmail ? 'email' : 'phone'});
+              await MethodChannelSvc.actions.openContactForm(
+                address: handle.address,
+                isEmail: handle.address.isEmail,
+              );
             } else {
               try {
-                await MethodChannelSvc.invokeMethod("view-contact-form", {'id': contact.nativeContactId});
+                await MethodChannelSvc.actions.viewContactForm(nativeContactId: contact.nativeContactId);
               } catch (_) {
                 showSnackbar("Error", "Failed to find contact on device!");
               }

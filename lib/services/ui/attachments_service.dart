@@ -432,9 +432,15 @@ class AttachmentsService extends GetxService {
       updateAttachment = true;
     }
 
-    // Clear metadata processing flag to force reprocessing
+    // Clear metadata processing flag and cached dimensions to force reprocessing
     if (attachment.metadata != null) {
       attachment.metadata!.remove('_dimensions_processed');
+      updateAttachment = true;
+    }
+
+    if (attachment.height != null || attachment.width != null) {
+      attachment.height = null;
+      attachment.width = null;
       updateAttachment = true;
     }
 

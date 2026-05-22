@@ -63,7 +63,7 @@ class ColorEditorTile extends StatelessWidget {
                 GestureDetector(
                   onLongPress: () async {
                     await Clipboard.setData(ClipboardData(text: _hexOf(mainColor)));
-                    showSnackbar("Copied", _hexOf(mainColor));
+                    showToast("Copied ${_hexOf(mainColor)}");
                   },
                   child: Text(
                     _hexOf(mainColor) + (onColor != null ? '  ·  ${_hexOf(onColor!)}' : ''),
@@ -92,9 +92,7 @@ class ColorEditorTile extends StatelessWidget {
             ],
           ] else ...[
             Tooltip(
-              message: SettingsSvc.settings.monetTheming.value != Monet.none
-                  ? "Material You is active"
-                  : "Select a custom theme to edit",
+              message: ThemeSvc.isAnyMaterialYouSelected ? "Material You is active" : "Select a custom theme to edit",
               child: Icon(
                 Icons.lock_outline,
                 size: 18,

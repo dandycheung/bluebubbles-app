@@ -4,7 +4,6 @@ import 'dart:math';
 
 import 'package:bluebubbles/app/layouts/conversation_view/pages/conversation_view.dart';
 import 'package:bluebubbles/app/layouts/settings/pages/scheduling/scheduled_messages_panel.dart';
-import 'package:bluebubbles/app/layouts/settings/pages/server/server_management_panel.dart';
 import 'package:bluebubbles/app/wrappers/theme_switcher.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/helpers/ui/facetime_helpers.dart';
@@ -58,7 +57,6 @@ class NotificationsService {
 
   /// For desktop use only
   static LocalNotification? failedToast;
-  static LocalNotification? socketToast;
   static LocalNotification? aliasesToast;
   static Map<String, LocalNotification> facetimeNotifications = {};
   static Map<String, LocalNotification> activeToasts = {};
@@ -74,7 +72,7 @@ class NotificationsService {
 
   Future<void> init({bool headless = false}) async {
     this.headless = headless;
-    if (!kIsWeb && !kIsDesktop) {
+    if (!kIsWeb && !kIsDesktop && !headless) {
       const AndroidInitializationSettings initializationSettingsAndroid = AndroidInitializationSettings('ic_stat_icon');
       const InitializationSettings initializationSettings =
           InitializationSettings(android: initializationSettingsAndroid);
@@ -82,12 +80,20 @@ class NotificationsService {
           settings: initializationSettings,
           onDidReceiveNotificationResponse: (NotificationResponse? response) {
             if (response?.payload != null) {
-              IntentsSvc.openChat(response!.payload);
+              if (GetIt.I.isRegistered<IntentsService>()) {
+                IntentsSvc.openChat(response!.payload);
+              } else {
+                Logger.warn('IntentsService not registered, cannot open chat from notification tap');
+              }
             }
           });
       final details = await flnp.getNotificationAppLaunchDetails();
       if (details != null && details.didNotificationLaunchApp && details.notificationResponse?.payload != null) {
-        IntentsSvc.openChat(details.notificationResponse!.payload!);
+        if (GetIt.I.isRegistered<IntentsService>()) {
+          IntentsSvc.openChat(details.notificationResponse!.payload!);
+        } else {
+          Logger.warn('IntentsService not registered, cannot process notification launch payload');
+        }
       }
     }
   }
@@ -119,6 +125,10 @@ class NotificationsService {
   }
 
   Future<void> createNotification(Chat chat, Message message) async {
+    if (GetIt.I.isRegistered<LifecycleService>()) {
+      await GetIt.I.isReady<LifecycleService>();
+    }
+
     if (chat.shouldMuteNotification(message) || message.isFromMe!) return;
     final isGroup = chat.isGroup;
     final guid = chat.guid;
@@ -140,6 +150,11 @@ class NotificationsService {
           () => showDesktopNotif(text, chat, title, contactName, message, isReaction, message.isGroupEvent));
     } else {
       if (message.guid != null && message.dateCreated != null) {
+        if (!GetIt.I.isRegistered<MethodChannelService>()) {
+          Logger.warn('MethodChannelService not registered; skipping incoming message notification');
+          return;
+        }
+
         final personIcon = (await rootBundle.load("assets/images/person64.png")).buffer.asUint8List();
         Uint8List chatIcon = await avatarAsBytes(chat: chat, quality: 256);
         final isFromMe = message.isFromMe ?? false;
@@ -160,22 +175,23 @@ class NotificationsService {
             message.associatedMessageGuid == null;
         final String reactionType = SettingsSvc.settings.notificationReactionActionType.value;
 
-        await MethodChannelSvc.invokeMethod("create-incoming-message-notification", {
-          "channel_id": NEW_MESSAGE_CHANNEL,
-          "chat_id": chat.id,
-          "chat_guid": guid,
-          "chat_is_group": isGroup,
-          "chat_title": title,
-          "chat_icon": isGroup ? chatIcon : contactIcon,
-          "contact_name": contactName,
-          "contact_avatar": contactIcon,
-          "message_guid": message.guid!,
-          "message_text": text,
-          "message_date": message.dateCreated!.millisecondsSinceEpoch,
-          "message_is_from_me": false,
-          "show_reaction_action": showReactionAction,
-          "reaction_type": reactionType,
-        });
+        await GetIt.I.isReady<MethodChannelService>();
+        await MethodChannelSvc.actions.createIncomingMessageNotification(
+          channelId: NEW_MESSAGE_CHANNEL,
+          chatId: chat.id,
+          chatGuid: guid,
+          chatIsGroup: isGroup,
+          chatTitle: title,
+          chatIcon: isGroup ? chatIcon : contactIcon,
+          contactName: contactName,
+          contactAvatar: contactIcon,
+          messageGuid: message.guid!,
+          messageText: text,
+          messageDate: message.dateCreated!.millisecondsSinceEpoch,
+          messageIsFromMe: false,
+          showReactionAction: showReactionAction,
+          reactionType: reactionType,
+        );
       }
     }
   }
@@ -223,16 +239,16 @@ class NotificationsService {
       _lock.synchronized(() async => await showPersistentDesktopFaceTimeNotif(callUuid, caller, chatIcon, isAudio));
     } else {
       final numeric = callUuid?.numericOnly();
-      await MethodChannelSvc.invokeMethod("create-incoming-facetime-notification", {
-        "channel_id": FACETIME_CHANNEL,
-        "notification_id":
+      await MethodChannelSvc.actions.createIncomingFaceTimeNotification(
+        channelId: FACETIME_CHANNEL,
+        notificationId:
             numeric != null ? int.parse(numeric.substring(0, min(8, numeric.length))) : Random().nextInt(9998) + 1,
-        "title": title,
-        "body": text,
-        "caller_avatar": chatIcon,
-        "caller": caller,
-        "call_uuid": callUuid
-      });
+        title: title,
+        body: text,
+        callerAvatar: chatIcon,
+        caller: caller,
+        callUuid: callUuid,
+      );
     }
   }
 
@@ -241,8 +257,10 @@ class NotificationsService {
       await clearDesktopFaceTimeNotif(callUuid);
     } else if (!kIsWeb) {
       final numeric = callUuid.numericOnly();
-      MethodChannelSvc.invokeMethod("delete-notification",
-          {"notification_id": int.parse(numeric.substring(0, min(8, numeric.length))), "tag": NEW_FACETIME_TAG});
+      MethodChannelSvc.actions.deleteNotification(
+        notificationId: int.parse(numeric.substring(0, min(8, numeric.length))),
+        tag: NEW_FACETIME_TAG,
+      );
     }
   }
 
@@ -563,56 +581,6 @@ class NotificationsService {
     }
   }
 
-  Future<void> createSocketError() async {
-    const title = 'Could not connect';
-    const subtitle = 'Your server may be offline!';
-    if (kIsDesktop) {
-      // Don't create duplicate socket error toasts
-      if (socketToast != null) return;
-      socketToast = LocalNotification(
-        type: LocalNotificationType.text02,
-        title: title,
-        body: subtitle,
-        actions: [],
-      );
-
-      socketToast!.onClick = () async {
-        socketToast = null;
-        await windowManager.show();
-        Navigator.of(Get.context!).push(
-          ThemeSwitcher.buildPageRoute(
-            builder: (BuildContext context) {
-              return ServerManagementPanel();
-            },
-          ),
-        );
-      };
-
-      await socketToast!.show();
-      return;
-    } else {
-      final notifs = await flnp.getActiveNotifications();
-      if (notifs.firstWhereOrNull((element) => element.id == -2) != null) return;
-      await flnp.show(
-        id: -2,
-        title: title,
-        body: subtitle,
-        notificationDetails: NotificationDetails(
-          android: AndroidNotificationDetails(
-            ERROR_CHANNEL,
-            'Errors',
-            channelDescription: 'Displays message send failures, connection failures, and more',
-            priority: Priority.max,
-            importance: Importance.max,
-            color: HexColor("4990de"),
-            ongoing: true,
-            onlyAlertOnce: true,
-          ),
-        ),
-      );
-    }
-  }
-
   Future<void> createAliasesRemovedNotification(List<String> aliases) async {
     const title = "iMessage alias deregistered!";
     const notifId = -3;
@@ -721,15 +689,6 @@ class NotificationsService {
       ),
       payload: chat.guid + (scheduled ? "-scheduled" : ""),
     );
-  }
-
-  Future<void> clearSocketError() async {
-    if (kIsDesktop) {
-      await socketToast?.close();
-      socketToast = null;
-      return;
-    }
-    await flnp.cancel(id: -2);
   }
 
   Future<void> clearFailedToSend(int id) async {

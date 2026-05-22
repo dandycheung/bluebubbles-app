@@ -5,9 +5,10 @@ import 'package:bluebubbles/database/models.dart';
 import 'package:bluebubbles/services/services.dart';
 import 'package:crop_your_image/crop_your_image.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:bluebubbles/utils/logger/logger.dart';
 import 'package:path/path.dart' as p;
 import 'package:universal_io/io.dart';
@@ -30,6 +31,51 @@ class _AvatarCropState extends State<AvatarCrop> with ThemeHelpers {
   final _cropController = CropController();
   Uint8List? _imageData;
   bool _isLoading = true;
+
+  Future<void> _pickImageFromGallery() async {
+    if (kIsDesktop || kIsWeb) return _pickImageFromFiles();
+
+    final XFile? file = await ImagePicker().pickImage(source: ImageSource.gallery);
+    if (file == null) return;
+
+    final bytes = await file.readAsBytes();
+    await _handlePickedImage(bytes, fileName: file.name);
+  }
+
+  Future<void> _pickImageFromFiles() async {
+    final res = await FilePicker.pickFiles(
+      withData: true,
+      type: FileType.image,
+    );
+    if (res == null || res.files.isEmpty || res.files.first.bytes == null) return;
+
+    await _handlePickedImage(res.files.first.bytes!, fileName: res.files.first.name);
+  }
+
+  Future<void> _handlePickedImage(Uint8List bytes, {String? fileName}) async {
+    final lowerName = (fileName ?? '').toLowerCase();
+    if (lowerName.endsWith('.gif')) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text("Saving avatar...", style: context.theme.textTheme.titleLarge),
+          content: SizedBox(
+            height: 70,
+            child: Center(
+              child: buildProgressIndicator(context),
+            ),
+          ),
+          backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
+        ),
+        barrierDismissible: false,
+      );
+      onCropped(CropSuccess(bytes));
+      return;
+    }
+
+    _imageData = bytes;
+    if (mounted) setState(() {});
+  }
 
   void onCropped(CropResult croppedResult) async {
     Uint8List croppedData;
@@ -142,32 +188,7 @@ class _AvatarCropState extends State<AvatarCrop> with ThemeHelpers {
                       side: BorderSide(color: context.theme.colorScheme.onPrimaryContainer)),
                   backgroundColor: context.theme.colorScheme.primaryContainer,
                 ),
-                onPressed: () async {
-                  final res = await FilePicker.pickFiles(
-                      withData: true, type: FileType.custom, allowedExtensions: ['png', 'jpg', 'jpeg']);
-                  if (res == null || res.files.isEmpty || res.files.first.bytes == null) return;
-
-                  if (res.files.first.name.endsWith("gif")) {
-                    showDialog(
-                      context: context,
-                      builder: (context) => AlertDialog(
-                        title: Text("Saving avatar...", style: context.theme.textTheme.titleLarge),
-                        content: SizedBox(
-                          height: 70,
-                          child: Center(
-                            child: buildProgressIndicator(context),
-                          ),
-                        ),
-                        backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
-                      ),
-                      barrierDismissible: false,
-                    );
-                    onCropped(CropSuccess(res.files.first.bytes!));
-                  } else {
-                    _imageData = res.files.first.bytes!;
-                    setState(() {});
-                  }
-                },
+                onPressed: _pickImageFromGallery,
                 child: Text(_imageData != null ? "Pick New Image" : "Pick Image",
                     style: context.theme.textTheme.bodyLarge!
                         .copyWith(color: context.theme.colorScheme.onPrimaryContainer)),

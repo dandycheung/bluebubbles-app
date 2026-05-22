@@ -105,6 +105,7 @@ class _UrlPreviewState extends State<UrlPreview> with AutomaticKeepAliveClientMi
     _imageAnimController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 250),
+      value: 1.0,
     );
     unawaited(_init());
   }

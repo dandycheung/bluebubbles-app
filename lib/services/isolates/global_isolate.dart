@@ -17,6 +17,7 @@ class GlobalIsolate {
   ReceivePort? _errorPort;
   SendPort? _sendPort;
   final Map<String, _RequestInfo> _pendingRequests = {};
+  bool _shutdownPending = false;
   final StreamController<dynamic> _controller = StreamController.broadcast();
   final Map<IsolateEvent, List<Function(dynamic)>> _eventListeners = {};
   bool _isRunning = false;
@@ -99,6 +100,7 @@ class GlobalIsolate {
     _sendPortCompleter = Completer<void>();
 
     _isStarting = true;
+    _shutdownPending = false;
 
     try {
       // Create a new ReceivePort for this isolate instance
@@ -216,6 +218,7 @@ class GlobalIsolate {
     }
 
     _pendingRequests.clear();
+    _shutdownPending = false;
     if (clearEventListeners) {
       _eventListeners.clear();
     }
@@ -229,20 +232,24 @@ class GlobalIsolate {
     }
   }
 
-  /// Waits for all in-flight [_pendingRequests] to complete (or times out),
-  /// then calls [stop()]. Safe to fire-and-forget with [unawaited].
-  Future<void> drainAndStop({Duration timeout = const Duration(seconds: 30)}) async {
-    final deadline = DateTime.now().add(timeout);
-    while (_pendingRequests.isNotEmpty && DateTime.now().isBefore(deadline)) {
-      await Future<void>.delayed(const Duration(seconds: 5));
+  /// Requests graceful shutdown:
+  /// - blocks new requests while draining
+  /// - stops immediately once in-flight requests reach zero
+  ///
+  /// Safe to fire-and-forget with [unawaited].
+  Future<void> drainAndStop() async {
+    _shutdownPending = true;
+
+    if (_pendingRequests.isEmpty) {
+      Logger.info('$isolateDebugName draining complete (0 pending). Stopping now.');
+      stop();
+      return;
     }
-    if (_pendingRequests.isNotEmpty) {
-      Logger.warn(
-        '$isolateDebugName drain timed out after ${timeout.inSeconds}s with '
-        '${_pendingRequests.length} pending request(s). Stopping anyway.',
-      );
-    }
-    stop();
+
+    Logger.info(
+      '$isolateDebugName drain requested with ${_pendingRequests.length} pending request(s). '
+      'Will stop when all pending requests complete.',
+    );
   }
 
   /// Closes the isolate and clears all listeners
@@ -300,6 +307,7 @@ class GlobalIsolate {
           if (!requestInfo.completer.isCompleted) {
             requestInfo.completer.completeError('Request timeout after ${customTimeout ?? taskTimeout}');
           }
+          _maybeStopAfterDrain();
         }
       });
     }
@@ -359,6 +367,7 @@ class GlobalIsolate {
         requestInfo.timer?.cancel();
 
         // Reset idle shutdown after work completes.
+        // This controls the idle timeout, not the shutdownPending case.
         _scheduleIdleShutdown();
 
         if (isolateResponse.ok) {
@@ -366,6 +375,9 @@ class GlobalIsolate {
         } else {
           requestInfo.completer.completeError(isolateResponse.error ?? 'Unknown error');
         }
+
+        // If we have a pending shutdown and this was the last in-flight request, stop the isolate now
+        _maybeStopAfterDrain();
       } else if (isolateResponse.data != null) {
         // Broadcast the response data
         _controller.add(isolateResponse.data);
@@ -390,6 +402,13 @@ class GlobalIsolate {
         }
       }
     }
+  }
+
+  void _maybeStopAfterDrain() {
+    if (!_shutdownPending) return;
+    if (_pendingRequests.isNotEmpty) return;
+    Logger.info('$isolateDebugName draining complete. Stopping isolate.');
+    stop();
   }
 
   /// Schedules isolate shutdown to happen [idleTimeout] after the latest activity.
@@ -589,6 +608,8 @@ enum IsolateRequestType {
   // Chat actions
   clearNotificationForChat,
   markChatReadUnread,
+  startTyping,
+  stopTyping,
   saveChat,
   deleteChat,
   softDeleteChat,
@@ -598,7 +619,6 @@ enum IsolateRequestType {
   syncLatestMessages,
   bulkSyncChats,
   getMessagesAsync,
-  bulkSyncMessages,
   getParticipantsAsync,
   clearTranscriptAsync,
   getChatsAsync,
@@ -633,6 +653,7 @@ enum IsolateRequestType {
 
   // Sync actions
   performIncrementalSync,
+  bulkSyncData,
 
   // Send message actions (routed through isolate so sends survive backgrounding)
   sendTextMessage,
@@ -641,8 +662,6 @@ enum IsolateRequestType {
   sendAttachmentMessage,
 
   // Message actions
-  bulkSaveNewMessages,
-  bulkAddMessages,
   replaceMessage,
   deleteMessage,
   softDeleteMessage,

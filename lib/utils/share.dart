@@ -14,11 +14,12 @@ import 'package:universal_io/io.dart';
 
 class Share {
   /// Share a file with other apps.
-  static void files(List<String> filepaths) async {
+  static void files(List<String> filepaths, {String? mimeType}) async {
     if (kIsDesktop) {
       showSnackbar("Unsupported", "Can't share files on desktop yet!");
     } else {
-      await SharePlus.instance.share(ShareParams(files: filepaths.map((String path) => XFile(path)).toList()));
+      await SharePlus.instance
+          .share(ShareParams(files: filepaths.map((String path) => XFile(path, mimeType: mimeType)).toList()));
     }
   }
 

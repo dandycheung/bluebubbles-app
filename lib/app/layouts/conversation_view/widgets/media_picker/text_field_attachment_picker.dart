@@ -15,7 +15,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:hand_signature/signature.dart';
-import 'package:bluebubbles/app/layouts/camera/camera_screen.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:photo_manager/photo_manager.dart';
@@ -123,16 +122,10 @@ class _AttachmentPickerState extends State<AttachmentPicker> with ThemeHelpers {
     }
 
     final XFile? file;
-    if (Platform.isAndroid && !kIsWeb) {
-      file = await Navigator.of(context).push<XFile?>(
-        MaterialPageRoute(
-          builder: (_) => CameraScreen(initialMode: type == 'video' ? 'video' : 'photo'),
-        ),
-      );
-    } else if (type == 'camera') {
-      file = await ImagePicker().pickImage(source: ImageSource.camera);
-    } else {
+    if (type == 'video') {
       file = await ImagePicker().pickVideo(source: ImageSource.camera);
+    } else {
+      file = await ImagePicker().pickImage(source: ImageSource.camera);
     }
 
     if (file != null) {
@@ -149,7 +142,7 @@ class _AttachmentPickerState extends State<AttachmentPicker> with ThemeHelpers {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 300,
+      height: 340,
       child: RefreshIndicator(
         onRefresh: () async {
           await getAttachments();
@@ -163,24 +156,19 @@ class _AttachmentPickerState extends State<AttachmentPicker> with ThemeHelpers {
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
             child: SizedBox(
-              height: 300,
+              height: 340,
               child: Padding(
                 padding: const EdgeInsets.all(10.0),
                 child: CustomScrollView(
                   physics: ThemeSwitcher.getScrollPhysics(),
                   scrollDirection: Axis.horizontal,
                   slivers: <Widget>[
-                    // Camera and Video buttons
+                    // Quick action list
                     SliverPadding(
                       padding: const EdgeInsets.only(bottom: 5),
-                      sliver: _buildActionButtons(context),
+                      sliver: _buildActionList(),
                     ),
-                    const SliverPadding(padding: EdgeInsets.only(left: 5, right: 5)),
-                    // Files, Location, Schedule, Handwriten buttons
-                    SliverPadding(
-                      padding: const EdgeInsets.only(bottom: 5),
-                      sliver: _buildFeatureButtons(context),
-                    ),
+                    // Image grid
                     const SliverPadding(padding: EdgeInsets.only(left: 5, right: 5)),
                     // Image grid
                     SliverPadding(
@@ -197,50 +185,228 @@ class _AttachmentPickerState extends State<AttachmentPicker> with ThemeHelpers {
     );
   }
 
-  Widget _buildActionButtons(BuildContext context) {
-    return SliverGrid(
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        childAspectRatio: 1.5,
-        crossAxisSpacing: 10,
-        mainAxisSpacing: 10,
-      ),
-      delegate: SliverChildBuilderDelegate(
-        (context, index) {
-          return Obx(() {
-            final isIOS = SettingsSvc.settings.skin.value == Skins.iOS;
-            return _ActionButton(
-              icon: index == 0
-                  ? (isIOS ? CupertinoIcons.camera : Icons.photo_camera_outlined)
-                  : (isIOS ? CupertinoIcons.videocam : Icons.videocam_outlined),
-              label: index == 0 ? "Photo" : "Video",
-              onPressed: () => openFullCamera(type: index == 0 ? "camera" : "video"),
-            );
-          });
-        },
-        childCount: 2,
+  Widget _buildActionList() {
+    return SliverToBoxAdapter(
+      child: SizedBox(
+        width: 175,
+        child: ShaderMask(
+          shaderCallback: (Rect bounds) {
+            return const LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Colors.white, Colors.white, Colors.transparent],
+              stops: [0.9, 0.95, 1.0],
+            ).createShader(bounds);
+          },
+          blendMode: BlendMode.dstIn,
+          child: ListView(
+            padding: EdgeInsets.zero,
+            physics: const BouncingScrollPhysics(),
+            children: [
+              _QuickActionItem(
+                icon: Icons.camera_alt_rounded,
+                label: 'Photo',
+                color: const Color(0xFF34C759),
+                onTap: () => openFullCamera(type: 'camera'),
+              ),
+              _QuickActionItem(
+                icon: Icons.videocam_rounded,
+                label: 'Video',
+                color: const Color(0xFFFF3B30),
+                onTap: () => openFullCamera(type: 'video'),
+              ),
+              _QuickActionItem(
+                icon: Icons.photo_library_rounded,
+                label: 'Gallery',
+                color: const Color(0xFF5856D6),
+                onTap: _handleGallery,
+              ),
+              _QuickActionItem(
+                icon: Icons.folder_rounded,
+                label: 'Files',
+                color: const Color(0xFF007AFF),
+                onTap: _handleFilePicker,
+              ),
+              _QuickActionItem(
+                icon: Icons.location_on_rounded,
+                label: 'Location',
+                color: const Color(0xFF32ADE6),
+                onTap: _handleLocation,
+              ),
+              _QuickActionItem(
+                icon: Icons.schedule_rounded,
+                label: 'Schedule',
+                color: const Color(0xFFFF9500),
+                onTap: () => _handleSchedule(context),
+              ),
+              _QuickActionItem(
+                icon: Icons.draw_rounded,
+                label: 'Handwritten',
+                color: const Color(0xFFAF52DE),
+                onTap: () => _handleHandwritten(context),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
 
-  Widget _buildFeatureButtons(BuildContext context) {
-    return SliverGrid(
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 4,
-        childAspectRatio: 2 / 3,
-        crossAxisSpacing: 10,
-        mainAxisSpacing: 10,
+  Future<void> _handleGallery() async {
+    if (kIsDesktop || kIsWeb) return;
+    final List<XFile> files = await ImagePicker().pickMultiImage();
+    for (final file in files) {
+      final size = await file.length();
+      if (size / 1024000 > 1000) {
+        showSnackbar("Error", "This file is over 1 GB! Please compress it before sending.");
+        continue;
+      }
+      controller.pickedAttachments.add(PlatformFile(
+        path: file.path,
+        name: file.path.split('/').last,
+        size: size,
+        bytes: null,
+      ));
+    }
+  }
+
+  Future<void> _handleFilePicker() async {
+    final res = await FilePicker.pickFiles(
+      withReadStream: true,
+      allowMultiple: true,
+    );
+    if (res == null || res.files.isEmpty) return;
+
+    for (pf.PlatformFile file in res.files) {
+      if (file.size / 1024000 > 1000) {
+        showSnackbar("Error", "This file is over 1 GB! Please compress it before sending.");
+        continue;
+      }
+      controller.pickedAttachments.add(PlatformFile(
+        path: file.path,
+        name: file.name,
+        bytes: null,
+        size: file.size,
+      ));
+    }
+  }
+
+  Future<void> _handleLocation() async {
+    await Share.location(controller.chat);
+  }
+
+  Future<void> _handleSchedule(BuildContext context) async {
+    if (controller.pickedAttachments.isNotEmpty) {
+      return showSnackbar("Error", "Remove all attachments before scheduling!");
+    } else if (controller.replyToMessage != null || controller.subjectTextController.text.isNotEmpty) {
+      return showSnackbar("Error", "Private API features are not supported when scheduling!");
+    }
+
+    final date = await showTimeframePicker("Pick date and time", context, presetsAhead: true);
+    if (date != null && date.isAfter(DateTime.now())) {
+      controller.scheduledDate.value = date;
+    }
+  }
+
+  Future<void> _handleHandwritten(BuildContext context) async {
+    Color selectedColor = context.theme.colorScheme.bubble(context, controller.chat.isIMessage);
+
+    final result = await ColorPicker(
+      color: selectedColor,
+      onColorChanged: (Color newColor) {
+        selectedColor = newColor;
+      },
+      title: Text(
+        "Select Color",
+        style: context.theme.textTheme.titleLarge,
       ),
-      delegate: SliverChildBuilderDelegate(
-        (context, index) {
-          return _FeatureButton(
-            index: index,
-            controller: controller,
-          );
-        },
-        childCount: 4,
+      width: 40,
+      height: 40,
+      spacing: 0,
+      runSpacing: 0,
+      borderRadius: 0,
+      wheelDiameter: 165,
+      enableOpacity: false,
+      showColorCode: true,
+      colorCodeHasColor: true,
+      pickersEnabled: <ColorPickerType, bool>{
+        ColorPickerType.wheel: true,
+      },
+      copyPasteBehavior: const ColorPickerCopyPasteBehavior(
+        parseShortHexCode: true,
+      ),
+      actionButtons: const ColorPickerActionButtons(
+        dialogActionButtons: true,
+      ),
+    ).showPickerDialog(
+      context,
+      barrierDismissible: false,
+      constraints: BoxConstraints(
+        minHeight: 480,
+        minWidth: NavigationSvc.width(context) - 70,
+        maxWidth: NavigationSvc.width(context) - 70,
       ),
     );
+
+    if (result && context.mounted) {
+      final control = HandSignatureControl();
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text(
+              "Draw Handwriten Message",
+              style: context.theme.textTheme.titleLarge,
+            ),
+            content: AspectRatio(
+              aspectRatio: 1,
+              child: Container(
+                constraints: const BoxConstraints.expand(),
+                child: HandSignature(
+                  control: control,
+                  color: selectedColor,
+                  width: 1.0,
+                  maxWidth: 10.0,
+                  type: SignatureDrawType.shape,
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                child: Text(
+                  "Cancel",
+                  style: context.theme.textTheme.bodyLarge!.copyWith(color: Get.context!.theme.colorScheme.primary),
+                ),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+              ),
+              TextButton(
+                child: Text(
+                  "OK",
+                  style: context.theme.textTheme.bodyLarge!.copyWith(color: Get.context!.theme.colorScheme.primary),
+                ),
+                onPressed: () async {
+                  Navigator.of(context).pop();
+                  final bytes = await control.toImage(height: 512, fit: false);
+                  if (bytes != null) {
+                    final uint8 = bytes.buffer.asUint8List();
+                    controller.pickedAttachments.add(PlatformFile(
+                      path: null,
+                      name: "handwriten-${controller.pickedAttachments.length + 1}.png",
+                      bytes: uint8,
+                      size: uint8.lengthInBytes,
+                      balloonBundleId: 'com.apple.Handwriting.HandwritingProvider',
+                    ));
+                  }
+                },
+              ),
+            ],
+            backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
+          );
+        },
+      );
+    }
   }
 
   Widget _buildStatusSliver({
@@ -382,279 +548,47 @@ class _AttachmentPickerState extends State<AttachmentPicker> with ThemeHelpers {
   }
 }
 
-/// Extracted stateless widget to prevent unnecessary rebuilds
-class _ActionButton extends StatelessWidget {
-  const _ActionButton({
+class _QuickActionItem extends StatelessWidget {
+  const _QuickActionItem({
     required this.icon,
     required this.label,
-    required this.onPressed,
+    required this.color,
+    required this.onTap,
   });
 
   final IconData icon;
   final String label;
-  final VoidCallback onPressed;
+  final Color color;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return ElevatedButton(
-      style: ElevatedButton.styleFrom(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
-        backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
-      ),
-      onPressed: onPressed,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: <Widget>[
-          Icon(
-            icon,
-            color: context.theme.colorScheme.onSurfaceVariant,
+    final bgColor = color.withValues(alpha: 0.12);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Container(
+          decoration: BoxDecoration(
+            color: bgColor,
+            borderRadius: BorderRadius.circular(12),
           ),
-          const SizedBox(height: 8.0),
-          Text(
-            label,
-            style: context.theme.textTheme.labelLarge!.copyWith(color: context.theme.colorScheme.onSurfaceVariant),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Extracted stateless widget for feature buttons to prevent rebuilds
-class _FeatureButton extends StatelessWidget {
-  const _FeatureButton({
-    required this.index,
-    required this.controller,
-  });
-
-  final int index;
-  final ConversationViewController controller;
-
-  IconData getIcon() {
-    if (SettingsSvc.settings.skin.value == Skins.iOS) {
-      switch (index) {
-        case 0:
-          return CupertinoIcons.folder_open;
-        case 1:
-          return CupertinoIcons.location;
-        case 2:
-          return CupertinoIcons.calendar_today;
-        case 3:
-          return CupertinoIcons.pencil_outline;
-      }
-    } else {
-      switch (index) {
-        case 0:
-          return Icons.folder_open_outlined;
-        case 1:
-          return Icons.location_on_outlined;
-        case 2:
-          return Icons.schedule;
-        case 3:
-          return Icons.draw;
-      }
-    }
-    return Icons.abc;
-  }
-
-  String getText() {
-    switch (index) {
-      case 0:
-        return "Files";
-      case 1:
-        return "Location";
-      case 2:
-        return "Schedule";
-      case 3:
-        return "Handwriten";
-    }
-    return "";
-  }
-
-  Future<void> handlePress(BuildContext context) async {
-    switch (index) {
-      case 0:
-        await _handleFilePicker();
-        break;
-      case 1:
-        await _handleLocation();
-        break;
-      case 2:
-        await _handleSchedule(context);
-        break;
-      case 3:
-        await _handleHandwritten(context);
-        break;
-    }
-  }
-
-  Future<void> _handleFilePicker() async {
-    final res = await FilePicker.pickFiles(
-      withReadStream: true,
-      allowMultiple: true,
-    );
-    if (res == null || res.files.isEmpty) return;
-
-    for (pf.PlatformFile file in res.files) {
-      if (file.size / 1024000 > 1000) {
-        showSnackbar("Error", "This file is over 1 GB! Please compress it before sending.");
-        continue;
-      }
-
-      // Don't preload bytes for files - use readStream when sending
-      controller.pickedAttachments.add(PlatformFile(
-        path: file.path,
-        name: file.name,
-        bytes: null, // Will be loaded via stream when sending
-        size: file.size,
-      ));
-    }
-  }
-
-  Future<void> _handleLocation() async {
-    await Share.location(controller.chat);
-  }
-
-  Future<void> _handleSchedule(BuildContext context) async {
-    if (controller.pickedAttachments.isNotEmpty) {
-      return showSnackbar("Error", "Remove all attachments before scheduling!");
-    } else if (controller.replyToMessage != null || controller.subjectTextController.text.isNotEmpty) {
-      return showSnackbar("Error", "Private API features are not supported when scheduling!");
-    }
-
-    final date = await showTimeframePicker("Pick date and time", context, presetsAhead: true);
-    if (date != null && date.isAfter(DateTime.now())) {
-      controller.scheduledDate.value = date;
-    }
-  }
-
-  Future<void> _handleHandwritten(BuildContext context) async {
-    Color selectedColor = context.theme.colorScheme.bubble(context, controller.chat.isIMessage);
-
-    final result = await ColorPicker(
-      color: selectedColor,
-      onColorChanged: (Color newColor) {
-        selectedColor = newColor;
-      },
-      title: Text(
-        "Select Color",
-        style: context.theme.textTheme.titleLarge,
-      ),
-      width: 40,
-      height: 40,
-      spacing: 0,
-      runSpacing: 0,
-      borderRadius: 0,
-      wheelDiameter: 165,
-      enableOpacity: false,
-      showColorCode: true,
-      colorCodeHasColor: true,
-      pickersEnabled: <ColorPickerType, bool>{
-        ColorPickerType.wheel: true,
-      },
-      copyPasteBehavior: const ColorPickerCopyPasteBehavior(
-        parseShortHexCode: true,
-      ),
-      actionButtons: const ColorPickerActionButtons(
-        dialogActionButtons: true,
-      ),
-    ).showPickerDialog(
-      context,
-      barrierDismissible: false,
-      constraints: BoxConstraints(
-        minHeight: 480,
-        minWidth: NavigationSvc.width(context) - 70,
-        maxWidth: NavigationSvc.width(context) - 70,
-      ),
-    );
-
-    if (result && context.mounted) {
-      final control = HandSignatureControl();
-      showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: Text(
-              "Draw Handwriten Message",
-              style: context.theme.textTheme.titleLarge,
-            ),
-            content: AspectRatio(
-              aspectRatio: 1,
-              child: Container(
-                constraints: const BoxConstraints.expand(),
-                child: HandSignature(
-                  control: control,
-                  color: selectedColor,
-                  width: 1.0,
-                  maxWidth: 10.0,
-                  type: SignatureDrawType.shape,
-                ),
-              ),
-            ),
-            actions: [
-              TextButton(
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 10),
+          child: Row(
+            children: [
+              Icon(icon, color: color, size: 26),
+              const SizedBox(width: 10),
+              Expanded(
                 child: Text(
-                  "Cancel",
-                  style: context.theme.textTheme.bodyLarge!.copyWith(color: Get.context!.theme.colorScheme.primary),
+                  label,
+                  style: context.theme.textTheme.bodyMedium,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-              ),
-              TextButton(
-                child: Text(
-                  "OK",
-                  style: context.theme.textTheme.bodyLarge!.copyWith(color: Get.context!.theme.colorScheme.primary),
-                ),
-                onPressed: () async {
-                  Navigator.of(context).pop();
-                  final bytes = await control.toImage(height: 512, fit: false);
-                  if (bytes != null) {
-                    final uint8 = bytes.buffer.asUint8List();
-                    controller.pickedAttachments.add(PlatformFile(
-                      path: null,
-                      name: "handwriten-${controller.pickedAttachments.length + 1}.png",
-                      bytes: uint8,
-                      size: uint8.lengthInBytes,
-                      balloonBundleId: 'com.apple.Handwriting.HandwritingProvider',
-                    ));
-                  }
-                },
               ),
             ],
-            backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
-          );
-        },
-      );
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return ElevatedButton(
-      style: ElevatedButton.styleFrom(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
+          ),
         ),
-        padding: const EdgeInsets.symmetric(vertical: 5),
-        backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
-      ),
-      onPressed: () => handlePress(context),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: <Widget>[
-          Icon(
-            getIcon(),
-            color: context.theme.colorScheme.onSurfaceVariant,
-          ),
-          const SizedBox(height: 8.0),
-          Text(
-            getText(),
-            style: context.theme.textTheme.labelLarge!.copyWith(color: context.theme.colorScheme.onSurfaceVariant),
-          ),
-        ],
       ),
     );
   }

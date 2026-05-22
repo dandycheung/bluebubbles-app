@@ -1,5 +1,6 @@
 import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/database/database.dart';
+import 'package:bluebubbles/services/backend/java_dart_interop/method_channel_service.dart';
 import 'package:characters/characters.dart';
 import 'package:crypto/crypto.dart';
 import 'package:collection/collection.dart';
@@ -209,13 +210,32 @@ class FilesystemService {
     return (ext != null && ext.isNotEmpty) ? '$filename.$ext' : filename;
   }
 
-  Future<String> saveToDownloads(File file) async {
+  Future<String> saveToDownloads(File file, {String mimeType = 'application/octet-stream'}) async {
     if (kIsWeb) throw "Cannot save file on web!";
 
     final String filename = basename(file.path);
-    final String downloadsDir = await downloadsDirectory;
-    final String newPath = join(downloadsDir, filename);
-    await file.copy(newPath);
-    return newPath;
+
+    if (kIsDesktop) {
+      // On desktop, path_provider resolves the real OS Downloads folder.
+      final String downloadsDir = await downloadsDirectory;
+      final String newPath = join(downloadsDir, filename);
+      await file.copy(newPath);
+      return newPath;
+    } else {
+      // On Android, use MediaStore.Downloads (API 29+) or direct file copy (older).
+      try {
+        await MethodChannelSvc.actions.saveFileToDownloads(
+          filePath: file.path,
+          fileName: filename,
+          mimeType: mimeType,
+        );
+        return filename;
+      } catch (_) {
+        // Fallback: direct file copy to the public Downloads directory.
+        final String newPath = join(androidDownloadsPath, filename);
+        await file.copy(newPath);
+        return newPath;
+      }
+    }
   }
 }

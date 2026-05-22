@@ -130,7 +130,7 @@ void showAddParticipant(BuildContext context, Chat chat) {
                         ),
                       );
                     });
-                final response = await HttpSvc.chatParticipant("add", chat.guid, participantController.text);
+                final response = await HttpSvc.chat.modifyParticipant("add", chat.guid, participantController.text);
                 if (response.statusCode == 200) {
                   // Sync the updated chat (with the new participant) to the DB
                   // and propagate the changes to ChatState so the UI updates.

@@ -132,7 +132,7 @@ class _ImageViewerState extends State<ImageViewer> with AutomaticKeepAliveClient
         final calculatedHeight = (displayHeight * Get.pixelRatio * qualityFactor).round().abs().nonZero;
         imageWidget = Image.memory(file.bytes!,
             gaplessPlayback: true,
-            filterQuality: FilterQuality.none,
+            filterQuality: FilterQuality.high,
             cacheWidth: calculatedWidth,
             cacheHeight: calculatedHeight,
             fit: BoxFit.contain,
@@ -204,10 +204,9 @@ class _ImageViewerState extends State<ImageViewer> with AutomaticKeepAliveClient
                 ));
       }
     } else {
-      // Non-web with file path - use file image (much more efficient)
-      // Note: For HEIC/TIFF, the path might point to unconverted file initially.
-      // Image.file will handle it on iOS/macOS (native support), or fail gracefully
-      // and trigger errorBuilder where we can attempt conversion.
+      // Calculate the proper height/width for the attachment to use only for the
+      // containers and placeholders, not the actual image. The Image widget should respect
+      // the EXIF data and display the image properly.
       final displayWidth = min((attachment.displayWidth?.toDouble() ?? NavigationSvc.width(context) * 0.5),
           NavigationSvc.width(context) * 0.5);
       final displayHeight = min(
@@ -220,9 +219,7 @@ class _ImageViewerState extends State<ImageViewer> with AutomaticKeepAliveClient
       imageWidget = Image.file(
         File(file.path!),
         gaplessPlayback: true,
-        filterQuality: FilterQuality.none,
-        cacheWidth: calculatedWidth,
-        cacheHeight: calculatedHeight,
+        filterQuality: FilterQuality.high,
         fit: BoxFit.contain,
         frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
           if (wasSynchronouslyLoaded) return child;

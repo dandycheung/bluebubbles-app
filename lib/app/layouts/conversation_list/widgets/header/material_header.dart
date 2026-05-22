@@ -107,7 +107,10 @@ class _MaterialHeaderState extends CustomState<MaterialHeader, void, Conversatio
                                             color: context.theme.colorScheme.onSurfaceVariant,
                                           ),
                                         )),
-                                    const OverflowMenu(),
+                                    const Padding(
+                                      padding: EdgeInsets.only(right: 8),
+                                      child: OverflowMenu(),
+                                    ),
                                   ],
                                 ),
                               ),

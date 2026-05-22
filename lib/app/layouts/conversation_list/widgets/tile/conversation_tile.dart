@@ -248,7 +248,7 @@ class _ChatSubtitleState extends CustomState<ChatSubtitle, void, ConversationTil
       // instead of italic styling — mirrors the Google Messages visual pattern.
       // Suppress when showing a draft so the layout stays clean.
       final showDeliveryIcon = material && isFromMe && !controller.chat.isGroup && !hasDraft;
-      final isMonet = SettingsSvc.settings.monetTheming.value != Monet.none;
+      final isMonet = ThemeSvc.isAnyMaterialYouSelected;
       final iconColor = isMonet ? context.theme.colorScheme.primary : context.theme.colorScheme.outline;
 
       final TextSpan subtitleSpan;

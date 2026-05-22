@@ -3,7 +3,6 @@ import 'dart:math';
 
 import 'package:audio_waveforms/audio_waveforms.dart';
 import 'package:bluebubbles/app/components/custom_text_editing_controllers.dart';
-import 'package:bluebubbles/app/layouts/camera/camera_screen.dart';
 import 'package:bluebubbles/app/layouts/conversation_view/widgets/media_picker/text_field_attachment_picker.dart';
 import 'package:bluebubbles/app/layouts/conversation_view/widgets/message/send_animation.dart';
 import 'package:bluebubbles/app/layouts/conversation_view/widgets/text_field/conversation_text_field_local_controller.dart';
@@ -16,6 +15,7 @@ import 'package:bluebubbles/app/layouts/conversation_view/widgets/text_field/tex
 import 'package:bluebubbles/app/wrappers/stateful_boilerplate.dart';
 import 'package:bluebubbles/database/models.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
+import 'package:bluebubbles/services/backend/interfaces/chat_interface.dart';
 import 'package:bluebubbles/services/services.dart';
 import 'package:bluebubbles/services/ui/chat/send_data.dart';
 import 'package:bluebubbles/utils/logger/logger.dart';
@@ -262,10 +262,10 @@ class ConversationTextFieldState extends CustomState<ConversationTextField, void
     if (SettingsSvc.settings.enablePrivateAPI.value &&
         (chat.autoSendTypingIndicators ?? SettingsSvc.settings.privateSendTypingIndicators.value)) {
       if (localController.debounceTyping == null) {
-        SocketSvc.sendMessage("started-typing", {"chatGuid": chatGuid});
+        unawaited(ChatInterface.startTyping(chatGuid: chatGuid));
       }
       localController.debounceTyping = Timer(const Duration(seconds: 3), () {
-        SocketSvc.sendMessage("stopped-typing", {"chatGuid": chatGuid});
+        unawaited(ChatInterface.stopTyping(chatGuid: chatGuid));
         localController.debounceTyping = null;
       });
     }
@@ -316,7 +316,7 @@ class ConversationTextFieldState extends CustomState<ConversationTextField, void
     localController.cancelAllTimers();
     Get.delete<ConversationTextFieldLocalController>();
     if (chat.autoSendTypingIndicators ?? SettingsSvc.settings.privateSendTypingIndicators.value) {
-      SocketSvc.sendMessage("stopped-typing", {"chatGuid": chatGuid});
+      unawaited(ChatInterface.stopTyping(chatGuid: chatGuid));
     }
 
     super.dispose();
@@ -351,7 +351,7 @@ class ConversationTextFieldState extends CustomState<ConversationTextField, void
           );
         },
       );
-      final response = await HttpSvc.createScheduled(chat.guid, text, date.toUtc(), {"type": "once"});
+      final response = await HttpSvc.message.createScheduled(chat.guid, text, date.toUtc(), {"type": "once"});
       Navigator.of(context).pop();
       if (response.statusCode == 200 && response.data != null) {
         showSnackbar("Notice", "Message scheduled successfully for ${buildFullDate(date)}");
@@ -428,16 +428,10 @@ class ConversationTextFieldState extends CustomState<ConversationTextField, void
     }
 
     final XFile? file;
-    if (Platform.isAndroid && !kIsWeb) {
-      file = await Navigator.of(context).push<XFile?>(
-        MaterialPageRoute(
-          builder: (_) => CameraScreen(initialMode: type == 'video' ? 'video' : 'photo'),
-        ),
-      );
-    } else if (type == 'camera') {
-      file = await ImagePicker().pickImage(source: ImageSource.camera);
-    } else {
+    if (type == 'video') {
       file = await ImagePicker().pickVideo(source: ImageSource.camera);
+    } else {
+      file = await ImagePicker().pickImage(source: ImageSource.camera);
     }
 
     if (file != null) {

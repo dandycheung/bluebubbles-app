@@ -3,8 +3,11 @@ import 'package:flutter/material.dart';
 /// Centralizes all animation configuration for the message list.
 /// This makes animation timing and curves easy to tune without touching the orchestrator logic.
 class MessageListAnimationConfig {
-  /// Duration for new message insertion animations (slide + size + fade)
-  static const Duration insertionDuration = Duration(milliseconds: 400);
+  /// Duration for new message insertion animations (slide + size + fade).
+  ///
+  /// Slightly longer duration delays the outgoing fade-in handoff so the
+  /// temporary send bubble and list row don't visually overlap as tightly.
+  static const Duration insertionDuration = Duration(milliseconds: 475);
 
   /// Curve for insertion slide animation
   static const Curve insertionSlideCurve = Curves.easeOut;
