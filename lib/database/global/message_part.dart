@@ -13,6 +13,7 @@ class MessagePart {
     this.edits = const [],
     required this.part,
     this.shouldRedact = false,
+    this.attachmentPartIndices,
   }) {
     if (attachments.isEmpty) attachments = [];
     if (mentions.isEmpty) mentions = [];
@@ -46,6 +47,15 @@ class MessagePart {
   bool isUnsent;
   List<MessagePart> edits;
   int part;
+
+  /// For gallery parts created by collapsing consecutive media-only parts,
+  /// maps each attachment (by index) to its original messagePart index.
+  /// Null for non-gallery parts or single-source-part galleries.
+  List<int>? attachmentPartIndices;
+
+  /// Returns the original message part index for the attachment at [index].
+  /// Falls back to [part] if [attachmentPartIndices] is not set.
+  int partIndexForAttachment(int index) => attachmentPartIndices?[index] ?? part;
 
   bool get isEdited => edits.isNotEmpty;
   String? get url => text?.replaceAll("\n", " ").split(" ").firstWhereOrNull((String e) => e.hasUrl);
