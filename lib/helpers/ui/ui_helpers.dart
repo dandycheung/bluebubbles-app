@@ -755,31 +755,74 @@ Future<ui.Image> loadImage(Uint8List data) async {
   return completer.future;
 }
 
-AlertDialog areYouSure(BuildContext context,
-    {Widget? content, String? title = "Are you sure?", required Function onNo, required Function onYes}) {
-  return AlertDialog(
-    title: Text(
-      title ?? "Are you sure?",
-      style: context.theme.textTheme.titleLarge,
-    ),
-    content: content,
-    backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
-    actions: <Widget>[
-      TextButton(
-        child: Text("No", style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.primary)),
-        onPressed: () {
-          onNo.call();
-        },
-      ),
-      TextButton(
-        child:
-            Text("Yes", style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.primary)),
-        onPressed: () async {
-          onYes.call();
-        },
-      ),
-    ],
-  );
+Widget areYouSure(BuildContext context,
+    {Widget? content,
+    String? title = "Are you sure?",
+    String? noText = "No",
+    String? yesText = "Yes",
+    Color? noColor,
+    Color? yesColor,
+    required Function onNo,
+    required Function onYes}) {
+  return _AreYouSureDialog(content: content, title: title, onNo: onNo, onYes: onYes, noText: noText, yesText: yesText, noColor: noColor, yesColor: yesColor);
+}
+
+class _AreYouSureDialog extends StatefulWidget {
+  final Widget? content;
+  final String? title;
+  final Function onNo;
+  final Function onYes;
+  final String? noText;
+  final String? yesText;
+  final Color? noColor;
+  final Color? yesColor;
+
+  const _AreYouSureDialog({
+    required this.onNo,
+    required this.onYes,
+    this.noText,
+    this.yesText,
+    this.noColor,
+    this.yesColor,
+    this.content,
+    this.title,
+  });
+
+  @override
+  State<_AreYouSureDialog> createState() => _AreYouSureDialogState();
+}
+
+class _AreYouSureDialogState extends State<_AreYouSureDialog> {
+  bool _loading = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.title ?? "Are you sure?", style: context.theme.textTheme.titleLarge),
+      content: _loading ? SizedBox(height: 70, child: Center(child: buildProgressIndicator(context))) : widget.content,
+      backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
+      actions: _loading
+          ? null
+          : [
+              TextButton(
+                child: Text(widget.noText ?? "No",
+                    style: context.theme.textTheme.bodyLarge!.copyWith(color: widget.noColor ?? context.theme.colorScheme.primary)),
+                onPressed: () => widget.onNo.call(),
+              ),
+              TextButton(
+                child: Text(widget.yesText ?? "Yes",
+                    style: context.theme.textTheme.bodyLarge!.copyWith(color: widget.yesColor ?? context.theme.colorScheme.primary)),
+                onPressed: () async {
+                  final result = widget.onYes.call();
+                  if (result is Future) {
+                    setState(() => _loading = true);
+                    await result;
+                  }
+                },
+              ),
+            ],
+    );
+  }
 }
 
 extension VideoAspectRatio on VideoController {
