@@ -42,7 +42,7 @@ class CupertinoConversationListState extends State<CupertinoConversationList> wi
     super.initState();
 
     // update widget when background color changes
-    if (kIsDesktop) {
+    if (kIsDesktop && mounted) {
       SettingsSvc.settings.windowEffect.listen((WindowEffect effect) {
         setState(() {});
       });
