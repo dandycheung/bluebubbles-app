@@ -176,7 +176,7 @@ class CustomDetailsMenuActionWidget extends StatelessWidget {
       child: InkWell(
         onTap: isDisabled ? null : onTap,
         child: ListTile(
-          mouseCursor: SystemMouseCursors.click,
+          mouseCursor: MouseCursor.defer,
           dense: !kIsDesktop && !kIsWeb,
           title: Text(
             title,

@@ -411,7 +411,7 @@ class SearchViewState extends State<SearchView> with ThemeHelpers {
                                 : null,
                           ),
                           child: ListTile(
-                            mouseCursor: SystemMouseCursors.click,
+                            mouseCursor: MouseCursor.defer,
                             title: RichText(
                               text: TextSpan(
                                 children: MessageHelper.buildEmojiText(

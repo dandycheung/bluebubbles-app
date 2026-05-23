@@ -357,7 +357,7 @@ class _MediaGalleryCardState extends State<MediaGalleryCard> with AutomaticKeepA
   bool get wantKeepAlive => true;
 }
 
-class ImageDisplay extends StatelessWidget {
+class ImageDisplay extends StatefulWidget {
   const ImageDisplay({
     super.key,
     required this.attachment,
@@ -372,6 +372,18 @@ class ImageDisplay extends StatelessWidget {
   final Duration? duration;
 
   @override
+  State<ImageDisplay> createState() => _ImageDisplayState();
+}
+
+class _ImageDisplayState extends State<ImageDisplay> {
+  bool _hovered = false;
+
+  Attachment get attachment => widget.attachment;
+  PlatformFile? get file => widget.file;
+  Uint8List? get image => widget.image;
+  Duration? get duration => widget.duration;
+
+  @override
   Widget build(BuildContext context) {
     final double cardSize = NavigationSvc.width(context) / max(2, NavigationSvc.width(context) ~/ 200);
 
@@ -383,7 +395,10 @@ class ImageDisplay extends StatelessWidget {
         );
       },
       closedBuilder: (_, openContainer) {
-        return InkWell(
+        return MouseRegion(
+          onEnter: (_) => setState(() => _hovered = true),
+          onExit: (_) => setState(() => _hovered = false),
+          child: InkWell(
           onTap: () {
             openContainer();
           },
@@ -422,10 +437,14 @@ class ImageDisplay extends StatelessWidget {
                     right: 10,
                     child: ContactAvatarWidget(handle: attachment.message.target?.handleRelation.target),
                   ),
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  color: _hovered ? context.theme.colorScheme.scrim.withValues(alpha: 0.3) : Colors.transparent,
+                ),
               ],
             ),
           ),
-        );
+        ));
       },
     );
   }

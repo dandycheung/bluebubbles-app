@@ -390,7 +390,7 @@ class _DesktopPanelState extends State<DesktopPanel> with ThemeHelpers {
                                           children: List.generate(
                                             ReactionTypes.toList().length + 1,
                                             (int index) => MouseRegion(
-                                              cursor: SystemMouseCursors.click,
+                                              cursor: MouseCursor.defer,
                                               onEnter: (event) => showButtons[index] = true,
                                               onExit: (event) => showButtons[index] = false,
                                               child: Obx(
@@ -415,7 +415,7 @@ class _DesktopPanelState extends State<DesktopPanel> with ThemeHelpers {
                                                   return MouseRegion(
                                                     cursor: hardDisabled
                                                         ? SystemMouseCursors.basic
-                                                        : SystemMouseCursors.click,
+                                                        : MouseCursor.defer,
                                                     child: GestureDetector(
                                                       behavior: HitTestBehavior.translucent,
                                                       onTap: () async {

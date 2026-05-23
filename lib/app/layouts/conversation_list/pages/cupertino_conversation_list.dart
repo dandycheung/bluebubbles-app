@@ -216,7 +216,7 @@ class CupertinoConversationListState extends State<CupertinoConversationList> wi
                                 ),
                                 if (_pageCount > 1)
                                   MouseRegion(
-                                    cursor: SystemMouseCursors.click,
+                                    cursor: MouseCursor.defer,
                                     hitTestBehavior: HitTestBehavior.deferToChild,
                                     child: Padding(
                                       padding: const EdgeInsets.only(bottom: 10),
