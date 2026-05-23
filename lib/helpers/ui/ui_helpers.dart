@@ -465,6 +465,10 @@ void showSnackbar(String title, String message,
 
 Future<void> showToast(String message, {bool isError = false}) async {
   if (message.trim().isEmpty) return;
+  if (kIsDesktop) {
+    showSnackbar(isError ? "Error" : "Notice", message);
+    return;
+  }
   try {
     await Fluttertoast.showToast(
       msg: message,
