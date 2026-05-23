@@ -206,11 +206,6 @@ class _MessageImageGalleryState extends State<MessageImageGallery> with ThemeHel
 
     final stackChildren = <Widget>[];
 
-    // Peeking-zone tap overlay: sits at the bottom of z-order so it is
-    // tested LAST in hit testing. It only wins when every card's SizedBox
-    // misses (i.e. the rotated corner that peeks past the card's layout
-    // bounds). Uses _advance(1) which is "bring next card to front" for
-    // both fan directions.
     if (_attachments.length > 1 && (widget.infiniteScroll || _currentIndex < _attachments.length - 1)) {
       stackChildren.add(
         Positioned.fill(
@@ -290,19 +285,22 @@ class _MessageImageGalleryState extends State<MessageImageGallery> with ThemeHel
     return Listener(
       onPointerSignal: (event) {
         if (event is PointerScrollEvent && _attachments.length > 1) {
-          _scrollAccumulator += event.scrollDelta.dy;
-          if (_scrollAccumulator.abs() >= _scrollAdvanceThreshold) {
-            final scrollDir = _scrollAccumulator > 0 ? 1 : -1;
-            _scrollAccumulator = 0;
-            final oldIndex = _currentIndex;
-            setState(() {
-              _advance(scrollDir);
-              _dragDx = 0;
-            });
-            if (_currentIndex == oldIndex && !widget.infiniteScroll) {
-              HapticFeedback.lightImpact();
+          GestureBinding.instance.pointerSignalResolver.register(event, (event) {
+            final scrollEvent = event as PointerScrollEvent;
+            _scrollAccumulator += scrollEvent.scrollDelta.dy;
+            if (_scrollAccumulator.abs() >= _scrollAdvanceThreshold) {
+              final scrollDir = _scrollAccumulator > 0 ? 1 : -1;
+              _scrollAccumulator = 0;
+              final oldIndex = _currentIndex;
+              setState(() {
+                _advance(scrollDir);
+                _dragDx = 0;
+              });
+              if (_currentIndex == oldIndex && !widget.infiniteScroll) {
+                HapticFeedback.lightImpact();
+              }
             }
-          }
+          });
         }
       },
       child: GestureDetector(
@@ -437,8 +435,8 @@ class _MessageImageGalleryState extends State<MessageImageGallery> with ThemeHel
       left: centeredLeft + mirroredBias + dx + dragOffset,
       child: Transform.translate(
         offset: Offset.zero,
-        child: SizedBox(
-          height: cardHeight,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: cardWidth, minHeight: cardHeight, maxHeight: cardHeight),
           child: Transform.rotate(
             angle: angle.toDouble() + dragRotate,
             alignment: widget.fanDirection == GalleryFanDirection.left ? Alignment.bottomRight : Alignment.bottomLeft,
