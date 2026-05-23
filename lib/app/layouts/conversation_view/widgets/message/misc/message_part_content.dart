@@ -1,6 +1,7 @@
 import 'package:bluebubbles/app/layouts/conversation_view/widgets/message/attachment/attachment_holder.dart';
 import 'package:bluebubbles/app/layouts/conversation_view/widgets/message/attachment/message_image_gallery.dart';
 import 'package:bluebubbles/app/layouts/conversation_view/widgets/message/interactive/interactive_holder.dart';
+import 'package:bluebubbles/app/state/chat_state_scope.dart';
 import 'package:bluebubbles/app/state/message_state_scope.dart';
 import 'package:bluebubbles/app/layouts/conversation_view/widgets/message/text/text_bubble.dart';
 import 'package:bluebubbles/database/models.dart';
@@ -23,6 +24,7 @@ class MessagePartContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final message = MessageStateScope.messageOf(context);
+    final chat = ChatStateScope.chatOf(context);
     // Interactive messages (URL previews, GamePigeon, etc.)
     if (message.hasApplePayloadData || message.isLegacyUrlPreview || message.isInteractive) {
       return InteractiveHolder(
@@ -41,12 +43,15 @@ class MessagePartContent extends StatelessWidget {
     if (messagePart.attachments.isNotEmpty) {
       final iOS = SettingsSvc.settings.skin.value == Skins.iOS;
       if (iOS && messagePart.isMediaGallery) {
-        return MessageImageGallery(
-          attachments: messagePart.attachments,
-          partIndex: messagePart.part,
-          isInReply: false,
-          fanDirection: message.isFromMe == true ? GalleryFanDirection.left : GalleryFanDirection.right,
-          currentIndexNotifier: galleryCurrentIndexNotifier,
+        return Padding(
+          padding: EdgeInsets.only(left: !chat.isGroup && SettingsSvc.settings.alwaysShowAvatars.value == false ? 20 : 0),
+          child: MessageImageGallery(
+            attachments: messagePart.attachments,
+            partIndex: messagePart.part,
+            isInReply: false,
+            fanDirection: message.isFromMe == true ? GalleryFanDirection.left : GalleryFanDirection.right,
+            currentIndexNotifier: galleryCurrentIndexNotifier,
+          )
         );
       }
       return AttachmentHolder(

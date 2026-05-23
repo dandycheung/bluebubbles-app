@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:io';
 import 'dart:math';
 
 import 'package:bluebubbles/app/layouts/conversation_view/widgets/message/attachment/attachment_holder.dart';
@@ -7,6 +9,7 @@ import 'package:bluebubbles/services/services.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:supercharged/supercharged.dart';
 
 enum GalleryFanDirection {
   left,
@@ -59,15 +62,75 @@ class _MessageImageGalleryState extends State<MessageImageGallery> with ThemeHel
   double _dragDx = 0;
   double _scrollAccumulator = 0;
   bool _hapticGivenForCurrentEnd = false;
+  final Map<String, Size> _imageSizes = {};
 
   List<Attachment> get _attachments => widget.attachments;
 
   @override
+  void initState() {
+    super.initState();
+    _loadImageSizes();
+  }
+
+  @override
   void didUpdateWidget(covariant MessageImageGallery oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.attachments != widget.attachments) {
+    final diff = widget.attachments.filter((a) => !_imageSizes.containsKey(a.guid ?? a.transferName)).toList();
+    if (diff.isNotEmpty) {
       _currentIndex = 0;
+      _imageSizes.clear();
+      _loadImageSizes();
     }
+  }
+
+  void _loadImageSizes() {
+    for (final a in _attachments) {
+      if (a.mimeStart == 'image') {
+        _loadOneImageSize(a);
+      }
+    }
+  }
+
+  Future<void> _loadOneImageSize(Attachment attachment) async {
+    final key = attachment.guid ?? attachment.transferName;
+    if (key == null || _imageSizes.containsKey(key)) return;
+    try {
+      // Prefer the converted PNG path (exists for HEIC/TIFF), fall back to original.
+      File? imageFile;
+      for (final candidate in [attachment.convertedPath, attachment.path]) {
+        final f = File(candidate);
+        if (f.existsSync()) {
+          imageFile = f;
+          break;
+        }
+      }
+      if (imageFile == null) return;
+
+      final completer = Completer<Size?>();
+      final provider = FileImage(imageFile);
+      final stream = provider.resolve(ImageConfiguration.empty);
+      late ImageStreamListener listener;
+      listener = ImageStreamListener(
+        (ImageInfo info, bool _) {
+          if (!completer.isCompleted) {
+            completer.complete(Size(info.image.width.toDouble(), info.image.height.toDouble()));
+          }
+          stream.removeListener(listener);
+        },
+        onError: (dynamic _, StackTrace? __) {
+          if (!completer.isCompleted) completer.complete(null);
+          stream.removeListener(listener);
+        },
+      );
+      stream.addListener(listener);
+
+      final size = await completer.future;
+      if (mounted && size != null) {
+        setState(() {
+          _imageSizes[key] = size;
+        });
+      }
+    } catch (_) {}
   }
 
   void _advance(int direction) {
@@ -108,12 +171,12 @@ class _MessageImageGalleryState extends State<MessageImageGallery> with ThemeHel
     final tallest = _attachments.fold<double>(
       minHeight,
       (current, a) {
-        final w = a.width;
-        final h = a.height;
-        if (w == null || h == null || w <= 0 || h <= 0) {
+        final key = a.guid ?? a.transferName;
+        final size = key != null ? _imageSizes[key] : null;
+        if (size == null || size.width <= 0 || size.height <= 0) {
           return max(current, baseCardWidth);
         }
-        return max(current, (h / w) * baseCardWidth);
+        return max(current, (size.height / size.width) * baseCardWidth);
       },
     );
     return tallest.clamp(minHeight, maxHeight);
@@ -122,7 +185,9 @@ class _MessageImageGalleryState extends State<MessageImageGallery> with ThemeHel
   @override
   Widget build(BuildContext context) {
     final baseCardWidth = min((NavigationSvc.width(context) * 0.5), 260.0);
-    final baseCardHeight = _computeBaseCardHeight(baseCardWidth).clamp(100.0, 300.0);
+    final baseHeight = _computeBaseCardHeight(baseCardWidth);
+    final baseCardHeight = baseHeight.clamp(100.0, 300.0);
+
     final fanCanvasWidth = baseCardWidth + 56;
     final fanCanvasHeight = baseCardHeight;
     final baseOffset =
@@ -373,7 +438,6 @@ class _MessageImageGalleryState extends State<MessageImageGallery> with ThemeHel
       child: Transform.translate(
         offset: Offset.zero,
         child: SizedBox(
-          width: cardWidth,
           height: cardHeight,
           child: Transform.rotate(
             angle: angle.toDouble() + dragRotate,
