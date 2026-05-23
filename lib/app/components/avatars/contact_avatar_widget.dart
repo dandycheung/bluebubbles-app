@@ -151,7 +151,7 @@ class _ContactAvatarWidgetState extends State<ContactAvatarWidget> with ThemeHel
         child: InkWell(
           customBorder: const CircleBorder(),
           splashColor: Colors.black,
-          onTap: !kIsDesktop && (!widget.editable || (widget.handle == null && contactV2 == null))
+          onTap: (!widget.editable || (!kIsDesktop && widget.handle == null && contactV2 == null))
               ? null
               : () async {
                   if (kIsDesktop) {

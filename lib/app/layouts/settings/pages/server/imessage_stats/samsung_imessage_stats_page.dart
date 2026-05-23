@@ -142,6 +142,11 @@ class _SamsungIMessageStatsPageState
           child: Center(
             child: SegmentedButton<IMessageStatsSource>(
               showSelectedIcon: false,
+              style: SegmentedButton.styleFrom(
+                foregroundColor: context.theme.colorScheme.onSurface,
+                selectedForegroundColor: context.theme.colorScheme.onPrimary,
+                selectedBackgroundColor: context.theme.colorScheme.primary,
+              ),
               segments: [
                 const ButtonSegment(value: IMessageStatsSource.server, label: Text("Server")),
                 ButtonSegment(
