@@ -19,7 +19,6 @@ class _MaterialConversationTileState extends CustomState<MaterialConversationTil
 
   bool get shouldHighlight => controller.shouldHighlight.value;
 
-
   @override
   void initState() {
     super.initState();

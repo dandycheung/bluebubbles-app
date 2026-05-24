@@ -92,21 +92,23 @@ class ContactTile extends StatelessWidget {
             showToast("Address copied to clipboard");
           }
         },
-        onTap: kIsDesktop ? null : () async {
-          final contactV2 = handle.contactsV2.firstOrNull;
-          if (contactV2 == null || !contactV2.isNative) {
-            await MethodChannelSvc.actions.openContactForm(
-              address: handle.address,
-              isEmail: handle.address.isEmail,
-            );
-          } else {
-            try {
-              await MethodChannelSvc.actions.viewContactForm(nativeContactId: contactV2.nativeContactId);
-            } catch (_) {
-              showSnackbar("Error", "Failed to find contact on device!");
-            }
-          }
-        },
+        onTap: kIsDesktop
+            ? null
+            : () async {
+                final contactV2 = handle.contactsV2.firstOrNull;
+                if (contactV2 == null || !contactV2.isNative) {
+                  await MethodChannelSvc.actions.openContactForm(
+                    address: handle.address,
+                    isEmail: handle.address.isEmail,
+                  );
+                } else {
+                  try {
+                    await MethodChannelSvc.actions.viewContactForm(nativeContactId: contactV2.nativeContactId);
+                  } catch (_) {
+                    showSnackbar("Error", "Failed to find contact on device!");
+                  }
+                }
+              },
         onSecondaryTap: () {
           showModalBottomSheet(
             context: context,
@@ -150,8 +152,7 @@ class ContactTile extends StatelessWidget {
                       ListTile(
                         mouseCursor: MouseCursor.defer,
                         leading: Icon(Icons.person_remove_outlined, color: context.theme.colorScheme.error),
-                        title: Text("Remove from chat",
-                            style: TextStyle(color: context.theme.colorScheme.error)),
+                        title: Text("Remove from chat", style: TextStyle(color: context.theme.colorScheme.error)),
                         onTap: () {
                           Navigator.of(ctx).pop();
                           _removeParticipant(context);

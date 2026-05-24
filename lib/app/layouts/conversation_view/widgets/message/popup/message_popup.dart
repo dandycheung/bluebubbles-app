@@ -280,9 +280,10 @@ class _MessagePopupState extends State<MessagePopup> with SingleTickerProviderSt
                     ),
                   if (SettingsSvc.settings.enablePrivateAPI.value && isSent && minSierra && chat.isIMessage)
                     Positioned(
-                      bottom:
-                          (iOS ? itemHeight * numberToShow + 35 + (_measuredChildHeight ?? widget.size.height) : context.height - materialOffset)
-                              .clamp(0, context.height - (narrowScreen ? 200 : 125)),
+                      bottom: (iOS
+                              ? itemHeight * numberToShow + 35 + (_measuredChildHeight ?? widget.size.height)
+                              : context.height - materialOffset)
+                          .clamp(0, context.height - (narrowScreen ? 200 : 125)),
                       right: message.isFromMe! ? 15 : null,
                       left: !message.isFromMe! ? widget.childPosition.dx + 10 : null,
                       child: AnimatedSize(

@@ -508,12 +508,11 @@ class _MessageHolderState extends State<MessageHolder> with ThemeHelpers {
                                                                             children: [
                                                                               MessagePartContent(
                                                                                 messagePart: e,
-                                                                                galleryCurrentIndexNotifier:
-                                                                                    e.isMediaGallery
-                                                                                        ? _galleryIndices.putIfAbsent(
-                                                                                            e.part,
-                                                                                            () => ValueNotifier(0))
-                                                                                        : null,
+                                                                                galleryCurrentIndexNotifier: e
+                                                                                        .isMediaGallery
+                                                                                    ? _galleryIndices.putIfAbsent(
+                                                                                        e.part, () => ValueNotifier(0))
+                                                                                    : null,
                                                                               ),
                                                                               if (message.isFromMe!)
                                                                                 Obx(() {

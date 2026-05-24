@@ -335,63 +335,63 @@ class _MessageImageGalleryState extends State<MessageImageGallery> with ThemeHel
         }
       },
       child: GestureDetector(
-      onHorizontalDragUpdate: (details) {
-        if (_attachments.length <= 1) return;
-        if (!widget.infiniteScroll) {
-          final fanFlip = widget.fanDirection == GalleryFanDirection.left ? -1 : 1;
-          final atStart = _currentIndex == 0;
-          final atEnd = _currentIndex == _attachments.length - 1;
-          final blockedPositive = (atStart && fanFlip > 0) || (atEnd && fanFlip < 0);
-          final blockedNegative = (atStart && fanFlip < 0) || (atEnd && fanFlip > 0);
+        onHorizontalDragUpdate: (details) {
+          if (_attachments.length <= 1) return;
+          if (!widget.infiniteScroll) {
+            final fanFlip = widget.fanDirection == GalleryFanDirection.left ? -1 : 1;
+            final atStart = _currentIndex == 0;
+            final atEnd = _currentIndex == _attachments.length - 1;
+            final blockedPositive = (atStart && fanFlip > 0) || (atEnd && fanFlip < 0);
+            final blockedNegative = (atStart && fanFlip < 0) || (atEnd && fanFlip > 0);
 
-          final draggingIntoBlockedEnd =
-              (blockedPositive && details.delta.dx > 0) || (blockedNegative && details.delta.dx < 0);
-          if (draggingIntoBlockedEnd) {
-            if (!_hapticGivenForCurrentEnd) {
-              HapticFeedback.lightImpact();
-              _hapticGivenForCurrentEnd = true;
+            final draggingIntoBlockedEnd =
+                (blockedPositive && details.delta.dx > 0) || (blockedNegative && details.delta.dx < 0);
+            if (draggingIntoBlockedEnd) {
+              if (!_hapticGivenForCurrentEnd) {
+                HapticFeedback.lightImpact();
+                _hapticGivenForCurrentEnd = true;
+              }
+              setState(() {
+                _dragDx += details.delta.dx * 0.3;
+                if (blockedPositive) _dragDx = _dragDx.clamp(0.0, _maxWiggleDx);
+                if (blockedNegative) _dragDx = _dragDx.clamp(-_maxWiggleDx, 0.0);
+              });
+              return;
+            } else {
+              _hapticGivenForCurrentEnd = false;
             }
+          }
+          setState(() {
+            _dragDx += details.delta.dx;
+            _dragDx = _dragDx.clamp(-_maxDragDx, _maxDragDx);
+          });
+        },
+        onHorizontalDragEnd: (details) {
+          _hapticGivenForCurrentEnd = false;
+          if (_attachments.length <= 1) return;
+          final velocity = details.primaryVelocity ?? 0;
+          final bool commit = _dragDx.abs() >= _swipeCommitThreshold || velocity.abs() > 700;
+          if (!commit) {
             setState(() {
-              _dragDx += details.delta.dx * 0.3;
-              if (blockedPositive) _dragDx = _dragDx.clamp(0.0, _maxWiggleDx);
-              if (blockedNegative) _dragDx = _dragDx.clamp(-_maxWiggleDx, 0.0);
+              _dragDx = 0;
             });
             return;
-          } else {
-            _hapticGivenForCurrentEnd = false;
           }
-        }
-        setState(() {
-          _dragDx += details.delta.dx;
-          _dragDx = _dragDx.clamp(-_maxDragDx, _maxDragDx);
-        });
-      },
-      onHorizontalDragEnd: (details) {
-        _hapticGivenForCurrentEnd = false;
-        if (_attachments.length <= 1) return;
-        final velocity = details.primaryVelocity ?? 0;
-        final bool commit = _dragDx.abs() >= _swipeCommitThreshold || velocity.abs() > 700;
-        if (!commit) {
+
+          final rawSign = (_dragDx != 0 ? _dragDx : velocity) < 0 ? 1 : -1;
+          final fanFlip = widget.fanDirection == GalleryFanDirection.left ? -1 : 1;
+          setState(() {
+            _advance(rawSign * fanFlip);
+            _dragDx = 0;
+          });
+        },
+        onHorizontalDragCancel: () {
+          _hapticGivenForCurrentEnd = false;
+          if (_attachments.length <= 1) return;
           setState(() {
             _dragDx = 0;
           });
-          return;
-        }
-
-        final rawSign = (_dragDx != 0 ? _dragDx : velocity) < 0 ? 1 : -1;
-        final fanFlip = widget.fanDirection == GalleryFanDirection.left ? -1 : 1;
-        setState(() {
-          _advance(rawSign * fanFlip);
-          _dragDx = 0;
-        });
-      },
-      onHorizontalDragCancel: () {
-        _hapticGivenForCurrentEnd = false;
-        if (_attachments.length <= 1) return;
-        setState(() {
-          _dragDx = 0;
-        });
-      },
+        },
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment:
@@ -474,7 +474,8 @@ class _MessageImageGalleryState extends State<MessageImageGallery> with ThemeHel
     required bool isCurrent,
   }) {
     final slot = slotIndex < _visibleFanSlots ? slotIndex : (_visibleFanSlots - 1);
-    final overflowDepth = slotIndex >= _visibleFanSlots ? ((slotIndex - (_visibleFanSlots - 1)).clamp(0, 6) * 0.7) : 0.0;
+    final overflowDepth =
+        slotIndex >= _visibleFanSlots ? ((slotIndex - (_visibleFanSlots - 1)).clamp(0, 6) * 0.7) : 0.0;
     final angle = slot == 0 ? 0.0 : direction * _fanSlotAngle[slot];
     final dy = _fanSlotDy[slot] + overflowDepth;
     final dx = direction * _fanSlotDx[slot];

@@ -413,9 +413,7 @@ class _DesktopPanelState extends State<DesktopPanel> with ThemeHelpers {
                                                           .lightenOrDarken(10);
 
                                                   return MouseRegion(
-                                                    cursor: hardDisabled
-                                                        ? SystemMouseCursors.basic
-                                                        : MouseCursor.defer,
+                                                    cursor: hardDisabled ? SystemMouseCursors.basic : MouseCursor.defer,
                                                     child: GestureDetector(
                                                       behavior: HitTestBehavior.translucent,
                                                       onTap: () async {

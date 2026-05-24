@@ -104,10 +104,8 @@ class _CupertinoConversationTileState extends CustomState<CupertinoConversationT
                 : controller.shouldHighlight.value
                     ? context.theme.colorScheme.bubble(context, controller.chat.isIMessage)
                     : Colors.transparent,
-            borderRadius: BorderRadius.circular(controller.shouldHighlight.value ||
-                    controller.shouldPartialHighlight.value
-                ? 8
-                : 0),
+            borderRadius: BorderRadius.circular(
+                controller.shouldHighlight.value || controller.shouldPartialHighlight.value ? 8 : 0),
           ),
           child: NavigationSvc.isAvatarOnly(context)
               ? InkWell(

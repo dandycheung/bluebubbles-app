@@ -322,7 +322,11 @@ class _MediaGalleryCardState extends State<MediaGalleryCard> with AutomaticKeepA
           addPadding = false;
         } else if ((attachment.mimeType?.startsWith("video") ?? false) && !kIsDesktop && !kIsWeb) {
           if (videoPreview != null) {
-            child = ImageDisplay(attachment: attachment, image: videoPreview!, duration: duration, showSenderAvatar: widget.showSenderAvatar);
+            child = ImageDisplay(
+                attachment: attachment,
+                image: videoPreview!,
+                duration: duration,
+                showSenderAvatar: widget.showSenderAvatar);
             addPadding = false;
           } else {
             child = const Text(
@@ -399,56 +403,56 @@ class _ImageDisplayState extends State<ImageDisplay> {
       },
       closedBuilder: (_, openContainer) {
         return MouseRegion(
-          onEnter: (_) => setState(() => _hovered = true),
-          onExit: (_) => setState(() => _hovered = false),
-          child: InkWell(
-          onTap: () {
-            openContainer();
-          },
-          child: SizedBox(
-            width: cardSize,
-            height: cardSize,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                // Blurred canvas: filled background + centered foreground.
-                ImageBlurCanvas(
-                  filePath: file?.path,
-                  bytes: file?.bytes ?? image,
-                ),
-                if ((attachment.mimeType?.contains("video") ?? false) && duration != null)
-                  Positioned(
-                    bottom: 10,
-                    right: 10,
-                    child: Text(
-                      duration
-                          .toString()
-                          .split('.')
-                          .first
-                          .padLeft(8, "0")
-                          .padLeft(9, "a")
-                          .replaceFirst("a00:", "")
-                          .replaceFirst("a", ""),
-                      style: context.theme.textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold),
+            onEnter: (_) => setState(() => _hovered = true),
+            onExit: (_) => setState(() => _hovered = false),
+            child: InkWell(
+              onTap: () {
+                openContainer();
+              },
+              child: SizedBox(
+                width: cardSize,
+                height: cardSize,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    // Blurred canvas: filled background + centered foreground.
+                    ImageBlurCanvas(
+                      filePath: file?.path,
+                      bytes: file?.bytes ?? image,
                     ),
-                  ),
-                if (widget.showSenderAvatar &&
-                    !(attachment.message.target?.isFromMe ?? true) &&
-                    attachment.message.target?.handleRelation.hasValue == true &&
-                    SettingsSvc.settings.skin.value == Skins.iOS)
-                  Positioned(
-                    top: 10,
-                    right: 10,
-                    child: ContactAvatarWidget(handle: attachment.message.target?.handleRelation.target),
-                  ),
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 150),
-                  color: _hovered ? context.theme.colorScheme.scrim.withValues(alpha: 0.3) : Colors.transparent,
+                    if ((attachment.mimeType?.contains("video") ?? false) && duration != null)
+                      Positioned(
+                        bottom: 10,
+                        right: 10,
+                        child: Text(
+                          duration
+                              .toString()
+                              .split('.')
+                              .first
+                              .padLeft(8, "0")
+                              .padLeft(9, "a")
+                              .replaceFirst("a00:", "")
+                              .replaceFirst("a", ""),
+                          style: context.theme.textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    if (widget.showSenderAvatar &&
+                        !(attachment.message.target?.isFromMe ?? true) &&
+                        attachment.message.target?.handleRelation.hasValue == true &&
+                        SettingsSvc.settings.skin.value == Skins.iOS)
+                      Positioned(
+                        top: 10,
+                        right: 10,
+                        child: ContactAvatarWidget(handle: attachment.message.target?.handleRelation.target),
+                      ),
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 150),
+                      color: _hovered ? context.theme.colorScheme.scrim.withValues(alpha: 0.3) : Colors.transparent,
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
-        ));
+              ),
+            ));
       },
     );
   }

@@ -44,15 +44,15 @@ class MessagePartContent extends StatelessWidget {
       final iOS = SettingsSvc.settings.skin.value == Skins.iOS;
       if (iOS && messagePart.isMediaGallery) {
         return Padding(
-          padding: EdgeInsets.only(left: !chat.isGroup && SettingsSvc.settings.alwaysShowAvatars.value == false ? 20 : 0),
-          child: MessageImageGallery(
-            attachments: messagePart.attachments,
-            partIndex: messagePart.part,
-            isInReply: false,
-            fanDirection: message.isFromMe == true ? GalleryFanDirection.left : GalleryFanDirection.right,
-            currentIndexNotifier: galleryCurrentIndexNotifier,
-          )
-        );
+            padding:
+                EdgeInsets.only(left: !chat.isGroup && SettingsSvc.settings.alwaysShowAvatars.value == false ? 20 : 0),
+            child: MessageImageGallery(
+              attachments: messagePart.attachments,
+              partIndex: messagePart.part,
+              isInReply: false,
+              fanDirection: message.isFromMe == true ? GalleryFanDirection.left : GalleryFanDirection.right,
+              currentIndexNotifier: galleryCurrentIndexNotifier,
+            ));
       }
       return AttachmentHolder(
         message: messagePart,

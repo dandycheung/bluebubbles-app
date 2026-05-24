@@ -768,7 +768,15 @@ Widget areYouSure(BuildContext context,
     Color? yesColor,
     required Function onNo,
     required Function onYes}) {
-  return _AreYouSureDialog(content: content, title: title, onNo: onNo, onYes: onYes, noText: noText, yesText: yesText, noColor: noColor, yesColor: yesColor);
+  return _AreYouSureDialog(
+      content: content,
+      title: title,
+      onNo: onNo,
+      onYes: onYes,
+      noText: noText,
+      yesText: yesText,
+      noColor: noColor,
+      yesColor: yesColor);
 }
 
 class _AreYouSureDialog extends StatefulWidget {
@@ -810,12 +818,14 @@ class _AreYouSureDialogState extends State<_AreYouSureDialog> {
           : [
               TextButton(
                 child: Text(widget.noText ?? "No",
-                    style: context.theme.textTheme.bodyLarge!.copyWith(color: widget.noColor ?? context.theme.colorScheme.primary)),
+                    style: context.theme.textTheme.bodyLarge!
+                        .copyWith(color: widget.noColor ?? context.theme.colorScheme.primary)),
                 onPressed: () => widget.onNo.call(),
               ),
               TextButton(
                 child: Text(widget.yesText ?? "Yes",
-                    style: context.theme.textTheme.bodyLarge!.copyWith(color: widget.yesColor ?? context.theme.colorScheme.primary)),
+                    style: context.theme.textTheme.bodyLarge!
+                        .copyWith(color: widget.yesColor ?? context.theme.colorScheme.primary)),
                 onPressed: () async {
                   final result = widget.onYes.call();
                   if (result is Future) {

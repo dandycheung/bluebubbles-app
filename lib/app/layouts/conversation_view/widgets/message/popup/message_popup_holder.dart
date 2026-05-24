@@ -140,21 +140,21 @@ class _MessagePopupHolderState extends State<MessagePopupHolder> with ThemeHelpe
                 chatState: chatState,
                 child: PopupScope(
                   child: MessagePopup(
-                  childPosition: childPos!,
-                  size: effectiveSize,
-                  part: effectivePart,
-                  controller: widget.controller,
-                  cvController: widget.cvController,
-                  serverDetails: MessagePopupServerDetails(
-                      minSierra: minSierra, minBigSur: minBigSur, supportsOriginalDownload: version > 100),
-                  sendTapback: sendTapback,
-                  widthContext: () => mounted ? context : null,
-                  child: effectiveChild,
+                    childPosition: childPos!,
+                    size: effectiveSize,
+                    part: effectivePart,
+                    controller: widget.controller,
+                    cvController: widget.cvController,
+                    serverDetails: MessagePopupServerDetails(
+                        minSierra: minSierra, minBigSur: minBigSur, supportsOriginalDownload: version > 100),
+                    sendTapback: sendTapback,
+                    widthContext: () => mounted ? context : null,
+                    child: effectiveChild,
+                  ),
                 ),
               ),
             ),
-          ),
-        );
+          );
         },
         fullscreenDialog: true,
         opaque: false,
