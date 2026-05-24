@@ -167,7 +167,7 @@ class _MessageImageGalleryState extends State<MessageImageGallery> with ThemeHel
   double _computeBaseCardHeight(double baseCardWidth) {
     if (widget.isInReply) return 120.0;
 
-    const double maxHeight = 300.0;
+    const double maxHeight = 500.0;
     const double minHeight = 100.0;
 
     final tallest = _attachments.fold<double>(
@@ -217,7 +217,7 @@ class _MessageImageGalleryState extends State<MessageImageGallery> with ThemeHel
   Widget build(BuildContext context) {
     final baseCardWidth = min((NavigationSvc.width(context) * 0.5), 260.0);
     final baseHeight = _computeBaseCardHeight(baseCardWidth);
-    final baseCardHeight = baseHeight.clamp(100.0, 300.0);
+    final baseCardHeight = baseHeight.clamp(100.0, 500.0);
 
     final fanCanvasWidth = baseCardWidth + 56;
     final fanCanvasHeight = baseCardHeight;

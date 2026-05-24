@@ -164,6 +164,16 @@ class _MessagePopupState extends State<MessagePopup> with SingleTickerProviderSt
     });
   }
 
+  void _remeasureChild() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final h = _childKey.currentContext?.size?.height;
+      if (h != null && h != _measuredChildHeight) {
+        setState(() => _measuredChildHeight = h);
+      }
+    });
+  }
+
   void popDetails({bool returnVal = true}) {
     Navigator.popUntil(context, (route) => route is! DialogRoute);
     Navigator.of(context).pop(returnVal);
@@ -250,13 +260,22 @@ class _MessagePopupState extends State<MessagePopup> with SingleTickerProviderSt
                         tween: Tween<double>(begin: 0.8, end: 1),
                         curve: Curves.easeOutBack,
                         duration: const Duration(milliseconds: 500),
-                        child: ConstrainedBox(
-                            key: _childKey,
-                            constraints: BoxConstraints(maxWidth: widget.size.width),
-                            child: MessageStateScope(
-                              messageState: widget.controller,
-                              child: widget.child,
-                            )),
+                        child: NotificationListener<SizeChangedLayoutNotification>(
+                          onNotification: (_) {
+                            _remeasureChild();
+                            return false;
+                          },
+                          child: SizeChangedLayoutNotifier(
+                            child: ConstrainedBox(
+                              key: _childKey,
+                              constraints: BoxConstraints(maxWidth: widget.size.width),
+                              child: MessageStateScope(
+                                messageState: widget.controller,
+                                child: widget.child,
+                              ),
+                            ),
+                          ),
+                        ),
                         builder: (context, size, child) {
                           return Transform.scale(
                             scale: size.clamp(1, double.infinity),
