@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:math';
 
+import 'package:bluebubbles/app/layouts/conversation_details/widgets/media_gallery_card.dart';
 import 'package:bluebubbles/app/layouts/conversation_view/widgets/message/attachment/attachment_holder.dart';
 import 'package:bluebubbles/database/models.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
@@ -62,6 +63,7 @@ class _MessageImageGalleryState extends State<MessageImageGallery> with ThemeHel
   double _dragDx = 0;
   double _scrollAccumulator = 0;
   bool _hapticGivenForCurrentEnd = false;
+  bool _labelHovered = false;
   final Map<String, Size> _imageSizes = {};
 
   List<Attachment> get _attachments => widget.attachments;
@@ -180,6 +182,35 @@ class _MessageImageGalleryState extends State<MessageImageGallery> with ThemeHel
       },
     );
     return tallest.clamp(minHeight, maxHeight);
+  }
+
+  void _showGalleryPopup(BuildContext context, String title) {
+    showDialog(
+      context: context,
+      useRootNavigator: false,
+      builder: (ctx) {
+        return AlertDialog(
+          backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+          title: Text(title, style: Theme.of(context).textTheme.titleLarge),
+          contentPadding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+          content: SizedBox(
+            width: 500,
+            height: 400,
+            child: GridView.builder(
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                mainAxisSpacing: 8,
+                crossAxisSpacing: 8,
+              ),
+              itemCount: _attachments.length,
+              itemBuilder: (context, index) {
+                return MediaGalleryCard(attachment: _attachments[index], showSenderAvatar: false);
+              },
+            ),
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -380,23 +411,50 @@ class _MessageImageGalleryState extends State<MessageImageGallery> with ThemeHel
               padding: (widget.fanDirection == GalleryFanDirection.left
                   ? const EdgeInsets.only(right: 20)
                   : EdgeInsets.only(left: textOffset)),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.grid_view_rounded,
-                    size: 10,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                  const SizedBox(width: 3),
-                  Text(
-                    galleryLabel,
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: Theme.of(context).colorScheme.primary,
-                          fontWeight: FontWeight.bold,
+              child: MouseRegion(
+                onEnter: kIsDesktop ? (_) => setState(() => _labelHovered = true) : null,
+                onExit: kIsDesktop ? (_) => setState(() => _labelHovered = false) : null,
+                child: GestureDetector(
+                  onTap: kIsDesktop ? () => _showGalleryPopup(context, galleryLabel) : null,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Positioned(
+                        left: -6,
+                        right: -6,
+                        top: -2,
+                        bottom: -2,
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 150),
+                          decoration: BoxDecoration(
+                            color: _labelHovered
+                                ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.12)
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
                         ),
+                      ),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.grid_view_rounded,
+                            size: 10,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                          const SizedBox(width: 3),
+                          Text(
+                            galleryLabel,
+                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                  color: Theme.of(context).colorScheme.primary,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
           ],
