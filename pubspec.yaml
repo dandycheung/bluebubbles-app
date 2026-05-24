@@ -87,7 +87,7 @@ dependencies:
   gesture_x_detector: # support touchscreens properly
     git:
       url: https://github.com/BlueBubblesApp/xgesture_flutter.git
-      ref: 7de6e023ff68f67af1d83f7c1303d8b973f84944
+      ref: d63342cb17976f60bd94e7c1a822398115d3f83c
   get: ^4.7.2
   github: ^9.25.0
   google_fonts: ^8.0.2
@@ -193,10 +193,10 @@ dependencies:
   uuid: any
 dependency_overrides:
   clock: ^1.1.2 # encrypter_plus
-  flutter_map: # Windows trackpad bug
+  flutter_map: # https://github.com/fleaflet/flutter_map/issues/2152
     git:
-      url: https://github.com/BlueBubblesApp/flutter_map.git
-      ref: 67cca68e9f6db59649af56b6454e5f58efcedbbe
+      url: https://github.com/fleaflet/flutter_map.git
+      ref: 51a3f84e08d3ce4c6393a572bd4ca4bcc472753d
   http: ^1.3.0 # firebase_dart
   intl: ^0.20.2 # firebase_dart
   meta: ^1.16.0 # flutter_markdown_plus
@@ -205,7 +205,7 @@ dependency_overrides:
   permission_handler_windows: # https://github.com/Baseflow/flutter-permission-handler/issues/983
     git:
       url: https://github.com/BlueBubblesApp/flutter-permission-handler.git
-      ref: 251a9475644f64784efedff4b3a8bd5c99d3884d
+      ref: 25fb3eb83e24f191a0021c34dfbe4c13c4af3c8a
       path: permission_handler_windows
   pointycastle: ^4.0.0 # firebase_dart
   rxdart: ^0.28.0 # firebase_dart
