@@ -113,6 +113,7 @@ class _MessagePopupHolderState extends State<MessagePopupHolder> with ThemeHelpe
     if (kIsDesktop || kIsWeb) {
       widget.cvController.showingOverlays = true;
     }
+    final chatState = ChatStateScope.of(context);
     final result = await Navigator.push(
       iOS ? Get.context! : context,
       PageRouteBuilder(
@@ -135,8 +136,10 @@ class _MessagePopupHolderState extends State<MessagePopupHolder> with ThemeHelpe
                       : (ctx.theme.extensions[BubbleColors] as BubbleColors?)?.onReceivedBubbleColor,
                 ),
               ),
-              child: PopupScope(
-                child: MessagePopup(
+              child: ChatStateScope(
+                chatState: chatState,
+                child: PopupScope(
+                  child: MessagePopup(
                   childPosition: childPos!,
                   size: effectiveSize,
                   part: effectivePart,
@@ -150,7 +153,8 @@ class _MessagePopupHolderState extends State<MessagePopupHolder> with ThemeHelpe
                 ),
               ),
             ),
-          );
+          ),
+        );
         },
         fullscreenDialog: true,
         opaque: false,

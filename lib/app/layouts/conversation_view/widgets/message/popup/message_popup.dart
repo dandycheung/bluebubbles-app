@@ -86,6 +86,8 @@ class _MessagePopupState extends State<MessagePopup> with SingleTickerProviderSt
       chat.handles.firstWhereOrNull((handle) => handle.address == message.handleRelation.target?.address) != null);
   String? selfReaction;
   String? currentlySelectedReaction = "init";
+  final GlobalKey _childKey = GlobalKey();
+  double? _measuredChildHeight;
 
   ConversationViewController get cvController => widget.cvController;
 
@@ -137,6 +139,7 @@ class _MessagePopupState extends State<MessagePopup> with SingleTickerProviderSt
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      final measuredHeight = _childKey.currentContext?.size?.height;
       currentlySelectedReaction = null;
       reactions = getUniqueReactionMessages(message.associatedMessages
           .where((e) =>
@@ -149,7 +152,14 @@ class _MessagePopupState extends State<MessagePopup> with SingleTickerProviderSt
         currentlySelectedReaction = selfReaction;
       }
       setState(() {
-        if (iOS) messageOffset = itemHeight * numberToShow + 40;
+        if (iOS) {
+          if (measuredHeight != null) {
+            _measuredChildHeight = measuredHeight;
+            final remainingHeight = max(Get.height - Get.statusBarHeight - 135 - measuredHeight, itemHeight);
+            numberToShow = min(remainingHeight ~/ itemHeight, 5);
+          }
+          messageOffset = itemHeight * numberToShow + 40;
+        }
       });
     });
   }
@@ -241,6 +251,7 @@ class _MessagePopupState extends State<MessagePopup> with SingleTickerProviderSt
                         curve: Curves.easeOutBack,
                         duration: const Duration(milliseconds: 500),
                         child: ConstrainedBox(
+                            key: _childKey,
                             constraints: BoxConstraints(maxWidth: widget.size.width),
                             child: MessageStateScope(
                               messageState: widget.controller,
@@ -270,7 +281,7 @@ class _MessagePopupState extends State<MessagePopup> with SingleTickerProviderSt
                   if (SettingsSvc.settings.enablePrivateAPI.value && isSent && minSierra && chat.isIMessage)
                     Positioned(
                       bottom:
-                          (iOS ? itemHeight * numberToShow + 35 + widget.size.height : context.height - materialOffset)
+                          (iOS ? itemHeight * numberToShow + 35 + (_measuredChildHeight ?? widget.size.height) : context.height - materialOffset)
                               .clamp(0, context.height - (narrowScreen ? 200 : 125)),
                       right: message.isFromMe! ? 15 : null,
                       left: !message.isFromMe! ? widget.childPosition.dx + 10 : null,
