@@ -72,7 +72,7 @@ class OldThemesDialog extends StatelessWidget {
                                                     .hex;
                                                 return ListTile(
                                                     key: ValueKey(ThemeColors.Colors.reversed.toList()[index2]),
-                                                    mouseCursor: SystemMouseCursors.click,
+                                                    mouseCursor: MouseCursor.defer,
                                                     title: Text(ThemeColors.Colors.reversed.toList()[index2],
                                                         style: context.theme.textTheme.bodyLarge),
                                                     subtitle: Text(

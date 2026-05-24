@@ -127,16 +127,30 @@ class _CupertinoIMessageStatsPageState
           child: Center(
             child: CupertinoSlidingSegmentedControl<IMessageStatsSource>(
               groupValue: controller.selectedStatsSource.value,
+              thumbColor: context.theme.colorScheme.primary,
               children: {
-                IMessageStatsSource.server: const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                  child: Text("Server"),
+                IMessageStatsSource.server: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  child: Text(
+                    "Server",
+                    style: TextStyle(
+                      color: controller.selectedStatsSource.value == IMessageStatsSource.server
+                          ? context.theme.colorScheme.onPrimary
+                          : null,
+                    ),
+                  ),
                 ),
                 IMessageStatsSource.local: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                   child: Text(
                     "Local DB",
-                    style: TextStyle(color: kIsWeb ? context.theme.colorScheme.outline : null),
+                    style: TextStyle(
+                      color: kIsWeb
+                          ? context.theme.colorScheme.outline
+                          : controller.selectedStatsSource.value == IMessageStatsSource.local
+                              ? context.theme.colorScheme.onPrimary
+                              : null,
+                    ),
                   ),
                 ),
               },

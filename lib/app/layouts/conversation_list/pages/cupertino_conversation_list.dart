@@ -42,7 +42,7 @@ class CupertinoConversationListState extends State<CupertinoConversationList> wi
     super.initState();
 
     // update widget when background color changes
-    if (kIsDesktop) {
+    if (kIsDesktop && mounted) {
       SettingsSvc.settings.windowEffect.listen((WindowEffect effect) {
         setState(() {});
       });
@@ -216,7 +216,7 @@ class CupertinoConversationListState extends State<CupertinoConversationList> wi
                                 ),
                                 if (_pageCount > 1)
                                   MouseRegion(
-                                    cursor: SystemMouseCursors.click,
+                                    cursor: MouseCursor.defer,
                                     hitTestBehavior: HitTestBehavior.deferToChild,
                                     child: Padding(
                                       padding: const EdgeInsets.only(bottom: 10),

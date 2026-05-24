@@ -64,7 +64,7 @@ class _ReplyBubbleState extends State<ReplyBubble> with ThemeHelpers {
       final messageText = controller.text.value;
       String text = Message(text: messageText, subject: controller.subject.value).getNotificationText();
       return MouseRegion(
-        cursor: SystemMouseCursors.click,
+        cursor: MouseCursor.defer,
         child: ConstrainedBox(
           constraints: BoxConstraints(
             maxWidth: NavigationSvc.width(context) * MessageState.maxBubbleSizeFactor - 30,
@@ -112,7 +112,7 @@ class _ReplyBubbleState extends State<ReplyBubble> with ThemeHelpers {
                 scale: 0.8,
                 alignment: message.isFromMe! ? Alignment.centerRight : Alignment.centerLeft,
                 child: MouseRegion(
-                  cursor: SystemMouseCursors.click,
+                  cursor: MouseCursor.defer,
                   child: GestureDetector(
                     onTap: () {
                       showReplyThread(context, message, part, MessagesSvc(chatGuid), widget.cvController);

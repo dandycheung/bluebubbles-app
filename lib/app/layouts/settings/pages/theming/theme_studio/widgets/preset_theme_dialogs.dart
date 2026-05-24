@@ -20,6 +20,7 @@ class PresetThemeDialogs {
     final isCustom = !theme.isPreset;
     showModalBottomSheet(
       context: context,
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),

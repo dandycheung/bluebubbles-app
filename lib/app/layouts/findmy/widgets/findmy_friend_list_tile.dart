@@ -31,7 +31,7 @@ class FindMyFriendListTile extends StatelessWidget {
             : (item.longAddress ?? "No location found");
 
     return ListTile(
-      mouseCursor: withLocation ? SystemMouseCursors.click : MouseCursor.defer,
+      mouseCursor: MouseCursor.defer,
       leading: ContactAvatarWidget(handle: item.handle),
       title: Text(item.handle?.displayName ?? item.title ?? "Unknown Friend"),
       subtitle: Text(displayLocation),

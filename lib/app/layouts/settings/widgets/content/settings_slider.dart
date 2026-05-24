@@ -50,7 +50,7 @@ class SettingsSlider extends StatelessWidget {
         divisions: divisions,
         min: min,
         max: max,
-        mouseCursor: SystemMouseCursors.click,
+        mouseCursor: MouseCursor.defer,
       ),
     );
   }

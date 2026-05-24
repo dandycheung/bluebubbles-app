@@ -120,7 +120,7 @@ class _BackupRestorePanelState extends State<BackupRestorePanel> with ThemeHelpe
                                 return ListTile(
                                   key: ValueKey(item["name"]),
                                   contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
-                                  mouseCursor: SystemMouseCursors.click,
+                                  mouseCursor: MouseCursor.defer,
                                   title: RichText(
                                     text: TextSpan(
                                       style: context.textTheme.titleMedium,
@@ -226,7 +226,7 @@ class _BackupRestorePanelState extends State<BackupRestorePanel> with ThemeHelpe
                         Material(
                           color: Colors.transparent,
                           child: ListTile(
-                            mouseCursor: SystemMouseCursors.click,
+                            mouseCursor: MouseCursor.defer,
                             title: Text("Create New",
                                 style: context.theme.textTheme.bodyLarge!
                                     .copyWith(color: context.theme.colorScheme.primary)),
@@ -445,7 +445,7 @@ class _BackupRestorePanelState extends State<BackupRestorePanel> with ThemeHelpe
                         Material(
                           color: Colors.transparent,
                           child: ListTile(
-                            mouseCursor: SystemMouseCursors.click,
+                            mouseCursor: MouseCursor.defer,
                             title: Text("Restore Local",
                                 style: context.theme.textTheme.bodyLarge!
                                     .copyWith(color: context.theme.colorScheme.primary)),
@@ -513,7 +513,7 @@ class _BackupRestorePanelState extends State<BackupRestorePanel> with ThemeHelpe
                                 final data = item["data"];
                                 return ListTile(
                                   key: ValueKey(item["name"]),
-                                  mouseCursor: SystemMouseCursors.click,
+                                  mouseCursor: MouseCursor.defer,
                                   title: Text(item["name"]),
                                   subtitle: !item.containsKey('data')
                                       ? Text("Incompatible backup!",
@@ -640,7 +640,7 @@ class _BackupRestorePanelState extends State<BackupRestorePanel> with ThemeHelpe
                         Material(
                           color: Colors.transparent,
                           child: ListTile(
-                            mouseCursor: SystemMouseCursors.click,
+                            mouseCursor: MouseCursor.defer,
                             title: Text("Create New",
                                 style: context.theme.textTheme.bodyLarge!
                                     .copyWith(color: context.theme.colorScheme.primary)),
@@ -755,7 +755,7 @@ class _BackupRestorePanelState extends State<BackupRestorePanel> with ThemeHelpe
                         Material(
                           color: Colors.transparent,
                           child: ListTile(
-                            mouseCursor: SystemMouseCursors.click,
+                            mouseCursor: MouseCursor.defer,
                             title: Text("Restore Local",
                                 style: context.theme.textTheme.bodyLarge!
                                     .copyWith(color: context.theme.colorScheme.primary)),

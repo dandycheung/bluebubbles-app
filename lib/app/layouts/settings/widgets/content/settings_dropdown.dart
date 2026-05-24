@@ -48,7 +48,7 @@ class SettingsOptions<T extends Object> extends StatelessWidget {
         height: 50,
         width: context.width,
         child: MouseRegion(
-          cursor: SystemMouseCursors.click,
+          cursor: MouseCursor.defer,
           child: CupertinoSlidingSegmentedControl<T>(
             children: map,
             groupValue: initial,
