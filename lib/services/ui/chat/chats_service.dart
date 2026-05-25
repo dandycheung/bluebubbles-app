@@ -415,7 +415,7 @@ class ChatsService {
   /// The UI notification is deferred to the next frame so this is safe to call
   /// from [State.dispose] (while the widget tree may still be locked).
   void refreshSortOrder() {
-    _sortedChats.sort(Chat.sort);
+    _sortedChats.sort(_sortCompare);
     SchedulerBinding.instance.addPostFrameCallback((_) {
       _scheduleListVersionUpdate(immediate: true);
     });
@@ -437,16 +437,50 @@ class ChatsService {
     return _sortedChats;
   }
 
-  /// Find the correct insertion index for a chat using binary search
-  /// Returns the index where the chat should be inserted to maintain sort order
+  /// State-aware sort comparison used by [_findInsertionIndex] and [refreshSortOrder].
+  ///
+  /// Mirrors [Chat.sort] for pin-index ordering but resolves the latest-message
+  /// date from [chatStates] instead of [Chat.dbOnlyLatestMessageDate].  Using the
+  /// reactive state avoids a race condition where the DB write for the new message
+  /// has not yet completed when the chat list needs to be repositioned.
+  int _sortCompare(Chat a, Chat b) {
+    final aIsPinned = a.isPinned ?? false;
+    final bIsPinned = b.isPinned ?? false;
+
+    // Both pinned with an explicit order → sort by pinIndex.
+    if (aIsPinned && bIsPinned && a.pinIndex != null && b.pinIndex != null) {
+      return a.pinIndex!.compareTo(b.pinIndex!);
+    }
+
+    // b is ordered-pinned, a is not → b comes first.
+    if (bIsPinned && b.pinIndex != null && (!aIsPinned || a.pinIndex == null)) return 1;
+    // a is ordered-pinned, b is not → a comes first.
+    if (aIsPinned && a.pinIndex != null && (!bIsPinned || b.pinIndex == null)) return -1;
+
+    // One pinned, one not.
+    if (!aIsPinned && bIsPinned) return 1;
+    if (aIsPinned && !bIsPinned) return -1;
+
+    // Both unpinned (or both pinned without an index): sort by most-recent message.
+    // Use ChatState latestMessage date to avoid the DB-write race condition.
+    final aDate = chatStates[a.guid]?.latestMessage.value?.dateCreated
+        ?? a.dbOnlyLatestMessageDate
+        ?? DateTime.fromMillisecondsSinceEpoch(0);
+    final bDate = chatStates[b.guid]?.latestMessage.value?.dateCreated
+        ?? b.dbOnlyLatestMessageDate
+        ?? DateTime.fromMillisecondsSinceEpoch(0);
+    return -aDate.compareTo(bDate);
+  }
+
+  /// Find the correct insertion index for a chat using binary search.
+  /// Returns the index where the chat should be inserted to maintain sort order.
   int _findInsertionIndex(Chat chat) {
     int left = 0;
     int right = _sortedChats.length;
 
     while (left < right) {
       final mid = (left + right) ~/ 2;
-      final midChat = _sortedChats[mid];
-      final comparison = Chat.sort(chat, midChat);
+      final comparison = _sortCompare(chat, _sortedChats[mid]);
 
       if (comparison < 0) {
         right = mid;
@@ -1178,29 +1212,38 @@ class ChatsService {
     state?.updateCustomBackgroundPathInternal(value);
   }
 
-  /// Set chat latest message
-  Future<void> setChatLatestMessage(Chat chat, Message value) async {
-    final state = getChatState(chat.guid);
-    if (state == null) return;
-
-    // Update Chat model (use state.chat if available, otherwise use passed in chat)
-    final chatToUpdate = state.chat;
-
-    // Only save in the DB if it's not already the same latest message.
-    if (state.latestMessage.value?.guid != value.guid) {
-      chatToUpdate.setLatestMessage(value);
-    }
-
-    // Update state if available
-    state.updateLatestMessageInternal(value);
-  }
-
-  /// Update chat latest message and subtitle in response to a new or updated message.
-  /// Called by IncomingMessageHandler and SyncService to keep ChatState as the single
-  /// source of truth for the conversation tile subtitle.
-  void updateChatLatestMessage(String chatGuid, Message message) {
+  /// Update the latest message for a chat, refreshing the conversation tile subtitle
+  /// and repositioning the chat in the sorted list.
+  ///
+  /// This is the single canonical path for updating the latest message in ChatState.
+  /// Always prefer this over touching [ChatState.latestMessage] directly.
+  ///
+  /// When [force] is false (the default), the update is skipped if [message]'s
+  /// [dateCreated] (falling back to milliseconds-since-epoch 0) is not strictly
+  /// newer than the current latest message's [dateCreated], unless the GUID matches
+  /// and the error state has changed.  Pass [force] = true when the message content
+  /// or state changed but the date has not advanced (e.g. replacing a deleted message
+  /// with the previous latest, temp→real GUID swaps, delivery-receipt updates).
+  void updateChatLatestMessage(String chatGuid, Message message, {bool force = false}) {
     final state = getChatState(chatGuid);
     if (state == null) return;
+
+    if (state.chat.dbLatestMessage.target?.guid != message.guid) {
+      state.chat.setLatestMessage(message);
+    }
+    
+    if (!force) {
+      final currentLatest = state.latestMessage.value;
+      final currentDate = currentLatest?.dateCreated?.millisecondsSinceEpoch ?? 0;
+      final messageDate = message.dateCreated?.millisecondsSinceEpoch ?? 0;
+
+      // Same GUID but error state changed (gained or cleared). Always update so the
+      // tile reflects the correct error/no-error appearance.
+      final sameGuid = currentLatest?.guid != null && currentLatest?.guid == message.guid;
+      final errorChanged = sameGuid && currentLatest!.error != message.error;
+
+      if (!errorChanged && messageDate <= currentDate) return;
+    }
 
     state.updateLatestMessageInternal(message);
     final redacted = SettingsSvc.settings.redactedMode.value;
@@ -1208,7 +1251,6 @@ class ChatsService {
     final hideMessageContent = redacted && SettingsSvc.settings.hideMessageContent.value;
     state.updateSubtitleInternal(
         message.getNotificationText(hideContactInfo: hideContactInfo, hideMessageContent: hideMessageContent));
-    state.chat.setLatestMessage(message);
     _repositionChat(state.chat, immediate: true);
   }
 
