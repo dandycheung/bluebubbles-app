@@ -1,5 +1,6 @@
 import 'package:adaptive_theme/adaptive_theme.dart';
 import 'package:bluebubbles/app/layouts/conversation_details/dialogs/chat_sync_dialog.dart';
+import 'package:bluebubbles/app/layouts/conversation_details/dialogs/sync_time_range_dialog.dart';
 import 'package:bluebubbles/app/layouts/conversation_details/dialogs/timeframe_picker.dart';
 import 'package:bluebubbles/app/layouts/conversation_view/widgets/message/reply/reply_thread_popup.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
@@ -67,6 +68,7 @@ class _ChatOptionsState extends State<ChatOptions> with ThemeHelpers {
                 if (!kIsWeb)
                   SettingsTile(
                     title: "Change Chat Avatar",
+                    subtitle: "Set a custom avatar for this chat, or reset it back to the default",
                     trailing: Padding(
                       padding: const EdgeInsets.only(right: 15.0),
                       child: Icon(
@@ -133,6 +135,7 @@ class _ChatOptionsState extends State<ChatOptions> with ThemeHelpers {
                 if (!kIsWeb)
                   SettingsTile(
                     title: "Custom Background",
+                    subtitle: "Set a custom background for this chat, or reset it back to the default",
                     trailing: Padding(
                       padding: const EdgeInsets.only(right: 15.0),
                       child: Icon(
@@ -228,39 +231,24 @@ class _ChatOptionsState extends State<ChatOptions> with ThemeHelpers {
                       showSnackbar("Notice", "Fetched details!");
                     }),
                 SettingsTile(
-                  title: "Fetch More Messages",
-                  subtitle: "Fetches up to 100 messages after the last message stored locally",
-                  isThreeLine: true,
+                  title: "Sync Messages",
+                  subtitle: "Fetch and sync messages from the server for a selected time range",
                   trailing: Padding(
                     padding: const EdgeInsets.only(right: 15.0),
-                    child: Icon(iOS ? CupertinoIcons.cloud_download : Icons.file_download),
+                    child: Icon(iOS ? CupertinoIcons.arrow_counterclockwise : Icons.replay),
                   ),
                   onTap: () async {
+                    final range = await showSyncTimeRangeDialog(context);
+                    if (range == null || !context.mounted) return;
                     await showDialog(
                       context: context,
                       barrierDismissible: false,
                       builder: (context) => ChatSyncDialog(
                         chat: chat,
-                        withOffset: true,
-                        initialMessage: "Fetching more messages...",
-                        limit: 100,
+                        initialMessage: "Syncing messages...",
+                        start: range.start,
+                        end: range.end,
                       ),
-                    );
-                  },
-                ),
-                SettingsTile(
-                  title: "Sync Last 25 Messages",
-                  subtitle: "Resyncs the 25 most recent messages from the server",
-                  trailing: Padding(
-                    padding: const EdgeInsets.only(right: 15.0),
-                    child: Icon(iOS ? CupertinoIcons.arrow_counterclockwise : Icons.replay),
-                  ),
-                  onTap: () {
-                    showDialog(
-                      context: context,
-                      barrierDismissible: false,
-                      builder: (context) =>
-                          ChatSyncDialog(chat: chat, initialMessage: "Resyncing messages...", limit: 25),
                     );
                   },
                 ),
