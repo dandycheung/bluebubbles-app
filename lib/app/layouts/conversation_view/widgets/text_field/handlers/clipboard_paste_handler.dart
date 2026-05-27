@@ -1,8 +1,10 @@
 import 'package:bluebubbles/database/global/platform_file.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/services/services.dart';
-import 'package:flutter/material.dart';
+import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:get_it/get_it.dart';
 import 'package:pasteboard/pasteboard.dart';
 import 'package:path/path.dart' hide context;
 import 'package:universal_io/io.dart';
@@ -24,7 +26,32 @@ class ClipboardPasteHandler {
   /// Returns true if the event was handled.
   Future<bool> handlePasteEvent() async {
     try {
-      // Try to get files first (desktop: file picker simulation)
+      // Try to get GIF URL from clipboard HTML (desktop only)
+      if (kIsDesktop) {
+        final html = await Pasteboard.html;
+        if (html != null) {
+          final gifMatch = RegExp(r'src="(https?://[^"]+\.gif)"').firstMatch(html);
+          if (gifMatch != null) {
+            final url = gifMatch.group(1)!;
+            final response = await GetIt.I<HttpService>().dio.get<List<int>>(
+              url,
+              options: Options(responseType: ResponseType.bytes),
+            );
+            final bytes = response.data;
+            if (bytes != null && bytes.isNotEmpty) {
+              final gifBytes = Uint8List.fromList(bytes);
+              controller.pickedAttachments.add(PlatformFile(
+                name: "gif-${controller.pickedAttachments.length + 1}.gif",
+                bytes: gifBytes,
+                size: gifBytes.length,
+              ));
+              return true;
+            }
+          }
+        }
+      }
+
+      // Try to get files (desktop)
       if (kIsDesktop) {
         final files = await Pasteboard.files();
         if (files.isNotEmpty) {
@@ -53,7 +80,20 @@ class ClipboardPasteHandler {
         return true;
       }
 
-      // Fallback to text paste (handled by OS keyboard)
+      // Fallback to text paste (Windows only — other platforms let the OS handle it)
+      if (!kIsWeb && Platform.isWindows) {
+        final data = await Clipboard.getData('text/plain');
+        if (data?.text != null) {
+          final tc = controller.textController;
+          final sel = tc.selection;
+          final newText = tc.text.replaceRange(sel.start, sel.end, data!.text!);
+          tc.value = TextEditingValue(
+            text: newText,
+            selection: TextSelection.collapsed(offset: sel.start + data.text!.length),
+          );
+          return true;
+        }
+      }
       return false;
     } catch (e) {
       // Silently fail and let OS handle text paste
