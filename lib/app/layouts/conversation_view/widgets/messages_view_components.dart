@@ -278,11 +278,9 @@ class DragDropOverlay extends StatelessWidget {
   const DragDropOverlay({
     super.key,
     required this.dragging,
-    required this.numFiles,
   });
 
   final RxBool dragging;
-  final RxInt numFiles;
 
   @override
   Widget build(BuildContext context) {
@@ -301,7 +299,7 @@ class DragDropOverlay extends StatelessWidget {
                       size: 50,
                     ),
                     Text(
-                      "Attach ${numFiles.value} File${numFiles.value > 1 ? 's' : ''}",
+                      "Attach File(s)",
                       style: context.theme.textTheme.headlineLarge!.copyWith(color: context.theme.colorScheme.primary),
                     ),
                   ],
