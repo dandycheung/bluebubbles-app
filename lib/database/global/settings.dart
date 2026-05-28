@@ -384,7 +384,7 @@ class Settings {
       'pinRowsLandscape': pinRowsLandscape.value,
       'pinColumnsLandscape': pinColumnsLandscape.value,
       'maxAvatarsInGroupWidget': maxAvatarsInGroupWidget.value,
-      'titleBarStyle': titleBarStyle.value,
+      'titleBarStyle': titleBarStyle.value.index,
       'windowEffect': windowEffect.value.name,
       'windowEffectCustomOpacityLight': windowEffectCustomOpacityLight.value,
       'windowEffectCustomOpacityDark': windowEffectCustomOpacityDark.value,
@@ -612,7 +612,8 @@ class Settings {
     SettingsSvc.settings.maxAvatarsInGroupWidget.value =
         map['maxAvatarsInGroupWidget'] ?? SettingsSvc.settings.maxAvatarsInGroupWidget.value;
     SettingsSvc.settings.titleBarStyle.value =
-        map['titleBarStyle'] != null ? BBTitleBarStyle.values[map['titleBarStyle']] : SettingsSvc.settings.titleBarStyle.value;
+        map['titleBarStyle'] != null ? BBTitleBarStyle.values[map['titleBarStyle']] :
+        map['useCustomTitleBar'] == false ? BBTitleBarStyle.hidden : SettingsSvc.settings.titleBarStyle.value;
 
     SettingsSvc.settings.showReplyField.value = map['showReplyField'] ?? SettingsSvc.settings.showReplyField.value;
     if (map.containsKey('selectedActionIndices')) {
@@ -783,7 +784,8 @@ class Settings {
     s.pinRowsLandscape.value = map['pinRowsLandscape'] ?? 1;
     s.pinColumnsLandscape.value = map['pinColumnsLandscape'] ?? 4;
     s.maxAvatarsInGroupWidget.value = map['maxAvatarsInGroupWidget'] ?? 4;
-    s.titleBarStyle.value = map['titleBarStyle'] != null ? BBTitleBarStyle.values[map['titleBarStyle']] : BBTitleBarStyle.custom;
+    s.titleBarStyle.value = map['titleBarStyle'] != null ? BBTitleBarStyle.values[map['titleBarStyle']] :
+                            map['useCustomTitleBar'] == false ? BBTitleBarStyle.hidden : BBTitleBarStyle.custom;
 
     s.showReplyField.value = map['showReplyField'] ?? true;
     s.selectedActionIndices.value = _processSelectedActionIndices(map['selectedActionIndices'], s.showReplyField.value);
