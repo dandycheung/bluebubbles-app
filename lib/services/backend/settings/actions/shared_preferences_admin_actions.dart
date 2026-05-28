@@ -9,7 +9,7 @@ class SharedPreferencesAdminActions {
 
   Future<void> setString(String key, String value) => service.i.setString(key, value);
 
-  Future<void> setInt(String key, int value) async => service.i.setInt(key, value);
+  Future<void> setInt(String key, int value) => service.i.setInt(key, value);
 
   Future<void> setDouble(String key, double value) => service.i.setDouble(key, value);
 

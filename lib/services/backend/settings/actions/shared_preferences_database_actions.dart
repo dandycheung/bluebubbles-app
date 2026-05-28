@@ -15,7 +15,7 @@ class SharedPreferencesDatabaseActions {
 
   int? getDbVersion() => service.i.getInt(_dbVersionKey);
 
-  Future<void> setDbVersion(int version) async => await service.i.setInt(_dbVersionKey, version);
+  Future<void> setDbVersion(int version) => service.i.setInt(_dbVersionKey, version);
 
   int getThemesVersion() => service.i.getInt(_themesVersionKey) ?? 0;
 
