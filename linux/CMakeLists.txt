@@ -91,6 +91,16 @@ set_target_properties(${BINARY_NAME}
 include(flutter/generated_plugins.cmake)
 
 target_link_libraries(${BINARY_NAME} PRIVATE ${MIMALLOC_LIB})
+# Hide C++ new/delete from the binary's dynamic symbol table so that
+# libflutter_linux_gtk.so's PLT for _Znwm resolves to Flutter's own WEAK
+# version (not mimalloc's). Without this, Flutter's hidden operator
+# new(size_t, nothrow_t) asserts that its operator new(size_t) was overridden
+# but the nothrow variant wasn't — a false positive since mimalloc provides
+# both, but Flutter's check uses an internal address comparison that can never
+# see the external override of its own HIDDEN nothrow new.
+target_link_options(${BINARY_NAME} PRIVATE
+  "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/hide_new_delete.map"
+)
 
 # === Installation ===
 # By default, "installing" just makes a relocatable bundle in the build
