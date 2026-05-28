@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:bluebubbles/app/layouts/conversation_view/widgets/message/popup/message_popup_action_context.dart';
 import 'package:bluebubbles/database/models.dart';
@@ -77,12 +76,11 @@ Future<void> openInImageViewer(MessagePopupActionContext ctx) async {
 }
 
 void copyAttachment(MessagePopupActionContext ctx) {
-  if (ctx.part.attachments.length == 1 && ctx.part.attachments.first.mimeStart == "image") {
-    final Uint8List bytes = File(ctx.part.attachments.first.path).readAsBytesSync();
-    Pasteboard.writeImage(bytes).then((_) {
+  if (ctx.part.attachments.length == 1) {
+    Pasteboard.writeFiles([ctx.part.attachments.first.path]).then((_) {
       ctx.popDetails();
     }).catchError((e) {
-      Logger.error("Failed to copy image!", error: e);
+      Logger.error("Failed to copy files!", error: e);
       ctx.showSnack("Copy Error", "Failed to copy image!");
     });
     return;
