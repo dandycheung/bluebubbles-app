@@ -164,6 +164,7 @@ class SocketService {
           ),
         ],
         useDefaultOptions: false,
+        triggerStream: Connectivity().onConnectivityChanged,
       );
 
       internetConnectionListener = internetConnection!.onStatusChange.listen((InternetStatus status) {
