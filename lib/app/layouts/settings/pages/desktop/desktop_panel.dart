@@ -113,25 +113,45 @@ class _DesktopPanelState extends State<DesktopPanel> with ThemeHelpers {
                       ),
                     ),
                   if (Platform.isLinux)
-                    Obx(() => SettingsSwitch(
-                          onChanged: (bool val) async {
-                            SettingsSvc.settings.useCustomTitleBar.value = val;
-                            await windowManager.setTitleBarStyle(val ? TitleBarStyle.hidden : TitleBarStyle.normal);
-                            await SettingsSvc.settings.saveOneAsync('useCustomTitleBar');
-                          },
-                          initialVal: SettingsSvc.settings.useCustomTitleBar.value,
-                          title: "Use Custom TitleBar",
-                          subtitle:
-                              "Enable the custom titlebar. This is necessary on non-GNOME systems, and will not look good on GNOME systems. This is also necessary for 'Minimize to Tray' to work correctly.",
-                          backgroundColor: tileColor,
-                          leading: const SettingsLeadingIcon(
+                    Obx(() {
+                      if (iOS) {
+                        return const SettingsTile(
+                          title: "TitleBar Style",
+                          leading: SettingsLeadingIcon(
                             iosIcon: CupertinoIcons.macwindow,
                             materialIcon: Icons.tab_outlined,
                             containerColor: Colors.orange,
                           ),
-                        )),
+                          subtitle:
+                            "Select the titlebar style. Native uses system window decorations and looks best on GNOME. Custom is necessary on non-GNOME systems and required for 'Minimize to Tray' to work correctly. Hidden removes all titlebar elements.",
+                        );
+                      } else {
+                        return const SizedBox.shrink();
+                      }
+                    }),
+                  if (Platform.isLinux)
+                    Obx(() => SettingsOptions<BBTitleBarStyle>(
+                      initial: SettingsSvc.settings.titleBarStyle.value,
+                      onChanged: (val) async {
+                        if (val == null) return;
+                        SettingsSvc.settings.titleBarStyle.value = val;
+                        await windowManager.setTitleBarStyle(val == BBTitleBarStyle.native ? TitleBarStyle.normal : TitleBarStyle.hidden);
+                        await SettingsSvc.settings.saveOneAsync('titleBarStyle');
+                      },
+                      options: BBTitleBarStyle.values,
+                      textProcessing: (val) => val.toString().split(".").last,
+                      title: "TitleBar Style",
+                      subtitle:
+                        "Select the titlebar style. Native uses system window decorations and looks best on GNOME. Custom is necessary on non-GNOME systems and required for 'Minimize to Tray' to work correctly. Hidden removes all titlebar elements.",
+                      secondaryColor: headerColor,
+                      leading: const SettingsLeadingIcon(
+                        iosIcon: CupertinoIcons.macwindow,
+                        materialIcon: Icons.tab_outlined,
+                        containerColor: Colors.orange,
+                      ),
+                    )),
                   Obx(() {
-                    if (SettingsSvc.settings.useCustomTitleBar.value || !Platform.isLinux) {
+                    if (SettingsSvc.settings.titleBarStyle.value == BBTitleBarStyle.custom || !Platform.isLinux) {
                       return Container(
                         color: tileColor,
                         child: Padding(
@@ -143,7 +163,7 @@ class _DesktopPanelState extends State<DesktopPanel> with ThemeHelpers {
                     return const SizedBox.shrink();
                   }),
                   Obx(() {
-                    if (SettingsSvc.settings.useCustomTitleBar.value || !Platform.isLinux) {
+                    if (SettingsSvc.settings.titleBarStyle.value == BBTitleBarStyle.custom || !Platform.isLinux) {
                       return SettingsSwitch(
                         onChanged: (bool val) async {
                           SettingsSvc.settings.minimizeToTray.value = val;
@@ -163,7 +183,7 @@ class _DesktopPanelState extends State<DesktopPanel> with ThemeHelpers {
                     return const SizedBox.shrink();
                   }),
                   Obx(() {
-                    if (SettingsSvc.settings.useCustomTitleBar.value) {
+                    if (SettingsSvc.settings.titleBarStyle.value == BBTitleBarStyle.custom) {
                       return Container(
                         color: tileColor,
                         child: Padding(
