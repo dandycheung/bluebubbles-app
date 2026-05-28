@@ -277,7 +277,7 @@ class _TroubleshootPanelState extends State<TroubleshootPanel> with ThemeHelpers
                 SettingsSection(backgroundColor: tileColor, children: [
                   SettingsTile(
                       onTap: () async {
-                        NavigationSvc.push(
+                        NavigationSvc.pushSettings(
                           context,
                           ChatSelectorView(
                             onSelect: (Chat chat) async {
@@ -341,18 +341,6 @@ class _TroubleshootPanelState extends State<TroubleshootPanel> with ThemeHelpers
                       subtitle:
                           "Permanently deletes a selected chat, all its messages, and all its participants. Use this to simulate a brand-new chat arrival."),
                   const SettingsDivider(padding: EdgeInsets.only(left: 16.0)),
-                  SettingsTile(
-                      onTap: () async {
-                        await PrefsSvc.messaging.clearLastOpenedChat();
-                        showSnackbar("Success", "Successfully cleared the last opened chat!");
-                      },
-                      leading: const SettingsLeadingIcon(
-                        iosIcon: CupertinoIcons.rectangle_badge_xmark,
-                        materialIcon: Icons.folder_delete_outlined,
-                        containerColor: Colors.orange,
-                      ),
-                      title: "Clear Last Opened Chat",
-                      subtitle: "Use this if you are experiencing the app opening an incorrect chat")
                 ]),
                 if (kIsDesktop) const SizedBox(height: 100),
               ],

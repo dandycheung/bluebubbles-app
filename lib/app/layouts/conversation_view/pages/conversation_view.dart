@@ -66,7 +66,7 @@ class ConversationViewState extends State<ConversationView> with ThemeHelpers<Co
     super.initState();
     controller.fromChatCreator = widget.fromChatCreator;
     controller.fromSearchResult = widget.initialScrollToGuid != null;
-    ChatsSvc.setActiveChatSync(chat);
+    ChatsSvc.setActiveChat(chat);
     ChatsSvc.activeChat?.controller = controller;
     Logger.debug("Conversation View initialized for ${chat.guid}");
 
