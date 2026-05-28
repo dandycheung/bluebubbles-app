@@ -154,7 +154,7 @@ class _BackupRestorePanelState extends State<BackupRestorePanel> with ThemeHelpe
                                               json["description"] = item["description"];
                                               json["timestamp"] = DateTime.now().millisecondsSinceEpoch;
                                               Response response = await HttpSvc.backup.setSettings(item["name"], json);
-                                              Navigator.of(context).pop();
+                                              Navigator.of(context, rootNavigator: true).pop();
                                               if (response.statusCode != 200) {
                                                 showSnackbar(
                                                   "Error",
@@ -183,7 +183,7 @@ class _BackupRestorePanelState extends State<BackupRestorePanel> with ThemeHelpe
                                                 const Text("Are you sure you want to delete this settings backup?"),
                                             onYes: () {
                                               deleteSettings(item["name"]);
-                                              Navigator.of(context).pop();
+                                              Navigator.of(context, rootNavigator: true).pop();
                                             },
                                           );
                                         })
@@ -196,7 +196,7 @@ class _BackupRestorePanelState extends State<BackupRestorePanel> with ThemeHelpe
                                         "Are you sure you want to restore this backup, overwriting your current Settings?",
                                       ),
                                       onYes: () {
-                                        Navigator.of(context).pop();
+                                        Navigator.of(context, rootNavigator: true).pop();
                                         try {
                                           Settings.updateFromMap(item);
                                           showSnackbar("Success", "Settings restored successfully");
@@ -425,7 +425,7 @@ class _BackupRestorePanelState extends State<BackupRestorePanel> with ThemeHelpe
                                               style: context.theme.textTheme.bodyLarge!
                                                   .copyWith(color: context.theme.colorScheme.primary)),
                                           onPressed: () {
-                                            Navigator.of(context).pop();
+                                            Navigator.of(context, rootNavigator: true).pop();
                                           },
                                         ),
                                         TextButton(
@@ -474,7 +474,7 @@ class _BackupRestorePanelState extends State<BackupRestorePanel> with ThemeHelpe
                                   "Are you sure you want to restore this backup, overwriting your current Settings?",
                                 ),
                                 onYes: () {
-                                  Navigator.of(context).pop();
+                                  Navigator.of(context, rootNavigator: true).pop();
                                   try {
                                     String jsonString = const Utf8Decoder().convert(res.files.first.bytes!);
                                     Map<String, dynamic> json = jsonDecode(jsonString);
@@ -592,7 +592,7 @@ class _BackupRestorePanelState extends State<BackupRestorePanel> with ThemeHelpe
                                         content: const Text("Are you sure you want to delete this theme backup?"),
                                         onYes: () {
                                           deleteTheme(item["name"]);
-                                          Navigator.of(context).pop();
+                                          Navigator.of(context, rootNavigator: true).pop();
                                         },
                                       );
                                     },
@@ -609,7 +609,7 @@ class _BackupRestorePanelState extends State<BackupRestorePanel> with ThemeHelpe
                                         "Are you sure you want to restore this backup, overwriting your current theme?",
                                       ),
                                       onYes: () {
-                                        Navigator.of(context).pop();
+                                        Navigator.of(context, rootNavigator: true).pop();
                                         try {
                                           ThemeStruct object = ThemeStruct.fromMap(item);
                                           object.id = null;
@@ -785,7 +785,7 @@ class _BackupRestorePanelState extends State<BackupRestorePanel> with ThemeHelpe
                                   "Are you sure you want to restore this backup, overwriting your current theme?",
                                 ),
                                 onYes: () {
-                                  Navigator.of(context).pop();
+                                  Navigator.of(context, rootNavigator: true).pop();
                                   try {
                                     String jsonString = const Utf8Decoder().convert(res.files.first.bytes!);
                                     List<dynamic> json = jsonDecode(jsonString);
