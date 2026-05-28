@@ -428,13 +428,8 @@ class OutgoingMessageHandler {
     bool clearNotificationsIfFromMe = true,
     bool isRetry = false,
   }) async {
-    // If it's a retry, the message should already be in the correct format.
-    // We just need to update the chat's latest message (if it's the latest).
-    if (isRetry) {
-      ChatsSvc.updateChatLatestMessage(c.guid, m);
-      return [m];
-    }
-
+    // If it's a retry, the message should already be in the correct format
+    if (isRetry) return [m];
     if ((m.text?.isEmpty ?? true) && (m.subject?.isEmpty ?? true) && r == null) return [];
 
     final List<Message> messages = [];
@@ -890,9 +885,8 @@ class OutgoingMessageHandler {
       }
 
       // Only update latest message if the failed message is the current latest message.
-      // force: true because errorMsg has the same dateCreated as the original temp message.
       if (ChatsSvc.getChatState(c.guid)?.latestMessage.value?.guid == tempGuid) {
-        ChatsSvc.updateChatLatestMessage(c.guid, errorMsg, force: true);
+        ChatsSvc.updateChatLatestMessage(c.guid, errorMsg);
       }
 
       await onExtra?.call(errorMsg);
@@ -984,10 +978,9 @@ class OutgoingMessageHandler {
       }
     }
 
-    // Only update latest message if the temp message is the current latest.
-    // force: true because the confirmed message may share the same dateCreated as the temp.
+    // Only update latest message if the failed message is the current latest message.
     if (ChatsSvc.getChatState(chat.guid)?.latestMessage.value?.guid == existingGuid) {
-      ChatsSvc.updateChatLatestMessage(chat.guid, _confirmedMessage, force: true);
+      ChatsSvc.updateChatLatestMessage(chat.guid, _confirmedMessage);
     }
 
     // Move the interactive media directory (for handwriten / digital-touch

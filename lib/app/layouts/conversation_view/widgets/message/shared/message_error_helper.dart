@@ -132,8 +132,7 @@ Future<void> removeReaction({
   await NotificationsSvc.clearFailedToSend(chat.id!);
   // Get the "new" latest info
   List<Message> latest = await Chat.getMessagesAsync(chat, limit: 1);
-  // force: true because the replacement message is older than the deleted one.
-  ChatsSvc.updateChatLatestMessage(chat.guid, latest.first, force: true);
+  ChatsSvc.setChatLatestMessage(chat, latest.first);
   await chat.saveAsync();
 }
 
