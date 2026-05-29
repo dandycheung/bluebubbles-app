@@ -469,63 +469,62 @@ mixin ConnectionPanelHelpersMixin {
                       containerColor: Colors.green,
                     ),
                   )),
-            if (!isSnap) const SettingsDivider(),
-            if (!isSnap)
-              SettingsTile(
-                leading: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Obx(() => Material(
-                          shape: SettingsSvc.settings.skin.value == Skins.Samsung
-                              ? SquircleBorder(
-                                  side: BorderSide(
-                                    color: context.theme.colorScheme.outline.withValues(alpha: 0.5),
-                                    width: 1.0,
-                                  ),
-                                )
-                              : null,
-                          color: Colors.transparent,
-                          borderRadius: SettingsSvc.settings.skin.value == Skins.iOS ? BorderRadius.circular(6) : null,
-                          child: SizedBox(
-                            width: 31,
-                            height: 31,
-                            child: Center(
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(6),
-                                  color: Colors.white,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.grey.withValues(alpha: 0.5),
-                                      blurRadius: 0,
-                                      spreadRadius: 0.5,
-                                      offset: const Offset(0, 0),
-                                    ),
-                                  ],
+            const SettingsDivider(),
+            SettingsTile(
+              leading: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Obx(() => Material(
+                        shape: SettingsSvc.settings.skin.value == Skins.Samsung
+                            ? SquircleBorder(
+                                side: BorderSide(
+                                  color: context.theme.colorScheme.outline.withValues(alpha: 0.5),
+                                  width: 1.0,
                                 ),
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(6),
-                                  child: Image.asset(
-                                    "assets/images/google-sign-in.png",
-                                    width: 33,
-                                    fit: BoxFit.contain,
+                              )
+                            : null,
+                        color: Colors.transparent,
+                        borderRadius: SettingsSvc.settings.skin.value == Skins.iOS ? BorderRadius.circular(6) : null,
+                        child: SizedBox(
+                          width: 31,
+                          height: 31,
+                          child: Center(
+                            child: Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(6),
+                                color: Colors.white,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.grey.withValues(alpha: 0.5),
+                                    blurRadius: 0,
+                                    spreadRadius: 0.5,
+                                    offset: const Offset(0, 0),
                                   ),
+                                ],
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(6),
+                                child: Image.asset(
+                                  "assets/images/google-sign-in.png",
+                                  width: 33,
+                                  fit: BoxFit.contain,
                                 ),
                               ),
                             ),
                           ),
-                        )),
-                  ],
-                ),
-                title: "Sign in with Google",
-                subtitle: "Fetch Firebase Config by Signing in with Google",
-                backgroundColor: tileColor,
-                onTap: () => NavigationSvc.pushSettings(context, const OauthPanel()),
-                trailing: const ThemeSwitcher(
-                  iOSSkin: Icon(CupertinoIcons.chevron_forward),
-                  materialSkin: Icon(Icons.chevron_right),
-                ),
+                        ),
+                      )),
+                ],
               ),
+              title: "Sign in with Google",
+              subtitle: "Fetch Firebase Config by Signing in with Google",
+              backgroundColor: tileColor,
+              onTap: () => NavigationSvc.pushSettings(context, const OauthPanel()),
+              trailing: const ThemeSwitcher(
+                iOSSkin: Icon(CupertinoIcons.chevron_forward),
+                materialSkin: Icon(Icons.chevron_right),
+              ),
+            ),
             const SettingsDivider(),
             SettingsTile(
               leading: const SettingsLeadingIcon(

@@ -209,13 +209,13 @@ class _FirebasePanelState extends State<FirebasePanel> with ThemeHelpers {
                     Obx(() {
                       final _enabled =
                           SettingsSvc.settings.firstFcmRegisterDate.value != 0 && !SettingsSvc.fcmData.isNull;
-                      if (_enabled && !isSnap) return const SizedBox.shrink();
+                      if (_enabled) return const SizedBox.shrink();
                       return const SettingsDivider();
                     }),
                     Obx(() {
                       final _enabled =
                           SettingsSvc.settings.firstFcmRegisterDate.value != 0 && !SettingsSvc.fcmData.isNull;
-                      if (_enabled && !isSnap) return const SizedBox.shrink();
+                      if (_enabled) return const SizedBox.shrink();
 
                       return SettingsTile(
                           leading: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
