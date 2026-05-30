@@ -415,7 +415,7 @@ class ChatsService {
   /// The UI notification is deferred to the next frame so this is safe to call
   /// from [State.dispose] (while the widget tree may still be locked).
   void refreshSortOrder() {
-    _sortedChats.sort(Chat.sort);
+    _sortedChats.sort(_sortCompare);
     SchedulerBinding.instance.addPostFrameCallback((_) {
       _scheduleListVersionUpdate(immediate: true);
     });
