@@ -1438,11 +1438,26 @@ class MessagesService extends GetxController {
           }
 
           // Sync the chat's latestMessage into ChatState after the server fetch.
+          // Guards:
+          // 1. offset == 0: only the first (newest) page should affect latestMessage.
+          //    Loading older pages must never overwrite a newer latest.
+          // 2. Use ChatState.latestMessage.value (the Rxn<Message>) for the comparison,
+          //    NOT chat.latestMessage.  The Chat.latestMessage getter falls back to
+          //    dbLatestMessage when _latestMessage is null, which queries the DB — and at
+          //    this point the DB now contains the just-bulk-added old messages, so that
+          //    query returns a stale old date and defeats the freshness check entirely.
           if (offset == 0) {
             for (final updatedChat in syncResult.chats) {
-              final latestMsg = updatedChat.dbLatestMessage.target;
-              if (latestMsg != null) {
-                ChatsSvc.updateChatLatestMessage(updatedChat.guid, latestMsg);
+              final state = ChatsSvc.getChatState(updatedChat.guid);
+              if (state != null && updatedChat.dbLatestMessage.target?.dateCreated != null) {
+                final currentDate = state.latestMessage.value?.dateCreated;
+                final hasRealCurrent = currentDate != null && currentDate.millisecondsSinceEpoch > 0;
+                final latestMsg = updatedChat.dbLatestMessage.target;
+                if (latestMsg != null &&
+                    (!hasRealCurrent ||
+                        (latestMsg.dateCreated != null && latestMsg.dateCreated!.isAfter(currentDate) == true))) {
+                  ChatsSvc.updateChatLatestMessage(updatedChat.guid, latestMsg);
+                }
               }
             }
           }

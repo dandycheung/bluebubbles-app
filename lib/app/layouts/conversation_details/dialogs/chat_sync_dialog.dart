@@ -93,7 +93,9 @@ class _ChatSyncDialogState extends State<ChatSyncDialog> {
       return;
     }
 
-    if (latestMessage != null) {
+    final chatState = ChatsSvc.getChatState(widget.chat.guid);
+    final currentLatest = chatState?.latestMessage.value?.dateCreated ?? DateTime.fromMillisecondsSinceEpoch(0);
+    if (latestMessage != null && (latestMessage.dateCreated?.isAfter(currentLatest) ?? false)) {
       ChatsSvc.updateChatLatestMessage(widget.chat.guid, latestMessage);
     }
 
