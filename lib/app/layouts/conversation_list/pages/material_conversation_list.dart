@@ -32,9 +32,11 @@ class _MaterialConversationListState extends State<MaterialConversationList> {
   void initState() {
     super.initState();
     // update widget when background color changes
-    if (kIsDesktop && mounted) {
+    if (kIsDesktop) {
       SettingsSvc.settings.windowEffect.listen((WindowEffect effect) {
-        setState(() {});
+        if (mounted) {
+          setState(() {});
+        }
       });
     }
   }

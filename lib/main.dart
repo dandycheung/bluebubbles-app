@@ -131,7 +131,7 @@ Future<Null> initApp(bool bubble, List<String> arguments) async {
           await Window.hideWindowControls();
         } else if (Platform.isLinux) {
           await windowManager.setTitleBarStyle(
-              SettingsSvc.settings.useCustomTitleBar.value ? TitleBarStyle.hidden : TitleBarStyle.normal);
+              SettingsSvc.settings.titleBarStyle.value == BBTitleBarStyle.native ? TitleBarStyle.normal : TitleBarStyle.hidden);
         }
         windowManager.addListener(DesktopWindowListener.instance);
         doWhenWindowReady(() async {

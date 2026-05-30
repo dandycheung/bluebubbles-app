@@ -242,7 +242,7 @@ class _ServerCredentialsState extends State<ServerCredentials> with ThemeHelpers
                   ),
                 ),
               if (token.value != null) const SizedBox(height: 10),
-              if (googleName.value == null && showLoginButtons.value && !isSnap)
+              if (googleName.value == null && showLoginButtons.value)
                 Container(
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(20),
@@ -291,7 +291,7 @@ class _ServerCredentialsState extends State<ServerCredentials> with ThemeHelpers
                     ),
                   ),
                 ),
-              if (googleName.value == null && showLoginButtons.value && !isSnap) const SizedBox(height: 10),
+              if (googleName.value == null && showLoginButtons.value) const SizedBox(height: 10),
               if (googleName.value == null && !kIsWeb && !kIsDesktop && showLoginButtons.value)
                 Container(
                   decoration: BoxDecoration(

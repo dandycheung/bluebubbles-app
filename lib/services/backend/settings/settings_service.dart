@@ -85,8 +85,8 @@ class SettingsService {
             _canAuthenticate = await LocalAuthentication().isDeviceSupported();
           } catch (_) {}
         }
-        SettingsSvc.settings.launchAtStartup.value = await setupLaunchAtStartup(
-            SettingsSvc.settings.launchAtStartup.value, SettingsSvc.settings.launchAtStartupMinimized.value);
+        settings.launchAtStartup.value = await setupLaunchAtStartup(
+            settings.launchAtStartup.value, settings.launchAtStartupMinimized.value);
       });
     }
 
@@ -281,7 +281,7 @@ class SettingsService {
                         Navigator.of(context).pop();
                         NavigationSvc.closeSettings(context);
                         NavigationSvc.closeAllConversationView(context);
-                        await ChatsSvc.setAllInactive();
+                        ChatsSvc.setAllInactive();
                         await Navigator.of(Get.context!).push(
                           ThemeSwitcher.buildPageRoute(
                             builder: (BuildContext context) {

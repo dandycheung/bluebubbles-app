@@ -9,6 +9,7 @@ import 'package:flutter/foundation.dart';
 
 class ChatActions {
   static Future<void> clearNotificationForChat(dynamic data) async {
+    if (kIsDesktop || kIsWeb) return;
     final chatId = data['chatId'] as int;
 
     await MethodChannelSvc.actions.deleteNotification(notificationId: chatId, tag: 'new_message');
