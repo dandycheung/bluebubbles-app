@@ -1198,10 +1198,38 @@ class MessagesService extends GetxController {
     }
   }
 
-  /// Delete a message from DB, struct, and MessageState
+  /// Delete a message from DB, struct, and MessageState.
+  /// If the deleted message was the chat's latest, updates the chat's latest message
+  /// in both the database and reactive state.
   Future<void> deleteMessage(Message message) async {
-    await Message.delete(message.guid!);
+    final deletedGuid = message.guid!;
+    await Message.delete(deletedGuid);
     removeMessage(message);
+    await _updateLatestMessageAfterDeletion(deletedGuid);
+  }
+
+  /// Soft-delete a message (sets dateDeleted) and remove it from the struct and MessageState.
+  /// If the deleted message was the chat's latest, updates the chat's latest message
+  /// in both the database and reactive state.
+  Future<void> softDeleteMessage(Message message) async {
+    final deletedGuid = message.guid!;
+    await Message.softDelete(deletedGuid);
+    removeMessage(message);
+    await _updateLatestMessageAfterDeletion(deletedGuid);
+  }
+
+  /// If [deletedGuid] was the chat's latest message, fetches the new latest from the
+  /// database and updates both [ChatState] and the [Chat] DB record.
+  Future<void> _updateLatestMessageAfterDeletion(String deletedGuid) async {
+    if (kIsWeb) return;
+    final chatState = ChatsSvc.getChatState(tag);
+    if (chatState == null || chatState.latestMessage.value?.guid != deletedGuid) return;
+    final chat = ChatsSvc.findChatByGuid(tag);
+    if (chat == null) return;
+    final latest = Chat.getMessages(chat, limit: 1);
+    if (latest.isNotEmpty) {
+      await ChatsSvc.setChatLatestMessage(chat, latest.first);
+    }
   }
 
   /// Toggle bookmark status on a message

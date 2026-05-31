@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'package:bluebubbles/app/components/custom_text_editing_controllers.dart';
 import 'package:bluebubbles/app/layouts/conversation_details/dialogs/timeframe_picker.dart';
 import 'package:bluebubbles/app/layouts/conversation_view/widgets/message/popup/message_popup_action_context.dart';
-import 'package:bluebubbles/database/models.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/services/services.dart';
 import 'package:flutter/foundation.dart';
@@ -68,9 +67,8 @@ void edit(MessagePopupActionContext ctx) {
   );
 }
 
-void delete(MessagePopupActionContext ctx) {
-  ctx.service.removeMessage(ctx.message);
-  Message.delete(ctx.message.guid!);
+Future<void> delete(MessagePopupActionContext ctx) async {
+  await ctx.service.deleteMessage(ctx.message);
   ctx.popDetails();
 }
 
