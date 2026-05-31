@@ -655,6 +655,9 @@ enum IsolateRequestType {
   performIncrementalSync,
   bulkSyncData,
 
+  // Log actions
+  getLogs,
+
   // Send message actions (routed through isolate so sends survive backgrounding)
   sendTextMessage,
   sendTapback,
