@@ -123,7 +123,7 @@ class _DesktopPanelState extends State<DesktopPanel> with ThemeHelpers {
                             containerColor: Colors.orange,
                           ),
                           subtitle:
-                            "Select the titlebar style. Native uses system window decorations and looks best on GNOME. Custom is necessary on non-GNOME systems and required for 'Minimize to Tray' to work correctly. Hidden removes all titlebar elements.",
+                              "Select the titlebar style. Native uses system window decorations and looks best on GNOME. Custom is necessary on non-GNOME systems and required for 'Minimize to Tray' to work correctly. Hidden removes all titlebar elements.",
                         );
                       } else {
                         return const SizedBox.shrink();
@@ -131,25 +131,26 @@ class _DesktopPanelState extends State<DesktopPanel> with ThemeHelpers {
                     }),
                   if (Platform.isLinux)
                     Obx(() => SettingsOptions<BBTitleBarStyle>(
-                      initial: SettingsSvc.settings.titleBarStyle.value,
-                      onChanged: (val) async {
-                        if (val == null) return;
-                        SettingsSvc.settings.titleBarStyle.value = val;
-                        await windowManager.setTitleBarStyle(val == BBTitleBarStyle.native ? TitleBarStyle.normal : TitleBarStyle.hidden);
-                        await SettingsSvc.settings.saveOneAsync('titleBarStyle');
-                      },
-                      options: BBTitleBarStyle.values,
-                      textProcessing: (val) => val.toString().split(".").last,
-                      title: "TitleBar Style",
-                      subtitle:
-                        "Select the titlebar style. Native uses system window decorations and looks best on GNOME. Custom is necessary on non-GNOME systems and required for 'Minimize to Tray' to work correctly. Hidden removes all titlebar elements.",
-                      secondaryColor: headerColor,
-                      leading: const SettingsLeadingIcon(
-                        iosIcon: CupertinoIcons.macwindow,
-                        materialIcon: Icons.tab_outlined,
-                        containerColor: Colors.orange,
-                      ),
-                    )),
+                          initial: SettingsSvc.settings.titleBarStyle.value,
+                          onChanged: (val) async {
+                            if (val == null) return;
+                            SettingsSvc.settings.titleBarStyle.value = val;
+                            await windowManager.setTitleBarStyle(
+                                val == BBTitleBarStyle.native ? TitleBarStyle.normal : TitleBarStyle.hidden);
+                            await SettingsSvc.settings.saveOneAsync('titleBarStyle');
+                          },
+                          options: BBTitleBarStyle.values,
+                          textProcessing: (val) => val.toString().split(".").last,
+                          title: "TitleBar Style",
+                          subtitle:
+                              "Select the titlebar style. Native uses system window decorations and looks best on GNOME. Custom is necessary on non-GNOME systems and required for 'Minimize to Tray' to work correctly. Hidden removes all titlebar elements.",
+                          secondaryColor: headerColor,
+                          leading: const SettingsLeadingIcon(
+                            iosIcon: CupertinoIcons.macwindow,
+                            materialIcon: Icons.tab_outlined,
+                            containerColor: Colors.orange,
+                          ),
+                        )),
                   Obx(() {
                     if (SettingsSvc.settings.titleBarStyle.value == BBTitleBarStyle.custom || !Platform.isLinux) {
                       return Container(

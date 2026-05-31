@@ -140,16 +140,15 @@ class SettingsOptions<T extends Object> extends StatelessWidget {
                 if (clampWidth) {
                   return ConstrainedBox(
                     constraints: BoxConstraints(
-                      maxWidth: leading != null
-                        ? NavigationSvc.width(context) * 2 / 5 - 80  // Account for leading icon space
-                        : NavigationSvc.width(context) * 2 / 5 - 47
-                    ),
+                        maxWidth: leading != null
+                            ? NavigationSvc.width(context) * 2 / 5 - 80 // Account for leading icon space
+                            : NavigationSvc.width(context) * 2 / 5 - 47),
                     child: widget,
                   );
                 } else {
                   return ConstrainedBox(
                     constraints: BoxConstraints(
-                      maxWidth: leading != null ? 200 : 250,  // Reasonable max width
+                      maxWidth: leading != null ? 200 : 250, // Reasonable max width
                     ),
                     child: widget,
                   );

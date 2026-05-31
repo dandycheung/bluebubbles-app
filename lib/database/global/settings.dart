@@ -611,9 +611,11 @@ class Settings {
         map['pinColumnsLandscape'] ?? SettingsSvc.settings.pinColumnsLandscape.value;
     SettingsSvc.settings.maxAvatarsInGroupWidget.value =
         map['maxAvatarsInGroupWidget'] ?? SettingsSvc.settings.maxAvatarsInGroupWidget.value;
-    SettingsSvc.settings.titleBarStyle.value =
-        map['titleBarStyle'] != null ? BBTitleBarStyle.values[map['titleBarStyle']] :
-        map['useCustomTitleBar'] == false ? BBTitleBarStyle.native : SettingsSvc.settings.titleBarStyle.value;
+    SettingsSvc.settings.titleBarStyle.value = map['titleBarStyle'] != null
+        ? BBTitleBarStyle.values[map['titleBarStyle']]
+        : map['useCustomTitleBar'] == false
+            ? BBTitleBarStyle.native
+            : SettingsSvc.settings.titleBarStyle.value;
 
     SettingsSvc.settings.showReplyField.value = map['showReplyField'] ?? SettingsSvc.settings.showReplyField.value;
     if (map.containsKey('selectedActionIndices')) {
@@ -784,8 +786,11 @@ class Settings {
     s.pinRowsLandscape.value = map['pinRowsLandscape'] ?? 1;
     s.pinColumnsLandscape.value = map['pinColumnsLandscape'] ?? 4;
     s.maxAvatarsInGroupWidget.value = map['maxAvatarsInGroupWidget'] ?? 4;
-    s.titleBarStyle.value = map['titleBarStyle'] != null ? BBTitleBarStyle.values[map['titleBarStyle']] :
-                            map['useCustomTitleBar'] == false ? BBTitleBarStyle.native : BBTitleBarStyle.custom;
+    s.titleBarStyle.value = map['titleBarStyle'] != null
+        ? BBTitleBarStyle.values[map['titleBarStyle']]
+        : map['useCustomTitleBar'] == false
+            ? BBTitleBarStyle.native
+            : BBTitleBarStyle.custom;
 
     s.showReplyField.value = map['showReplyField'] ?? true;
     s.selectedActionIndices.value = _processSelectedActionIndices(map['selectedActionIndices'], s.showReplyField.value);

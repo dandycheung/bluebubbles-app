@@ -128,11 +128,7 @@ enum SwipeDirection {
   RIGHT,
 }
 
-enum BBTitleBarStyle {
-  native,
-  custom,
-  hidden
-}
+enum BBTitleBarStyle { native, custom, hidden }
 
 enum MaterialSwipeAction {
   pin,

@@ -53,7 +53,8 @@ class _ChatSyncDialogState extends State<ChatSyncDialog> {
           before: widget.end.millisecondsSinceEpoch,
           offset: offset,
           limit: batchSize,
-        )).cast<Map<String, dynamic>>();
+        ))
+            .cast<Map<String, dynamic>>();
 
         if (batch.isEmpty) break;
 
@@ -72,11 +73,10 @@ class _ChatSyncDialogState extends State<ChatSyncDialog> {
 
         // Track the overall latest message across all batches.
         if (result.messages.isNotEmpty) {
-          final batchLatest = result.messages.reduce((a, b) =>
-              (a.dateCreated ?? DateTime.fromMillisecondsSinceEpoch(0))
-                      .isAfter(b.dateCreated ?? DateTime.fromMillisecondsSinceEpoch(0))
-                  ? a
-                  : b);
+          final batchLatest = result.messages.reduce((a, b) => (a.dateCreated ?? DateTime.fromMillisecondsSinceEpoch(0))
+                  .isAfter(b.dateCreated ?? DateTime.fromMillisecondsSinceEpoch(0))
+              ? a
+              : b);
           if (latestMessage == null ||
               (batchLatest.dateCreated ?? DateTime.fromMillisecondsSinceEpoch(0))
                   .isAfter(latestMessage.dateCreated ?? DateTime.fromMillisecondsSinceEpoch(0))) {

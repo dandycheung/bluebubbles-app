@@ -85,8 +85,8 @@ class SettingsService {
             _canAuthenticate = await LocalAuthentication().isDeviceSupported();
           } catch (_) {}
         }
-        settings.launchAtStartup.value = await setupLaunchAtStartup(
-            settings.launchAtStartup.value, settings.launchAtStartupMinimized.value);
+        settings.launchAtStartup.value =
+            await setupLaunchAtStartup(settings.launchAtStartup.value, settings.launchAtStartupMinimized.value);
       });
     }
 

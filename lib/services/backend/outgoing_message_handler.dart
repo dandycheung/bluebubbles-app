@@ -304,8 +304,7 @@ class OutgoingMessageHandler {
   /// Cancels the single queued message identified by [tempGuid].
   ///
   /// If the message has already been dequeued for dispatch this is a no-op.
-  Future<void> cancelMessage(String tempGuid) =>
-      _cancelEntries(_queue.where((e) => e.item.message.guid == tempGuid));
+  Future<void> cancelMessage(String tempGuid) => _cancelEntries(_queue.where((e) => e.item.message.guid == tempGuid));
 
   /// Cancels all pending (not-yet-dispatched) outgoing messages for [chatGuid].
   ///

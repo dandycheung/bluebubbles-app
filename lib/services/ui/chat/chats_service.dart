@@ -463,12 +463,12 @@ class ChatsService {
 
     // Both unpinned (or both pinned without an index): sort by most-recent message.
     // Use ChatState latestMessage date to avoid the DB-write race condition.
-    final aDate = chatStates[a.guid]?.latestMessage.value?.dateCreated
-        ?? a.dbOnlyLatestMessageDate
-        ?? DateTime.fromMillisecondsSinceEpoch(0);
-    final bDate = chatStates[b.guid]?.latestMessage.value?.dateCreated
-        ?? b.dbOnlyLatestMessageDate
-        ?? DateTime.fromMillisecondsSinceEpoch(0);
+    final aDate = chatStates[a.guid]?.latestMessage.value?.dateCreated ??
+        a.dbOnlyLatestMessageDate ??
+        DateTime.fromMillisecondsSinceEpoch(0);
+    final bDate = chatStates[b.guid]?.latestMessage.value?.dateCreated ??
+        b.dbOnlyLatestMessageDate ??
+        DateTime.fromMillisecondsSinceEpoch(0);
     return -aDate.compareTo(bDate);
   }
 
