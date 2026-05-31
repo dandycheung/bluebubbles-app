@@ -1196,6 +1196,11 @@ class MessagesService extends GetxController {
         ),
       );
     }
+
+    // The retried message always gets dateCreated = now, making it the newest
+    // message in the chat regardless of what was previously the latest.
+    // Always update the chat's latest message, subtitle, and sort position.
+    ChatsSvc.updateChatLatestMessage(tag, message);
   }
 
   /// Delete a message from DB, struct, and MessageState.
@@ -1228,7 +1233,7 @@ class MessagesService extends GetxController {
     if (chat == null) return;
     final latest = Chat.getMessages(chat, limit: 1);
     if (latest.isNotEmpty) {
-      await ChatsSvc.setChatLatestMessage(chat, latest.first);
+      ChatsSvc.updateChatLatestMessage(tag, latest.first);
     }
   }
 
