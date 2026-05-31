@@ -593,6 +593,11 @@ class _MessagePopupState extends State<MessagePopup> with SingleTickerProviderSt
           shouldDisableBtn: !canUnsend,
           action: DetailsMenuAction.UndoSend,
         ),
+      if (message.isFromMe! && widget.controller.isSending.value && OutgoingMsgHandler.hasPendingMessage(message.guid!))
+        DetailsMenuActionWidget(
+          onTap: () => popup_message_actions.cancelSend(_buildActionContext(DetailsMenuAction.CancelSend)),
+          action: DetailsMenuAction.CancelSend,
+        ),
       if (SettingsSvc.serverDetails.isMinVentura &&
           message.isFromMe! &&
           !widget.controller.isSending.value &&

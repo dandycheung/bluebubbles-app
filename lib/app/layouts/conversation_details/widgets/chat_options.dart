@@ -622,11 +622,61 @@ class _ChatOptionsState extends State<ChatOptions> with ThemeHelpers {
                       showSnackbar("Success", "Saved transcript to the downloads folder");
                     },
                   ),
+                Obx(() {
+                  if (!OutgoingMsgHandler.pendingChatGuids.contains(chat.guid)) return const SizedBox.shrink();
+                  return SettingsTile(
+                    title: "Cancel Outgoing Messages",
+                    subtitle: "Cancel all messages currently queued to be sent in this chat",
+                    trailing: Padding(
+                      padding: const EdgeInsets.only(right: 15.0),
+                      child: Icon(
+                        iOS ? CupertinoIcons.xmark_circle : Icons.cancel_outlined,
+                        color: context.theme.colorScheme.error,
+                      ),
+                    ),
+                    onTap: () => _showCancelConfirmation(context),
+                  );
+                }),
               ],
             ),
           ],
         ),
       ),
+    );
+  }
+
+  void _showCancelConfirmation(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
+          title: Text("Cancel Outgoing Messages?", style: context.theme.textTheme.titleLarge),
+          content: Text(
+            'This will cancel all messages currently waiting to be sent in this chat. They will be marked as failed.',
+            style: context.theme.textTheme.bodyLarge,
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: Text(
+                "Keep Sending",
+                style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.primary),
+              ),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+            TextButton(
+              child: Text(
+                "Cancel Messages",
+                style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.error),
+              ),
+              onPressed: () async {
+                Navigator.of(context).pop();
+                await OutgoingMsgHandler.cancelPendingForChat(chat.guid);
+              },
+            ),
+          ],
+        );
+      },
     );
   }
 }

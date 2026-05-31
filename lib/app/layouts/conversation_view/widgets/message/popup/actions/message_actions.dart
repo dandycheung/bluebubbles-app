@@ -137,3 +137,8 @@ void messageInfo(MessagePopupActionContext ctx) {
     ),
   );
 }
+
+Future<void> cancelSend(MessagePopupActionContext ctx) async {
+  ctx.popDetails();
+  await OutgoingMsgHandler.cancelMessage(ctx.message.guid!);
+}
