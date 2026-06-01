@@ -176,18 +176,47 @@ class ConversationViewState extends State<ConversationView> with ThemeHelpers<Co
 
   @override
   Widget build(BuildContext context) {
-    // Cache theme values to avoid repeated lookups
-    final theme = context.theme;
-    final colorScheme = theme.colorScheme;
     final windowEffect = SettingsSvc.settings.windowEffect.value;
-    final bubbleColor = colorScheme.bubble(context, chat.isIMessage);
-    final onBubbleColor = colorScheme.onBubble(context, chat.isIMessage);
-
     final chatState = ChatsSvc.getOrCreateChatState(chat);
     return ChatStateScope(
       chatState: chatState,
-      child: Theme(
-          data: theme.copyWith(
+      child: Obx(() {
+        // Determine base theme — use adaptive theme when enabled and loaded.
+        ThemeData baseTheme = context.theme;
+        final adaptiveEnabled = chatState.adaptiveThemeEnabled.value;
+        final adaptiveThemes = chatState.adaptiveThemes.value;
+        final isDark = ThemeSvc.inDarkMode(context);
+        final variantName =
+            isDark ? chatState.adaptiveThemeVariantDark.value : chatState.adaptiveThemeVariantLight.value;
+
+        if (adaptiveEnabled && adaptiveThemes != null && variantName != null) {
+          final variant = MaterialYouVariant.values.where((v) => v.name == variantName).firstOrNull;
+          if (variant != null && adaptiveThemes.containsKey(variant)) {
+            final pair = adaptiveThemes[variant]!;
+            baseTheme = ThemeSvc.inDarkMode(context) ? pair.dark : pair.light;
+          }
+        }
+
+        final colorScheme = baseTheme.colorScheme;
+        // When the adaptive theme is active, derive bubble color from its own
+        // BubbleColors extension rather than from the outer context's theme.
+        // The outer context carries the global app theme (e.g. "Bright White"),
+        // whose BubbleColors would otherwise override the adaptive palette.
+        final adaptiveBubbleColors =
+            adaptiveEnabled && adaptiveThemes != null ? baseTheme.extensions[BubbleColors] as BubbleColors? : null;
+        final bubbleColor = adaptiveBubbleColors != null
+            ? (chat.isIMessage
+                ? adaptiveBubbleColors.iMessageBubbleColor ?? colorScheme.iMessageBubble
+                : adaptiveBubbleColors.smsBubbleColor ?? colorScheme.smsBubble)
+            : colorScheme.bubble(context, chat.isIMessage);
+        final onBubbleColor = adaptiveBubbleColors != null
+            ? (chat.isIMessage
+                ? adaptiveBubbleColors.oniMessageBubbleColor ?? colorScheme.oniMessageBubble
+                : adaptiveBubbleColors.onSmsBubbleColor ?? colorScheme.onSmsBubble)
+            : colorScheme.onBubble(context, chat.isIMessage);
+
+        return Theme(
+          data: baseTheme.copyWith(
             // Override primary color with our custom bubble color.
             primaryColor: bubbleColor,
             colorScheme: colorScheme.copyWith(
@@ -225,7 +254,9 @@ class ConversationViewState extends State<ConversationView> with ThemeHelpers<Co
                 child: _bodyContent,
               ),
             ),
-          )),
+          ),
+        );
+      }),
     );
   }
 }

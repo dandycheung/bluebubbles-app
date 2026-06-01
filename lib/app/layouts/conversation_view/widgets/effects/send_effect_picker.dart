@@ -125,6 +125,11 @@ void sendEffectAction(
       SpotlightController(vsync: provider, windowSize: Size(NavigationSvc.width(context), context.height));
   final LaserController laserController =
       LaserController(vsync: provider, windowSize: Size(NavigationSvc.width(context), context.height));
+  // Capture the conversation's theme before pushing the route — if adaptive
+  // theming is active, context.theme is already the per-chat theme.
+  final capturedTheme = context.theme;
+  final capturedIsM3 = ThemeSvc.isMaterialYouActive(context);
+  final capturedBubbleExt = capturedTheme.extensions[BubbleColors] as BubbleColors?;
   Navigator.push(
     context,
     PageRouteBuilder(
@@ -138,7 +143,7 @@ void sendEffectAction(
             },
             child: BBScaffold(
               backgroundColor: kIsDesktop && SettingsSvc.settings.windowEffect.value != WindowEffect.disabled
-                  ? context.theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.9)
+                  ? capturedTheme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.9)
                   : Colors.transparent,
               safeAreaLeft: false,
               safeAreaRight: false,
@@ -151,7 +156,7 @@ void sendEffectAction(
                         sigmaY:
                             kIsDesktop && SettingsSvc.settings.windowEffect.value != WindowEffect.disabled ? 0 : 30),
                     child: Container(
-                      color: context.theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                      color: capturedTheme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
                     ),
                   ),
                   StatefulBuilder(builder: (BuildContext context, void Function(void Function()) setState) {
@@ -358,20 +363,17 @@ void sendEffectAction(
                               const Spacer(),
                               if (text.isNotEmpty || subjectText.isNotEmpty)
                                 Theme(
-                                  data: context.theme.copyWith(
+                                  data: capturedTheme.copyWith(
                                     // in case some components still use legacy theming
-                                    primaryColor: context.theme.colorScheme.bubble(context, true),
-                                    colorScheme: context.theme.colorScheme.copyWith(
-                                      primary: context.theme.colorScheme.bubble(context, true),
-                                      onPrimary: context.theme.colorScheme.onBubble(context, true),
-                                      surface: ThemeSvc.isMaterialYouActive(context)
-                                          ? null
-                                          : (context.theme.extensions[BubbleColors] as BubbleColors?)
-                                              ?.receivedBubbleColor,
-                                      onSurface: ThemeSvc.isMaterialYouActive(context)
-                                          ? null
-                                          : (context.theme.extensions[BubbleColors] as BubbleColors?)
-                                              ?.onReceivedBubbleColor,
+                                    primaryColor:
+                                        capturedBubbleExt?.iMessageBubbleColor ?? capturedTheme.colorScheme.primary,
+                                    colorScheme: capturedTheme.colorScheme.copyWith(
+                                      primary:
+                                          capturedBubbleExt?.iMessageBubbleColor ?? capturedTheme.colorScheme.primary,
+                                      onPrimary: capturedBubbleExt?.oniMessageBubbleColor ??
+                                          capturedTheme.colorScheme.onPrimary,
+                                      surface: capturedIsM3 ? null : capturedBubbleExt?.receivedBubbleColor,
+                                      onSurface: capturedIsM3 ? null : capturedBubbleExt?.onReceivedBubbleColor,
                                     ),
                                   ),
                                   child: Builder(builder: (context) {

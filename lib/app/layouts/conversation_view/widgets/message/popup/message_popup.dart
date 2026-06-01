@@ -671,18 +671,22 @@ class _MessagePopupState extends State<MessagePopup> with SingleTickerProviderSt
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: allActions.sublist(numberToShow - 1),
                     );
+                    final adaptiveTheme = context.theme;
                     showDialog(
                       useRootNavigator: false,
                       context: context,
-                      builder: (context) => SettingsSvc.settings.skin.value == Skins.iOS
-                          ? CupertinoAlertDialog(
-                              backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
-                              content: content,
-                            )
-                          : AlertDialog(
-                              backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
-                              content: content,
-                            ),
+                      builder: (context) => Theme(
+                        data: adaptiveTheme,
+                        child: SettingsSvc.settings.skin.value == Skins.iOS
+                            ? CupertinoAlertDialog(
+                                backgroundColor: adaptiveTheme.colorScheme.surfaceContainerHighest,
+                                content: content,
+                              )
+                            : AlertDialog(
+                                backgroundColor: adaptiveTheme.colorScheme.surfaceContainerHighest,
+                                content: content,
+                              ),
+                      ),
                     );
                   },
                   title: 'More...',

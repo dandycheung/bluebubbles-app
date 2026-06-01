@@ -104,7 +104,7 @@
     },
     {
       "id": "3:9017250848141753702",
-      "lastPropertyId": "30:5609008615344379625",
+      "lastPropertyId": "34:6097956829538166324",
       "name": "Chat",
       "properties": [
         {
@@ -227,6 +227,21 @@
           "type": 11,
           "flags": 520,
           "relationTarget": "Message"
+        },
+        {
+          "id": "31:8712146833870022765",
+          "name": "adaptiveThemeEnabled",
+          "type": 1
+        },
+        {
+          "id": "33:8853311400813838140",
+          "name": "adaptiveThemeVariantLight",
+          "type": 9
+        },
+        {
+          "id": "34:6097956829538166324",
+          "name": "adaptiveThemeVariantDark",
+          "type": 9
         }
       ],
       "relations": [
@@ -938,7 +953,8 @@
     4095958741939757312,
     8329508394572392433,
     128649823768535358,
-    8841030829401354828
+    8841030829401354828,
+    5762172898544447362
   ],
   "retiredRelationUids": [],
   "version": 1

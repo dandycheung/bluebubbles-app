@@ -22,9 +22,6 @@ class LogInterface {
         input: data,
       );
     }
-    return raw
-        .map((e) => ParsedLogEntry.fromMap(Map<String, dynamic>.from(e as Map)))
-        .toList();
+    return raw.map((e) => ParsedLogEntry.fromMap(Map<String, dynamic>.from(e as Map))).toList();
   }
 }
-

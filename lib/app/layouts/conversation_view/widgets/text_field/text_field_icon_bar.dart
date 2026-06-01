@@ -39,6 +39,7 @@ class TextFieldIconBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final hasBackground = ChatsSvc.getChatState(controller.chat.guid)?.customBackgroundPath.value?.isNotEmpty == true;
     return Row(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.end,
@@ -47,7 +48,9 @@ class TextFieldIconBar extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 10),
           child: IconButton(
             style: IconButton.styleFrom(
-              backgroundColor: context.theme.colorScheme.outline.withValues(alpha: 0.2),
+              backgroundColor: hasBackground
+                  ? context.theme.colorScheme.surfaceContainerHighest
+                  : context.theme.colorScheme.outline.withValues(alpha: 0.2),
               shape: const CircleBorder(),
               padding: EdgeInsets.zero,
               minimumSize: const Size(36, 36),

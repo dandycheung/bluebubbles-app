@@ -1,3 +1,4 @@
+import 'package:bluebubbles/app/state/chat_state_scope.dart';
 import 'package:bluebubbles/app/state/message_state_scope.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/database/models.dart';
@@ -44,26 +45,40 @@ class TimestampSeparator extends StatelessWidget {
   Widget build(BuildContext context) {
     final message = MessageStateScope.messageOf(context);
     final timestamp = buildTimeStamp(message);
+    final hasBackground = ChatStateScope.maybeOf(context)?.customBackgroundPath.value?.isNotEmpty == true;
 
-    return timestamp != null
-        ? Padding(
-            padding: const EdgeInsets.all(14.0),
-            child: RichText(
-              text: TextSpan(
-                style: context.theme.textTheme.labelSmall!
-                    .copyWith(color: context.theme.colorScheme.outline, fontWeight: FontWeight.normal),
-                children: [
-                  if (timestamp.date != null)
-                    TextSpan(
-                      text: "${timestamp.date!} ",
-                      style: context.theme.textTheme.labelSmall!
-                          .copyWith(fontWeight: FontWeight.w600, color: context.theme.colorScheme.outline),
-                    ),
-                  TextSpan(text: timestamp.time)
-                ],
-              ),
+    if (timestamp == null) return const SizedBox.shrink();
+
+    final textColor = hasBackground ? context.theme.colorScheme.onSurfaceVariant : context.theme.colorScheme.outline;
+
+    final richText = RichText(
+      text: TextSpan(
+        style: context.theme.textTheme.labelSmall!.copyWith(color: textColor, fontWeight: FontWeight.normal),
+        children: [
+          if (timestamp.date != null)
+            TextSpan(
+              text: "${timestamp.date!} ",
+              style: context.theme.textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600, color: textColor),
             ),
-          )
-        : const SizedBox.shrink();
+          TextSpan(text: timestamp.time),
+        ],
+      ),
+    );
+
+    return Padding(
+      padding: const EdgeInsets.all(14.0),
+      child: hasBackground
+          ? Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 3, horizontal: 10),
+                decoration: BoxDecoration(
+                  color: context.theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.75),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: richText,
+              ),
+            )
+          : richText,
+    );
   }
 }

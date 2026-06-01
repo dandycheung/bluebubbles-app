@@ -22,8 +22,7 @@ class LogActions {
     // Split off the leading timestamp token.
     final int spaceIdx = firstLine.indexOf(' ');
     final String timestamp = spaceIdx > 0 ? firstLine.substring(0, spaceIdx) : '';
-    final String firstBody =
-        spaceIdx > 0 ? firstLine.substring(spaceIdx + 1).trim() : firstLine.trim();
+    final String firstBody = spaceIdx > 0 ? firstLine.substring(spaceIdx + 1).trim() : firstLine.trim();
 
     // Reconstruct full body: first-line body + any continuation lines.
     final String continuation = newlineIdx >= 0 ? entry.substring(newlineIdx) : '';
@@ -51,4 +50,3 @@ class LogActions {
     return ParsedLogEntry(timestamp: timestamp, level: level, body: body).toMap();
   }
 }
-

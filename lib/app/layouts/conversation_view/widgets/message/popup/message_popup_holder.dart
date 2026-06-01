@@ -114,6 +114,11 @@ class _MessagePopupHolderState extends State<MessagePopupHolder> with ThemeHelpe
       widget.cvController.showingOverlays = true;
     }
     final chatState = ChatStateScope.of(context);
+    // Capture the conversation's theme before pushing the route — if adaptive
+    // theming is active, context.theme is already the per-chat theme.
+    final capturedTheme = context.theme;
+    final capturedIsM3 = ThemeSvc.isMaterialYouActive(context);
+    final capturedBubbleExt = capturedTheme.extensions[BubbleColors] as BubbleColors?;
     final result = await Navigator.push(
       iOS ? Get.context! : context,
       PageRouteBuilder(
@@ -122,18 +127,14 @@ class _MessagePopupHolderState extends State<MessagePopupHolder> with ThemeHelpe
           return FadeTransition(
             opacity: animation,
             child: Theme(
-              data: ctx.theme.copyWith(
+              data: capturedTheme.copyWith(
                 // in case some components still use legacy theming
-                primaryColor: ctx.theme.colorScheme.bubble(ctx, true),
-                colorScheme: ctx.theme.colorScheme.copyWith(
-                  primary: ctx.theme.colorScheme.bubble(ctx, true),
-                  onPrimary: ctx.theme.colorScheme.onBubble(ctx, true),
-                  surface: ThemeSvc.isMaterialYouActive(context)
-                      ? null
-                      : (ctx.theme.extensions[BubbleColors] as BubbleColors?)?.receivedBubbleColor,
-                  onSurface: ThemeSvc.isMaterialYouActive(context)
-                      ? null
-                      : (ctx.theme.extensions[BubbleColors] as BubbleColors?)?.onReceivedBubbleColor,
+                primaryColor: capturedBubbleExt?.iMessageBubbleColor ?? capturedTheme.colorScheme.primary,
+                colorScheme: capturedTheme.colorScheme.copyWith(
+                  primary: capturedBubbleExt?.iMessageBubbleColor ?? capturedTheme.colorScheme.primary,
+                  onPrimary: capturedBubbleExt?.oniMessageBubbleColor ?? capturedTheme.colorScheme.onPrimary,
+                  surface: capturedIsM3 ? null : capturedBubbleExt?.receivedBubbleColor,
+                  onSurface: capturedIsM3 ? null : capturedBubbleExt?.onReceivedBubbleColor,
                 ),
               ),
               child: ChatStateScope(

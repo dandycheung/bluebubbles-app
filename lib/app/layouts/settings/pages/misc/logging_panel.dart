@@ -60,11 +60,16 @@ class _LoggingPanel extends State<LoggingPanel> {
   void _applyFilters() {
     final filtered = _allParsedLogs.where((entry) {
       switch (entry.level) {
-        case ParsedLogEntry.info:  return showInfo.value;
-        case ParsedLogEntry.debug: return showDebug.value;
-        case ParsedLogEntry.warn:  return showWarn.value;
-        case ParsedLogEntry.error: return showError.value;
-        default: return true; // trace, fatal, unknown always shown
+        case ParsedLogEntry.info:
+          return showInfo.value;
+        case ParsedLogEntry.debug:
+          return showDebug.value;
+        case ParsedLogEntry.warn:
+          return showWarn.value;
+        case ParsedLogEntry.error:
+          return showError.value;
+        default:
+          return true; // trace, fatal, unknown always shown
       }
     }).toList();
     _logs.assignAll(filtered);
@@ -74,13 +79,7 @@ class _LoggingPanel extends State<LoggingPanel> {
 
   void _rebuildErrorState() {
     _errorIndices.assignAll(
-      _logs
-          .asMap()
-          .entries
-          .where((e) => e.value.level == ParsedLogEntry.error)
-          .map((e) => e.key)
-          .toList()
-          .reversed,
+      _logs.asMap().entries.where((e) => e.value.level == ParsedLogEntry.error).map((e) => e.key).toList().reversed,
     );
     _nextErrorOffset = 0;
     _errorNavigationActive.value = false;
@@ -291,41 +290,41 @@ class _LoggingPanel extends State<LoggingPanel> {
                         ),
                       )
                     : ListView.separated(
-                    itemCount: _logs.length,
-                    shrinkWrap: true,
-                    controller: _scrollController,
-                    separatorBuilder: (context, index) =>
-                        Divider(thickness: 0.25, color: context.theme.colorScheme.onSurface),
-                    itemBuilder: (context, index) {
-                      final ParsedLogEntry entry = _logs[index];
-
-                      Color textColor = context.theme.colorScheme.primary;
-                      switch (entry.level) {
-                        case ParsedLogEntry.error:
-                        case ParsedLogEntry.fatal:
-                          textColor = Colors.red;
-                          break;
-                        case ParsedLogEntry.warn:
-                          textColor = Colors.orange;
-                          break;
-                        case ParsedLogEntry.debug:
-                          textColor = context.theme.colorScheme.secondary;
-                          break;
-                        default:
-                          break; // trace, info, unknown use primary
-                      }
-
-                      return AutoScrollTag(
-                        key: ValueKey(index),
+                        itemCount: _logs.length,
+                        shrinkWrap: true,
                         controller: _scrollController,
-                        index: index,
-                        child: Text(
-                          entry.body.trim(),
-                          style: TextStyle(fontSize: 12.0, color: textColor),
-                        ),
-                      );
-                    },
-                  ),
+                        separatorBuilder: (context, index) =>
+                            Divider(thickness: 0.25, color: context.theme.colorScheme.onSurface),
+                        itemBuilder: (context, index) {
+                          final ParsedLogEntry entry = _logs[index];
+
+                          Color textColor = context.theme.colorScheme.primary;
+                          switch (entry.level) {
+                            case ParsedLogEntry.error:
+                            case ParsedLogEntry.fatal:
+                              textColor = Colors.red;
+                              break;
+                            case ParsedLogEntry.warn:
+                              textColor = Colors.orange;
+                              break;
+                            case ParsedLogEntry.debug:
+                              textColor = context.theme.colorScheme.secondary;
+                              break;
+                            default:
+                              break; // trace, info, unknown use primary
+                          }
+
+                          return AutoScrollTag(
+                            key: ValueKey(index),
+                            controller: _scrollController,
+                            index: index,
+                            child: Text(
+                              entry.body.trim(),
+                              style: TextStyle(fontSize: 12.0, color: textColor),
+                            ),
+                          );
+                        },
+                      ),
           ),
         ),
       ),

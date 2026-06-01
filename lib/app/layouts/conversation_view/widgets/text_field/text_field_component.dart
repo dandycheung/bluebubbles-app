@@ -164,6 +164,9 @@ class TextFieldComponentState extends State<TextFieldComponent> {
       child: ValueListenableBuilder<bool>(
           valueListenable: isRecordingNotifier,
           builder: (context, isRecording, child) {
+            final hasBackground = chat != null
+                ? (ChatsSvc.getChatState(chat!.guid)?.customBackgroundPath.value?.isNotEmpty == true)
+                : false;
             return Container(
               // Border is placed in the foregroundDecoration so it paints on top of
               // child content (ReplyHolder, attachments, etc.) and remains visible
@@ -179,14 +182,10 @@ class TextFieldComponentState extends State<TextFieldComponent> {
                       borderRadius: BorderRadius.circular(20),
                     )
                   : null,
-              decoration: iOS
-                  ? const BoxDecoration(
-                      borderRadius: BorderRadius.all(Radius.circular(20)),
-                    )
-                  : BoxDecoration(
-                      color: context.theme.colorScheme.surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
+              decoration: BoxDecoration(
+                color: (!iOS || hasBackground) ? context.theme.colorScheme.surfaceContainerHighest : null,
+                borderRadius: BorderRadius.circular(20),
+              ),
               clipBehavior: Clip.antiAlias,
               child: AnimatedSize(
                 duration: const Duration(milliseconds: 400),

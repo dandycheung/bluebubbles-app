@@ -247,8 +247,7 @@ class BaseLogger {
       if (!logDir.existsSync()) return [];
 
       final List<FileSystemEntity> files = logDir.listSync();
-      final List<FileSystemEntity> logFiles =
-          files.where((file) => file.path.endsWith(latestLogName)).toList();
+      final List<FileSystemEntity> logFiles = files.where((file) => file.path.endsWith(latestLogName)).toList();
       if (logFiles.isEmpty) return [];
 
       final File logFile = logFiles.first as File;
@@ -368,10 +367,14 @@ class BaseLogger {
   /// date prefix: four decimal digits followed by a hyphen (`YYYY-`).
   bool _isLogEntryStart(List<int> bytes) {
     if (bytes.length < 5) return false;
-    return bytes[0] >= 0x30 && bytes[0] <= 0x39 &&
-        bytes[1] >= 0x30 && bytes[1] <= 0x39 &&
-        bytes[2] >= 0x30 && bytes[2] <= 0x39 &&
-        bytes[3] >= 0x30 && bytes[3] <= 0x39 &&
+    return bytes[0] >= 0x30 &&
+        bytes[0] <= 0x39 &&
+        bytes[1] >= 0x30 &&
+        bytes[1] <= 0x39 &&
+        bytes[2] >= 0x30 &&
+        bytes[2] <= 0x39 &&
+        bytes[3] >= 0x30 &&
+        bytes[3] <= 0x39 &&
         bytes[4] == 0x2D; // '-'
   }
 

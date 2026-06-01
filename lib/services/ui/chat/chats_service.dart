@@ -1194,6 +1194,12 @@ class ChatsService {
 
     if (state != null && state.customBackgroundPath.value == value) return;
 
+    // Invalidate the adaptive theme cache for the old background path.
+    final oldPath = state?.customBackgroundPath.value ?? chat.customBackgroundPath;
+    if (oldPath != null && oldPath != value) {
+      ThemesService.clearAdaptiveThemeCache(oldPath);
+    }
+
     // Update Chat model (use state.chat if available, otherwise use passed in chat)
     final chatToUpdate = state?.chat ?? chat;
     chatToUpdate.customBackgroundPath = value;
@@ -1201,6 +1207,45 @@ class ChatsService {
 
     // Update state if available
     state?.updateCustomBackgroundPathInternal(value);
+  }
+
+  /// Enable or disable the adaptive chat theme for a specific chat
+  Future<void> setAdaptiveThemeEnabled(Chat chat, bool value) async {
+    final state = getChatState(chat.guid);
+
+    if (state != null && state.adaptiveThemeEnabled.value == value) return;
+
+    final chatToUpdate = state?.chat ?? chat;
+    chatToUpdate.adaptiveThemeEnabled = value;
+    await chatToUpdate.saveAsync(updateAdaptiveTheme: true);
+
+    state?.updateAdaptiveThemeEnabledInternal(value);
+  }
+
+  /// Set the light mode adaptive theme variant for a specific chat
+  Future<void> setAdaptiveThemeVariantLight(Chat chat, String? variant) async {
+    final state = getChatState(chat.guid);
+
+    if (state != null && state.adaptiveThemeVariantLight.value == variant) return;
+
+    final chatToUpdate = state?.chat ?? chat;
+    chatToUpdate.adaptiveThemeVariantLight = variant;
+    await chatToUpdate.saveAsync(updateAdaptiveTheme: true);
+
+    state?.updateAdaptiveThemeVariantLightInternal(variant);
+  }
+
+  /// Set the dark mode adaptive theme variant for a specific chat
+  Future<void> setAdaptiveThemeVariantDark(Chat chat, String? variant) async {
+    final state = getChatState(chat.guid);
+
+    if (state != null && state.adaptiveThemeVariantDark.value == variant) return;
+
+    final chatToUpdate = state?.chat ?? chat;
+    chatToUpdate.adaptiveThemeVariantDark = variant;
+    await chatToUpdate.saveAsync(updateAdaptiveTheme: true);
+
+    state?.updateAdaptiveThemeVariantDarkInternal(variant);
   }
 
   /// Set chat latest message
