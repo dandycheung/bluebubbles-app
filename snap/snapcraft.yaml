@@ -136,6 +136,46 @@ parts:
       - zenity
     stage:
       - -usr/lib/*/libasound*
+      - -usr/lib/*/libmpv.so*
+
+  mpv:
+    plugin: meson
+    source: https://github.com/mpv-player/mpv.git
+    source-tag: v0.41.0
+    source-depth: 1
+    meson-parameters:
+      - --prefix=/usr
+      - -Dlibmpv=true
+      - -Dcplayer=false
+      - -Dmanpage-build=disabled
+      - -Dalsa=disabled
+      - -Db_ndebug=true
+    build-packages:
+      - pkg-config
+      - libavcodec-dev
+      - libavfilter-dev
+      - libavformat-dev
+      - libavutil-dev
+      - libswresample-dev
+      - libswscale-dev
+      - libass-dev
+      - libplacebo-dev
+      - libdrm-dev
+      - libegl1-mesa-dev
+      - libgbm-dev
+      - libgl-dev
+      - libx11-dev
+      - libxext-dev
+      - libxkbcommon-dev
+      - libxpresent-dev
+      - libxrandr-dev
+      - libxss-dev
+      - libxv-dev
+      - libpulse-dev
+      - libjpeg-dev
+    prime:
+      - usr/lib/*/libmpv.so*
+      - usr/lib/libmpv.so*
 
   gpu-2404:
     after:

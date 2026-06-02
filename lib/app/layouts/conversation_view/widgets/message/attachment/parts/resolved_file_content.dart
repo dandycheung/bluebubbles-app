@@ -10,7 +10,6 @@ import 'package:bluebubbles/app/state/chat_state_scope.dart';
 import 'package:bluebubbles/app/state/message_state_scope.dart';
 import 'package:bluebubbles/app/layouts/fullscreen_media/fullscreen_holder.dart';
 import 'package:bluebubbles/database/models.dart';
-import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/services/services.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -96,7 +95,7 @@ class ResolvedFileContent extends StatelessWidget {
       );
     }
 
-    if (attachment.mimeStart == "video" && !SettingsSvc.settings.highPerfMode.value && !isSnap) {
+    if (attachment.mimeStart == "video" && !SettingsSvc.settings.highPerfMode.value) {
       return VideoPlayer(
         attachment: attachment,
         file: file,
