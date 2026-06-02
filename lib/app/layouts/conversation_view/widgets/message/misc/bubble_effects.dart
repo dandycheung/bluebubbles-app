@@ -229,7 +229,7 @@ class _BubbleEffectsState extends State<BubbleEffects> with SingleTickerProvider
                           connectUpper: false,
                         ),
                         child: BackdropFilter(
-                          filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+                          filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
                           child: Particles(
                             key: UniqueKey(),
                             height: size.height,
