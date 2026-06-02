@@ -144,7 +144,7 @@ class _ReplyBubbleState extends State<ReplyBubble> with ThemeHelpers {
                         child: controller.parts.length <= widget.part
                             ? Container(
                                 color: hasBackground
-                                    ? context.theme.colorScheme.errorContainer.withValues(alpha: 0.25)
+                                    ? context.theme.colorScheme.errorContainer.withValues(alpha: 0.4)
                                     : null,
                                 constraints: BoxConstraints(
                                   maxWidth: NavigationSvc.width(context) * MessageState.maxBubbleSizeFactor - 30,
@@ -182,7 +182,7 @@ class _ReplyBubbleState extends State<ReplyBubble> with ThemeHelpers {
                                     ? Container(
                                         color: hasBackground
                                             ? (message.isFromMe! ? context.theme.colorScheme.primary : getBubbleColor())
-                                                .withValues(alpha: 0.25)
+                                                .withValues(alpha: 0.4)
                                             : null,
                                         constraints: BoxConstraints(
                                           maxWidth:
@@ -210,7 +210,7 @@ class _ReplyBubbleState extends State<ReplyBubble> with ThemeHelpers {
                                                   colorOverride: (message.isFromMe!
                                                           ? context.theme.colorScheme.primary
                                                           : getBubbleColor())
-                                                      .themeLightenOrDarken(context, 30),
+                                                      .themeLightenOrDarken(context, hasBackground ? 70 : 30),
                                                 ),
                                                 initialData: buildMessageSpans(
                                                   context,
@@ -219,7 +219,7 @@ class _ReplyBubbleState extends State<ReplyBubble> with ThemeHelpers {
                                                   colorOverride: (message.isFromMe!
                                                           ? context.theme.colorScheme.primary
                                                           : getBubbleColor())
-                                                      .themeLightenOrDarken(context, 30),
+                                                      .themeLightenOrDarken(context, hasBackground ? 70 : 30),
                                                 ),
                                                 builder: (context, snapshot) {
                                                   if (snapshot.data != null) {

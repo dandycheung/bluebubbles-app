@@ -1,4 +1,5 @@
 import 'package:bluebubbles/app/layouts/conversation_details/widgets/attachments_loader.dart';
+import 'package:flutter_acrylic/flutter_acrylic.dart';
 import 'package:bluebubbles/app/layouts/conversation_details/widgets/chat_info.dart';
 import 'package:bluebubbles/app/state/chat_state_scope.dart';
 import 'package:bluebubbles/app/layouts/conversation_details/widgets/chat_options.dart';
@@ -81,6 +82,16 @@ class _ConversationDetailsState extends State<ConversationDetails> with WidgetsB
           }
         }
 
+        // Compute scaffold colors from baseTheme before copyWith modifies colorScheme.surface.
+        final hasWindowEffect = SettingsSvc.settings.windowEffect.value != WindowEffect.disabled;
+        final reverseMapping = SettingsSvc.settings.skin.value == Skins.Material && isDark;
+        final rawHeaderColor = (isDark ? baseTheme.colorScheme.surface : baseTheme.colorScheme.surfaceContainerHighest)
+            .withAlpha(hasWindowEffect ? 20 : 255);
+        final rawTileColor = (isDark ? baseTheme.colorScheme.surfaceContainerHighest : baseTheme.colorScheme.surface)
+            .withAlpha(hasWindowEffect ? 100 : 255);
+        final scaffoldHeaderColor = reverseMapping ? rawTileColor : rawHeaderColor;
+        final scaffoldTileColor = reverseMapping ? rawHeaderColor : rawTileColor;
+
         return Theme(
             data: baseTheme.copyWith(
               // in case some components still use legacy theming
@@ -97,9 +108,9 @@ class _ConversationDetailsState extends State<ConversationDetails> with WidgetsB
               ),
             ),
             child: Obx(() => SettingsScaffold(
-                  headerColor: headerColor,
+                  headerColor: scaffoldHeaderColor,
                   title: "Details",
-                  tileColor: tileColor,
+                  tileColor: scaffoldTileColor,
                   initialHeader: null,
                   iosSubtitle: iosSubtitle,
                   materialSubtitle: materialSubtitle,

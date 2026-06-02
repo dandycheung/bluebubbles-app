@@ -339,7 +339,7 @@ class _ChatInfoState extends State<ChatInfo> with ThemeHelpers {
           ),
         if (!chat.isGroup && iOS)
           Padding(
-            padding: const EdgeInsets.only(left: 15.0, right: 15, top: 20),
+            padding: const EdgeInsets.only(left: 18.0, right: 18, top: 20),
             child: Row(
               mainAxisAlignment: kIsWeb || kIsDesktop ? MainAxisAlignment.center : MainAxisAlignment.spaceBetween,
               children: intersperse(const SizedBox(width: 5), [
