@@ -382,6 +382,7 @@ class ThemesService {
         onErrorContainer: Color(resolvedPalette.error.get(isDark ? 80 : 10)),
         surface: surface,
         onSurface: onSurface,
+        surfaceContainerHighest: surfaceVariant,
         surfaceVariant: surfaceVariant,
         onSurfaceVariant: onSurfaceVariant,
         outline: outline,
@@ -539,6 +540,52 @@ class ThemesService {
     lightTheme.data = lightTheme.data.copyWith(colorScheme: lightScheme);
     darkTheme.data = darkTheme.data.copyWith(colorScheme: darkScheme);
     changeTheme(Get.context!, light: lightTheme, dark: darkTheme);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Adaptive Chat Theme — per-chat theme generation from background image
+  // ---------------------------------------------------------------------------
+
+  static final Map<String, Map<MaterialYouVariant, ({ThemeData light, ThemeData dark})>> _adaptiveThemeCache = {};
+
+  static void clearAdaptiveThemeCache(String path) {
+    _adaptiveThemeCache.remove(path);
+  }
+
+  /// Generates all 9 Material You variant [ThemeData] pairs (light + dark) by
+  /// extracting the dominant seed color from the image at [imagePath] and
+  /// feeding it through [CorePalette.of] + [materialYouTheme].
+  ///
+  /// Results are cached by file path; call [clearAdaptiveThemeCache] when the
+  /// background image is replaced.
+  static Future<Map<MaterialYouVariant, ({ThemeData light, ThemeData dark})>> generateAdaptiveThemesFromImage(
+    String imagePath,
+  ) async {
+    if (_adaptiveThemeCache.containsKey(imagePath)) {
+      return _adaptiveThemeCache[imagePath]!;
+    }
+
+    // Extract the dominant color via Flutter's built-in quantizer.
+    final provider = FileImage(File(imagePath));
+    final lightScheme = await ColorScheme.fromImageProvider(
+      provider: provider,
+      brightness: Brightness.light,
+    );
+
+    // Build a CorePalette from the dominant seed color so we can reuse all 9
+    // existing variant algorithms in materialYouTheme().
+    final corePalette = mui_utils.CorePalette.of(lightScheme.primary.value);
+
+    final result = <MaterialYouVariant, ({ThemeData light, ThemeData dark})>{};
+    for (final variant in MaterialYouVariant.values) {
+      result[variant] = (
+        light: materialYouTheme(Brightness.light, palette: corePalette, variant: variant),
+        dark: materialYouTheme(Brightness.dark, palette: corePalette, variant: variant),
+      );
+    }
+
+    _adaptiveThemeCache[imagePath] = result;
+    return result;
   }
 
   void _loadTheme(BuildContext context, {ThemeStruct? lightOverride, ThemeStruct? darkOverride}) {

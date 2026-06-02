@@ -503,16 +503,23 @@ class MessagesViewState extends State<MessagesView> with MessagesServiceMixin, T
   Widget _buildReply(String text, {Function()? onTap}) => Builder(
         builder: (replyContext) {
           final theme = Theme.of(replyContext);
+          final hasBackground =
+              ChatsSvc.getChatState(controller.chat.guid)?.customBackgroundPath.value?.isNotEmpty == true;
           return Container(
             margin: const EdgeInsets.all(5),
-            decoration: BoxDecoration(
-              border: Border.all(
-                width: 2,
-                style: BorderStyle.solid,
-                color: theme.colorScheme.surfaceContainerHighest,
-              ),
-              borderRadius: BorderRadius.circular(19),
-            ),
+            decoration: hasBackground
+                ? BoxDecoration(
+                    color: theme.colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(19),
+                  )
+                : BoxDecoration(
+                    border: Border.all(
+                      width: 2,
+                      style: BorderStyle.solid,
+                      color: theme.colorScheme.surfaceContainerHighest,
+                    ),
+                    borderRadius: BorderRadius.circular(19),
+                  ),
             child: InkWell(
               borderRadius: BorderRadius.circular(19),
               onTap: onTap ??

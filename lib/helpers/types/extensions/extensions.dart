@@ -60,6 +60,7 @@ extension ClientMessageErrorExtension on ClientMessageError {
     ClientMessageError.notFound: 10005,
     ClientMessageError.editFailed: 10006,
     ClientMessageError.unsendFailed: 10007,
+    ClientMessageError.userCanceled: 10008,
   };
 
   static const friendlyTitles = {
@@ -70,6 +71,7 @@ extension ClientMessageErrorExtension on ClientMessageError {
     ClientMessageError.notFound: "Not Found",
     ClientMessageError.editFailed: "Edit Failed",
     ClientMessageError.unsendFailed: "Unsend Failed",
+    ClientMessageError.userCanceled: "Manually Canceled",
   };
 
   int get code => codes[this]!;

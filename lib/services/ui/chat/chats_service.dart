@@ -415,7 +415,7 @@ class ChatsService {
   /// The UI notification is deferred to the next frame so this is safe to call
   /// from [State.dispose] (while the widget tree may still be locked).
   void refreshSortOrder() {
-    _sortedChats.sort(Chat.sort);
+    _sortedChats.sort(_sortCompare);
     SchedulerBinding.instance.addPostFrameCallback((_) {
       _scheduleListVersionUpdate(immediate: true);
     });
@@ -437,6 +437,41 @@ class ChatsService {
     return _sortedChats;
   }
 
+  /// State-aware sort comparison used by [_findInsertionIndex] and [refreshSortOrder].
+  ///
+  /// Mirrors [Chat.sort] for pin-index ordering but resolves the latest-message
+  /// date from [chatStates] instead of [Chat.dbOnlyLatestMessageDate].  Using the
+  /// reactive state avoids a race condition where the DB write for the new message
+  /// has not yet completed when the chat list needs to be repositioned.
+  int _sortCompare(Chat a, Chat b) {
+    final aIsPinned = a.isPinned ?? false;
+    final bIsPinned = b.isPinned ?? false;
+
+    // Both pinned with an explicit order → sort by pinIndex.
+    if (aIsPinned && bIsPinned && a.pinIndex != null && b.pinIndex != null) {
+      return a.pinIndex!.compareTo(b.pinIndex!);
+    }
+
+    // b is ordered-pinned, a is not → b comes first.
+    if (bIsPinned && b.pinIndex != null && (!aIsPinned || a.pinIndex == null)) return 1;
+    // a is ordered-pinned, b is not → a comes first.
+    if (aIsPinned && a.pinIndex != null && (!bIsPinned || b.pinIndex == null)) return -1;
+
+    // One pinned, one not.
+    if (!aIsPinned && bIsPinned) return 1;
+    if (aIsPinned && !bIsPinned) return -1;
+
+    // Both unpinned (or both pinned without an index): sort by most-recent message.
+    // Use ChatState latestMessage date to avoid the DB-write race condition.
+    final aDate = chatStates[a.guid]?.latestMessage.value?.dateCreated ??
+        a.dbOnlyLatestMessageDate ??
+        DateTime.fromMillisecondsSinceEpoch(0);
+    final bDate = chatStates[b.guid]?.latestMessage.value?.dateCreated ??
+        b.dbOnlyLatestMessageDate ??
+        DateTime.fromMillisecondsSinceEpoch(0);
+    return -aDate.compareTo(bDate);
+  }
+
   /// Find the correct insertion index for a chat using binary search
   /// Returns the index where the chat should be inserted to maintain sort order
   int _findInsertionIndex(Chat chat) {
@@ -446,7 +481,7 @@ class ChatsService {
     while (left < right) {
       final mid = (left + right) ~/ 2;
       final midChat = _sortedChats[mid];
-      final comparison = Chat.sort(chat, midChat);
+      final comparison = _sortCompare(chat, midChat);
 
       if (comparison < 0) {
         right = mid;
@@ -1159,6 +1194,12 @@ class ChatsService {
 
     if (state != null && state.customBackgroundPath.value == value) return;
 
+    // Invalidate the adaptive theme cache for the old background path.
+    final oldPath = state?.customBackgroundPath.value ?? chat.customBackgroundPath;
+    if (oldPath != null && oldPath != value) {
+      ThemesService.clearAdaptiveThemeCache(oldPath);
+    }
+
     // Update Chat model (use state.chat if available, otherwise use passed in chat)
     final chatToUpdate = state?.chat ?? chat;
     chatToUpdate.customBackgroundPath = value;
@@ -1166,6 +1207,45 @@ class ChatsService {
 
     // Update state if available
     state?.updateCustomBackgroundPathInternal(value);
+  }
+
+  /// Enable or disable the adaptive chat theme for a specific chat
+  Future<void> setAdaptiveThemeEnabled(Chat chat, bool value) async {
+    final state = getChatState(chat.guid);
+
+    if (state != null && state.adaptiveThemeEnabled.value == value) return;
+
+    final chatToUpdate = state?.chat ?? chat;
+    chatToUpdate.adaptiveThemeEnabled = value;
+    await chatToUpdate.saveAsync(updateAdaptiveTheme: true);
+
+    state?.updateAdaptiveThemeEnabledInternal(value);
+  }
+
+  /// Set the light mode adaptive theme variant for a specific chat
+  Future<void> setAdaptiveThemeVariantLight(Chat chat, String? variant) async {
+    final state = getChatState(chat.guid);
+
+    if (state != null && state.adaptiveThemeVariantLight.value == variant) return;
+
+    final chatToUpdate = state?.chat ?? chat;
+    chatToUpdate.adaptiveThemeVariantLight = variant;
+    await chatToUpdate.saveAsync(updateAdaptiveTheme: true);
+
+    state?.updateAdaptiveThemeVariantLightInternal(variant);
+  }
+
+  /// Set the dark mode adaptive theme variant for a specific chat
+  Future<void> setAdaptiveThemeVariantDark(Chat chat, String? variant) async {
+    final state = getChatState(chat.guid);
+
+    if (state != null && state.adaptiveThemeVariantDark.value == variant) return;
+
+    final chatToUpdate = state?.chat ?? chat;
+    chatToUpdate.adaptiveThemeVariantDark = variant;
+    await chatToUpdate.saveAsync(updateAdaptiveTheme: true);
+
+    state?.updateAdaptiveThemeVariantDarkInternal(variant);
   }
 
   /// Set chat latest message

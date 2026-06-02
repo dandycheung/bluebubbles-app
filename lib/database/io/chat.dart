@@ -57,6 +57,9 @@ class Chat {
   bool lockChatName;
   bool lockChatIcon;
   String? lastReadMessageGuid;
+  bool adaptiveThemeEnabled;
+  String? adaptiveThemeVariantLight;
+  String? adaptiveThemeVariantDark;
 
   final RxnString _customAvatarPath = RxnString();
   String? get customAvatarPath => _customAvatarPath.value;
@@ -117,6 +120,9 @@ class Chat {
     this.lockChatName = false,
     this.lockChatIcon = false,
     this.lastReadMessageGuid,
+    this.adaptiveThemeEnabled = false,
+    this.adaptiveThemeVariantLight,
+    this.adaptiveThemeVariantDark,
   }) {
     customAvatarPath = customAvatar;
     customBackgroundPath = customBackground;
@@ -150,6 +156,9 @@ class Chat {
       lockChatName: json["lockChatName"] ?? false,
       lockChatIcon: json["lockChatIcon"] ?? false,
       lastReadMessageGuid: json["lastReadMessageGuid"],
+      adaptiveThemeEnabled: json["adaptiveThemeEnabled"] ?? false,
+      adaptiveThemeVariantLight: json["adaptiveThemeVariantLight"],
+      adaptiveThemeVariantDark: json["adaptiveThemeVariantDark"],
       textFieldText: json["textFieldText"],
       textFieldAttachments: (json["textFieldAttachments"] as List?)?.cast<String>() ?? const [],
     );
@@ -175,6 +184,7 @@ class Chat {
     bool updateLockChatIcon = false,
     bool updateLastReadMessageGuid = false,
     bool updateLatestMessage = false,
+    bool updateAdaptiveTheme = false,
   }) async {
     if (kIsWeb) return this;
 
@@ -200,6 +210,7 @@ class Chat {
         'updateLockChatIcon': updateLockChatIcon,
         'updateLastReadMessageGuid': updateLastReadMessageGuid,
         'updateLatestMessage': updateLatestMessage,
+        'updateAdaptiveTheme': updateAdaptiveTheme,
       },
     );
 
@@ -851,6 +862,9 @@ class Chat {
       "lockChatName": lockChatName,
       "lockChatIcon": lockChatIcon,
       "lastReadMessageGuid": lastReadMessageGuid,
+      "adaptiveThemeEnabled": adaptiveThemeEnabled,
+      "adaptiveThemeVariantLight": adaptiveThemeVariantLight,
+      "adaptiveThemeVariantDark": adaptiveThemeVariantDark,
       "textFieldText": textFieldText,
       "textFieldAttachments": textFieldAttachments,
       "dbOnlyLatestMessageDate": dbOnlyLatestMessageDate?.millisecondsSinceEpoch,

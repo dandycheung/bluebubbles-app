@@ -112,6 +112,11 @@ class ChatActions {
       if (updateFlags['updateLastReadMessageGuid']!) {
         chat.lastReadMessageGuid = inputChat.lastReadMessageGuid;
       }
+      if (updateFlags['updateAdaptiveTheme'] == true) {
+        chat.adaptiveThemeEnabled = inputChat.adaptiveThemeEnabled;
+        chat.adaptiveThemeVariantLight = inputChat.adaptiveThemeVariantLight;
+        chat.adaptiveThemeVariantDark = inputChat.adaptiveThemeVariantDark;
+      }
       if (updateFlags['updateLatestMessage'] == true) {
         final latestMessageId = chatData['dbLatestMessageId'] as int?;
         final latestMessageDateMs = chatData['dbOnlyLatestMessageDate'] as int?;

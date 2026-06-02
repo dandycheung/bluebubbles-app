@@ -122,8 +122,8 @@ class _ConversationListState extends CustomState<ConversationList, void, Convers
     tag = controller.showArchivedChats
         ? "Archived"
         : controller.showUnknownSenders
-        ? "Unknown"
-        : "Messages";
+            ? "Unknown"
+            : "Messages";
 
     if (!SettingsSvc.settings.reachedConversationList.value) {
       _initTimer = Timer.periodic(const Duration(seconds: 1), (Timer t) {

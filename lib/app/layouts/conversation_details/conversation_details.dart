@@ -61,142 +61,162 @@ class _ConversationDetailsState extends State<ConversationDetails> with WidgetsB
 
   @override
   Widget build(BuildContext context) {
+    final chatState = ChatsSvc.getOrCreateChatState(chat);
     return ChatStateScope(
-      chatState: ChatsSvc.getOrCreateChatState(chat),
-      child: Theme(
-          data: context.theme.copyWith(
-            // in case some components still use legacy theming
-            primaryColor: context.theme.colorScheme.bubble(context, chat.isIMessage),
-            colorScheme: context.theme.colorScheme.copyWith(
-              primary: context.theme.colorScheme.bubble(context, chat.isIMessage),
-              onPrimary: context.theme.colorScheme.onBubble(context, chat.isIMessage),
-              surface: ThemeSvc.isMaterialYouActive(context)
-                  ? null
-                  : (context.theme.extensions[BubbleColors] as BubbleColors?)?.receivedBubbleColor,
-              onSurface: ThemeSvc.isMaterialYouActive(context)
-                  ? null
-                  : (context.theme.extensions[BubbleColors] as BubbleColors?)?.onReceivedBubbleColor,
+      chatState: chatState,
+      child: Obx(() {
+        // Reactively resolve adaptive theme for this chat.
+        ThemeData baseTheme = context.theme;
+        final adaptiveEnabled = chatState.adaptiveThemeEnabled.value;
+        final adaptiveThemes = chatState.adaptiveThemes.value;
+        final isDark = ThemeSvc.inDarkMode(context);
+        final variantName =
+            isDark ? chatState.adaptiveThemeVariantDark.value : chatState.adaptiveThemeVariantLight.value;
+
+        if (adaptiveEnabled && adaptiveThemes != null && variantName != null) {
+          final variant = MaterialYouVariant.values.where((v) => v.name == variantName).firstOrNull;
+          if (variant != null && adaptiveThemes.containsKey(variant)) {
+            final pair = adaptiveThemes[variant]!;
+            baseTheme = isDark ? pair.dark : pair.light;
+          }
+        }
+
+        return Theme(
+            data: baseTheme.copyWith(
+              // in case some components still use legacy theming
+              primaryColor: baseTheme.colorScheme.bubble(context, chat.isIMessage),
+              colorScheme: baseTheme.colorScheme.copyWith(
+                primary: baseTheme.colorScheme.bubble(context, chat.isIMessage),
+                onPrimary: baseTheme.colorScheme.onBubble(context, chat.isIMessage),
+                surface: ThemeSvc.isMaterialYouActive(context)
+                    ? null
+                    : (context.theme.extensions[BubbleColors] as BubbleColors?)?.receivedBubbleColor,
+                onSurface: ThemeSvc.isMaterialYouActive(context)
+                    ? null
+                    : (context.theme.extensions[BubbleColors] as BubbleColors?)?.onReceivedBubbleColor,
+              ),
             ),
-          ),
-          child: Obx(() => SettingsScaffold(
-                headerColor: headerColor,
-                title: "Details",
-                tileColor: tileColor,
-                initialHeader: null,
-                iosSubtitle: iosSubtitle,
-                materialSubtitle: materialSubtitle,
-                actions: [
-                  Obx(() {
-                    if (selected.isNotEmpty) {
-                      return IconButton(
-                        icon:
-                            Icon(iOS ? CupertinoIcons.xmark : Icons.close, color: context.theme.colorScheme.onSurface),
-                        onPressed: () {
-                          selected.clear();
-                        },
-                      );
-                    } else {
-                      return const SizedBox.shrink();
-                    }
-                  }),
-                  Obx(() {
-                    if (selected.isNotEmpty) {
-                      return IconButton(
-                        icon: Icon(iOS ? CupertinoIcons.cloud_download : Icons.file_download,
-                            color: context.theme.colorScheme.onSurface),
-                        onPressed: () {
-                          final attachments = media.where((e) => selected.contains(e.guid!));
-                          for (Attachment a in attachments) {
-                            final file = AttachmentsSvc.getContent(a, autoDownload: false);
-                            if (file is PlatformFile) {
-                              AttachmentsSvc.saveToDisk(file);
-                            }
-                          }
-                        },
-                      );
-                    } else {
-                      return const SizedBox.shrink();
-                    }
-                  }),
-                ],
-                bodySlivers: [
-                  SliverToBoxAdapter(
-                    child: ChatInfo(chat: chat),
-                  ),
-                  ParticipantsList(chat: chat),
-                  // Hidden widget that loads attachments in the background
-                  SliverToBoxAdapter(
-                    child: AttachmentsLoader(
-                      chat: chat,
-                      onAttachmentsLoaded: onAttachmentsLoaded,
-                    ),
-                  ),
-                  if (chat.handles.length > 2 &&
-                      SettingsSvc.settings.enablePrivateAPI.value &&
-                      SettingsSvc.serverDetails.supportsGroupChatManagement)
-                    SliverToBoxAdapter(
-                      child: Builder(builder: (context) {
-                        return ListTile(
-                          mouseCursor: MouseCursor.defer,
-                          title: Text("Leave ${iOS ? "Chat" : "chat"}",
-                              style:
-                                  context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.error)),
-                          leading: Container(
-                            width: 40 * SettingsSvc.settings.avatarScale.value,
-                            height: 40 * SettingsSvc.settings.avatarScale.value,
-                            decoration: BoxDecoration(
-                                color: !iOS ? null : context.theme.colorScheme.surfaceContainerHighest,
-                                shape: BoxShape.circle,
-                                border: iOS ? null : Border.all(color: context.theme.colorScheme.error, width: 3)),
-                            child: Icon(Icons.error_outline, color: context.theme.colorScheme.error, size: 20),
-                          ),
-                          onTap: () async {
-                            showDialog(
-                                context: context,
-                                builder: (BuildContext context) {
-                                  return AlertDialog(
-                                    backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
-                                    title: Text(
-                                      "Leaving chat...",
-                                      style: context.theme.textTheme.titleLarge,
-                                    ),
-                                    content: SizedBox(
-                                      height: 70,
-                                      child: Center(
-                                        child: CircularProgressIndicator(
-                                          backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
-                                          valueColor: AlwaysStoppedAnimation<Color>(context.theme.colorScheme.primary),
-                                        ),
-                                      ),
-                                    ),
-                                  );
-                                });
-                            final response = await HttpSvc.chat.leave(chat.guid);
-                            if (!context.mounted) return;
-                            if (response.statusCode == 200) {
-                              Navigator.of(context, rootNavigator: true).pop();
-                              showSnackbar("Notice", "Left chat successfully!");
-                            } else {
-                              Navigator.of(context, rootNavigator: true).pop();
-                              showSnackbar("Error", "Failed to leave chat!");
+            child: Obx(() => SettingsScaffold(
+                  headerColor: headerColor,
+                  title: "Details",
+                  tileColor: tileColor,
+                  initialHeader: null,
+                  iosSubtitle: iosSubtitle,
+                  materialSubtitle: materialSubtitle,
+                  actions: [
+                    Obx(() {
+                      if (selected.isNotEmpty) {
+                        return IconButton(
+                          icon: Icon(iOS ? CupertinoIcons.xmark : Icons.close,
+                              color: context.theme.colorScheme.onSurface),
+                          onPressed: () {
+                            selected.clear();
+                          },
+                        );
+                      } else {
+                        return const SizedBox.shrink();
+                      }
+                    }),
+                    Obx(() {
+                      if (selected.isNotEmpty) {
+                        return IconButton(
+                          icon: Icon(iOS ? CupertinoIcons.cloud_download : Icons.file_download,
+                              color: context.theme.colorScheme.onSurface),
+                          onPressed: () {
+                            final attachments = media.where((e) => selected.contains(e.guid!));
+                            for (Attachment a in attachments) {
+                              final file = AttachmentsSvc.getContent(a, autoDownload: false);
+                              if (file is PlatformFile) {
+                                AttachmentsSvc.saveToDisk(file);
+                              }
                             }
                           },
                         );
-                      }),
+                      } else {
+                        return const SizedBox.shrink();
+                      }
+                    }),
+                  ],
+                  bodySlivers: [
+                    SliverToBoxAdapter(
+                      child: ChatInfo(chat: chat),
                     ),
-                  const SliverPadding(
-                    padding: EdgeInsets.symmetric(vertical: 10),
-                  ),
-                  ChatOptions(chat: chat),
-                  MediaGridSection(media: media, selected: selected, isLoading: isLoadingAttachments),
-                  LinksSection(chat: chat),
-                  LocationsSection(locations: locations, isLoading: isLoadingAttachments),
-                  DocumentsSection(docs: docs, isLoading: isLoadingAttachments),
-                  const SliverPadding(
-                    padding: EdgeInsets.only(top: 50),
-                  ),
-                ],
-              ))),
+                    ParticipantsList(chat: chat),
+                    // Hidden widget that loads attachments in the background
+                    SliverToBoxAdapter(
+                      child: AttachmentsLoader(
+                        chat: chat,
+                        onAttachmentsLoaded: onAttachmentsLoaded,
+                      ),
+                    ),
+                    if (chat.handles.length > 2 &&
+                        SettingsSvc.settings.enablePrivateAPI.value &&
+                        SettingsSvc.serverDetails.supportsGroupChatManagement)
+                      SliverToBoxAdapter(
+                        child: Builder(builder: (context) {
+                          return ListTile(
+                            mouseCursor: MouseCursor.defer,
+                            title: Text("Leave ${iOS ? "Chat" : "chat"}",
+                                style: context.theme.textTheme.bodyLarge!
+                                    .copyWith(color: context.theme.colorScheme.error)),
+                            leading: Container(
+                              width: 40 * SettingsSvc.settings.avatarScale.value,
+                              height: 40 * SettingsSvc.settings.avatarScale.value,
+                              decoration: BoxDecoration(
+                                  color: !iOS ? null : context.theme.colorScheme.surfaceContainerHighest,
+                                  shape: BoxShape.circle,
+                                  border: iOS ? null : Border.all(color: context.theme.colorScheme.error, width: 3)),
+                              child: Icon(Icons.error_outline, color: context.theme.colorScheme.error, size: 20),
+                            ),
+                            onTap: () async {
+                              showDialog(
+                                  context: context,
+                                  builder: (BuildContext context) {
+                                    return AlertDialog(
+                                      backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
+                                      title: Text(
+                                        "Leaving chat...",
+                                        style: context.theme.textTheme.titleLarge,
+                                      ),
+                                      content: SizedBox(
+                                        height: 70,
+                                        child: Center(
+                                          child: CircularProgressIndicator(
+                                            backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
+                                            valueColor:
+                                                AlwaysStoppedAnimation<Color>(context.theme.colorScheme.primary),
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  });
+                              final response = await HttpSvc.chat.leave(chat.guid);
+                              if (!context.mounted) return;
+                              if (response.statusCode == 200) {
+                                Navigator.of(context, rootNavigator: true).pop();
+                                showSnackbar("Notice", "Left chat successfully!");
+                              } else {
+                                Navigator.of(context, rootNavigator: true).pop();
+                                showSnackbar("Error", "Failed to leave chat!");
+                              }
+                            },
+                          );
+                        }),
+                      ),
+                    const SliverPadding(
+                      padding: EdgeInsets.symmetric(vertical: 10),
+                    ),
+                    ChatOptions(chat: chat),
+                    MediaGridSection(media: media, selected: selected, isLoading: isLoadingAttachments),
+                    LinksSection(chat: chat),
+                    LocationsSection(locations: locations, isLoading: isLoadingAttachments),
+                    DocumentsSection(docs: docs, isLoading: isLoadingAttachments),
+                    const SliverPadding(
+                      padding: EdgeInsets.only(top: 50),
+                    ),
+                  ],
+                )));
+      }),
     );
   }
 }

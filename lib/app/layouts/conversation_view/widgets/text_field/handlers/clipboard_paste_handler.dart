@@ -26,9 +26,9 @@ class ClipboardPasteHandler {
         if (gifMatch != null) {
           final url = gifMatch.group(1)!;
           final response = await GetIt.I<HttpService>().dio.get<List<int>>(
-            url,
-            options: Options(responseType: ResponseType.bytes),
-          );
+                url,
+                options: Options(responseType: ResponseType.bytes),
+              );
           final bytes = response.data;
           if (bytes != null && bytes.isNotEmpty) {
             final gifBytes = Uint8List.fromList(bytes);
