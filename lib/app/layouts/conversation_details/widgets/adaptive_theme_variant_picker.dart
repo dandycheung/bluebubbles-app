@@ -1,4 +1,5 @@
 import 'package:bluebubbles/database/models.dart';
+import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/services/services.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -44,13 +45,13 @@ class AdaptiveThemeVariantPicker extends StatelessWidget {
       final selectedVariant =
           isLight ? chatState?.adaptiveThemeVariantLight.value : chatState?.adaptiveThemeVariantDark.value;
       return Container(
-        height: 96,
+        height: 130,
         color: backgroundColor,
         child: themes == null
             ? const Center(child: CircularProgressIndicator.adaptive())
             : ListView.builder(
                 scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 itemCount: MaterialYouVariant.values.length,
                 itemBuilder: (context, index) {
                   final variant = MaterialYouVariant.values[index];
@@ -58,12 +59,10 @@ class AdaptiveThemeVariantPicker extends StatelessWidget {
                   final themeData = isLight ? pair.light : pair.dark;
                   final isSelected = variant.name == selectedVariant;
 
-                  return _VariantSwatch(
+                  return _VariantPreviewCard(
                     variant: variant,
                     label: _displayNames[variant] ?? variant.name,
-                    primaryColor: themeData.colorScheme.primary,
-                    secondaryColor: themeData.colorScheme.secondary,
-                    surfaceColor: themeData.colorScheme.surface,
+                    themeData: themeData,
                     isSelected: isSelected,
                     onTap: () => isLight
                         ? ChatsSvc.setAdaptiveThemeVariantLight(chat, variant.name)
@@ -76,27 +75,27 @@ class AdaptiveThemeVariantPicker extends StatelessWidget {
   }
 }
 
-class _VariantSwatch extends StatelessWidget {
-  const _VariantSwatch({
+class _VariantPreviewCard extends StatelessWidget {
+  const _VariantPreviewCard({
     required this.variant,
     required this.label,
-    required this.primaryColor,
-    required this.secondaryColor,
-    required this.surfaceColor,
+    required this.themeData,
     required this.isSelected,
     required this.onTap,
   });
 
   final MaterialYouVariant variant;
   final String label;
-  final Color primaryColor;
-  final Color secondaryColor;
-  final Color surfaceColor;
+  final ThemeData themeData;
   final bool isSelected;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    final cs = themeData.colorScheme;
+    final bubbleColors = themeData.extensions[BubbleColors] as BubbleColors?;
+    final sentColor = bubbleColors?.iMessageBubbleColor ?? cs.iMessageBubble;
+    final onSentColor = bubbleColors?.oniMessageBubbleColor ?? cs.oniMessageBubble;
     return GestureDetector(
       onTap: onTap,
       child: Center(
@@ -105,52 +104,107 @@ class _VariantSwatch extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 150),
-                width: 46,
-                height: 46,
-                decoration: BoxDecoration(
-                  color: primaryColor,
-                  borderRadius: BorderRadius.circular(12),
-                  border: isSelected
-                      ? Border.all(color: context.theme.colorScheme.onSurface, width: 2.5)
-                      : Border.all(color: Colors.transparent, width: 2.5),
-                  boxShadow: isSelected
-                      ? [
-                          BoxShadow(
-                            color: primaryColor.withValues(alpha: 0.4),
-                            blurRadius: 6,
-                            offset: const Offset(0, 2),
-                          )
-                        ]
-                      : null,
-                ),
-                child: Stack(
-                  children: [
-                    // Secondary color accent dot in bottom-right
-                    Positioned(
-                      right: 4,
-                      bottom: 4,
-                      child: Container(
-                        width: 12,
-                        height: 12,
-                        decoration: BoxDecoration(
-                          color: secondaryColor,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: surfaceColor.withValues(alpha: 0.6), width: 1),
-                        ),
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  // Content clipped to rounded rect
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: SizedBox(
+                      width: 80,
+                      height: 88,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          // Messages area
+                          Expanded(
+                            child: Container(
+                              color: cs.surface,
+                              padding: const EdgeInsets.fromLTRB(6, 5, 6, 3),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  _miniBubble('Hey! 👋', false, cs),
+                                  const SizedBox(height: 3),
+                                  _miniBubble('Hi there!', true, cs),
+                                  const SizedBox(height: 3),
+                                  _miniBubble('How are you?', false, cs),
+                                ],
+                              ),
+                            ),
+                          ),
+                          // Text field
+                          Container(
+                            height: 18,
+                            color: cs.surface,
+                            padding: const EdgeInsets.fromLTRB(5, 0, 5, 4),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.35), width: 0.5),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              padding: const EdgeInsets.fromLTRB(5, 0, 3, 0),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      'iMessage',
+                                      style: TextStyle(color: cs.outline.withValues(alpha: 0.6), fontSize: 5),
+                                    ),
+                                  ),
+                                  Container(
+                                    width: 9,
+                                    height: 9,
+                                    decoration: BoxDecoration(color: sentColor, shape: BoxShape.circle),
+                                    child: Icon(Icons.arrow_upward_rounded, size: 6, color: onSentColor),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    if (isSelected)
-                      const Positioned(
-                        left: 4,
-                        top: 4,
-                        child: Icon(Icons.check, size: 14, color: Colors.white),
+                  ),
+                  // Border + shadow overlay painted on top of content so it's fully visible
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 150),
+                    width: 80,
+                    height: 88,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: isSelected ? sentColor : cs.outlineVariant.withValues(alpha: 0.5),
+                        width: isSelected ? 2 : 1,
                       ),
-                  ],
-                ),
+                      boxShadow: isSelected
+                          ? [
+                              BoxShadow(
+                                  color: sentColor.withValues(alpha: 0.35), blurRadius: 8, offset: const Offset(0, 2))
+                            ]
+                          : null,
+                    ),
+                  ),
+                  // Selection checkmark badge
+                  if (isSelected)
+                    Positioned(
+                      right: -5,
+                      bottom: -5,
+                      child: Container(
+                        width: 18,
+                        height: 18,
+                        decoration: BoxDecoration(
+                          color: sentColor,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: context.theme.colorScheme.surface, width: 1.5),
+                        ),
+                        child: Icon(Icons.check_rounded, size: 11, color: onSentColor),
+                      ),
+                    ),
+                ],
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 8),
               Text(
                 label,
                 style: context.theme.textTheme.labelSmall!.copyWith(
@@ -160,6 +214,41 @@ class _VariantSwatch extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _miniBubble(String text, bool isMe, ColorScheme cs) {
+    final bubbleColors = themeData.extensions[BubbleColors] as BubbleColors?;
+    // Mirror conversation_view: use explicit BubbleColors values first (set by
+    // materialYouTheme to `primary` / `surfaceVariant`), then fall back to
+    // the computed colorfulness-based getters.
+    final bg = isMe
+        ? (bubbleColors?.iMessageBubbleColor ?? cs.iMessageBubble)
+        : (bubbleColors?.receivedBubbleColor ?? cs.surfaceContainerHighest);
+    final textColor = isMe
+        ? (bubbleColors?.oniMessageBubbleColor ?? cs.oniMessageBubble)
+        : (bubbleColors?.onReceivedBubbleColor ?? cs.onSurfaceVariant);
+    return Align(
+      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 58),
+        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2.5),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.only(
+            topLeft: const Radius.circular(8),
+            topRight: const Radius.circular(8),
+            bottomLeft: Radius.circular(isMe ? 8 : 2),
+            bottomRight: Radius.circular(isMe ? 2 : 8),
+          ),
+        ),
+        child: Text(
+          text,
+          style: TextStyle(color: textColor, fontSize: 5.5),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
       ),
     );

@@ -150,9 +150,7 @@ class _BackgroundCropState extends State<BackgroundCrop> with ThemeHelpers {
                 child: Text(
                   "NEXT",
                   style: context.theme.textTheme.bodyLarge!.apply(
-                    color: _isLoading
-                        ? context.theme.colorScheme.outline
-                        : context.theme.colorScheme.primary,
+                    color: _isLoading ? context.theme.colorScheme.outline : context.theme.colorScheme.primary,
                   ),
                 ),
                 onPressed: () => _cropController.crop(),
