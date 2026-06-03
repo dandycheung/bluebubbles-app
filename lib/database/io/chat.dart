@@ -92,7 +92,9 @@ class Chat {
   @Transient()
   String get fakeName {
     if (_fakeName != null) return _fakeName!;
-    _fakeName = faker.lorem.words(getTitle().split(' ').length).join(" ").capitalize;
+    final color = faker.color.color();
+    final animal = faker.animal.name();
+    _fakeName = "${color.capitalize} ${animal.capitalize}";
     return _fakeName!;
   }
 

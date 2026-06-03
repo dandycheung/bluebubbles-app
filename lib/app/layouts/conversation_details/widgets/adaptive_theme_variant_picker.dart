@@ -178,12 +178,6 @@ class _VariantPreviewCard extends StatelessWidget {
                         color: isSelected ? sentColor : cs.outlineVariant.withValues(alpha: 0.5),
                         width: isSelected ? 2 : 1,
                       ),
-                      boxShadow: isSelected
-                          ? [
-                              BoxShadow(
-                                  color: sentColor.withValues(alpha: 0.35), blurRadius: 8, offset: const Offset(0, 2))
-                            ]
-                          : null,
                     ),
                   ),
                   // Selection checkmark badge

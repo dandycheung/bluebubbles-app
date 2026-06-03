@@ -58,7 +58,6 @@ class ChatsService {
   /// Listeners for redacted mode settings to update all ChatStates
   StreamSubscription? _redactedModeListener;
   StreamSubscription? _hideContactInfoListener;
-  StreamSubscription? _generateFakeContactNamesListener;
   StreamSubscription? _generateFakeAvatarsListener;
   StreamSubscription? _hideAttachmentsListener;
 
@@ -327,7 +326,6 @@ class ChatsService {
     // Cancel existing listeners if any
     _redactedModeListener?.cancel();
     _hideContactInfoListener?.cancel();
-    _generateFakeContactNamesListener?.cancel();
     _generateFakeAvatarsListener?.cancel();
     _hideAttachmentsListener?.cancel();
 
@@ -344,17 +342,6 @@ class ChatsService {
 
     // Listen to hideContactInfo toggle - only affects contact info fields
     _hideContactInfoListener = SettingsSvc.settings.hideContactInfo.listen((enabled) {
-      for (final chatState in chatStates.values) {
-        if (enabled) {
-          chatState.redactContactInfo();
-        } else {
-          chatState.unredactContactInfo();
-        }
-      }
-    });
-
-    // Listen to generateFakeContactNames toggle - only affects contact info fields
-    _generateFakeContactNamesListener = SettingsSvc.settings.generateFakeContactNames.listen((enabled) {
       for (final chatState in chatStates.values) {
         if (enabled) {
           chatState.redactContactInfo();
@@ -426,7 +413,6 @@ class ChatsService {
     _listVersionUpdateTimer?.cancel();
     _redactedModeListener?.cancel();
     _hideContactInfoListener?.cancel();
-    _generateFakeContactNamesListener?.cancel();
     _generateFakeAvatarsListener?.cancel();
     _hideAttachmentsListener?.cancel();
   }

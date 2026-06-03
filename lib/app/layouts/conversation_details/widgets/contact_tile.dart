@@ -81,8 +81,10 @@ class ContactTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final handleState = HandleSvc.getOrCreateHandleState(handle);
     return Obx(() {
-      final bool hideInfo = SettingsSvc.settings.redactedMode.value && SettingsSvc.settings.hideContactInfo.value;
+      final String displayName = handleState.displayName.value ?? handle.address;
+      final String address = handleState.formattedAddress.value ?? handle.address;
       final bool isEmail = handle.address.isEmail;
       final child = InkWell(
         mouseCursor: MouseCursor.defer,
@@ -129,7 +131,7 @@ class ContactTile extends StatelessWidget {
                           const SizedBox(width: 8),
                           Flexible(
                             child: Text(
-                              handle.displayName,
+                              displayName,
                               style: context.theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -168,13 +170,16 @@ class ContactTile extends StatelessWidget {
         child: ListTile(
           title: RichText(
             text: TextSpan(
-              children: MessageHelper.buildEmojiText(handle.displayName, context.theme.textTheme.bodyLarge!),
+              children: MessageHelper.buildEmojiText(
+                displayName,
+                context.theme.textTheme.bodyLarge!,
+              ),
             ),
           ),
-          subtitle: handle.contactsV2.isEmpty || hideInfo
+          subtitle: handle.contactsV2.isEmpty
               ? null
               : Text(
-                  handle.formattedAddress ?? handle.address,
+                  address,
                   style: context.theme.textTheme.bodyMedium!.copyWith(color: context.theme.colorScheme.outline),
                 ),
           leading: ContactAvatarWidget(
