@@ -1,8 +1,8 @@
 import 'package:bluebubbles/app/layouts/conversation_details/dialogs/chat_sync_dialog.dart';
 import 'package:bluebubbles/app/layouts/conversation_details/dialogs/sync_time_range_dialog.dart';
 import 'package:bluebubbles/app/layouts/conversation_details/dialogs/timeframe_picker.dart';
-import 'package:bluebubbles/app/layouts/conversation_details/widgets/adaptive_theme_variant_picker.dart';
 import 'package:bluebubbles/app/layouts/conversation_view/widgets/message/reply/reply_thread_popup.dart';
+import 'package:bluebubbles/app/layouts/settings/pages/theming/theme_studio/theme_studio_panel.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/app/layouts/settings/widgets/settings_widgets.dart';
 import 'package:bluebubbles/app/layouts/settings/pages/theming/avatar/avatar_crop.dart';
@@ -144,7 +144,8 @@ class _ChatOptionsState extends State<ChatOptions> with ThemeHelpers {
                     ),
                   ),
                   onTap: () {
-                    if (chat.customBackgroundPath != null) {
+                    final backgroundPath = FilesystemSvc.getExistingChatBackgroundPath(chat.guid);
+                    if (backgroundPath != null) {
                       showDialog(
                         context: context,
                         builder: (BuildContext context) {
@@ -176,7 +177,7 @@ class _ChatOptionsState extends State<ChatOptions> with ThemeHelpers {
                                     style: context.theme.textTheme.bodyLarge!
                                         .copyWith(color: context.theme.colorScheme.error)),
                                 onPressed: () async {
-                                  final File bgFile = File(chat.customBackgroundPath!);
+                                  final File bgFile = File(backgroundPath);
                                   if (await bgFile.exists()) bgFile.delete();
                                   await ChatsSvc.setChatCustomBackgroundPath(chat, null);
                                   if (context.mounted) Navigator.of(context, rootNavigator: true).pop();
@@ -200,54 +201,41 @@ class _ChatOptionsState extends State<ChatOptions> with ThemeHelpers {
                     }
                   },
                 ),
+              if (!kIsWeb) const SettingsDivider(),
               if (!kIsWeb)
-                Obx(() {
-                  final chatState = ChatsSvc.getChatState(chat.guid);
-                  final hasBackground = chatState?.customBackgroundPath.value != null;
-                  if (!hasBackground) return const SizedBox.shrink();
-                  final adaptiveEnabled = chatState!.adaptiveThemeEnabled.value;
-                  return Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const SettingsDivider(),
-                      SettingsSwitch(
-                        title: "Adaptive Chat Theme",
-                        subtitle: "Generate a theme from your background image colors",
-                        initialVal: adaptiveEnabled,
-                        onChanged: (value) {
-                          ChatsSvc.setAdaptiveThemeEnabled(chat, value);
-                        },
-                        backgroundColor: tileColor,
+                SettingsTile(
+                  title: "Set Custom Theme",
+                  subtitle: "Choose light and dark chat themes in Theme Studio",
+                  backgroundColor: tileColor,
+                  trailing: Padding(
+                    padding: const EdgeInsets.only(right: 15.0),
+                    child: Icon(iOS ? CupertinoIcons.paintbrush : Icons.palette_outlined),
+                  ),
+                  onTap: () {
+                    final lightThemeName = chat.customThemeLight ?? ThemeStruct.getLightTheme().name;
+                    final darkThemeName = chat.customThemeDark ?? ThemeStruct.getDarkTheme().name;
+
+                    Get.to(
+                      () => ThemeStudioPanel(
+                        config: ThemeStudioPanelConfig(
+                          initialLightThemeName: lightThemeName,
+                          initialDarkThemeName: darkThemeName,
+                          adaptiveImagePath: FilesystemSvc.getExistingChatBackgroundPath(chat.guid),
+                          adaptiveThemeScopeKey: chat.guid,
+                          onApply: (lightTheme, darkTheme) async {
+                            final globalLight = ThemeStruct.getLightTheme().name;
+                            final globalDark = ThemeStruct.getDarkTheme().name;
+                            await ChatsSvc.setChatCustomThemes(
+                              chat,
+                              lightTheme: lightTheme.name == globalLight ? null : lightTheme.name,
+                              darkTheme: darkTheme.name == globalDark ? null : darkTheme.name,
+                            );
+                          },
+                        ),
                       ),
-                      if (adaptiveEnabled) ...[
-                        const SettingsDivider(),
-                        SettingsTile(
-                          title: "Light Mode Theme",
-                          subtitle: "Choose a variant for light mode",
-                          backgroundColor: tileColor,
-                          trailing: const SizedBox.shrink(),
-                        ),
-                        AdaptiveThemeVariantPicker(
-                          chat: chat,
-                          brightness: Brightness.light,
-                          backgroundColor: tileColor,
-                        ),
-                        const SettingsDivider(),
-                        SettingsTile(
-                          title: "Dark Mode Theme",
-                          subtitle: "Choose a variant for dark mode",
-                          backgroundColor: tileColor,
-                          trailing: const SizedBox.shrink(),
-                        ),
-                        AdaptiveThemeVariantPicker(
-                          chat: chat,
-                          brightness: Brightness.dark,
-                          backgroundColor: tileColor,
-                        ),
-                      ],
-                    ],
-                  );
-                }),
+                    );
+                  },
+                ),
               const SettingsDivider(),
               if (iOS)
                 SettingsTile(
