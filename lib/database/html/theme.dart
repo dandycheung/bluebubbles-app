@@ -33,7 +33,8 @@ class ThemeStruct {
     if (googleFont.isEmpty) googleFont = 'Default';
   }
 
-  bool get isPreset => ThemesService.defaultThemes.map((e) => e.name).contains(name) ||
+  bool get isPreset =>
+      ThemesService.defaultThemes.map((e) => e.name).contains(name) ||
       ThemesService.isAdaptiveBackgroundThemeName(name);
 
   ThemeStruct save({bool updateIfNotAbsent = true}) {

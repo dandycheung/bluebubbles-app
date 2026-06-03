@@ -49,7 +49,8 @@ class _ThemeSelectorSectionState extends State<ThemeSelectorSection> {
 
     // Partition by brightness
     final lightAll = all
-        .where((t) => t.data.colorScheme.brightness == Brightness.light && controller.includeInGeneralThemeLists(t.name))
+        .where(
+            (t) => t.data.colorScheme.brightness == Brightness.light && controller.includeInGeneralThemeLists(t.name))
         .toList();
     final darkAll = all
         .where((t) => t.data.colorScheme.brightness == Brightness.dark && controller.includeInGeneralThemeLists(t.name))

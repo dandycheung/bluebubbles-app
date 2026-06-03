@@ -98,12 +98,8 @@ class _ConversationDetailsState extends State<ConversationDetails> with WidgetsB
               colorScheme: baseTheme.colorScheme.copyWith(
                 primary: bubbleColor,
                 onPrimary: onBubbleColor,
-                surface: useGeneratedThemeSurface
-                    ? null
-                    : bubbleColors?.receivedBubbleColor,
-                onSurface: useGeneratedThemeSurface
-                    ? null
-                    : bubbleColors?.onReceivedBubbleColor,
+                surface: useGeneratedThemeSurface ? null : bubbleColors?.receivedBubbleColor,
+                onSurface: useGeneratedThemeSurface ? null : bubbleColors?.onReceivedBubbleColor,
               ),
             ),
             child: Obx(() => SettingsScaffold(

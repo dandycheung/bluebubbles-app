@@ -1204,9 +1204,8 @@ class ChatsService {
     String? darkTheme,
   }) async {
     final state = getChatState(chat.guid);
-    final changed = state == null ||
-        state.customThemeLight.value != lightTheme ||
-        state.customThemeDark.value != darkTheme;
+    final changed =
+        state == null || state.customThemeLight.value != lightTheme || state.customThemeDark.value != darkTheme;
     final chatToUpdate = state?.chat ?? chat;
     chatToUpdate.customThemeLight = lightTheme;
     chatToUpdate.customThemeDark = darkTheme;
