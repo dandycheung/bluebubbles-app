@@ -121,8 +121,8 @@ class ConversationViewState extends State<ConversationView> with ThemeHelpers<Co
           Builder(
             builder: (context) {
               final bottomInset = MediaQuery.paddingOf(context).bottom;
-              return Obx(() => Padding(
-                    padding: EdgeInsets.only(bottom: controller.showAttachmentPicker.value ? 0 : bottomInset),
+              return Padding(
+                    padding: EdgeInsets.only(bottom: bottomInset),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
@@ -147,7 +147,7 @@ class ConversationViewState extends State<ConversationView> with ThemeHelpers<Co
                         ),
                       ],
                     ),
-                  ));
+                  );
             },
           ),
         ],
