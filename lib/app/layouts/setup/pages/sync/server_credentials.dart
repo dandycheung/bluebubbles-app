@@ -31,17 +31,20 @@ class _ServerCredentialsState extends State<ServerCredentials> with ThemeHelpers
   final TextEditingController passwordController = TextEditingController();
   final controller = Get.find<SetupViewController>();
   final FocusScopeNode focusScopeNode = FocusScopeNode(traversalEdgeBehavior: TraversalEdgeBehavior.stop);
+  final googleFlow = GoogleOAuthFlowController();
 
   final RxBool showLoginButtons = true.obs;
   final RxBool obscureText = true.obs;
 
-  final Rxn<String> token = Rxn<String>();
-  final Rxn<String> googleName = Rxn<String>();
-  final Rxn<String> googlePicture = Rxn<String>();
-  final RxList<Map> usableProjects = <Map>[].obs;
-  List<RxBool> triedConnecting = [];
-  List<RxBool> reachable = [];
-  final RxBool fetchingFirebase = false.obs;
+  Rxn<String> get token => googleFlow.token;
+  Rxn<String> get googleName => googleFlow.googleName;
+  Rxn<String> get googlePicture => googleFlow.googlePicture;
+  RxList<Map> get usableProjects => googleFlow.usableProjects;
+  RxList<RxBool> get triedConnecting => googleFlow.triedConnecting;
+  RxList<RxBool> get reachable => googleFlow.reachable;
+  RxBool get fetchingFirebase => googleFlow.fetchingFirebase;
+  RxBool get googleSignInInFlight => googleFlow.googleSignInInFlight;
+  RxString get googleSignInStatus => googleFlow.googleSignInStatus;
 
   @override
   Widget build(BuildContext context) {
@@ -171,11 +174,7 @@ class _ServerCredentialsState extends State<ServerCredentials> with ThemeHelpers
                                 const SizedBox(height: 10),
                                 if (!fetchingFirebase.value)
                                   ElevatedButton(
-                                    onPressed: () {
-                                      for (int i = 0; i < triedConnecting.length; i++) {
-                                        triedConnecting[i].value = false;
-                                      }
-                                    },
+                                    onPressed: googleFlow.retryConnections,
                                     child: const Text("Retry Connections"),
                                   ),
                                 if (!fetchingFirebase.value) const SizedBox(height: 10),
@@ -227,9 +226,8 @@ class _ServerCredentialsState extends State<ServerCredentials> with ThemeHelpers
                       minimumSize: WidgetStateProperty.all(buttonSize),
                     ),
                     onPressed: () async {
-                      token.value = null;
-                      googleName.value = null;
-                      googlePicture.value = null;
+                      controller.updateConnectError("");
+                      await googleFlow.chooseDifferentAccount();
                     },
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -242,6 +240,21 @@ class _ServerCredentialsState extends State<ServerCredentials> with ThemeHelpers
                   ),
                 ),
               if (token.value != null) const SizedBox(height: 10),
+              if (googleName.value == null && showLoginButtons.value)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: AnimatedOpacity(
+                    duration: const Duration(milliseconds: 150),
+                    opacity: googleSignInInFlight.value ? 1 : 0,
+                    child: Text(
+                      googleSignInStatus.value,
+                      textAlign: TextAlign.center,
+                      style: context.theme.textTheme.bodyMedium?.copyWith(
+                        color: context.theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ),
               if (googleName.value == null && showLoginButtons.value)
                 Container(
                   decoration: BoxDecoration(
@@ -261,29 +274,30 @@ class _ServerCredentialsState extends State<ServerCredentials> with ThemeHelpers
                       maximumSize: WidgetStateProperty.all(buttonSize),
                       minimumSize: WidgetStateProperty.all(buttonSize),
                     ),
-                    onPressed: () async {
-                      token.value = await googleOAuth(context);
-                      if (token.value != null) {
-                        final response = await HttpSvc.firebase.getGoogleInfo(token.value!);
-                        googleName.value = response.data['name'];
-                        googlePicture.value = response.data['picture'];
-                        fetchingFirebase.value = true;
-                        fetchFirebaseProjects(token.value!).then((List<Map> value) async {
-                          usableProjects.value = value;
-                          triedConnecting = List.generate(usableProjects.length, (i) => false.obs);
-                          reachable = List.generate(usableProjects.length, (i) => false.obs);
-                          fetchingFirebase.value = false;
-                        });
-                      }
-                    },
+                    onPressed: googleSignInInFlight.value
+                        ? null
+                        : () => googleFlow.handleGoogleSignIn(
+                              context,
+                              onError: controller.updateConnectError,
+                            ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Image.asset("assets/images/google-sign-in.png", width: 30, fit: BoxFit.contain),
+                        if (googleSignInInFlight.value)
+                          const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.5,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          ),
+                        if (!googleSignInInFlight.value)
+                          Image.asset("assets/images/google-sign-in.png", width: 30, fit: BoxFit.contain),
                         const SizedBox(width: 10),
                         Padding(
                           padding: const EdgeInsets.only(right: 0.0, left: 5.0),
-                          child: Text("Sign in with Google",
+                          child: Text(googleSignInInFlight.value ? "Loading..." : "Sign in with Google",
                               style:
                                   context.theme.textTheme.bodyLarge!.apply(fontSizeFactor: 1.1, color: Colors.white)),
                         ),
