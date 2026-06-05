@@ -195,7 +195,7 @@ Future<String?> googleOAuth(
       authorization ??= await account.authorizationClient.authorizeScopes(defaultScopes);
 
       token = authorization.accessToken;
-      if (token == null || token!.isEmpty) {
+      if (token.isEmpty) {
         throw Exception("No access token!");
       }
     } catch (e, stack) {
