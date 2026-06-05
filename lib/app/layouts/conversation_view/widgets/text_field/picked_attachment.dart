@@ -184,7 +184,7 @@ class _PickedAttachmentState extends State<PickedAttachment> with AutomaticKeepA
                                       .toList();
                                   unawaited(ChatsSvc.setChatTextFieldAttachments(widget.controller!.chat, remaining));
                                   // Don't request focus if attachment picker is open
-                                  if (!widget.controller!.showAttachmentPicker) {
+                                  if (!widget.controller!.showAttachmentPicker.value) {
                                     widget.controller!.lastFocusedNode.requestFocus();
                                   }
                                 } else {
@@ -222,7 +222,7 @@ class _PickedAttachmentState extends State<PickedAttachment> with AutomaticKeepA
                     widget.controller!.chat.textFieldAttachments.removeWhere((e) => e == widget.data.path);
                     widget.controller!.chat.saveAsync(updateTextFieldAttachments: true);
                     // Don't request focus if attachment picker is open
-                    if (!widget.controller!.showAttachmentPicker) {
+                    if (!widget.controller!.showAttachmentPicker.value) {
                       widget.controller!.lastFocusedNode.requestFocus();
                     }
                   } else {

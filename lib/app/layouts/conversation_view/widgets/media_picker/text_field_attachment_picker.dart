@@ -141,41 +141,44 @@ class _AttachmentPickerState extends State<AttachmentPicker> with ThemeHelpers {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 340,
-      child: RefreshIndicator(
-        onRefresh: () async {
-          await getAttachments();
-        },
-        child: NotificationListener<OverscrollIndicatorNotification>(
-          onNotification: (OverscrollIndicatorNotification overscroll) {
-            // Prevent stretchy effect
-            overscroll.disallowIndicator();
-            return true;
+    return Container(
+      color: context.theme.colorScheme.surface,
+      child: SizedBox(
+        height: 340,
+        child: RefreshIndicator(
+          onRefresh: () async {
+            await getAttachments();
           },
-          child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            child: SizedBox(
-              height: 340,
-              child: Padding(
-                padding: const EdgeInsets.all(10.0),
-                child: CustomScrollView(
-                  physics: ThemeSwitcher.getScrollPhysics(),
-                  scrollDirection: Axis.horizontal,
-                  slivers: <Widget>[
-                    // Quick action list
-                    SliverPadding(
-                      padding: const EdgeInsets.only(bottom: 5),
-                      sliver: _buildActionList(),
-                    ),
-                    // Image grid
-                    const SliverPadding(padding: EdgeInsets.only(left: 5, right: 5)),
-                    // Image grid
-                    SliverPadding(
-                      padding: const EdgeInsets.only(bottom: 5),
-                      sliver: _buildImageGrid(),
-                    ),
-                  ],
+          child: NotificationListener<OverscrollIndicatorNotification>(
+            onNotification: (OverscrollIndicatorNotification overscroll) {
+              // Prevent stretchy effect
+              overscroll.disallowIndicator();
+              return true;
+            },
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: SizedBox(
+                height: 340,
+                child: Padding(
+                  padding: const EdgeInsets.all(10.0),
+                  child: CustomScrollView(
+                    physics: ThemeSwitcher.getScrollPhysics(),
+                    scrollDirection: Axis.horizontal,
+                    slivers: <Widget>[
+                      // Quick action list
+                      SliverPadding(
+                        padding: const EdgeInsets.only(bottom: 5),
+                        sliver: _buildActionList(),
+                      ),
+                      // Image grid
+                      const SliverPadding(padding: EdgeInsets.only(left: 5, right: 5)),
+                      // Image grid
+                      SliverPadding(
+                        padding: const EdgeInsets.only(bottom: 5),
+                        sliver: _buildImageGrid(),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),

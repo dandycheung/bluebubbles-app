@@ -54,7 +54,7 @@ class ConversationTextFieldState extends CustomState<ConversationTextField, void
 
   String get chatGuid => chat.guid;
 
-  bool get showAttachmentPicker => localController.showAttachmentPickerLocal.value;
+  bool get showAttachmentPicker => controller.showAttachmentPicker.value;
 
   late final double emojiPickerHeight = max(256, context.height * 0.4);
   late final emojiColumns =
@@ -155,8 +155,8 @@ class ConversationTextFieldState extends CustomState<ConversationTextField, void
   void focusListener(bool subject) async {
     final _focusNode = subject ? controller.subjectFocusNode : controller.focusNode;
     // OPTIMIZATION: Only update if state actually needs to change
-    if (_focusNode.hasFocus && localController.showAttachmentPickerLocal.value) {
-      localController.showAttachmentPickerLocal.value = false;
+    if (_focusNode.hasFocus && controller.showAttachmentPicker.value) {
+      controller.showAttachmentPicker.value = false;
     }
   }
 
@@ -313,6 +313,7 @@ class ConversationTextFieldState extends CustomState<ConversationTextField, void
     controller.subjectTextController.dispose();
     recorderController?.dispose();
     _emojiScrollController.dispose();
+    controller.showAttachmentPicker.value = false;
     localController.cancelAllTimers();
     Get.delete<ConversationTextFieldLocalController>();
     if (chat.autoSendTypingIndicators ?? SettingsSvc.settings.privateSendTypingIndicators.value) {
@@ -446,77 +447,86 @@ class ConversationTextFieldState extends CustomState<ConversationTextField, void
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10.0, top: 10.0),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-            TextFieldIconBar(controller: controller, localController: localController),
-            Expanded(
-              child: Stack(
-                alignment: Alignment.centerLeft,
-                clipBehavior: Clip.none,
-                children: [
-                  TextFieldComponent(
-                    key: controller.textFieldKey,
-                    subjectTextController: controller.subjectTextController,
-                    textController: controller.textController,
-                    controller: controller,
-                    recorderController: recorderController,
-                    sendMessage: sendMessage,
-                  ),
-                  if (!kIsWeb)
-                    Positioned(
-                      top: 0,
-                      bottom: 0,
-                      child: TextFieldRecordingOverlay(
+    return Obx(() => Padding(
+          padding: EdgeInsets.only(
+            bottom: showAttachmentPicker ? 0 : 10.0,
+            top: 10.0,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                TextFieldIconBar(controller: controller, localController: localController),
+                Expanded(
+                  child: Stack(
+                    alignment: Alignment.centerLeft,
+                    clipBehavior: Clip.none,
+                    children: [
+                      TextFieldComponent(
+                        key: controller.textFieldKey,
+                        subjectTextController: controller.subjectTextController,
+                        textController: controller.textController,
                         controller: controller,
                         recorderController: recorderController,
+                        sendMessage: sendMessage,
                       ),
-                    ),
-                  SendAnimation(parentController: controller),
-                ],
-              ),
-            ),
-            if (iOS) const SizedBox(width: 10),
-            if (samsung)
-              Padding(
-                padding: const EdgeInsets.only(right: 5.0),
-                child: TextFieldSuffix(
-                  subjectTextController: controller.subjectTextController,
-                  textController: controller.textController,
-                  controller: controller,
-                  recorderController: recorderController,
-                  sendMessage: sendMessage,
-                ),
-              ),
-          ]),
-          Builder(builder: (context) {
-            // Capture width outside the Obx lambda so the reactive builder does not
-            // register a MediaQuery.of dependency and rebuild on keyboard animation frames.
-            // sizeOf only notifies on actual display-size changes (rotation / resize).
-            final pickerWidth = MediaQuery.sizeOf(context).width;
-            return Obx(() => AnimatedSize(
-                  duration: const Duration(milliseconds: 250),
-                  curve: Curves.easeIn,
-                  alignment: Alignment.bottomCenter,
-                  child: !showAttachmentPicker
-                      ? SizedBox(width: pickerWidth)
-                      : AttachmentPicker(
-                          controller: controller,
+                      if (!kIsWeb)
+                        Positioned(
+                          top: 0,
+                          bottom: 0,
+                          child: TextFieldRecordingOverlay(
+                            controller: controller,
+                            recorderController: recorderController,
+                          ),
                         ),
-                ));
-          }),
-          TextFieldEmojiPickerSection(
-            controller: controller,
-            proxyController: proxyController,
-            emojiScrollController: _emojiScrollController,
-            emojiPickerHeight: emojiPickerHeight,
-            emojiColumns: emojiColumns,
+                      SendAnimation(parentController: controller),
+                    ],
+                  ),
+                ),
+                if (iOS) const SizedBox(width: 10),
+                if (samsung)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 5.0),
+                    child: TextFieldSuffix(
+                      subjectTextController: controller.subjectTextController,
+                      textController: controller.textController,
+                      controller: controller,
+                      recorderController: recorderController,
+                      sendMessage: sendMessage,
+                    ),
+                  ),
+              ]),
+              Builder(builder: (context) {
+                // Capture width outside the Obx lambda so the reactive builder does not
+                // register a MediaQuery.of dependency and rebuild on keyboard animation frames.
+                // sizeOf only notifies on actual display-size changes (rotation / resize).
+                final pickerWidth = MediaQuery.sizeOf(context).width;
+                return Obx(() => AnimatedSize(
+                      duration: const Duration(milliseconds: 250),
+                      curve: Curves.easeIn,
+                      alignment: Alignment.bottomCenter,
+                      child: !showAttachmentPicker
+                          ? SizedBox(width: pickerWidth)
+                          : Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const SizedBox(height: 8),
+                                AttachmentPicker(
+                                  controller: controller,
+                                ),
+                              ],
+                            ),
+                    ));
+              }),
+              TextFieldEmojiPickerSection(
+                controller: controller,
+                proxyController: proxyController,
+                emojiScrollController: _emojiScrollController,
+                emojiPickerHeight: emojiPickerHeight,
+                emojiColumns: emojiColumns,
+              ),
+            ],
           ),
-        ],
-      ),
-    );
+        ));
   }
 }

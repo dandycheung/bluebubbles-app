@@ -99,29 +99,56 @@ class ConversationViewState extends State<ConversationView> with ThemeHelpers<Co
         clipBehavior: Clip.none,
         children: [
           const Positioned.fill(child: ScreenEffectsWidget()),
-          Column(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              Expanded(
-                child: Stack(
-                  children: [
-                    MessagesView(
-                      key: Key(chat.guid),
-                      customService: widget.customService,
-                      initialScrollToGuid: widget.initialScrollToGuid,
-                      controller: controller,
+          Builder(
+            builder: (context) {
+              final bottomInset = MediaQuery.paddingOf(context).bottom;
+              if (bottomInset <= 0) return const SizedBox.shrink();
+              return Obx(() => Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    height: bottomInset,
+                    child: IgnorePointer(
+                      child: ColoredBox(
+                        color: controller.showAttachmentPicker.value
+                            ? context.theme.colorScheme.surface
+                            : Colors.transparent,
+                      ),
                     ),
-                    ScrollDownButton(controller: controller),
-                  ],
-                ),
-              ),
-              GestureDetector(
-                onPanUpdate: _onPanUpdate,
-                child: ConversationTextField(
-                  parentController: controller,
-                ),
-              ),
-            ],
+                  ));
+            },
+          ),
+          Builder(
+            builder: (context) {
+              final bottomInset = MediaQuery.paddingOf(context).bottom;
+              return Obx(() => Padding(
+                    padding: EdgeInsets.only(bottom: controller.showAttachmentPicker.value ? 0 : bottomInset),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Expanded(
+                          child: Stack(
+                            children: [
+                              MessagesView(
+                                key: Key(chat.guid),
+                                customService: widget.customService,
+                                initialScrollToGuid: widget.initialScrollToGuid,
+                                controller: controller,
+                              ),
+                              ScrollDownButton(controller: controller),
+                            ],
+                          ),
+                        ),
+                        GestureDetector(
+                          onPanUpdate: _onPanUpdate,
+                          child: ConversationTextField(
+                            parentController: controller,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ));
+            },
           ),
         ],
       ),
@@ -217,8 +244,8 @@ class ConversationViewState extends State<ConversationView> with ThemeHelpers<Co
                 controller.selected.clear();
                 return;
               }
-              if (controller.showAttachmentPicker) {
-                controller.showAttachmentPicker = false;
+              if (controller.showAttachmentPicker.value) {
+                controller.showAttachmentPicker.value = false;
                 controller.updateWidgets<ConversationTextField>(null);
                 return;
               }
@@ -232,6 +259,7 @@ class ConversationViewState extends State<ConversationView> with ThemeHelpers<Co
             child: BBScaffold(
               backgroundColor: windowEffect != WindowEffect.disabled ? Colors.transparent : colorScheme.surface,
               extendBodyBehindAppBar: true,
+              safeAreaBottom: false,
               appBar: _appBar,
               body: Actions(
                 actions: _actionsMap,
