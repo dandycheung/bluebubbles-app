@@ -19,12 +19,16 @@ import 'package:get/get.dart' hide Response;
 MessagesService? maybeFindMessagesSvc(String chatGuid) =>
     Get.isRegistered<MessagesService>(tag: chatGuid) ? Get.find<MessagesService>(tag: chatGuid) : null;
 
-MessagesService ensureMessagesSvc(String chatGuid) => maybeFindMessagesSvc(chatGuid) ?? Get.put(
+MessagesService ensureMessagesSvc(String chatGuid) =>
+    maybeFindMessagesSvc(chatGuid) ??
+    Get.put(
       MessagesService(chatGuid),
       tag: chatGuid,
     );
 
-MessagesService registerMessagesSvc(MessagesService service) => maybeFindMessagesSvc(service.tag) ?? Get.put(
+MessagesService registerMessagesSvc(MessagesService service) =>
+    maybeFindMessagesSvc(service.tag) ??
+    Get.put(
       service,
       tag: service.tag,
     );

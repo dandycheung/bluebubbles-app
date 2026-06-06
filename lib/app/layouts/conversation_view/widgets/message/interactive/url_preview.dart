@@ -36,8 +36,9 @@ class UrlPreview extends StatefulWidget {
 class _UrlPreviewState extends State<UrlPreview> with AutomaticKeepAliveClientMixin, TickerProviderStateMixin {
   UrlPreviewData get data => widget.data;
   UrlPreviewData? dataOverride;
-  File? get file => content is PlatformFile && content?.path != null ? File(content!.path!) : null;
-  PlatformFile? content;
+  PlatformFile? get resolvedContent => content is PlatformFile ? content as PlatformFile : null;
+  File? get file => resolvedContent?.path != null ? File(resolvedContent!.path!) : null;
+  Object? content;
   Metadata? _fetchedMetadata;
   String? _previewImagePath;
   String? _iconImagePath;
@@ -392,13 +393,13 @@ class _UrlPreviewState extends State<UrlPreview> with AutomaticKeepAliveClientMi
           if (!inReply && (_previewImagePath != null || webImageUrl != null))
             _buildPreviewImage(context,
                 animate: _previewImagePath != null && !_previewImageFromDisk, webImageUrl: webImageUrl),
-          if (content is PlatformFile && hasAppleImage && content?.bytes != null && !inReply)
+          if (resolvedContent?.bytes != null && hasAppleImage && !inReply)
             ClipRRect(
               borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
               child: Container(
                 decoration: BoxDecoration(
                   image: DecorationImage(
-                    image: MemoryImage(content!.bytes!),
+                    image: MemoryImage(resolvedContent!.bytes!),
                     fit: BoxFit.cover,
                   ),
                 ),
@@ -409,7 +410,7 @@ class _UrlPreviewState extends State<UrlPreview> with AutomaticKeepAliveClientMi
                     child: ConstrainedBox(
                       constraints: BoxConstraints(maxHeight: context.height * 0.4, minHeight: 100),
                       child: Image.memory(
-                        content!.bytes!,
+                        resolvedContent!.bytes!,
                         gaplessPlayback: true,
                         filterQuality: FilterQuality.none,
                         errorBuilder: (context, object, stacktrace) => Center(
@@ -422,12 +423,7 @@ class _UrlPreviewState extends State<UrlPreview> with AutomaticKeepAliveClientMi
                 ),
               ),
             ),
-          if (content is PlatformFile &&
-              hasAppleImage &&
-              content?.bytes == null &&
-              content?.path != null &&
-              file != null &&
-              !inReply)
+          if (resolvedContent != null && hasAppleImage && resolvedContent?.bytes == null && file != null && !inReply)
             ClipRRect(
               borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
               child: Container(
