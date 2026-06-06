@@ -444,7 +444,7 @@ class SearchViewState extends State<SearchView> with ThemeHelpers {
                               overflow: TextOverflow.clip,
                             ),
                             onTap: () {
-                              final service = MessagesSvc(chat.guid);
+                              final service = maybeFindMessagesSvc(chat.guid) ?? MessagesService(chat.guid);
                               service.method = local.value ? SearchMode.local.name : SearchMode.network.name;
                               service.struct.addMessages([message]);
                               NavigationSvc.pushAndRemoveUntil(

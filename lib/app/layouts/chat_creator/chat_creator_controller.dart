@@ -385,7 +385,7 @@ class ChatCreatorController extends StatefulController {
     // Only create a new MessagesService if necessary.
     // Do NOT initialize here — MessagesView initializes it with proper handlers.
     if (messagesService == null || messagesService!.tag != chat.guid) {
-      messagesService = MessagesSvc(chat.guid);
+      messagesService = maybeFindMessagesSvc(chat.guid) ?? MessagesService(chat.guid);
     }
 
     final newCVC = ChatsSvc.activeChat!.controller!;

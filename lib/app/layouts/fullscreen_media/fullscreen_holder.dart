@@ -49,12 +49,12 @@ class FullscreenMediaHolder extends StatefulWidget {
 class FullscreenMediaHolderState extends State<FullscreenMediaHolder> with ThemeHelpers {
   final focusNode = FocusNode();
   late final PageController controller;
-  late final messageService = widget.currentChat == null ? null : MessagesSvc(widget.currentChat!.guid);
+  late final messageService = widget.currentChat == null ? null : maybeFindMessagesSvc(widget.currentChat!.guid);
   late List<Attachment> attachments = widget.galleryAttachments != null
       ? List<Attachment>.from(widget.galleryAttachments!)
       : (widget.currentChat == null
           ? [attachment]
-          : messageService!.struct.attachments.where((e) => e.mimeStart == "image").toList());
+          : (messageService?.struct.attachments.where((e) => e.mimeStart == "image").toList() ?? [attachment]));
 
   int currentIndex = 0;
   ScrollPhysics? physics;

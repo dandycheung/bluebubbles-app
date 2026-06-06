@@ -780,8 +780,8 @@ class MessageState extends StatefulController {
           final attachmentGuid = e.attributes!.attachmentGuid!;
           foundAttachment = message.dbAttachments.firstWhereOrNull((a) => a.guid == attachmentGuid);
           if (foundAttachment == null) {
-            foundAttachment = MessagesSvc(cvController?.chat.guid ?? ChatsSvc.activeChat!.chat.guid)
-                .struct
+            foundAttachment = maybeFindMessagesSvc(cvController?.chat.guid ?? ChatsSvc.activeChat!.chat.guid)
+                ?.struct
                 .getAttachment(attachmentGuid);
             foundAttachment ??= await Attachment.findOneAsync(attachmentGuid);
           }
