@@ -122,32 +122,32 @@ class ConversationViewState extends State<ConversationView> with ThemeHelpers<Co
             builder: (context) {
               final bottomInset = MediaQuery.paddingOf(context).bottom;
               return Padding(
-                    padding: EdgeInsets.only(bottom: bottomInset),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        Expanded(
-                          child: Stack(
-                            children: [
-                              MessagesView(
-                                key: Key(chat.guid),
-                                customService: widget.customService,
-                                initialScrollToGuid: widget.initialScrollToGuid,
-                                controller: controller,
-                              ),
-                              ScrollDownButton(controller: controller),
-                            ],
+                padding: EdgeInsets.only(bottom: bottomInset),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Expanded(
+                      child: Stack(
+                        children: [
+                          MessagesView(
+                            key: Key(chat.guid),
+                            customService: widget.customService,
+                            initialScrollToGuid: widget.initialScrollToGuid,
+                            controller: controller,
                           ),
-                        ),
-                        GestureDetector(
-                          onPanUpdate: _onPanUpdate,
-                          child: ConversationTextField(
-                            parentController: controller,
-                          ),
-                        ),
-                      ],
+                          ScrollDownButton(controller: controller),
+                        ],
+                      ),
                     ),
-                  );
+                    GestureDetector(
+                      onPanUpdate: _onPanUpdate,
+                      child: ConversationTextField(
+                        parentController: controller,
+                      ),
+                    ),
+                  ],
+                ),
+              );
             },
           ),
         ],
