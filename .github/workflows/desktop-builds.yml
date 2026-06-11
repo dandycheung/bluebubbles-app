@@ -17,20 +17,20 @@ jobs:
     timeout-minutes: 60
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install fvm
         run: choco install fvm -y
 
       # Keyed on the build script so a version bump in it invalidates the cache
       - name: Cache Flutter SDK (fvm)
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/fvm
           key: fvm-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('windows/build.ps1') }}
 
       - name: Cache pub packages
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/AppData/Local/Pub/Cache
           key: pub-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pubspec.lock') }}
@@ -42,7 +42,7 @@ jobs:
         shell: pwsh
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: bluebubbles-windows
           path: |
@@ -51,7 +51,7 @@ jobs:
 
       - name: Attach to release
         if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: |
             windows/bluebubbles.msix
@@ -70,7 +70,7 @@ jobs:
     timeout-minutes: 60
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install system dependencies
         run: |
@@ -93,13 +93,13 @@ jobs:
 
       # Keyed on the build script so a version bump in it invalidates the cache
       - name: Cache Flutter SDK (fvm)
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/fvm
           key: fvm-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('linux/build.sh') }}
 
       - name: Cache pub packages
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.pub-cache
           key: pub-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pubspec.lock') }}
@@ -108,13 +108,13 @@ jobs:
         run: bash linux/build.sh
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: bluebubbles-linux-${{ matrix.arch }}
           path: bluebubbles-linux-${{ matrix.arch }}.tar.gz
 
       - name: Attach to release
         if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: bluebubbles-linux-${{ matrix.arch }}.tar.gz
