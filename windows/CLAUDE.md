@@ -7,6 +7,7 @@
 - `utils.cpp/h` — UTF-8 / UTF-16 helpers
 
 ## Installer
+- `build.ps1` — release build script: cleans Release dir, `dart run msix:create`, then compiles the installer (mirrors `linux/build.sh`)
 - `bluebubbles_installer_script.iss` — Inno Setup installer definition
 - `CodeDependencies.iss` — installer dependency declarations
 
