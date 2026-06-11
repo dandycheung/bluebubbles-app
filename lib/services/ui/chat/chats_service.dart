@@ -746,8 +746,8 @@ class ChatsService {
   // ========== Chat Lifecycle Management Methods (migrated from ChatManager) ==========
 
   /// Set all chats to inactive synchronously
-  void _setAllInactiveSync({bool clearActive = true}) {
-    Logger.debug('Setting chats to inactive (clearActive: $clearActive)');
+  void setAllInactiveSync({bool save = true, bool clearActive = true}) {
+    Logger.debug('Setting chats to inactive (save: $save, clearActive: $clearActive)');
 
     String? skip;
     if (clearActive) {
@@ -762,22 +762,28 @@ class ChatsService {
       state.updateActiveInternal(false);
       state.updateAliveInternal(false);
     });
+
+    if (save) {
+      EventDispatcherSvc.emit("update-highlight", null);
+      unawaited(PrefsSvc.messaging.clearLastOpenedChat());
+    }
   }
 
-  /// Set all chats to inactive
-  void setAllInactive() async {
+  /// Set all chats to inactive asynchronously
+  Future<void> setAllInactive() async {
     Logger.debug('Setting all chats to inactive');
-    _setAllInactiveSync();
+    await PrefsSvc.messaging.clearLastOpenedChat();
+    setAllInactiveSync(save: false);
   }
 
   /// Set a chat as the active chat
-  void setActiveChat(Chat chat, {bool clearNotifications = true}) async {
-    _setActiveChatSync(chat, clearNotifications: clearNotifications);
+  Future<void> setActiveChat(Chat chat, {bool clearNotifications = true}) async {
+    await PrefsSvc.messaging.setLastOpenedChat(chat.guid);
+    setActiveChatSync(chat, clearNotifications: clearNotifications, save: false);
   }
 
-  /// Set a chat as the active chat synchronously.
-  /// This does NOT save the last opened chat to preferences
-  void _setActiveChatSync(Chat chat, {bool clearNotifications = true}) {
+  /// Set a chat as the active chat synchronously
+  void setActiveChatSync(Chat chat, {bool clearNotifications = true, bool save = true}) {
     EventDispatcherSvc.emit("update-highlight", chat.guid);
     Logger.debug('Setting active chat to ${chat.guid} (${chat.displayName})');
 
@@ -789,13 +795,17 @@ class ChatsService {
       chatState.updateActiveAndAliveInternal(true);
 
       // Clear all other chats to inactive
-      _setAllInactiveSync(clearActive: false);
+      setAllInactiveSync(save: false, clearActive: false);
 
       if (clearNotifications) {
         // Defer the observable update to avoid updating during build phase
         Future.microtask(() {
           setChatHasUnread(chatState.chat, false, force: true);
         });
+      }
+
+      if (save) {
+        unawaited(PrefsSvc.messaging.setLastOpenedChat(chat.guid));
       }
     }
   }
@@ -841,7 +851,7 @@ class ChatsService {
     // Handle active chat cleanup
     if (activeChat?.chat.guid == chat.guid) {
       NavigationSvc.closeAllConversationView(Get.context!);
-      setAllInactive();
+      await setAllInactive();
       await Future.delayed(const Duration(milliseconds: 500));
     }
 
@@ -874,7 +884,7 @@ class ChatsService {
     // Handle active chat cleanup
     if (activeChat?.chat.guid == chat.guid) {
       NavigationSvc.closeAllConversationView(Get.context!);
-      setAllInactive();
+      await setAllInactive();
       await Future.delayed(const Duration(milliseconds: 500));
     }
 

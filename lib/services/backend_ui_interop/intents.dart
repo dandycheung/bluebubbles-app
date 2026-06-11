@@ -25,7 +25,7 @@ class OpenSettingsAction extends Action<OpenSettingsIntent> {
     if (SettingsSvc.settings.finishedSetup.value) {
       final currentChat = ChatsSvc.activeChat?.chat;
       NavigationSvc.closeAllConversationView(context);
-      ChatsSvc.setAllInactive();
+      await ChatsSvc.setAllInactive();
       await Navigator.of(Get.context!).push(
         ThemeSwitcher.buildPageRoute(
           builder: (BuildContext context) {

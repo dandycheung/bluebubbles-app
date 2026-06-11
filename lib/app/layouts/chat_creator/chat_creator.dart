@@ -98,7 +98,7 @@ class ChatCreatorState extends State<ChatCreator> with ThemeHelpers {
             oldText = addressController.text;
             // if user has typed stuff, remove the message view and show filtered results
             if (addressController.text.isNotEmpty && fakeController.value != null) {
-              ChatsSvc.setAllInactive();
+              await ChatsSvc.setAllInactive();
               oldController = fakeController.value;
               fakeController.value = null;
             }
@@ -166,7 +166,7 @@ class ChatCreatorState extends State<ChatCreator> with ThemeHelpers {
   Future<Chat?> findExistingChat({bool checkDeleted = false, bool update = true}) async {
     // no selected items, remove message view
     if (selectedContacts.isEmpty) {
-      ChatsSvc.setAllInactive();
+      await ChatsSvc.setAllInactive();
       fakeController.value = null;
       return null;
     }
@@ -201,7 +201,7 @@ class ChatCreatorState extends State<ChatCreator> with ThemeHelpers {
     // if match, show message view, otherwise hide it
     if (update) {
       if (existingChat != null) {
-        ChatsSvc.setActiveChat(existingChat, clearNotifications: false);
+        await ChatsSvc.setActiveChat(existingChat, clearNotifications: false);
         ChatsSvc.activeChat!.controller = cvc(existingChat);
 
         // Get or create the MessagesService for this chat
@@ -228,7 +228,7 @@ class ChatCreatorState extends State<ChatCreator> with ThemeHelpers {
 
         fakeController.value = ChatsSvc.activeChat!.controller;
       } else {
-        ChatsSvc.setAllInactive();
+        await ChatsSvc.setAllInactive();
         fakeController.value = null;
         messagesService = null;
       }
@@ -379,7 +379,7 @@ class ChatCreatorState extends State<ChatCreator> with ThemeHelpers {
             ),
             Obx(() => MessageTypeToggle(
                   selectedService: selectedService.value,
-                  onToggle: (index) {
+                  onToggle: (index) async {
                     selectedContacts.clear();
                     addressController.text = "";
                     if (index == 0) {
@@ -389,7 +389,7 @@ class ChatCreatorState extends State<ChatCreator> with ThemeHelpers {
                       selectedService.value = ChatServiceType.sms;
                       filteredChats.value = List<Chat>.from(existingChats.where((e) => !e.isIMessage));
                     }
-                    ChatsSvc.setAllInactive();
+                    await ChatsSvc.setAllInactive();
                     fakeController.value = null;
                   },
                 )),
@@ -493,7 +493,7 @@ class ChatCreatorState extends State<ChatCreator> with ThemeHelpers {
                               final existingChat = chat;
                               // Ensure fakeController is set up for this chat
                               if (fakeController.value == null) {
-                                ChatsSvc.setActiveChat(existingChat, clearNotifications: false);
+                                await ChatsSvc.setActiveChat(existingChat, clearNotifications: false);
                                 ChatsSvc.activeChat!.controller = cvc(existingChat);
                                 fakeController.value = ChatsSvc.activeChat!.controller;
                               }

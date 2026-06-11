@@ -340,7 +340,6 @@ class _TroubleshootPanelState extends State<TroubleshootPanel> with ThemeHelpers
                       title: "Delete a Chat",
                       subtitle:
                           "Permanently deletes a selected chat, all its messages, and all its participants. Use this to simulate a brand-new chat arrival."),
-                  const SettingsDivider(padding: EdgeInsets.only(left: 16.0)),
                 ]),
                 if (kIsDesktop) const SizedBox(height: 100),
               ],
