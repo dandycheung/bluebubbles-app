@@ -170,9 +170,6 @@ Future<Null> initApp(bool bubble, List<String> arguments) async {
             SocketSvc.init();
           }
         });
-
-        /* ----- GIPHY API KEY INITIALIZATION ----- */
-        await dotenv.load(fileName: '.env', isOptional: true);
       }
 
       /* ----- EMOJI FONT INITIALIZATION ----- */

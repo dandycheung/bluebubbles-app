@@ -17,7 +17,6 @@ After any `@Entity` annotation change: **`dart run build_runner build`**
 | `theme_entry.dart` | reference to a Theme record | — |
 | `theme_object.dart` | theme metadata wrapper | — |
 | `fcm_data.dart` | FCM tokens and Firebase auth credentials | — |
-| `tenor.dart` | GIF search result metadata | — |
 | `launch_at_startup.dart` | startup behavior configuration | — |
 
 ## Rules
