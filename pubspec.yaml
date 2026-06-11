@@ -43,7 +43,6 @@ dependencies:
   csslib: ^1.0.2
   cupertino_icons: ^1.0.8
   defer_pointer: ^0.0.2
-  desktop_drop: ^0.7.1
   desktop_webview_auth:
     git:
       url: https://github.com/BlueBubblesApp/flutter_desktop_webview_auth.git
@@ -167,6 +166,7 @@ dependencies:
   store_checker: ^1.8.0
   synchronized: ^3.3.0+3
   system_tray: ^2.0.3
+  super_drag_and_drop: ^0.9.1
   supercharged: ^2.1.1
   system_info2: ^4.0.0
   tenor_flutter: ^1.0.3 # Pinned because of flutter SDK
@@ -325,6 +325,7 @@ flutter:
   # see https://flutter.dev/custom-fonts/#from-packages
 
 msix_config:
+  output_path: windows
   display_name: BlueBubbles
   publisher_display_name: BlueBubbles
   identity_name: 23344BlueBubbles.BlueBubbles
