@@ -73,7 +73,6 @@ dependencies:
   flutter_acrylic: ^1.1.4
   flutter_audio_waveforms: ^1.2.1+8
   flutter_displaymode: ^0.7.0 # android only
-  flutter_dotenv: ^6.0.0
   flutter_image_compress: ^2.4.0
   flutter_improved_scrolling: ^0.0.3
   flutter_isolate: ^2.1.0
