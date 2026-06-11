@@ -134,7 +134,8 @@ class MessagesViewState extends State<MessagesView> with MessagesServiceMixin, T
       // Only load if not already initialized from customService
       if (!handlersInitialized) {
         // Get or create the service
-        final service = widget.customService ?? MessagesSvc(chat.guid);
+        final service =
+            widget.customService != null ? registerMessagesSvc(widget.customService!) : ensureMessagesSvc(chat.guid);
 
         // Initialize with handlers
         service.init(

@@ -58,7 +58,7 @@ class ReactionWidgetState extends State<ReactionWidget> with ThemeHelpers {
     //  3. ChatsSvc.activeChat – last-resort fallback
     final chatGuid = widget.chatGuid ?? _parentMessage?.chat.target?.guid ?? ChatsSvc.activeChat?.chat.guid;
     final parentController =
-        chatGuid != null ? MessagesSvc(chatGuid).getMessageStateIfExists(_parentMessage?.guid ?? '') : null;
+        chatGuid != null ? maybeFindMessagesSvc(chatGuid)?.getMessageStateIfExists(_parentMessage?.guid ?? '') : null;
     if (parentController != null) {
       // Find our reaction in the observable associatedMessages list
       final found = parentController.associatedMessages.firstWhereOrNull((m) =>
@@ -90,7 +90,7 @@ class ReactionWidgetState extends State<ReactionWidget> with ThemeHelpers {
     // Use same resolution order as reaction getter
     final chatGuid = widget.chatGuid ?? _parentMessage?.chat.target?.guid ?? ChatsSvc.activeChat?.chat.guid;
     if (chatGuid == null || reaction.guid == null) return null;
-    return MessagesSvc(chatGuid).getMessageStateIfExists(reaction.guid!);
+    return maybeFindMessagesSvc(chatGuid)?.getMessageStateIfExists(reaction.guid!);
   }
 
   static const double iosSize = 35;
@@ -272,8 +272,11 @@ class ReactionWidgetState extends State<ReactionWidget> with ThemeHelpers {
                       final chat = ChatStateScope.maybeChatOf(context) ??
                           ChatsSvc.getChatState(widget.chatGuid ?? _parentMessage?.chat.target?.guid ?? '')?.chat ??
                           ChatsSvc.activeChat!.chat;
-                      final selected =
-                          MessagesSvc(chat.guid).getMessageStateIfExists(reaction.associatedMessageGuid!)!.message;
+                      final selected = maybeFindMessagesSvc(chat.guid)
+                              ?.getMessageStateIfExists(reaction.associatedMessageGuid!)
+                              ?.message ??
+                          _parentMessage;
+                      if (selected == null) return;
 
                       showDialog(
                         context: context,

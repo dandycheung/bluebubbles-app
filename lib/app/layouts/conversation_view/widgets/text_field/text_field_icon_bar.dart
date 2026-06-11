@@ -35,7 +35,7 @@ class TextFieldIconBar extends StatelessWidget {
 
   bool get _iOS => SettingsSvc.settings.skin.value == Skins.iOS;
 
-  bool get _showAttachmentPicker => localController.showAttachmentPickerLocal.value;
+  bool get _showAttachmentPicker => controller.showAttachmentPicker.value;
 
   @override
   Widget build(BuildContext context) {
@@ -126,7 +126,7 @@ class TextFieldIconBar extends StatelessWidget {
                   controller.focusNode.unfocus();
                   controller.subjectFocusNode.unfocus();
                 }
-                localController.showAttachmentPickerLocal.value = !_showAttachmentPicker;
+                controller.showAttachmentPicker.value = !_showAttachmentPicker;
               }
             },
           ),

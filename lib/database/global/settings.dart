@@ -111,7 +111,6 @@ class Settings {
   final RxBool redactedMode = false.obs;
   final RxBool hideAttachments = true.obs;
   final RxBool hideContactInfo = true.obs;
-  final RxBool generateFakeContactNames = false.obs;
   final RxBool generateFakeAvatars = false.obs;
   final RxBool hideMessageContent = false.obs;
 
@@ -364,7 +363,6 @@ class Settings {
       'hideMessageContent': hideMessageContent.value,
       'hideAttachments': hideAttachments.value,
       'hideContactInfo': hideContactInfo.value,
-      'generateFakeContactNames': generateFakeContactNames.value,
       'generateFakeAvatars': generateFakeAvatars.value,
       'generateFakeMessageContent': hideMessageContent.value,
       'enableQuickTapback': enableQuickTapback.value,
@@ -566,8 +564,6 @@ class Settings {
         map['hideMessageContent'] ?? SettingsSvc.settings.hideMessageContent.value;
     SettingsSvc.settings.hideAttachments.value = map['hideAttachments'] ?? SettingsSvc.settings.hideAttachments.value;
     SettingsSvc.settings.hideContactInfo.value = map['hideContactInfo'] ?? SettingsSvc.settings.hideContactInfo.value;
-    SettingsSvc.settings.generateFakeContactNames.value =
-        map['generateFakeContactNames'] ?? SettingsSvc.settings.generateFakeContactNames.value;
     SettingsSvc.settings.generateFakeAvatars.value =
         map['generateFakeAvatars'] ?? SettingsSvc.settings.generateFakeAvatars.value;
     SettingsSvc.settings.hideMessageContent.value =
@@ -757,7 +753,6 @@ class Settings {
     s.hideMessageContent.value = map['hideMessageContent'] ?? true;
     s.hideAttachments.value = map['hideAttachments'] ?? true;
     s.hideContactInfo.value = map['hideContactInfo'] ?? true;
-    s.generateFakeContactNames.value = map['generateFakeContactNames'] ?? false;
     s.generateFakeAvatars.value = map['generateFakeAvatars'] ?? false;
     s.hideMessageContent.value = map['generateFakeMessageContent'] ?? false;
     s.enableUnifiedPush.value = map['enableUnifiedPush'] ?? false;

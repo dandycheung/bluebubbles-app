@@ -99,29 +99,56 @@ class ConversationViewState extends State<ConversationView> with ThemeHelpers<Co
         clipBehavior: Clip.none,
         children: [
           const Positioned.fill(child: ScreenEffectsWidget()),
-          Column(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              Expanded(
-                child: Stack(
-                  children: [
-                    MessagesView(
-                      key: Key(chat.guid),
-                      customService: widget.customService,
-                      initialScrollToGuid: widget.initialScrollToGuid,
-                      controller: controller,
+          Builder(
+            builder: (context) {
+              final bottomInset = MediaQuery.paddingOf(context).bottom;
+              if (bottomInset <= 0) return const SizedBox.shrink();
+              return Obx(() => Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    height: bottomInset,
+                    child: IgnorePointer(
+                      child: ColoredBox(
+                        color: controller.showAttachmentPicker.value
+                            ? context.theme.colorScheme.surface
+                            : Colors.transparent,
+                      ),
                     ),
-                    ScrollDownButton(controller: controller),
+                  ));
+            },
+          ),
+          Builder(
+            builder: (context) {
+              final bottomInset = MediaQuery.paddingOf(context).bottom;
+              return Padding(
+                padding: EdgeInsets.only(bottom: bottomInset),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Expanded(
+                      child: Stack(
+                        children: [
+                          MessagesView(
+                            key: Key(chat.guid),
+                            customService: widget.customService,
+                            initialScrollToGuid: widget.initialScrollToGuid,
+                            controller: controller,
+                          ),
+                          ScrollDownButton(controller: controller),
+                        ],
+                      ),
+                    ),
+                    GestureDetector(
+                      onPanUpdate: _onPanUpdate,
+                      child: ConversationTextField(
+                        parentController: controller,
+                      ),
+                    ),
                   ],
                 ),
-              ),
-              GestureDetector(
-                onPanUpdate: _onPanUpdate,
-                child: ConversationTextField(
-                  parentController: controller,
-                ),
-              ),
-            ],
+              );
+            },
           ),
         ],
       ),
@@ -181,38 +208,22 @@ class ConversationViewState extends State<ConversationView> with ThemeHelpers<Co
     return ChatStateScope(
       chatState: chatState,
       child: Obx(() {
-        // Determine base theme — use adaptive theme when enabled and loaded.
-        ThemeData baseTheme = context.theme;
-        final adaptiveEnabled = chatState.adaptiveThemeEnabled.value;
-        final adaptiveThemes = chatState.adaptiveThemes.value;
         final isDark = ThemeSvc.inDarkMode(context);
-        final variantName =
-            isDark ? chatState.adaptiveThemeVariantDark.value : chatState.adaptiveThemeVariantLight.value;
-
-        if (adaptiveEnabled && adaptiveThemes != null && variantName != null) {
-          final variant = MaterialYouVariant.values.where((v) => v.name == variantName).firstOrNull;
-          if (variant != null && adaptiveThemes.containsKey(variant)) {
-            final pair = adaptiveThemes[variant]!;
-            baseTheme = ThemeSvc.inDarkMode(context) ? pair.dark : pair.light;
-          }
-        }
+        chatState.themeVersion.value;
+        final themeName = isDark ? chatState.customThemeDark.value : chatState.customThemeLight.value;
+        final baseTheme = ThemeStruct.resolveByName(themeName, isDark ? Brightness.dark : Brightness.light).data;
 
         final colorScheme = baseTheme.colorScheme;
-        // When the adaptive theme is active, derive bubble color from its own
-        // BubbleColors extension rather than from the outer context's theme.
-        // The outer context carries the global app theme (e.g. "Bright White"),
-        // whose BubbleColors would otherwise override the adaptive palette.
-        final adaptiveBubbleColors =
-            adaptiveEnabled && adaptiveThemes != null ? baseTheme.extensions[BubbleColors] as BubbleColors? : null;
-        final bubbleColor = adaptiveBubbleColors != null
+        final bubbleColors = baseTheme.extensions[BubbleColors] as BubbleColors?;
+        final bubbleColor = bubbleColors != null
             ? (chat.isIMessage
-                ? adaptiveBubbleColors.iMessageBubbleColor ?? colorScheme.iMessageBubble
-                : adaptiveBubbleColors.smsBubbleColor ?? colorScheme.smsBubble)
+                ? bubbleColors.iMessageBubbleColor ?? colorScheme.iMessageBubble
+                : bubbleColors.smsBubbleColor ?? colorScheme.smsBubble)
             : colorScheme.bubble(context, chat.isIMessage);
-        final onBubbleColor = adaptiveBubbleColors != null
+        final onBubbleColor = bubbleColors != null
             ? (chat.isIMessage
-                ? adaptiveBubbleColors.oniMessageBubbleColor ?? colorScheme.oniMessageBubble
-                : adaptiveBubbleColors.onSmsBubbleColor ?? colorScheme.onSmsBubble)
+                ? bubbleColors.oniMessageBubbleColor ?? colorScheme.oniMessageBubble
+                : bubbleColors.onSmsBubbleColor ?? colorScheme.onSmsBubble)
             : colorScheme.onBubble(context, chat.isIMessage);
 
         return Theme(
@@ -233,8 +244,8 @@ class ConversationViewState extends State<ConversationView> with ThemeHelpers<Co
                 controller.selected.clear();
                 return;
               }
-              if (controller.showAttachmentPicker) {
-                controller.showAttachmentPicker = false;
+              if (controller.showAttachmentPicker.value) {
+                controller.showAttachmentPicker.value = false;
                 controller.updateWidgets<ConversationTextField>(null);
                 return;
               }
@@ -248,6 +259,7 @@ class ConversationViewState extends State<ConversationView> with ThemeHelpers<Co
             child: BBScaffold(
               backgroundColor: windowEffect != WindowEffect.disabled ? Colors.transparent : colorScheme.surface,
               extendBodyBehindAppBar: true,
+              safeAreaBottom: false,
               appBar: _appBar,
               body: Actions(
                 actions: _actionsMap,

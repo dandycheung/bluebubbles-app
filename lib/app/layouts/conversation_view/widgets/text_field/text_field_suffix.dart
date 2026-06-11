@@ -222,7 +222,7 @@ class _RecordingButton extends StatelessWidget {
                     icon: Icon(
                       isIOS ? CupertinoIcons.mic_fill : Icons.mic_none,
                       color: isIOS
-                          ? context.theme.colorScheme.outline.withValues(alpha: 0.6)
+                          ? context.theme.colorScheme.outline.withValues(alpha: 0.8)
                           : context.theme.colorScheme.onSurfaceVariant,
                       size: 20,
                     ),

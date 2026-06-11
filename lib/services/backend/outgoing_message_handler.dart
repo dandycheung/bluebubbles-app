@@ -703,7 +703,8 @@ class OutgoingMessageHandler {
         onExtra: r != null
             ? (confirmed) async {
                 if (confirmed.associatedMessageGuid != null) {
-                  final parentState = MessagesSvc(c.guid).getMessageStateIfExists(confirmed.associatedMessageGuid!);
+                  final parentState =
+                      maybeFindMessagesSvc(c.guid)?.getMessageStateIfExists(confirmed.associatedMessageGuid!);
                   if (parentState != null) {
                     parentState.updateAssociatedMessageInternal(confirmed, tempGuid: tempGuid);
                   } else {
@@ -727,8 +728,8 @@ class OutgoingMessageHandler {
         // update the parent so the error badge propagates to the UI.
         onExtra: r != null && m.associatedMessageGuid != null
             ? (errorMsg) async {
-                MessagesSvc(c.guid)
-                    .getMessageStateIfExists(m.associatedMessageGuid!)
+                maybeFindMessagesSvc(c.guid)
+                    ?.getMessageStateIfExists(m.associatedMessageGuid!)
                     ?.updateAssociatedMessageInternal(errorMsg, tempGuid: tempGuid);
               }
             : null,
@@ -840,8 +841,8 @@ class OutgoingMessageHandler {
             // to the real key when updateMessage delivers the updated struct.
             if (Get.isRegistered<MessagesService>(tag: c.guid)) {
               MessagesSvc(c.guid).notifyAttachmentSendComplete(tempGuid, newMessage.guid!, tempGuid, a);
+              MessagesSvc(c.guid).updateMessage(newMessage);
             }
-            MessagesSvc(c.guid).updateMessage(newMessage);
           } catch (e, st) {
             Logger.warn('Failed to replace attachment ${a.guid}', error: e, trace: st, tag: _tag);
           }

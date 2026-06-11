@@ -16,10 +16,33 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart' hide Response;
 
+MessagesService? maybeFindMessagesSvc(String chatGuid) =>
+    Get.isRegistered<MessagesService>(tag: chatGuid) ? Get.find<MessagesService>(tag: chatGuid) : null;
+
+MessagesService ensureMessagesSvc(String chatGuid) =>
+    maybeFindMessagesSvc(chatGuid) ??
+    Get.put(
+      MessagesService(chatGuid),
+      tag: chatGuid,
+    );
+
+MessagesService registerMessagesSvc(MessagesService service) =>
+    maybeFindMessagesSvc(service.tag) ??
+    Get.put(
+      service,
+      tag: service.tag,
+    );
+
 // ignore: non_constant_identifier_names
-MessagesService MessagesSvc(String chatGuid) => Get.isRegistered<MessagesService>(tag: chatGuid)
-    ? Get.find<MessagesService>(tag: chatGuid)
-    : Get.put(MessagesService(chatGuid), tag: chatGuid);
+MessagesService MessagesSvc(String chatGuid) {
+  final service = maybeFindMessagesSvc(chatGuid);
+  if (service == null) {
+    throw StateError(
+      'MessagesService for chat $chatGuid is not registered. Only UI owner code should create it.',
+    );
+  }
+  return service;
+}
 
 String? lastReloadedChat() =>
     Get.isRegistered<String>(tag: 'lastReloadedChat') ? Get.find<String>(tag: 'lastReloadedChat') : null;

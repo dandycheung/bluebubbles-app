@@ -208,7 +208,7 @@ class ChatCreatorState extends State<ChatCreator> with ThemeHelpers {
         // Only create a new one if we don't already have one for this chat
         // DON'T initialize it here - let MessagesView initialize it with proper handlers
         if (messagesService == null || messagesService!.tag != existingChat.guid) {
-          messagesService = MessagesSvc(existingChat.guid);
+          messagesService = maybeFindMessagesSvc(existingChat.guid) ?? MessagesService(existingChat.guid);
         }
 
         if (widget.initialAttachments.isNotEmpty) {
@@ -498,7 +498,8 @@ class ChatCreatorState extends State<ChatCreator> with ThemeHelpers {
                                 fakeController.value = ChatsSvc.activeChat!.controller;
                               }
                               if (messagesService == null || messagesService!.tag != existingChat.guid) {
-                                messagesService = MessagesSvc(existingChat.guid);
+                                messagesService =
+                                    maybeFindMessagesSvc(existingChat.guid) ?? MessagesService(existingChat.guid);
                               }
 
                               final ctrl = fakeController.value!;
@@ -600,7 +601,7 @@ class ChatCreatorState extends State<ChatCreator> with ThemeHelpers {
 
                                 // Force close the message service for the chat so it can be reloaded.
                                 // If this isn't done, new messages will not show.
-                                MessagesSvc(newChat.guid).close(force: true);
+                                maybeFindMessagesSvc(newChat.guid)?.close(force: true);
                                 cvc(newChat).close();
 
                                 // Let awaiters know we completed

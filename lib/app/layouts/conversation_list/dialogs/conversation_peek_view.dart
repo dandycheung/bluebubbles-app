@@ -4,7 +4,7 @@ import 'dart:ui';
 import 'package:bluebubbles/app/layouts/conversation_view/mixins/messages_service_mixin.dart';
 import 'package:bluebubbles/app/layouts/conversation_view/widgets/message/message_holder.dart';
 import 'package:bluebubbles/app/state/chat_state_scope.dart';
-import 'package:bluebubbles/app/wrappers/bb_annotated_region.dart';
+import 'package:bluebubbles/app/wrappers/bb_scaffold.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/app/layouts/conversation_view/pages/conversation_view.dart';
 import 'package:bluebubbles/app/wrappers/theme_switcher.dart';
@@ -28,7 +28,11 @@ Future<void> peekChat(BuildContext context, Chat c, Offset offset) async {
       pageBuilder: (context, animation, secondaryAnimation) {
         return FadeTransition(
           opacity: animation,
-          child: ConversationPeekView(position: offset, chat: c, messages: messages),
+          child: ConversationPeekView(
+            position: offset,
+            chat: c,
+            messages: messages,
+          ),
         );
       },
       fullscreenDialog: true,
@@ -100,131 +104,151 @@ class _ConversationPeekViewState extends State<ConversationPeekView>
 
   @override
   Widget build(BuildContext context) {
-    return BBAnnotatedRegion(
-      child: Theme(
-        data: context.theme.copyWith(
-          // in case some components still use legacy theming
-          primaryColor: context.theme.colorScheme.bubble(context, widget.chat.isIMessage),
-          colorScheme: context.theme.colorScheme.copyWith(
-            primary: context.theme.colorScheme.bubble(context, widget.chat.isIMessage),
-            onPrimary: context.theme.colorScheme.onBubble(context, widget.chat.isIMessage),
-            surface: ThemeSvc.isMaterialYouActive(context)
-                ? null
-                : (context.theme.extensions[BubbleColors] as BubbleColors?)?.receivedBubbleColor,
-            onSurface: ThemeSvc.isMaterialYouActive(context)
-                ? null
-                : (context.theme.extensions[BubbleColors] as BubbleColors?)?.onReceivedBubbleColor,
-          ),
+    return Theme(
+      data: context.theme.copyWith(
+        // in case some components still use legacy theming
+        primaryColor: context.theme.colorScheme.bubble(context, widget.chat.isIMessage),
+        colorScheme: context.theme.colorScheme.copyWith(
+          primary: context.theme.colorScheme.bubble(context, widget.chat.isIMessage),
+          onPrimary: context.theme.colorScheme.onBubble(context, widget.chat.isIMessage),
+          surface: ThemeSvc.isMaterialYouActive(context)
+              ? null
+              : (context.theme.extensions[BubbleColors] as BubbleColors?)?.receivedBubbleColor,
+          onSurface: ThemeSvc.isMaterialYouActive(context)
+              ? null
+              : (context.theme.extensions[BubbleColors] as BubbleColors?)?.onReceivedBubbleColor,
         ),
-        child: TitleBarWrapper(
-            child: Stack(
-          fit: StackFit.expand,
-          children: [
-            GestureDetector(
-              onTap: () {
-                Navigator.of(context).pop();
-              },
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
-                child: Container(
-                  color: context.theme.colorScheme.surfaceContainerHighest.darkenPercent(30).withValues(alpha: 0.2),
-                ),
-              ),
-            ),
-            Positioned(
-              left: min(widget.position.dx, context.width - min(context.width - 50, 500) - 25),
-              top: min(widget.position.dy,
-                  context.height - min(context.height / 2, context.height - itemHeight * 5) - itemHeight * 5 - 25),
-              child: TweenAnimationBuilder<double>(
-                tween: Tween<double>(begin: 0.8, end: 1),
-                curve: Curves.easeOutBack,
-                duration: const Duration(milliseconds: 400),
-                child: FadeTransition(
-                  opacity: CurvedAnimation(
-                    parent: controller,
-                    curve: const Interval(0.0, .9, curve: Curves.ease),
-                    reverseCurve: Curves.easeInCubic,
+      ),
+      child: BBScaffold(
+        backgroundColor: Colors.transparent,
+        safeAreaTop: false,
+        safeAreaBottom: true,
+        safeAreaLeft: false,
+        safeAreaRight: false,
+        body: TitleBarWrapper(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final availableWidth = constraints.maxWidth;
+              final availableHeight = constraints.maxHeight;
+              final previewWidth = min(max(availableWidth - 50, 0.0), 500.0);
+              final menuHeight = itemHeight * 5 + 5;
+              final previewHeight = min(
+                  max(min(availableHeight / 2, availableHeight - menuHeight - 25), itemHeight * 2), availableHeight);
+              final maxLeft = max(availableWidth - previewWidth - 25, 0.0);
+              final maxTop = max(availableHeight - previewHeight - menuHeight - 25, 0.0);
+
+              return Stack(
+                fit: StackFit.expand,
+                children: [
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.of(context).pop();
+                    },
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+                      child: Container(
+                        color:
+                            context.theme.colorScheme.surfaceContainerHighest.darkenPercent(30).withValues(alpha: 0.2),
+                      ),
+                    ),
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      GestureDetector(
-                        onTap: () async {
-                          cvController.close();
-                          MessagesSvc(widget.chat.guid).close();
-                          // Controllers are disposed by MessagesService.onClose()
-                          controller.dispose();
-                          disposed = true;
-                          Navigator.of(context).pop();
-                          NavigationSvc.pushAndRemoveUntil(
-                            Get.context!,
-                            ConversationView(
-                              chat: widget.chat,
-                            ),
-                            (route) => route.isFirst,
-                          );
-                        },
-                        child: ChatStateScope(
-                          chatState: ChatsSvc.getOrCreateChatState(widget.chat),
-                          child: DeferredPointerHandler(
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: ThemeSvc.inDarkMode(context)
-                                    ? context.theme.colorScheme.surfaceContainerHighest.darkenPercent(30)
-                                    : context.theme.colorScheme.surface,
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              width: min(context.width - 50, 500),
-                              height: min(context.height / 2, context.height - itemHeight * 5),
-                              child: Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: ListView.builder(
-                                  shrinkWrap: true,
-                                  reverse: true,
-                                  physics: ThemeSwitcher.getScrollPhysics(),
-                                  findChildIndexCallback: (key) =>
-                                      findChildIndexByKey(widget.messages, key, (item) => item.guid),
-                                  itemBuilder: (context, index) {
-                                    return AbsorbPointer(
-                                      absorbing: true,
-                                      child: Material(
-                                        color: Colors.transparent,
-                                        child: Padding(
-                                          padding: const EdgeInsets.only(left: 5.0, right: 5.0),
-                                          child: MessageHolder(
-                                            key: Key(widget.messages[index].guid!),
-                                            cvController: cvController,
-                                            message: widget.messages[index],
-                                            oldMessage:
-                                                index == widget.messages.length - 1 ? null : widget.messages[index + 1],
-                                            newMessage: index == 0 ? null : widget.messages[index - 1],
-                                          ),
-                                        ),
+                  Positioned(
+                    left: min(widget.position.dx, maxLeft),
+                    top: min(widget.position.dy, maxTop),
+                    child: TweenAnimationBuilder<double>(
+                      tween: Tween<double>(begin: 0.8, end: 1),
+                      curve: Curves.easeOutBack,
+                      duration: const Duration(milliseconds: 400),
+                      child: FadeTransition(
+                        opacity: CurvedAnimation(
+                          parent: controller,
+                          curve: const Interval(0.0, .9, curve: Curves.ease),
+                          reverseCurve: Curves.easeInCubic,
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            GestureDetector(
+                              onTap: () async {
+                                cvController.close();
+                                MessagesSvc(widget.chat.guid).close();
+                                // Controllers are disposed by MessagesService.onClose()
+                                controller.dispose();
+                                disposed = true;
+                                Navigator.of(context).pop();
+                                NavigationSvc.pushAndRemoveUntil(
+                                  Get.context!,
+                                  ConversationView(
+                                    chat: widget.chat,
+                                  ),
+                                  (route) => route.isFirst,
+                                );
+                              },
+                              child: ChatStateScope(
+                                chatState: ChatsSvc.getOrCreateChatState(widget.chat),
+                                child: DeferredPointerHandler(
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: ThemeSvc.inDarkMode(context)
+                                          ? context.theme.colorScheme.surfaceContainerHighest.darkenPercent(30)
+                                          : context.theme.colorScheme.surface,
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    width: previewWidth,
+                                    height: previewHeight,
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: ListView.builder(
+                                        shrinkWrap: true,
+                                        reverse: true,
+                                        physics: ThemeSwitcher.getScrollPhysics(),
+                                        findChildIndexCallback: (key) =>
+                                            findChildIndexByKey(widget.messages, key, (item) => item.guid),
+                                        itemBuilder: (context, index) {
+                                          return AbsorbPointer(
+                                            absorbing: true,
+                                            child: Material(
+                                              color: Colors.transparent,
+                                              child: Padding(
+                                                padding: const EdgeInsets.only(left: 5.0, right: 5.0),
+                                                child: MessageHolder(
+                                                  key: Key(widget.messages[index].guid!),
+                                                  cvController: cvController,
+                                                  message: widget.messages[index],
+                                                  oldMessage: index == widget.messages.length - 1
+                                                      ? null
+                                                      : widget.messages[index + 1],
+                                                  newMessage: index == 0 ? null : widget.messages[index - 1],
+                                                ),
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                        itemCount: widget.messages.length,
                                       ),
-                                    );
-                                  },
-                                  itemCount: widget.messages.length,
+                                    ),
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
+                            const SizedBox(height: 5),
+                            buildDetailsMenu(context),
+                          ],
                         ),
                       ),
-                      const SizedBox(height: 5),
-                      buildDetailsMenu(context),
-                    ],
+                      builder: (context, size, child) {
+                        return Transform.scale(
+                          scale: size,
+                          child: child,
+                        );
+                      },
+                    ),
                   ),
-                ),
-                builder: (context, size, child) {
-                  return Transform.scale(
-                    scale: size,
-                    child: child,
-                  );
-                },
-              ),
-            ),
-          ],
-        )),
+                ],
+              );
+            },
+          ),
+        ),
       ),
     );
   }

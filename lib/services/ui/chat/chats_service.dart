@@ -58,7 +58,6 @@ class ChatsService {
   /// Listeners for redacted mode settings to update all ChatStates
   StreamSubscription? _redactedModeListener;
   StreamSubscription? _hideContactInfoListener;
-  StreamSubscription? _generateFakeContactNamesListener;
   StreamSubscription? _generateFakeAvatarsListener;
   StreamSubscription? _hideAttachmentsListener;
 
@@ -327,7 +326,6 @@ class ChatsService {
     // Cancel existing listeners if any
     _redactedModeListener?.cancel();
     _hideContactInfoListener?.cancel();
-    _generateFakeContactNamesListener?.cancel();
     _generateFakeAvatarsListener?.cancel();
     _hideAttachmentsListener?.cancel();
 
@@ -344,17 +342,6 @@ class ChatsService {
 
     // Listen to hideContactInfo toggle - only affects contact info fields
     _hideContactInfoListener = SettingsSvc.settings.hideContactInfo.listen((enabled) {
-      for (final chatState in chatStates.values) {
-        if (enabled) {
-          chatState.redactContactInfo();
-        } else {
-          chatState.unredactContactInfo();
-        }
-      }
-    });
-
-    // Listen to generateFakeContactNames toggle - only affects contact info fields
-    _generateFakeContactNamesListener = SettingsSvc.settings.generateFakeContactNames.listen((enabled) {
       for (final chatState in chatStates.values) {
         if (enabled) {
           chatState.redactContactInfo();
@@ -426,7 +413,6 @@ class ChatsService {
     _listVersionUpdateTimer?.cancel();
     _redactedModeListener?.cancel();
     _hideContactInfoListener?.cancel();
-    _generateFakeContactNamesListener?.cancel();
     _generateFakeAvatarsListener?.cancel();
     _hideAttachmentsListener?.cancel();
   }
@@ -1191,61 +1177,45 @@ class ChatsService {
   /// Set chat custom background path
   Future<void> setChatCustomBackgroundPath(Chat chat, String? value) async {
     final state = getChatState(chat.guid);
+    final resolvedPath = value ?? FilesystemSvc.getExistingChatBackgroundPath(chat.guid);
+    final oldPath = state?.customBackgroundPath.value ?? FilesystemSvc.getExistingChatBackgroundPath(chat.guid);
+    if (state != null && state.customBackgroundPath.value == resolvedPath) return;
 
-    if (state != null && state.customBackgroundPath.value == value) return;
-
-    // Invalidate the adaptive theme cache for the old background path.
-    final oldPath = state?.customBackgroundPath.value ?? chat.customBackgroundPath;
-    if (oldPath != null && oldPath != value) {
+    if (oldPath != null && oldPath != resolvedPath) {
       ThemesService.clearAdaptiveThemeCache(oldPath);
     }
 
-    // Update Chat model (use state.chat if available, otherwise use passed in chat)
-    final chatToUpdate = state?.chat ?? chat;
-    chatToUpdate.customBackgroundPath = value;
-    await chatToUpdate.saveAsync(updateCustomBackgroundPath: true);
+    final lightThemeName = state?.customThemeLight.value ?? chat.customThemeLight;
+    final darkThemeName = state?.customThemeDark.value ?? chat.customThemeDark;
+    final usesAdaptiveBackgroundTheme =
+        (lightThemeName != null && ThemesService.isAdaptiveBackgroundThemeName(lightThemeName)) ||
+            (darkThemeName != null && ThemesService.isAdaptiveBackgroundThemeName(darkThemeName));
+    if (resolvedPath != null && usesAdaptiveBackgroundTheme) {
+      await ThemesService.upsertAdaptiveBackgroundThemesFromImage(resolvedPath, scopeKey: chat.guid);
+    }
 
-    // Update state if available
-    state?.updateCustomBackgroundPathInternal(value);
+    state?.updateCustomBackgroundPathInternal(resolvedPath);
   }
 
-  /// Enable or disable the adaptive chat theme for a specific chat
-  Future<void> setAdaptiveThemeEnabled(Chat chat, bool value) async {
+  /// Set the custom light and dark themes for a specific chat.
+  Future<void> setChatCustomThemes(
+    Chat chat, {
+    String? lightTheme,
+    String? darkTheme,
+  }) async {
     final state = getChatState(chat.guid);
-
-    if (state != null && state.adaptiveThemeEnabled.value == value) return;
-
+    final changed =
+        state == null || state.customThemeLight.value != lightTheme || state.customThemeDark.value != darkTheme;
     final chatToUpdate = state?.chat ?? chat;
-    chatToUpdate.adaptiveThemeEnabled = value;
-    await chatToUpdate.saveAsync(updateAdaptiveTheme: true);
+    chatToUpdate.customThemeLight = lightTheme;
+    chatToUpdate.customThemeDark = darkTheme;
+    await chatToUpdate.saveAsync(updateCustomThemes: true);
 
-    state?.updateAdaptiveThemeEnabledInternal(value);
-  }
-
-  /// Set the light mode adaptive theme variant for a specific chat
-  Future<void> setAdaptiveThemeVariantLight(Chat chat, String? variant) async {
-    final state = getChatState(chat.guid);
-
-    if (state != null && state.adaptiveThemeVariantLight.value == variant) return;
-
-    final chatToUpdate = state?.chat ?? chat;
-    chatToUpdate.adaptiveThemeVariantLight = variant;
-    await chatToUpdate.saveAsync(updateAdaptiveTheme: true);
-
-    state?.updateAdaptiveThemeVariantLightInternal(variant);
-  }
-
-  /// Set the dark mode adaptive theme variant for a specific chat
-  Future<void> setAdaptiveThemeVariantDark(Chat chat, String? variant) async {
-    final state = getChatState(chat.guid);
-
-    if (state != null && state.adaptiveThemeVariantDark.value == variant) return;
-
-    final chatToUpdate = state?.chat ?? chat;
-    chatToUpdate.adaptiveThemeVariantDark = variant;
-    await chatToUpdate.saveAsync(updateAdaptiveTheme: true);
-
-    state?.updateAdaptiveThemeVariantDarkInternal(variant);
+    state?.updateCustomThemeLightInternal(lightTheme);
+    state?.updateCustomThemeDarkInternal(darkTheme);
+    if (!changed) {
+      state.bumpThemeVersion();
+    }
   }
 
   /// Set chat latest message

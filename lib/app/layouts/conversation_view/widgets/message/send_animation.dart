@@ -29,7 +29,8 @@ class _SendAnimationState extends CustomState<SendAnimation, SendData, Conversat
   Tween<double> tween = Tween<double>(begin: 1, end: 0);
   Control control = Control.stop;
 
-  // The padding applied to the ConversationTextField (bottom: 10 + top: 10) plus
+  // The padding applied to the ConversationTextField in its closed state
+  // (bottom: 10 + top: 10) plus
   // the visual gap between the text field top edge and the bottom of the message list.
   static const double _textFieldVerticalPadding = 17.5;
 

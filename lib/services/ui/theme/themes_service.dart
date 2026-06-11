@@ -33,6 +33,7 @@ enum MaterialYouVariant {
 class ThemesService {
   static const String materialYouLightName = "Material You (Light)";
   static const String materialYouDarkName = "Material You (Dark)";
+  static const String _adaptiveBackgroundThemePrefix = "__adaptive_background_theme__";
   static const Map<MaterialYouVariant, String> _variantTokens = {
     MaterialYouVariant.base: "Material You",
     MaterialYouVariant.vibrant: "Material You - Vibrant",
@@ -195,6 +196,31 @@ class ThemesService {
     if (name.contains("Style 3") || name.contains("Bloom") || name.contains("Neon Pop")) return 7;
     if (name.contains("Style 4") || name.contains("Moss") || name.contains("Earthy")) return 8;
     return 99;
+  }
+
+  static String adaptiveBackgroundThemeName(
+    String scopeKey, {
+    required MaterialYouVariant variant,
+    required Brightness brightness,
+  }) {
+    return "$_adaptiveBackgroundThemePrefix::$scopeKey::${brightness.name}::${variant.name}";
+  }
+
+  static bool isAdaptiveBackgroundThemeName(String name) {
+    return name.startsWith(_adaptiveBackgroundThemePrefix);
+  }
+
+  static bool isGeneratedMaterialThemeName(String name) {
+    return isMaterialYouThemeName(name) || isAdaptiveBackgroundThemeName(name);
+  }
+
+  static String adaptiveBackgroundThemeDisplayName(String name) {
+    if (!isAdaptiveBackgroundThemeName(name)) return name;
+    final parts = name.split("::");
+    if (parts.length < 4) return "Default";
+    final variant = MaterialYouVariant.values.firstWhereOrNull((value) => value.name == parts[3]);
+    if (variant == null) return "Default";
+    return materialYouDisplayName(materialYouThemeName(variant, Brightness.light));
   }
 
   static Color _tone(Color color, {double sat = 0, double light = 0, double hue = 0}) {
@@ -586,6 +612,36 @@ class ThemesService {
 
     _adaptiveThemeCache[imagePath] = result;
     return result;
+  }
+
+  static Future<List<ThemeStruct>> upsertAdaptiveBackgroundThemesFromImage(
+    String imagePath, {
+    required String scopeKey,
+  }) async {
+    final generated = await generateAdaptiveThemesFromImage(imagePath);
+    final results = <ThemeStruct>[];
+
+    for (final variant in MaterialYouVariant.values) {
+      final pair = generated[variant]!;
+      for (final brightness in [Brightness.light, Brightness.dark]) {
+        final name = adaptiveBackgroundThemeName(
+          scopeKey,
+          variant: variant,
+          brightness: brightness,
+        );
+        final data = brightness == Brightness.dark ? pair.dark : pair.light;
+        final struct = ThemeStruct.findOne(name) ?? ThemeStruct(name: name, themeData: data);
+        struct
+          ..name = name
+          ..data = data
+          ..gradientBg = false
+          ..googleFont = 'Default';
+        struct.save();
+        results.add(struct);
+      }
+    }
+
+    return results;
   }
 
   void _loadTheme(BuildContext context, {ThemeStruct? lightOverride, ThemeStruct? darkOverride}) {

@@ -1,4 +1,5 @@
 import 'package:bluebubbles/app/layouts/conversation_details/widgets/attachments_loader.dart';
+import 'package:flutter_acrylic/flutter_acrylic.dart';
 import 'package:bluebubbles/app/layouts/conversation_details/widgets/chat_info.dart';
 import 'package:bluebubbles/app/state/chat_state_scope.dart';
 import 'package:bluebubbles/app/layouts/conversation_details/widgets/chat_options.dart';
@@ -65,41 +66,46 @@ class _ConversationDetailsState extends State<ConversationDetails> with WidgetsB
     return ChatStateScope(
       chatState: chatState,
       child: Obx(() {
-        // Reactively resolve adaptive theme for this chat.
-        ThemeData baseTheme = context.theme;
-        final adaptiveEnabled = chatState.adaptiveThemeEnabled.value;
-        final adaptiveThemes = chatState.adaptiveThemes.value;
         final isDark = ThemeSvc.inDarkMode(context);
-        final variantName =
-            isDark ? chatState.adaptiveThemeVariantDark.value : chatState.adaptiveThemeVariantLight.value;
+        chatState.themeVersion.value;
+        final themeName = isDark ? chatState.customThemeDark.value : chatState.customThemeLight.value;
+        final baseTheme = ThemeStruct.resolveByName(themeName, isDark ? Brightness.dark : Brightness.light).data;
 
-        if (adaptiveEnabled && adaptiveThemes != null && variantName != null) {
-          final variant = MaterialYouVariant.values.where((v) => v.name == variantName).firstOrNull;
-          if (variant != null && adaptiveThemes.containsKey(variant)) {
-            final pair = adaptiveThemes[variant]!;
-            baseTheme = isDark ? pair.dark : pair.light;
-          }
-        }
+        // Compute scaffold colors from baseTheme before copyWith modifies colorScheme.surface.
+        final hasWindowEffect = SettingsSvc.settings.windowEffect.value != WindowEffect.disabled;
+        final reverseMapping = SettingsSvc.settings.skin.value == Skins.Material && isDark;
+        final rawHeaderColor = (isDark ? baseTheme.colorScheme.surface : baseTheme.colorScheme.surfaceContainerHighest)
+            .withAlpha(hasWindowEffect ? 20 : 255);
+        final rawTileColor = (isDark ? baseTheme.colorScheme.surfaceContainerHighest : baseTheme.colorScheme.surface)
+            .withAlpha(hasWindowEffect ? 100 : 255);
+        final scaffoldHeaderColor = reverseMapping ? rawTileColor : rawHeaderColor;
+        final scaffoldTileColor = reverseMapping ? rawHeaderColor : rawTileColor;
+
+        final bubbleColors = baseTheme.extensions[BubbleColors] as BubbleColors?;
+        final bubbleColor = chat.isIMessage
+            ? bubbleColors?.iMessageBubbleColor ?? baseTheme.colorScheme.iMessageBubble
+            : bubbleColors?.smsBubbleColor ?? baseTheme.colorScheme.smsBubble;
+        final onBubbleColor = chat.isIMessage
+            ? bubbleColors?.oniMessageBubbleColor ?? baseTheme.colorScheme.oniMessageBubble
+            : bubbleColors?.onSmsBubbleColor ?? baseTheme.colorScheme.onSmsBubble;
+        final useGeneratedThemeSurface = themeName != null
+            ? ThemesService.isGeneratedMaterialThemeName(themeName)
+            : ThemeSvc.isMaterialYouActive(context);
 
         return Theme(
             data: baseTheme.copyWith(
-              // in case some components still use legacy theming
-              primaryColor: baseTheme.colorScheme.bubble(context, chat.isIMessage),
+              primaryColor: bubbleColor,
               colorScheme: baseTheme.colorScheme.copyWith(
-                primary: baseTheme.colorScheme.bubble(context, chat.isIMessage),
-                onPrimary: baseTheme.colorScheme.onBubble(context, chat.isIMessage),
-                surface: ThemeSvc.isMaterialYouActive(context)
-                    ? null
-                    : (context.theme.extensions[BubbleColors] as BubbleColors?)?.receivedBubbleColor,
-                onSurface: ThemeSvc.isMaterialYouActive(context)
-                    ? null
-                    : (context.theme.extensions[BubbleColors] as BubbleColors?)?.onReceivedBubbleColor,
+                primary: bubbleColor,
+                onPrimary: onBubbleColor,
+                surface: useGeneratedThemeSurface ? null : bubbleColors?.receivedBubbleColor,
+                onSurface: useGeneratedThemeSurface ? null : bubbleColors?.onReceivedBubbleColor,
               ),
             ),
             child: Obx(() => SettingsScaffold(
-                  headerColor: headerColor,
+                  headerColor: scaffoldHeaderColor,
                   title: "Details",
-                  tileColor: tileColor,
+                  tileColor: scaffoldTileColor,
                   initialHeader: null,
                   iosSubtitle: iosSubtitle,
                   materialSubtitle: materialSubtitle,
