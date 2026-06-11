@@ -137,6 +137,8 @@ dependencies:
   particles_flutter: ^2.0.2
   pasteboard: ^0.5.0
   path_provider: ^2.1.5 # no web support
+  path_provider_linux: ^2.2.1 # desktop shared_preferences store path resolution
+  path_provider_windows: ^2.3.0 # desktop shared_preferences store path resolution
   pdf: ^3.11.3
   permission_handler: ^12.0.1 # mobile only
   photo_manager: ^3.9.0 # only mobile; 3.9.0 has Kotlin classpath conflict with AGP 8.9/Kotlin 2.1
@@ -153,6 +155,7 @@ dependencies:
   secure_application: ^4.1.0 # no linux support
   share_plus: ^12.0.1 # sharing files not supported on Linux, doesn't work properly on Windows
   shared_preferences: ^2.5.3
+  shared_preferences_platform_interface: ^2.4.2 # custom desktop store (see desktop_shared_preferences_store.dart)
   shimmer: ^3.0.0
   simple_animations: ^5.1.0
   skeletonizer: ^2.1.3
