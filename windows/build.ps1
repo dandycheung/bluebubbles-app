@@ -36,7 +36,7 @@ if ($env:FLUTTER_CMD) {
 $releaseDir = 'build\windows\x64\runner\Release'
 if (Test-Path $releaseDir) { Remove-Item $releaseDir -Recurse -Force }
 
-Invoke-Checked $flutterCmd pub get
+Invoke-Checked $flutterCmd pub get --enforce-lockfile
 
 # Runs `flutter build windows --release` and packages the result as an MSIX
 Invoke-Checked $dartCmd run msix:create

@@ -18,7 +18,7 @@ fi
 # leftover libs from removed plugins would get shipped.
 rm -rf build/linux
 
-$FLUTTER_CMD pub get
+$FLUTTER_CMD pub get --enforce-lockfile
 $FLUTTER_CMD build linux --release -v
 
 arch=$(uname -m)
