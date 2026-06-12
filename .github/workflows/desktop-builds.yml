@@ -15,7 +15,7 @@ permissions:
 
 jobs:
   windows:
-    runs-on: windows-2025-vs2026
+    runs-on: windows-latest
     timeout-minutes: 60
     steps:
       - name: Checkout code
@@ -38,7 +38,7 @@ jobs:
           key: pub-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pubspec.lock') }}
 
       # Inno Setup 6 and Rust (for super_native_extensions) are preinstalled
-      # on the windows-2025-vs2026 runner image.
+      # on the windows-latest runner image.
       - name: Build
         run: .\windows\build.ps1
         shell: pwsh
@@ -48,6 +48,12 @@ jobs:
         with:
           name: bluebubbles-installer
           path: windows/bluebubbles_installer.exe
+
+      - name: Upload debug symbols
+        uses: actions/upload-artifact@v7
+        with:
+          name: bluebubbles-windows-symbols
+          path: build/windows/symbols/
 
       # The msix is for the MS Store only — uploaded as its own run artifact
       # for easy download, never attached to releases.

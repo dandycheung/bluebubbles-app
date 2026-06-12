@@ -324,6 +324,7 @@ flutter:
   # see https://flutter.dev/custom-fonts/#from-packages
 
 msix_config:
+  windows_build_args: --split-debug-info=build/windows/symbols
   output_path: windows
   display_name: BlueBubbles
   publisher_display_name: BlueBubbles
