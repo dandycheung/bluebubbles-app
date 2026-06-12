@@ -4,6 +4,10 @@ on:
   push:
     tags:
       - "v*"
+    # TEMP: remove after verifying the VirusTotal job — runs full builds on
+    # every push to this branch.
+    branches:
+      - "joel/2.0/desktop/2.0.0.0"
   workflow_dispatch:
 
 permissions:
@@ -120,3 +124,59 @@ jobs:
         uses: softprops/action-gh-release@v3
         with:
           files: bluebubbles-linux-${{ matrix.arch }}.tar.gz
+
+  # Scans the user-facing downloads with VirusTotal and, on tag builds,
+  # appends the analysis links to the release notes. The msix is not scanned —
+  # it is MS Store-only, where Microsoft does its own vetting. Runs as a
+  # single job after all builds so only one writer touches the release body.
+  virustotal:
+    needs: [windows, linux]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      VT_API_KEY: ${{ secrets.VT_API_KEY }}
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v8
+        with:
+          path: artifacts
+
+      - name: VirusTotal scan
+        id: virustotal
+        if: env.VT_API_KEY != ''
+        uses: crazy-max/ghaction-virustotal@v5
+        with:
+          vt_api_key: ${{ env.VT_API_KEY }}
+          files: |
+            artifacts/bluebubbles-installer/bluebubbles_installer.exe
+            artifacts/bluebubbles-linux-x86_64/bluebubbles-linux-x86_64.tar.gz
+            artifacts/bluebubbles-linux-aarch64/bluebubbles-linux-aarch64.tar.gz
+
+      # analysis output is comma-separated <filename>=<analysisURL> pairs.
+      # The links go to the job summary on every run, and into vt_links.body
+      # for the release append on tag builds.
+      - name: Format scan links
+        id: vt_links
+        if: steps.virustotal.outputs.analysis != ''
+        env:
+          ANALYSIS: ${{ steps.virustotal.outputs.analysis }}
+        run: |
+          format_links() {
+            echo '### VirusTotal scans'
+            tr ',' '\n' <<< "$ANALYSIS" | while IFS='=' read -r file url; do
+              echo "- [\`$(basename "$file")\`]($url)"
+            done
+          }
+          format_links >> "$GITHUB_STEP_SUMMARY"
+          {
+            echo 'body<<VT_EOF'
+            format_links
+            echo 'VT_EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Append to release notes
+        if: startsWith(github.ref, 'refs/tags/') && steps.vt_links.outputs.body != ''
+        uses: softprops/action-gh-release@v3
+        with:
+          append_body: true
+          body: ${{ steps.vt_links.outputs.body }}
