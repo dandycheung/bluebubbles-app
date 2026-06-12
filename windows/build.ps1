@@ -1,8 +1,8 @@
 # Windows release build script. Run from the root of the repository. Requires Inno Setup 6 to be installed.
 # Builds the app, packages the MSIX, then compiles the Inno Setup installer.
 # Outputs:
-#   windows\bluebubbles.msix
-#   windows\bluebubbles-windows.exe
+#   windows\bluebubbles.msix (internal use only — not attached to releases)
+#   windows\bluebubbles_installer.exe
 $ErrorActionPreference = 'Stop'
 
 # Flutter version to build with; override with the FLUTTER_VERSION env var.
@@ -44,4 +44,4 @@ Invoke-Checked $dartCmd run msix:create
 # Compile the Inno Setup installer
 Invoke-Checked @($iscc) 'windows\bluebubbles_installer_script.iss'
 
-Get-FileHash 'windows\bluebubbles.msix', 'windows\bluebubbles-windows.exe' -Algorithm SHA256 | Format-List Path, Hash
+Get-FileHash 'windows\bluebubbles.msix', 'windows\bluebubbles_installer.exe' -Algorithm SHA256 | Format-List Path, Hash
