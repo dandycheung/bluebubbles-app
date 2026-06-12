@@ -15,7 +15,7 @@ permissions:
 
 jobs:
   windows:
-    runs-on: windows-latest
+    runs-on: windows-2025-vs2026
     timeout-minutes: 60
     steps:
       - name: Checkout code
@@ -38,7 +38,7 @@ jobs:
           key: pub-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pubspec.lock') }}
 
       # Inno Setup 6 and Rust (for super_native_extensions) are preinstalled
-      # on the windows-latest runner image.
+      # on the windows-2025-vs2026 runner image.
       - name: Build
         run: .\windows\build.ps1
         shell: pwsh
