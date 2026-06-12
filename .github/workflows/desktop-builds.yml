@@ -4,10 +4,6 @@ on:
   push:
     tags:
       - "v*"
-    # TEMP: remove after verifying the VirusTotal job — runs full builds on
-    # every push to this branch.
-    branches:
-      - "joel/2.0/desktop/2.0.0.0"
   workflow_dispatch:
 
 permissions:
