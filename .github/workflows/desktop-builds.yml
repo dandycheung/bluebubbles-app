@@ -4,8 +4,6 @@ on:
   push:
     tags:
       - "v*"
-    branches:
-      - "joel/2.0/**" # TEMP: for testing the workflow; remove before merge
   workflow_dispatch:
 
 permissions:
