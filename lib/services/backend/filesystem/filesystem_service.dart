@@ -133,14 +133,18 @@ class FilesystemService {
       appDocDir = (kIsDesktop ? await getApplicationSupportDirectory() : await getApplicationDocumentsDirectory());
       if (isMsix) {
         final String appDataRoot = joinAll(split(appDocDir.absolute.path).slice(0, 4));
-        final Directory msStoreLocation = Directory(join(appDataRoot, "Local", "Packages",
-            "23344BlueBubbles.BlueBubbles_2fva2ntdzvhtw", "LocalCache", "Roaming", "BlueBubbles", "bluebubbles"));
+        // Family name (Name_PublisherHash) from the install dir; hash varies per variant.
+        final exeSegments = split(Platform.resolvedExecutable);
+        final fullNameParts = exeSegments[exeSegments.indexOf('WindowsApps') + 1].split('_');
+        final packageFamilyName = '${fullNameParts.first}_${fullNameParts.last}';
+        final Directory msixLocation = Directory(join(appDataRoot, "Local", "Packages",
+            packageFamilyName, "LocalCache", "Roaming", "BlueBubbles", "bluebubbles"));
         // Check if the non-msix directory exists
         final Directory nonMsixLocation = Directory(join(appDataRoot, "Roaming", "BlueBubbles", "bluebubbles"));
-        if (!msStoreLocation.existsSync() && nonMsixLocation.existsSync()) {
-          await copyPath(nonMsixLocation.path, msStoreLocation.path);
+        if (!msixLocation.existsSync() && nonMsixLocation.existsSync()) {
+          await copyPath(nonMsixLocation.path, msixLocation.path);
         }
-        appDocDir = msStoreLocation;
+        appDocDir = msixLocation;
       }
       if (!headless) {
         final file = await rootBundle.load("assets/images/no-video-preview.png");
