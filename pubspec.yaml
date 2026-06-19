@@ -333,7 +333,6 @@ msix_config:
   publisher: CN=BEC9154D-191E-4375-BF30-698BD4C141C4
   vs_generated_images_folder_path: windows/icons
   logo_path: assets/icon/icon.ico
-  store: true
   icons_background_color: transparent
   languages: en-us
   architecture: x64

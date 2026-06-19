@@ -2,17 +2,45 @@ name: Desktop Builds
 
 on:
   push:
+    # TEMP: run on this branch until the workflow lands on master (workflow_dispatch
+    # only works from the default branch). Remove the branches list after merge.
+    branches:
+      - joel/2.0/desktop/2.0.0.0
     tags:
       - "v*"
   workflow_dispatch:
+    inputs:
+      sign:
+        description: "Run SignPath signing on this manual build (test the signing pipeline without a release tag)"
+        type: boolean
+        default: false
 
 permissions:
   contents: write # attach artifacts to releases on tag builds
+
+# Code signing is handled by SignPath.
+# TEMP wiring: the test-vs-release config is hardcoded by event for now —
+#   branch push (this branch) -> test-signing policy + test cert
+#   v* tag                    -> release-signing policy + release cert
+# (signing-policy-slug and SIGNED_MSIX_PUBLISHER below). This will be parameterized
+# back into repo vars later.
+# Still required in repo settings (shared by both):
+#   Secret  SIGNPATH_API_TOKEN                 — SignPath CI user API token
+#   Var     SIGNPATH_ORGANIZATION_ID           — SignPath organization id (GUID)
+#   Var     SIGNPATH_PROJECT_SLUG              — SignPath project slug
+#   Var     SIGNPATH_ARTIFACT_CONFIG_INSTALLER — artifact configuration slug for the Inno installer
+#   Var     SIGNPATH_ARTIFACT_CONFIG_MSIX      — artifact configuration slug for the msix
+# When SIGNPATH_API_TOKEN is unset, signing is skipped and nothing is attached to releases.
 
 jobs:
   windows:
     runs-on: windows-latest
     timeout-minutes: 60
+    env:
+      SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
+      # TEMP: release cert on tags, test cert on branch pushes (baked into the msix at build time).
+      SIGNED_MSIX_PUBLISHER: "${{ startsWith(github.ref, 'refs/tags/') && 'CN=SignPath Foundation,O=SignPath Foundation,C=US,S=DE,L=Lewes' || 'CN=Test certificate for ''BlueBubbles [OSS]''' }}"
+      SIGNED_MSIX_IDENTITY: BlueBubbles.BlueBubbles
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -40,10 +68,21 @@ jobs:
         shell: pwsh
 
       - name: Upload installer artifact
+        id: upload-installer
         uses: actions/upload-artifact@v7
         with:
           name: bluebubbles-installer
           path: windows/bluebubbles_installer.exe
+
+      # The directly-distributed msix, still unsigned — SignPath signs it below.
+      # Only built when SIGNED_MSIX_PUBLISHER is configured.
+      - name: Upload msix artifact (to be signed)
+        id: upload-msix
+        if: ${{ hashFiles('windows/bluebubbles-signed.msix') != '' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: bluebubbles-msix
+          path: windows/bluebubbles-signed.msix
 
       - name: Upload debug symbols
         uses: actions/upload-artifact@v7
@@ -51,19 +90,76 @@ jobs:
           name: bluebubbles-windows-symbols
           path: build/windows/symbols/
 
-      # The msix is for the MS Store only — uploaded as its own run artifact
-      # for easy download, never attached to releases.
-      - name: Upload msix artifact
+      # The store msix is for the MS Store only — uploaded as its own run artifact
+      # for easy download, never signed by SignPath or attached to releases.
+      - name: Upload store msix artifact
         uses: actions/upload-artifact@v7
         with:
-          name: bluebubbles-msix
+          name: bluebubbles-msix-store
           path: windows/bluebubbles.msix
 
-      - name: Attach to release
-        if: startsWith(github.ref, 'refs/tags/')
+      # --- SignPath signing: tag builds, or manual builds with sign=true ---
+      # SignPath downloads the artifact uploaded above (by id), signs it per the
+      # project's artifact configuration, and extracts the signed result locally.
+      - name: Sign installer (SignPath)
+        id: sign-installer
+        if: ${{ env.SIGNPATH_API_TOKEN != '' && (startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/joel/2.0/desktop/2.0.0.0' || inputs.sign) }}
+        uses: signpath/github-action-submit-signing-request@v2
+        with:
+          api-token: ${{ env.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          # TEMP: release-signing on tags, test-signing on branch pushes.
+          signing-policy-slug: ${{ startsWith(github.ref, 'refs/tags/') && 'release-signing' || 'test-signing' }}
+          artifact-configuration-slug: ${{ vars.SIGNPATH_ARTIFACT_CONFIG_INSTALLER }}
+          github-artifact-id: ${{ steps.upload-installer.outputs.artifact-id }}
+          wait-for-completion: true
+          output-artifact-directory: signed/installer
+
+      - name: Sign msix (SignPath)
+        id: sign-msix
+        if: ${{ env.SIGNPATH_API_TOKEN != '' && steps.upload-msix.outputs.artifact-id != '' && (startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/joel/2.0/desktop/2.0.0.0' || inputs.sign) }}
+        uses: signpath/github-action-submit-signing-request@v2
+        with:
+          api-token: ${{ env.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          # TEMP: release-signing on tags, test-signing on branch pushes.
+          signing-policy-slug: ${{ startsWith(github.ref, 'refs/tags/') && 'release-signing' || 'test-signing' }}
+          artifact-configuration-slug: ${{ vars.SIGNPATH_ARTIFACT_CONFIG_MSIX }}
+          github-artifact-id: ${{ steps.upload-msix.outputs.artifact-id }}
+          wait-for-completion: true
+          output-artifact-directory: signed/msix
+
+      # Re-upload the signed results under their own names so VirusTotal and the
+      # release step can pick them up. Output paths follow the SignPath artifact
+      # configuration — adjust if yours nests the files differently.
+      - name: Upload signed installer
+        if: ${{ steps.sign-installer.outcome == 'success' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: bluebubbles-installer-signed
+          path: signed/installer/bluebubbles_installer.exe
+
+      - name: Upload signed msix
+        if: ${{ steps.sign-msix.outcome == 'success' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: bluebubbles-msix-signed
+          path: signed/msix/bluebubbles-signed.msix
+
+      # On tag builds, the signed artifacts are what gets released.
+      - name: Attach signed installer to release
+        if: ${{ startsWith(github.ref, 'refs/tags/') && steps.sign-installer.outcome == 'success' }}
         uses: softprops/action-gh-release@v3
         with:
-          files: windows/bluebubbles_installer.exe
+          files: signed/installer/bluebubbles_installer.exe
+
+      - name: Attach signed msix to release
+        if: ${{ startsWith(github.ref, 'refs/tags/') && steps.sign-msix.outcome == 'success' }}
+        uses: softprops/action-gh-release@v3
+        with:
+          files: signed/msix/bluebubbles-signed.msix
 
   linux:
     strategy:
@@ -127,10 +223,11 @@ jobs:
         with:
           files: bluebubbles-linux-${{ matrix.arch }}.tar.gz
 
-  # Scans the user-facing downloads with VirusTotal and, on tag builds,
-  # appends the analysis links to the release notes. The msix is not scanned —
-  # it is MS Store-only, where Microsoft does its own vetting. Runs as a
-  # single job after all builds so only one writer touches the release body.
+  # Scans the user-facing downloads with VirusTotal and writes the analysis links
+  # to the job summary. Prefers the SignPath-signed installer/msix when present (so
+  # the released binaries are what gets scanned); falls back to the unsigned
+  # installer otherwise. The store msix is not scanned — Microsoft vets Store
+  # submissions.
   virustotal:
     needs: [windows, linux]
     runs-on: ubuntu-latest
@@ -143,42 +240,44 @@ jobs:
         with:
           path: artifacts
 
+      - name: Select files to scan
+        id: select
+        run: |
+          files=()
+          if [ -f artifacts/bluebubbles-installer-signed/bluebubbles_installer.exe ]; then
+            files+=("artifacts/bluebubbles-installer-signed/bluebubbles_installer.exe")
+          else
+            files+=("artifacts/bluebubbles-installer/bluebubbles_installer.exe")
+          fi
+          [ -f artifacts/bluebubbles-msix-signed/bluebubbles-signed.msix ] && \
+            files+=("artifacts/bluebubbles-msix-signed/bluebubbles-signed.msix")
+          [ -f artifacts/bluebubbles-linux-x86_64/bluebubbles-linux-x86_64.tar.gz ] && \
+            files+=("artifacts/bluebubbles-linux-x86_64/bluebubbles-linux-x86_64.tar.gz")
+          [ -f artifacts/bluebubbles-linux-aarch64/bluebubbles-linux-aarch64.tar.gz ] && \
+            files+=("artifacts/bluebubbles-linux-aarch64/bluebubbles-linux-aarch64.tar.gz")
+          {
+            echo 'files<<EOF'
+            printf '%s\n' "${files[@]}"
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
       - name: VirusTotal scan
         id: virustotal
         if: env.VT_API_KEY != ''
         uses: crazy-max/ghaction-virustotal@v5
         with:
           vt_api_key: ${{ env.VT_API_KEY }}
-          files: |
-            artifacts/bluebubbles-installer/bluebubbles_installer.exe
-            artifacts/bluebubbles-linux-x86_64/bluebubbles-linux-x86_64.tar.gz
-            artifacts/bluebubbles-linux-aarch64/bluebubbles-linux-aarch64.tar.gz
+          files: ${{ steps.select.outputs.files }}
 
       # analysis output is comma-separated <filename>=<analysisURL> pairs.
-      # The links go to the job summary on every run, and into vt_links.body
-      # for the release append on tag builds.
       - name: Format scan links
-        id: vt_links
         if: steps.virustotal.outputs.analysis != ''
         env:
           ANALYSIS: ${{ steps.virustotal.outputs.analysis }}
         run: |
-          format_links() {
+          {
             echo '### VirusTotal scans'
             tr ',' '\n' <<< "$ANALYSIS" | while IFS='=' read -r file url; do
               echo "- [\`$(basename "$file")\`]($url)"
             done
-          }
-          format_links >> "$GITHUB_STEP_SUMMARY"
-          {
-            echo 'body<<VT_EOF'
-            format_links
-            echo 'VT_EOF'
-          } >> "$GITHUB_OUTPUT"
-
-      - name: Append to release notes
-        if: startsWith(github.ref, 'refs/tags/') && steps.vt_links.outputs.body != ''
-        uses: softprops/action-gh-release@v3
-        with:
-          append_body: true
-          body: ${{ steps.vt_links.outputs.body }}
+          } >> "$GITHUB_STEP_SUMMARY"
