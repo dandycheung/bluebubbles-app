@@ -8,12 +8,12 @@
 
 ## Installer
 - `build.ps1` — release build script: cleans Release dir, builds two MSIX variants, then compiles the installer (mirrors `linux/build.sh`)
-  - `--store` build → `bluebubbles.msix` (MS Store; Microsoft signs it; store identity/publisher from `pubspec.yaml`)
-  - signed build → `bluebubbles-signed.msix` (directly distributed; unsigned, SignPath signs it in CI). Only built when `SIGNED_MSIX_PUBLISHER` env is set; that value must equal the SignPath cert's subject DN.
+  - `--store` build → `bluebubbles-store.msix` (MS Store; Microsoft signs it; store identity/publisher from `pubspec.yaml`)
+  - sideload build → `bluebubbles.msix` (directly distributed; unsigned, SignPath signs it in CI). Only built when `SIGNED_MSIX_PUBLISHER` env is set; that value must equal the SignPath cert's subject DN.
   - `store:` is deliberately absent from `pubspec.yaml` (msix forces store mode if present and can't be overridden via CLI); pass `--store` for the store build instead.
 - `bluebubbles_installer_script.iss` — Inno Setup installer definition
 - `CodeDependencies.iss` — installer dependency declarations
-- SignPath code signing is wired in `.github/workflows/desktop-builds.yml` (installer + signed msix, on tags or manual `sign=true`)
+- SignPath code signing is wired in `.github/workflows/desktop-builds.yml` (installer + msix, on tags or manual `sign=true`)
 
 ## Key Flutter-Side Files for Windows
 - `lib/utils/window_effects.dart` — Mica/acrylic transparency (`flutter_acrylic`)

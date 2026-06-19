@@ -1,8 +1,8 @@
 # Windows release build script. Run from the root of the repository. Requires Inno Setup 6 to be installed.
 # Builds the app, packages the MSIX, then compiles the Inno Setup installer.
 # Outputs:
-#   windows\bluebubbles.msix (MS Store submission only — not attached to releases)
-#   windows\bluebubbles-signed.msix (directly-distributed, unsigned; SignPath signs it in CI — only when SIGNED_MSIX_PUBLISHER is set)
+#   windows\bluebubbles-store.msix (MS Store submission only — not attached to releases)
+#   windows\bluebubbles.msix (directly-distributed, unsigned; SignPath signs it in CI — only when SIGNED_MSIX_PUBLISHER is set)
 #   windows\bluebubbles_installer.exe
 $ErrorActionPreference = 'Stop'
 
@@ -39,29 +39,29 @@ if (Test-Path $releaseDir) { Remove-Item $releaseDir -Recurse -Force }
 
 Invoke-Checked $flutterCmd pub get --enforce-lockfile
 
-# Runs `flutter build windows --release` and packages the result as the MS Store
-# MSIX (windows\bluebubbles.msix). Microsoft signs this one, so pass --store
+# Runs `flutter build windows --release` and packages the MS Store MSIX
+# (windows\bluebubbles-store.msix). Microsoft signs this one, so pass --store
 # explicitly (store mode is no longer set in pubspec.yaml).
-Invoke-Checked $dartCmd run msix:create --store
+Invoke-Checked $dartCmd run msix:create --store --output-name bluebubbles-store
 
 # Build the directly-distributed MSIX, left unsigned for SignPath to sign in CI.
 # Reuses the Release output from the store build above. SIGNED_MSIX_PUBLISHER must
 # equal the SignPath certificate's subject DN, or Windows will reject the signature.
 # Skipped when unset (e.g. local builds without signing configured).
 if ($env:SIGNED_MSIX_PUBLISHER) {
-    $signedArgs = @(
+    $msixArgs = @(
         '--build-windows', 'false',
         '--sign-msix', 'false',
         '--publisher', $env:SIGNED_MSIX_PUBLISHER,
-        '--output-name', 'bluebubbles-signed'
+        '--output-name', 'bluebubbles'
     )
-    if ($env:SIGNED_MSIX_IDENTITY) { $signedArgs += @('--identity-name', $env:SIGNED_MSIX_IDENTITY) }
-    Invoke-Checked $dartCmd run msix:create @signedArgs
+    if ($env:SIGNED_MSIX_IDENTITY) { $msixArgs += @('--identity-name', $env:SIGNED_MSIX_IDENTITY) }
+    Invoke-Checked $dartCmd run msix:create @msixArgs
 }
 
 # Compile the Inno Setup installer
 Invoke-Checked @($iscc) 'windows\bluebubbles_installer_script.iss'
 
-$hashTargets = @('windows\bluebubbles.msix', 'windows\bluebubbles_installer.exe')
-if (Test-Path 'windows\bluebubbles-signed.msix') { $hashTargets += 'windows\bluebubbles-signed.msix' }
+$hashTargets = @('windows\bluebubbles-store.msix', 'windows\bluebubbles_installer.exe')
+if (Test-Path 'windows\bluebubbles.msix') { $hashTargets += 'windows\bluebubbles.msix' }
 Get-FileHash $hashTargets -Algorithm SHA256 | Format-List Path, Hash
