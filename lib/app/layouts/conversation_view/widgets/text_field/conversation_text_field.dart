@@ -482,7 +482,7 @@ class ConversationTextFieldState extends CustomState<ConversationTextField, void
                     ],
                   ),
                 ),
-                if (iOS) const SizedBox(width: 10),
+                if (iOS || material) const SizedBox(width: 10),
                 if (samsung)
                   Padding(
                     padding: const EdgeInsets.only(right: 5.0),
