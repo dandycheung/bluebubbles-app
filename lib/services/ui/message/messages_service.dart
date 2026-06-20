@@ -730,6 +730,11 @@ class MessagesService extends GetxController {
 
     struct.flush();
     messagesLoaded = false;
+    messageUpdateTrigger.clear();
+    for (final state in messageStates.values) {
+      state.onClose();
+    }
+    messageStates.clear();
   }
 
   void reload() {
