@@ -237,6 +237,25 @@ class _ChatInfoState extends State<ChatInfo> with ThemeHelpers {
                   )),
             ),
           ),
+        if (!chat.isGroup && iOS && chatState != null && chatState.participants.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 4.0, left: 20.0, right: 20.0),
+            child: Center(
+              child: Obx(() {
+                final address = chatState.participants.first.formattedAddress.value;
+                if (address == null) return const SizedBox.shrink();
+                return Text(
+                  address,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: context.theme.textTheme.bodyMedium!.copyWith(
+                    color: context.theme.colorScheme.outline,
+                  ),
+                );
+              }),
+            ),
+          ),
         if (chat.isGroup && !iOS)
           Padding(
             padding: const EdgeInsets.only(left: 15.0, bottom: 5.0),
