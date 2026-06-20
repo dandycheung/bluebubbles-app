@@ -1,6 +1,7 @@
 import 'package:adaptive_theme/adaptive_theme.dart';
 import 'package:bluebubbles/app/layouts/settings/widgets/content/next_button.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
+import 'package:bluebubbles/utils/logger/logger.dart';
 import 'package:bluebubbles/utils/window_effects.dart';
 import 'package:bluebubbles/app/layouts/settings/pages/theming/avatar/custom_avatar_color_panel.dart';
 import 'package:bluebubbles/app/layouts/settings/pages/theming/avatar/custom_avatar_panel.dart';
@@ -376,7 +377,8 @@ class _ThemingPanelState extends CustomState<ThemingPanel, void, ThemingPanelCon
                                     dark: allThemes.firstWhere((element) => element.name == "Music Theme 🌙"));
                                 SettingsSvc.settings.colorsFromMedia.value = val;
                                 await SettingsSvc.settings.saveOneAsync('colorsFromMedia');
-                              } catch (e) {
+                              } catch (e, s) {
+                                Logger.error("Failed to start notification listener for music theme", error: e, trace: s);
                                 showSnackbar("Error",
                                     "Something went wrong, please ensure you granted the permission correctly!");
                               }
@@ -524,7 +526,8 @@ class _ThemingPanelState extends CustomState<ThemingPanel, void, ThemingPanelCon
                                 await fontLoader.load();
                                 FilesystemSvc.fontExistsOnDisk.value = true;
                                 return showSnackbar("Notice", "Font loaded");
-                              } catch (_) {
+                              } catch (e, s) {
+                                Logger.error("Failed to load font file", error: e, trace: s);
                                 return showSnackbar("Error",
                                     "Failed to load font file. Please make sure it is a valid ttf and under 50mb.");
                               }

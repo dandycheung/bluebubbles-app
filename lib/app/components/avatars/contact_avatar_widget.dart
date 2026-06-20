@@ -2,6 +2,7 @@ import 'package:bluebubbles/app/state/handle_state.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/database/models.dart';
 import 'package:bluebubbles/services/services.dart';
+import 'package:bluebubbles/utils/logger/logger.dart';
 import 'package:flex_color_picker/flex_color_picker.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -159,7 +160,8 @@ class _ContactAvatarWidgetState extends State<ContactAvatarWidget> with ThemeHel
                   } else if (contactV2 != null && contactV2!.isNative) {
                     try {
                       await MethodChannelSvc.actions.viewContactForm(nativeContactId: contactV2!.nativeContactId);
-                    } catch (_) {
+                    } catch (e, s) {
+                      Logger.error("Failed to find contact on device", error: e, trace: s);
                       showSnackbar("Error", "Failed to find contact on device!");
                     }
                   } else if (widget.handle != null) {
