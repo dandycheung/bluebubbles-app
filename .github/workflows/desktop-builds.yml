@@ -154,16 +154,30 @@ jobs:
           wait-for-completion: true
           output-artifact-directory: out/installer
 
-      - name: Sign msix (SignPath)
+      - name: Sign release msix (SignPath)
         id: sign-msix
-        if: ${{ steps.gate.outputs.sign == 'true' && steps.upload-msix.outputs.artifact-id != '' }}
+        if: ${{ steps.gate.outputs.sign == 'true' && startsWith(github.ref, 'refs/tags/') && steps.upload-msix.outputs.artifact-id != '' }}
         uses: signpath/github-action-submit-signing-request@v2
         with:
           api-token: ${{ env.SIGNPATH_API_TOKEN }}
           organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
           project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
-          signing-policy-slug: ${{ startsWith(github.ref, 'refs/tags/') && 'release-signing' || 'test-signing' }}
+          signing-policy-slug: 'release-signing'
           artifact-configuration-slug: ${{ vars.SIGNPATH_ARTIFACT_CONFIG_MSIX }}
+          github-artifact-id: ${{ steps.upload-msix.outputs.artifact-id }}
+          wait-for-completion: true
+          output-artifact-directory: out/msix
+
+      - name: Sign test msix (SignPath)
+        id: sign-msix-test
+        if: ${{ steps.gate.outputs.sign == 'true' && !startsWith(github.ref, 'refs/tags/') && steps.upload-msix.outputs.artifact-id != '' }}
+        uses: signpath/github-action-submit-signing-request@v2
+        with:
+          api-token: ${{ env.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: 'test-signing'
+          artifact-configuration-slug: ${{ vars.SIGNPATH_ARTIFACT_CONFIG_MSIX_TEST }}
           github-artifact-id: ${{ steps.upload-msix.outputs.artifact-id }}
           wait-for-completion: true
           output-artifact-directory: out/msix
@@ -177,7 +191,7 @@ jobs:
           path: out/installer/bluebubbles_installer.exe
 
       - name: Upload msix
-        if: ${{ steps.sign-msix.outcome == 'success' }}
+        if: ${{ steps.sign-msix.outcome == 'success' || steps.sign-msix-test.outcome == 'success' }}
         uses: actions/upload-artifact@v7
         with:
           name: bluebubbles-msix
@@ -190,7 +204,7 @@ jobs:
           files: out/installer/bluebubbles_installer.exe
 
       - name: Attach msix to release
-        if: ${{ startsWith(github.ref, 'refs/tags/') && steps.sign-msix.outcome == 'success' }}
+        if: ${{ startsWith(github.ref, 'refs/tags/') && (steps.sign-msix.outcome == 'success' || steps.sign-msix-test.outcome == 'success') }}
         uses: softprops/action-gh-release@v3
         with:
           files: out/msix/bluebubbles.msix
