@@ -98,7 +98,9 @@ class FindMyController extends GetxController {
 
         buildFriendMarker(friend);
       }
-    } catch (_) {}
+    } catch (e, s) {
+      Logger.warn("Failed to fetch FindMy locations", error: e, trace: s, tag: 'FindMyController');
+    }
   }
 
   /// Fetches the FindMy data from the server.

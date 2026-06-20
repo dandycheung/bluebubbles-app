@@ -378,7 +378,8 @@ class _ThemingPanelState extends CustomState<ThemingPanel, void, ThemingPanelCon
                                 SettingsSvc.settings.colorsFromMedia.value = val;
                                 await SettingsSvc.settings.saveOneAsync('colorsFromMedia');
                               } catch (e, s) {
-                                Logger.error("Failed to start notification listener for music theme", error: e, trace: s);
+                                Logger.error("Failed to start notification listener for music theme",
+                                    error: e, trace: s);
                                 showSnackbar("Error",
                                     "Something went wrong, please ensure you granted the permission correctly!");
                               }

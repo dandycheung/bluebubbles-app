@@ -10,6 +10,7 @@ import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/services/services.dart';
 import 'package:bluebubbles/services/backend/interfaces/sync_interface.dart';
 import 'package:bluebubbles/services/ui/chat/send_data.dart';
+import 'package:bluebubbles/utils/logger/logger.dart';
 import 'package:bluebubbles/utils/string_utils.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
@@ -242,7 +243,10 @@ class ChatCreatorController extends StatefulController {
           : available == false
               ? ChatServiceType.sms
               : null;
-    } catch (_) {}
+    } catch (e, s) {
+      Logger.warn("Failed to check iMessage availability for contact",
+          error: e, trace: s, tag: 'ChatCreatorController');
+    }
   }
 
   Future<void> addSelectedFromChat(List<SelectedContact> contacts) async {

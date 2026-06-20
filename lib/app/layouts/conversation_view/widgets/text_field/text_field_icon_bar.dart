@@ -4,6 +4,7 @@ import 'package:bluebubbles/app/layouts/conversation_view/widgets/text_field/con
 import 'package:bluebubbles/database/models.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/services/services.dart';
+import 'package:bluebubbles/utils/logger/logger.dart';
 import 'package:bluebubbles/utils/share.dart';
 import 'package:chunked_stream/chunked_stream.dart';
 import 'package:file_picker/file_picker.dart' as pf;
@@ -218,7 +219,9 @@ class TextFieldIconBar extends StatelessWidget {
                         bytes: data,
                       ));
                       return;
-                    } catch (_) {}
+                    } catch (e, s) {
+                      Logger.warn("Failed to attach GIF from picker", error: e, trace: s, tag: 'TextFieldIconBar');
+                    }
                   }
                 }
               }),
