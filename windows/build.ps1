@@ -16,8 +16,6 @@ param(
     [string]$Phase = 'All'
 )
 
-Set-PSDebug -Trace 1
-
 $ErrorActionPreference = 'Stop'
 
 # Flutter version to build with; override with the FLUTTER_VERSION env var.
@@ -93,5 +91,3 @@ if ($Phase -ne 'Build') {
     if (Test-Path 'windows\bluebubbles.msix') { $hashTargets += 'windows\bluebubbles.msix' }
     Get-FileHash $hashTargets -Algorithm SHA256 | Format-List Path, Hash
 }
-
-Set-PSDebug -Trace 0
