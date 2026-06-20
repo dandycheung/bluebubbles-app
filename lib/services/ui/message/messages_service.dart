@@ -722,13 +722,14 @@ class MessagesService extends GetxController {
     super.onClose();
   }
 
-  void close({force = false}) {
+  void close({bool force = false}) {
     String? lastChat = lastReloadedChat();
     if (force || lastChat != tag) {
       Get.delete<MessagesService>(tag: tag);
     }
 
     struct.flush();
+    messagesLoaded = false;
   }
 
   void reload() {
