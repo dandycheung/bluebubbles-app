@@ -74,7 +74,7 @@ jobs:
       - name: Zip app payload
         if: ${{ steps.gate.outputs.sign == 'true' }}
         shell: pwsh
-        run: Compress-Archive -Path 'build\windows\x64\runner\Release\*' -DestinationPath 'windows\bluebubbles-payload.zip' -Force
+        run: Compress-Archive -Path 'build\windows\x64\runner\Release\*' -DestinationPath 'windows\bluebubbles-payload-unsigned.zip' -Force
 
       - name: Upload app payload artifact
         id: upload-payload
@@ -82,7 +82,8 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: bluebubbles-payload-unsigned
-          path: windows/bluebubbles-payload.zip
+          path: windows/bluebubbles-payload-unsigned.zip
+          archive: false
 
       - name: Sign app payload (SignPath)
         id: sign-payload
@@ -101,7 +102,9 @@ jobs:
       - name: Replace Release binaries with signed payload
         if: ${{ steps.gate.outputs.sign == 'true' }}
         shell: pwsh
-        run: Expand-Archive -Path 'out\payload\bluebubbles-payload.zip' -DestinationPath 'build\windows\x64\runner\Release' -Force
+        run: |
+          Remove-Item -Path 'build\windows\x64\runner\Release' -Recurse -Force
+          Move-Item -Path 'out\payload' -Destination 'build\windows\x64\runner\Release' -Force
 
       - name: Package installer + msix (phase 2)
         run: .\windows\build.ps1 -Phase Package
