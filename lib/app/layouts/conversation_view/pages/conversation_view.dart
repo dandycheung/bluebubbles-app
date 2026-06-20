@@ -11,6 +11,7 @@ import 'package:bluebubbles/app/layouts/conversation_view/widgets/effects/screen
 import 'package:bluebubbles/database/models.dart';
 import 'package:bluebubbles/services/services.dart';
 import 'package:bluebubbles/utils/logger/logger.dart';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_acrylic/window_effect.dart';
@@ -78,6 +79,14 @@ class ConversationViewState extends State<ConversationView> with ThemeHelpers<Co
     // Cache the stable appBar and body subtrees. See field comments above.
     _appBar = _buildAppBar();
     _bodyContent = _buildBodyContent();
+
+    // Warm the image cache for the custom background so it's ready on first paint.
+    final bgPath = ChatsSvc.getChatState(chat.guid)?.customBackgroundPath.value;
+    if (bgPath != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) precacheImage(FileImage(File(bgPath)), context);
+      });
+    }
   }
 
   PreferredSizeWidget _buildAppBar() {
