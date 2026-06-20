@@ -8,6 +8,7 @@ import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/database/models.dart';
 import 'package:bluebubbles/services/services.dart';
 import 'package:bluebubbles/services/ui/chat/send_data.dart';
+import 'package:bluebubbles/utils/logger/logger.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -251,12 +252,24 @@ class _RecordingButton extends StatelessWidget {
               audioRecorder.start(const RecordConfig(bitRate: 320000), path: temp.path);
               return;
             }
-            await recorderController!.record(
-              recorderSettings: const RecorderSettings(
-                sampleRate: 44100,
-                bitRate: 320000,
-              ),
-            );
+            try {
+              await recorderController!.record(
+                recorderSettings: const RecorderSettings(
+                  sampleRate: 44100,
+                  bitRate: 320000,
+                ),
+              );
+              // If the recorder still isn't in a recording state after the call,
+              // treat it as a failure and reset the UI.
+              if (!recorderController!.isRecording) {
+                controller!.showRecording.value = false;
+                showSnackbar("Error", "Failed to start recording. Please check microphone permissions.");
+              }
+            } catch (e, stack) {
+              controller!.showRecording.value = false;
+              showSnackbar("Error", "Failed to start recording. Please check microphone permissions.");
+              Logger.error("Error starting recording", error: e, trace: stack);
+            }
           } else {
             // Stop recording and show dialog
             late final String? path;
@@ -264,7 +277,10 @@ class _RecordingButton extends StatelessWidget {
 
             if (isDesktop) {
               path = await audioRecorder.stop();
-              if (path == null) return;
+              if (path == null) {
+                showSnackbar("Error", "Failed to save voice memo. Please try again.");
+                return;
+              }
               final _file = File(path);
               file = PlatformFile(
                 name: basename(_file.path),
@@ -274,7 +290,10 @@ class _RecordingButton extends StatelessWidget {
               );
             } else {
               path = await recorderController!.stop();
-              if (path == null) return;
+              if (path == null) {
+                showSnackbar("Error", "Failed to save voice memo. Please try again.");
+                return;
+              }
               final _file = File(path);
               file = PlatformFile(
                 name: basename(_file.path),

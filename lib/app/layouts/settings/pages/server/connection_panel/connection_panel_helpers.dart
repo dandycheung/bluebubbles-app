@@ -429,7 +429,9 @@ mixin ConnectionPanelHelpersMixin {
                           builder: (context) => SyncDialog(manager: newMgr),
                         );
                         await newMgr.start();
-                      } catch (_) {}
+                      } catch (e, s) {
+                        Logger.warn("Incremental sync failed", error: e, trace: s, tag: 'ConnectionPanel');
+                      }
                       Navigator.of(context, rootNavigator: true).pop();
                       setManager(null);
                       SyncSvc.isIncrementalSyncing.value = false;

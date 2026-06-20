@@ -336,7 +336,9 @@ class Chat {
           shouldMarkOnServer: true,
         );
       }
-    } catch (_) {}
+    } catch (e, s) {
+      Logger.warn("Failed to mark chat as read on message add", error: e, trace: s, tag: 'Chat');
+    }
 
     return this;
   }

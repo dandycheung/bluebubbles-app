@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:bluebubbles/app/layouts/conversation_details/dialogs/timeframe_picker.dart';
+import 'package:bluebubbles/utils/logger/logger.dart';
 import 'package:bluebubbles/utils/share.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/app/layouts/conversation_view/widgets/media_picker/attachment_picker_file.dart';
@@ -95,7 +96,8 @@ class _AttachmentPickerState extends State<AttachmentPicker> with ThemeHelpers {
           }
         }
       }
-    } catch (e) {
+    } catch (e, s) {
+      Logger.error("Failed to load attachments", error: e, trace: s);
       showSnackbar("Error", "Failed to load attachments: $e");
     } finally {
       if (mounted) {

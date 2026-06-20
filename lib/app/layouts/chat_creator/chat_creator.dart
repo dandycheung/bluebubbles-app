@@ -20,6 +20,7 @@ import 'package:bluebubbles/database/models.dart';
 import 'package:bluebubbles/services/services.dart';
 import 'package:bluebubbles/services/backend/interfaces/sync_interface.dart';
 import 'package:bluebubbles/services/ui/chat/send_data.dart';
+import 'package:bluebubbles/utils/logger/logger.dart';
 import 'package:bluebubbles/utils/string_utils.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
@@ -147,7 +148,9 @@ class ChatCreatorState extends State<ChatCreator> with ThemeHelpers {
     try {
       final response = await HttpSvc.handle.handleiMessageState(c.address);
       c.serviceType.value = response.data["data"]["available"] == true ? ChatServiceType.iMessage : ChatServiceType.sms;
-    } catch (_) {}
+    } catch (e, s) {
+      Logger.warn("Failed to check iMessage availability for contact", error: e, trace: s, tag: 'ChatCreator');
+    }
     addressController.text = "";
     findExistingChat();
   }
@@ -187,7 +190,9 @@ class ChatCreatorState extends State<ChatCreator> with ThemeHelpers {
         } else {
           existingChat = Chat.findOne(chatIdentifier: slugify(address, delimiter: ''));
         }
-      } catch (_) {}
+      } catch (e, s) {
+        Logger.warn("Failed to find existing chat by identifier", error: e, trace: s, tag: 'ChatCreator');
+      }
     }
     // match each selected contact to a participant in a chat
     if (existingChat == null) {

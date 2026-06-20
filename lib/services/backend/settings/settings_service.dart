@@ -65,7 +65,10 @@ class SettingsService {
             }
           }),
         ]);
-      } catch (_) {}
+      } catch (e, s) {
+        Logger.warn("Failed to apply display mode or biometric check at startup",
+            error: e, trace: s, tag: 'SettingsService');
+      }
       // system appearance
       if (settings.immersiveMode.value) {
         SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
@@ -114,7 +117,9 @@ class SettingsService {
       try {
         final mode = await settings.getDisplayMode();
         FlutterDisplayMode.setPreferredMode(mode);
-      } catch (_) {}
+      } catch (e, s) {
+        Logger.warn("Failed to update display mode", error: e, trace: s, tag: 'SettingsService');
+      }
     }
   }
 
