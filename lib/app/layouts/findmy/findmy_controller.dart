@@ -79,17 +79,22 @@ class FindMyController extends GetxController {
       Logger.info("Received new location for ${friend.handle?.address}");
       if ((friend.latitude ?? 0) == 0 && (friend.longitude ?? 0) == 0) return;
 
-      final existingFriendIndex =
-          friends.indexWhere((e) => e.handle?.uniqueAddressAndService == friend.handle?.uniqueAddressAndService);
+      final existingFriendIndex = friends.indexWhere((e) => e.stableId != null && e.stableId == friend.stableId);
       final existingFriend = existingFriendIndex == -1 ? null : friends[existingFriendIndex];
 
-      if (existingFriend == null ||
+      final shouldUpdate = existingFriend == null ||
           existingFriend.status == null ||
           friend.locatingInProgress ||
           LocationStatus.values.indexOf(existingFriend.status!) <=
-              LocationStatus.values.indexOf(friend.status ?? LocationStatus.legacy)) {
-        Logger.info("Updating map for ${friend.handle?.address}");
-        friends[existingFriendIndex] = friend;
+              LocationStatus.values.indexOf(friend.status ?? LocationStatus.legacy);
+
+      if (shouldUpdate) {
+        Logger.info("Updating map for ${friend.stableId}");
+        if (existingFriendIndex == -1) {
+          friends.add(friend);
+        } else {
+          friends[existingFriendIndex] = friend;
+        }
 
         friendsWithLocation.value =
             friends.where((item) => (item.latitude ?? 0) != 0 && (item.longitude ?? 0) != 0).toList();
@@ -201,6 +206,13 @@ class FindMyController extends GetxController {
         devices.value =
             (response.data['data'] as List).map((e) => FindMyDevice.fromJson(e)).toList().cast<FindMyDevice>();
 
+        // Apply safe location name as the display label once, here rather than during build.
+        for (final device in devices) {
+          if (device.safeLocations.isNotEmpty && device.safeLocations.first.name != null) {
+            device.address?.label = device.safeLocations.first.name;
+          }
+        }
+
         for (FindMyDevice e in devices.where((e) => e.location?.latitude != null && e.location?.longitude != null)) {
           buildDeviceMarker(e);
         }
@@ -264,8 +276,9 @@ class FindMyController extends GetxController {
   }
 
   void buildFriendMarker(FindMyFriend friend) {
-    markers[friend.handle?.uniqueAddressAndService ?? randomString(6)] = Marker(
-      key: ValueKey('friend-${friend.handle?.uniqueAddressAndService ?? randomString(6)}'),
+    final markerKey = friend.stableId ?? randomString(6);
+    markers[markerKey] = Marker(
+      key: ValueKey('friend-$markerKey'),
       point: LatLng(friend.latitude!, friend.longitude!),
       width: 35,
       height: 35,
