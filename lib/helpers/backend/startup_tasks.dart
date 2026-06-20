@@ -30,6 +30,11 @@ class WindowEntry {
 class StartupTasks {
   static final Completer<void> uiReady = Completer<void>();
 
+  /// User-facing description of the current startup phase, surfaced by the
+  /// desktop splash screen while services initialize. Updated by
+  /// [initStartupServices] (main isolate only — isolate init paths don't drive UI).
+  static final ValueNotifier<String> status = ValueNotifier<String>("Starting...");
+
   static Future<void> waitForUI() async {
     await uiReady.future;
   }
@@ -151,6 +156,7 @@ class StartupTasks {
 
   static Future<void> initStartupServices({bool isBubble = false}) async {
     debugPrint("Initializing startup services...");
+    status.value = "Loading settings...";
     await _initCoreServices(headless: false);
 
     final startupInteropReady = _preRegisterInteropServices(
@@ -166,9 +172,12 @@ class StartupTasks {
     // The next thing we need to do is initialize the database.
     // If the database is not initialized, we cannot do anything.
     Logger.info("Initializing database...");
+    status.value = "Opening database...";
     await Database.init();
     Logger.info("Database initialized");
     startupInteropReady.complete();
+
+    status.value = "Starting services...";
 
     // Register the global isolate
     Logger.info("Registering isolates...");
@@ -215,6 +224,7 @@ class StartupTasks {
 
     // Parallelize independent services for faster startup
     Logger.info("Waiting for services to be ready...");
+    status.value = "Loading contacts...";
     await Future.wait([
       ThemeSvc.init(),
       IntentsSvc.init(),
@@ -231,6 +241,7 @@ class StartupTasks {
     HandleSvc.init();
 
     Logger.info("Registering ChatsService, SocketService, and NotificationsService...");
+    status.value = "Loading chats...";
     GetIt.I.registerSingleton<ChatsService>(ChatsService());
     GetIt.I.registerSingleton<SocketService>(SocketService());
     await _waitForInterop(notifications: true);
@@ -243,6 +254,7 @@ class StartupTasks {
       dispose: (svc) => svc.dispose(),
     );
 
+    status.value = "Finishing up...";
     Logger.info(
         "Startup services initialization complete! Running localhost detection then starting incremental sync...");
 

@@ -1,4 +1,5 @@
 import 'package:bluebubbles/helpers/helpers.dart';
+import 'package:bluebubbles/helpers/backend/startup_tasks.dart';
 import 'package:bluebubbles/database/database.dart';
 import 'package:bluebubbles/services/backend/java_dart_interop/method_channel_service.dart';
 import 'package:characters/characters.dart';
@@ -142,6 +143,7 @@ class FilesystemService {
         // Check if the non-msix directory exists
         final Directory nonMsixLocation = Directory(join(appDataRoot, "Roaming", "BlueBubbles", "bluebubbles"));
         if (!msixLocation.existsSync() && nonMsixLocation.existsSync()) {
+          if (!headless) StartupTasks.status.value = "Copying data from previous version...";
           await copyPath(nonMsixLocation.path, msixLocation.path);
         }
         appDocDir = msixLocation;

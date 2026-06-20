@@ -65,6 +65,21 @@ Future<Null> bubble() async {
 Future<Null> initApp(bool bubble, List<String> arguments) async {
   runZonedGuarded<Future<void>>(() async {
     WidgetsFlutterBinding.ensureInitialized();
+
+    /* ----- DESKTOP NATIVE SPLASH STATUS ----- */
+    // Pushes startup status to the native splash; detached once it's dismissed.
+    void Function()? detachSplashStatus;
+    if (kIsDesktop && !bubble && arguments.firstOrNull != "minimized") {
+      const splashChannel = MethodChannel('bluebubbles/splash');
+      void pushStatus() {
+        splashChannel.invokeMethod('setStatus', StartupTasks.status.value).catchError((_) => null);
+      }
+
+      StartupTasks.status.addListener(pushStatus);
+      pushStatus();
+      detachSplashStatus = () => StartupTasks.status.removeListener(pushStatus);
+    }
+
     await StartupTasks.initStartupServices(isBubble: bubble);
 
     /* ----- RANDOM STUFF INITIALIZATION ----- */
@@ -138,23 +153,22 @@ Future<Null> initApp(bool bubble, List<String> arguments) async {
           await windowManager.setMinimumSize(const Size(300, 300));
           Display primary = await ScreenRetriever.instance.getPrimaryDisplay();
 
-          Size size = await windowManager.getSize();
-          double width = PrefsSvc.desktop.getWindowWidth() ?? size.width;
-          double height = PrefsSvc.desktop.getWindowHeight() ?? size.height;
+          double width = PrefsSvc.desktop.getWindowWidth() ?? 1280;
+          double height = PrefsSvc.desktop.getWindowHeight() ?? 720;
 
           width = width.clamp(300, max(300, primary.size.width));
           height = height.clamp(300, max(300, primary.size.height));
-          await windowManager.setSize(Size(width, height));
-          await PrefsSvc.desktop.setWindowDimensions(width: width, height: height);
 
-          await windowManager.setAlignment(Alignment.center);
-          Offset offset = await windowManager.getPosition();
-          double? posX = PrefsSvc.desktop.getWindowX() ?? offset.dx;
-          double? posY = PrefsSvc.desktop.getWindowY() ?? offset.dy;
 
+          final centered = await calcWindowPosition(Size(width, height), Alignment.center);
+          double posX = PrefsSvc.desktop.getWindowX() ?? centered.dx;
+          double posY = PrefsSvc.desktop.getWindowY() ?? centered.dy;
           posX = posX.clamp(0, max(0, primary.size.width - width));
           posY = posY.clamp(0, max(0, primary.size.height - height));
-          await windowManager.setPosition(Offset(posX, posY), animate: true);
+
+          // Apply size and position in one call.
+          await windowManager.setBounds(Rect.fromLTWH(posX, posY, width, height));
+          await PrefsSvc.desktop.setWindowDimensions(width: width, height: height);
           await PrefsSvc.desktop.setWindowOffsets(x: posX, y: posY);
 
           await windowManager.setTitle('BlueBubbles');
@@ -163,6 +177,10 @@ Future<Null> initApp(bool bubble, List<String> arguments) async {
           } else {
             await windowManager.hide();
           }
+          try {
+            await const MethodChannel('bluebubbles/splash').invokeMethod('closeSplash');
+          } catch (_) {}
+          detachSplashStatus?.call();
           bool shouldAuthenticate = SettingsSvc.canAuthenticate && SettingsSvc.settings.shouldSecure.value;
           if (!shouldAuthenticate) {
             ChatsSvc.init();
