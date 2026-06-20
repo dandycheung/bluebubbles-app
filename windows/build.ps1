@@ -1,16 +1,27 @@
 # Windows release build script. Run from the root of the repository. Requires Inno Setup 6 to be installed.
-# Builds the app, packages the MSIX, then compiles the Inno Setup installer.
+#
+# Phases (so CI can sign the app payload between building and packaging):
+#   -Phase Build    build the app + store MSIX, then stop, leaving build\windows\x64\runner\Release
+#                   ready for SignPath to sign the inner binaries.
+#   -Phase Package  package the sideload MSIX + Inno installer from the (now-signed) Release\ dir.
+#   -Phase All      both, back-to-back (default — local builds with no signing round-trip).
+#
 # Outputs:
-#   windows\bluebubbles-store.msix (MS Store submission only — not attached to releases)
-#   windows\bluebubbles.msix (directly-distributed, unsigned; SignPath signs it in CI — only when SIGNED_MSIX_PUBLISHER is set)
-#   windows\bluebubbles_installer.exe
+#   windows\bluebubbles-store.msix      (Build/All) MS Store submission only — not attached to releases
+#   windows\bluebubbles.msix            (Package/All) directly-distributed, unsigned; SignPath signs it in CI
+#                                       (only when SIGNED_MSIX_PUBLISHER is set)
+#   windows\bluebubbles_installer.exe   (Package/All)
+param(
+    [ValidateSet('All', 'Build', 'Package')]
+    [string]$Phase = 'All'
+)
+
+Set-PSDebug -Trace 1
+
 $ErrorActionPreference = 'Stop'
 
 # Flutter version to build with; override with the FLUTTER_VERSION env var.
 $flutterVersion = if ($env:FLUTTER_VERSION) { $env:FLUTTER_VERSION } else { '3.44.2' }
-
-$iscc = if ($env:ISCC_PATH) { $env:ISCC_PATH } else { "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" }
-if (-not (Test-Path $iscc)) { throw "Inno Setup compiler not found at '$iscc'. Install Inno Setup 6 or set ISCC_PATH." }
 
 Set-Location (Join-Path $PSScriptRoot '..')
 
@@ -32,36 +43,55 @@ if ($env:FLUTTER_CMD) {
     $dartCmd = 'fvm', 'dart'
 }
 
-# Clean the Release output first: the installer ships Release\*.dll wholesale,
-# so leftovers from removed plugins would get packaged into the installer.
 $releaseDir = 'build\windows\x64\runner\Release'
-if (Test-Path $releaseDir) { Remove-Item $releaseDir -Recurse -Force }
 
-Invoke-Checked $flutterCmd pub get --enforce-lockfile
+if ($Phase -ne 'Package') {
+    # --- Build phase: produce the Release\ output and the store MSIX ---
 
-# Runs `flutter build windows --release` and packages the MS Store MSIX
-# (windows\bluebubbles-store.msix). Microsoft signs this one, so pass --store
-# explicitly (store mode is no longer set in pubspec.yaml).
-Invoke-Checked $dartCmd run msix:create --store --output-name bluebubbles-store
+    # Clean the Release output first: the installer ships Release\*.dll wholesale,
+    # so leftovers from removed plugins would get packaged into the installer.
+    if (Test-Path $releaseDir) { Remove-Item $releaseDir -Recurse -Force }
 
-# Build the directly-distributed MSIX, left unsigned for SignPath to sign in CI.
-# Reuses the Release output from the store build above. SIGNED_MSIX_PUBLISHER must
-# equal the SignPath certificate's subject DN, or Windows will reject the signature.
-# Skipped when unset (e.g. local builds without signing configured).
-if ($env:SIGNED_MSIX_PUBLISHER) {
-    $msixArgs = @(
-        '--build-windows', 'false',
-        '--sign-msix', 'false',
-        '--publisher', $env:SIGNED_MSIX_PUBLISHER,
-        '--output-name', 'bluebubbles'
-    )
-    if ($env:SIGNED_MSIX_IDENTITY) { $msixArgs += @('--identity-name', $env:SIGNED_MSIX_IDENTITY) }
-    Invoke-Checked $dartCmd run msix:create @msixArgs
+    Invoke-Checked $flutterCmd pub get --enforce-lockfile
+
+    # Runs `flutter build windows --release` and packages the MS Store MSIX
+    # (windows\bluebubbles-store.msix). Microsoft signs this one, so pass --store
+    # explicitly (store mode is no longer set in pubspec.yaml). Built from the
+    # unsigned Release output — Microsoft re-signs the package at ingestion.
+    Invoke-Checked $dartCmd run msix:create --store --output-name bluebubbles-store
+
+    Get-FileHash 'windows\bluebubbles-store.msix' -Algorithm SHA256 | Format-List Path, Hash
 }
 
-# Compile the Inno Setup installer
-Invoke-Checked @($iscc) 'windows\bluebubbles_installer_script.iss'
+if ($Phase -ne 'Build') {
+    # --- Package phase: wrap the Release\ binaries (signed by CI in between) ---
 
-$hashTargets = @('windows\bluebubbles-store.msix', 'windows\bluebubbles_installer.exe')
-if (Test-Path 'windows\bluebubbles.msix') { $hashTargets += 'windows\bluebubbles.msix' }
-Get-FileHash $hashTargets -Algorithm SHA256 | Format-List Path, Hash
+    $iscc = if ($env:ISCC_PATH) { $env:ISCC_PATH } else { "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" }
+    if (-not (Test-Path $iscc)) { throw "Inno Setup compiler not found at '$iscc'. Install Inno Setup 6 or set ISCC_PATH." }
+
+    if (-not (Test-Path $releaseDir)) { throw "Release output '$releaseDir' not found — run the Build phase first." }
+
+    # Build the directly-distributed MSIX, left unsigned for SignPath to sign in CI.
+    # Reuses the Release output from the store build above. SIGNED_MSIX_PUBLISHER must
+    # equal the SignPath certificate's subject DN, or Windows will reject the signature.
+    # Skipped when unset (e.g. local builds without signing configured).
+    if ($env:SIGNED_MSIX_PUBLISHER) {
+        $msixArgs = @(
+            '--build-windows', 'false',
+            '--sign-msix', 'false',
+            '--publisher', $env:SIGNED_MSIX_PUBLISHER,
+            '--output-name', 'bluebubbles'
+        )
+        if ($env:SIGNED_MSIX_IDENTITY) { $msixArgs += @('--identity-name', $env:SIGNED_MSIX_IDENTITY) }
+        Invoke-Checked $dartCmd run msix:create @msixArgs
+    }
+
+    # Compile the Inno Setup installer
+    Invoke-Checked @($iscc) 'windows\bluebubbles_installer_script.iss'
+
+    $hashTargets = @('windows\bluebubbles_installer.exe')
+    if (Test-Path 'windows\bluebubbles.msix') { $hashTargets += 'windows\bluebubbles.msix' }
+    Get-FileHash $hashTargets -Algorithm SHA256 | Format-List Path, Hash
+}
+
+Set-PSDebug -Trace 0
