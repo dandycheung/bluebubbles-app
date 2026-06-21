@@ -19,7 +19,9 @@ fi
 rm -rf build/linux
 
 $FLUTTER_CMD pub get --enforce-lockfile
-$FLUTTER_CMD build linux --release -v
+# --no-pub: reuse the lockfile-enforced resolution above (build otherwise re-runs
+# pub get without --enforce-lockfile).
+$FLUTTER_CMD build linux --release -v --no-pub
 
 arch=$(uname -m)
 if [[ $arch == "x86_64" ]]; then

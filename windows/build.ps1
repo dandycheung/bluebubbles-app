@@ -52,11 +52,13 @@ if ($Phase -ne 'Package') {
 
     Invoke-Checked $flutterCmd pub get --enforce-lockfile
 
-    # Runs `flutter build windows --release` and packages the MS Store MSIX
+    # Runs `flutter build windows` and packages the MS Store MSIX
     # (windows\bluebubbles-store.msix). Microsoft signs this one, so pass --store
     # explicitly (store mode is no longer set in pubspec.yaml). Built from the
     # unsigned Release output — Microsoft re-signs the package at ingestion.
-    Invoke-Checked $dartCmd run msix:create --store --output-name bluebubbles-store
+    # --windows-build-args=--no-pub: the inner `flutter build windows` reuses the
+    # lockfile-enforced resolution above instead of re-running pub get unenforced.
+    Invoke-Checked $dartCmd run msix:create --store '--windows-build-args=--no-pub' --output-name bluebubbles-store
 
     Get-FileHash 'windows\bluebubbles-store.msix' -Algorithm SHA256 | Format-List Path, Hash
 }

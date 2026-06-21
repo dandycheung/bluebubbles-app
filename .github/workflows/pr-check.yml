@@ -53,8 +53,10 @@ jobs:
       # --no-fatal-infos: the codebase carries ~270 pre-existing info-level lints
       # (deprecations, use_build_context_synchronously). Fail only on new
       # warnings/errors a PR introduces, not on that legacy baseline.
+      # --no-pub: reuse the lockfile-enforced resolution from the step above
+      # (analyze otherwise re-runs pub get without --enforce-lockfile).
       - name: Analyze
-        run: fvm flutter analyze --no-fatal-infos
+        run: fvm flutter analyze --no-pub --no-fatal-infos
 
   build-windows:
     # Skip the heavy compile on draft PRs; analyze still runs for fast feedback.
@@ -89,8 +91,9 @@ jobs:
         shell: pwsh
 
       # Compile only — no msix/installer packaging (that's the release workflow).
+      # --no-pub: reuse the lockfile-enforced resolution from the Pub get step.
       - name: Build Windows (unsigned)
-        run: fvm flutter build windows --release
+        run: fvm flutter build windows --release --no-pub
         shell: pwsh
 
   build-linux:
@@ -140,5 +143,6 @@ jobs:
         run: fvm flutter pub get --enforce-lockfile
 
       # Compile only — no tarball packaging (that's the release workflow).
+      # --no-pub: reuse the lockfile-enforced resolution from the Pub get step.
       - name: Build Linux (unsigned)
-        run: fvm flutter build linux --release
+        run: fvm flutter build linux --release --no-pub
