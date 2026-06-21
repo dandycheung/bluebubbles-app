@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:bluebubbles/app/state/chat_state_scope.dart';
 import 'package:bluebubbles/app/state/message_state_scope.dart';
 import 'package:bluebubbles/database/models.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
@@ -72,18 +73,31 @@ class ChatEvent extends StatelessWidget {
             );
           },
           child: Obx(() {
+            final chatState = ChatStateScope.maybeOf(context);
+            final hasBackground = chatState?.customBackgroundPath.value?.isNotEmpty == true;
             final senderName = state.senderDisplayName;
             final text = part.isUnsent
                 ? (message.isFromMe!
                     ? "You unsent a message. Others may still see the message on devices where the software hasn't been updated"
                     : "$senderName unsent a message")
                 : message.buildGroupEventText(senderName);
-            return Text(
+            final textColor =
+                hasBackground ? context.theme.colorScheme.onSurfaceVariant : context.theme.colorScheme.outline;
+            final textWidget = Text(
               text,
-              style: context.theme.textTheme.bodySmall!.copyWith(color: context.theme.colorScheme.outline),
+              style: context.theme.textTheme.bodySmall!.copyWith(color: textColor),
               overflow: TextOverflow.ellipsis,
               maxLines: 2,
               textAlign: TextAlign.center,
+            );
+            if (!hasBackground) return textWidget;
+            return Container(
+              padding: const EdgeInsets.symmetric(vertical: 3, horizontal: 10),
+              decoration: BoxDecoration(
+                color: context.theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.75),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: textWidget,
             );
           }),
         ),
