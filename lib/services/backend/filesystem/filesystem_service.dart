@@ -143,7 +143,7 @@ class FilesystemService {
         // Check if the non-msix directory exists
         final Directory nonMsixLocation = Directory(join(appDataRoot, "Roaming", "BlueBubbles", "bluebubbles"));
         if (!msixLocation.existsSync() && nonMsixLocation.existsSync()) {
-          if (!headless) StartupTasks.status.value = "Copying data from previous version...";
+          if (!headless) await StartupTasks.setSplashStatus("Copying data from previous version...");
           await copyPath(nonMsixLocation.path, msixLocation.path);
         }
         appDocDir = msixLocation;
