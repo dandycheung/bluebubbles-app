@@ -2,10 +2,6 @@ name: Desktop Builds
 
 on:
   push:
-    # TEMP: build this branch until the workflow lands on master (workflow_dispatch
-    # only works from the default branch). Remove the branches list after merge.
-    branches:
-      - joel/2.0/desktop/2.0.0.0
     tags:
       - "v*"
   workflow_dispatch:
@@ -18,11 +14,8 @@ on:
 permissions:
   contents: write # attach artifacts to releases on tag builds
 
-# SignPath code signing. Required repo settings:
-#   Secret SIGNPATH_API_TOKEN
-#   Var    SIGNPATH_ORGANIZATION_ID / SIGNPATH_PROJECT_SLUG
-#   Var    SIGNPATH_ARTIFACT_CONFIG_APP / _INSTALLER / _MSIX
-# TEMP: branch push -> test-signing + test cert; v* tag -> release-signing + release cert.
+env:
+  FLUTTER_VERSION: "3.44.2"
 
 jobs:
   windows:
@@ -30,7 +23,7 @@ jobs:
     timeout-minutes: 60
     env:
       SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
-      # TEMP: release cert on tags, test cert on branch pushes (baked into the msix at build time).
+      # Must match the signing cert subject: release cert on tags, test cert on manual builds.
       SIGNED_MSIX_PUBLISHER: "${{ startsWith(github.ref, 'refs/tags/') && 'CN=SignPath Foundation,O=SignPath Foundation,C=US,S=DE,L=Lewes' || 'CN=Test certificate for ''BlueBubbles [OSS]''' }}"
       SIGNED_MSIX_IDENTITY: BlueBubbles.BlueBubbles
     steps:
@@ -40,12 +33,13 @@ jobs:
       - name: Install fvm
         run: choco install fvm -y
 
-      # Keyed on the build script so a version bump in it invalidates the cache
+      # Keyed on the Flutter version so the SDK is only re-downloaded when the
+      # version actually changes — not on every build-script edit.
       - name: Cache Flutter SDK (fvm)
         uses: actions/cache@v5
         with:
           path: ~/fvm
-          key: fvm-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('windows/build.ps1') }}
+          key: fvm-${{ runner.os }}-${{ runner.arch }}-${{ env.FLUTTER_VERSION }}
 
       - name: Cache pub packages
         uses: actions/cache@v5
@@ -59,12 +53,12 @@ jobs:
         run: .\windows\build.ps1 -Phase Build
         shell: pwsh
 
-      # sign=true when: token present AND (release tag, build branch, or manual sign=true).
+      # sign=true when: token present AND (release tag or manual sign=true).
       - name: Determine signing
         id: gate
         shell: bash
         run: |
-          if [ -n "$SIGNPATH_API_TOKEN" ] && { [[ "$GITHUB_REF" == refs/tags/* ]] || [ "$GITHUB_REF" = "refs/heads/joel/2.0/desktop/2.0.0.0" ] || [ "${{ inputs.sign }}" = "true" ]; }; then
+          if [ -n "$SIGNPATH_API_TOKEN" ] && { [[ "$GITHUB_REF" == refs/tags/* ]] || [ "${{ inputs.sign }}" = "true" ]; }; then
             echo "sign=true" >> "$GITHUB_OUTPUT"
           else
             echo "sign=false" >> "$GITHUB_OUTPUT"
@@ -243,12 +237,13 @@ jobs:
           curl -fsSL https://fvm.app/install.sh | bash
           echo "$HOME/fvm/bin" >> "$GITHUB_PATH"
 
-      # Keyed on the build script so a version bump in it invalidates the cache
+      # Keyed on the Flutter version so the SDK is only re-downloaded when the
+      # version actually changes — not on every build-script edit.
       - name: Cache Flutter SDK (fvm)
         uses: actions/cache@v5
         with:
           path: ~/fvm
-          key: fvm-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('linux/build.sh') }}
+          key: fvm-${{ runner.os }}-${{ runner.arch }}-${{ env.FLUTTER_VERSION }}
 
       - name: Cache pub packages
         uses: actions/cache@v5
