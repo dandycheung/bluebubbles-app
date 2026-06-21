@@ -303,65 +303,52 @@ class _RecordingButton extends StatelessWidget {
               );
             }
 
-            await showDialog(
+            await showBBDialog(
               context: context,
               barrierDismissible: false,
-              builder: (BuildContext context) {
-                return AlertDialog(
-                  backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
-                  title: Text("Send it?", style: context.theme.textTheme.titleLarge),
-                  content: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        "Review your audio snippet before sending it",
-                        style: context.theme.textTheme.bodyLarge,
-                      ),
-                      Container(height: 10.0),
-                      ConstrainedBox(
-                        constraints: BoxConstraints(maxWidth: context.width * 0.6),
-                        child: AudioPlayer(
-                          key: Key("AudioMessage-$path"),
-                          file: file,
-                          attachment: null,
-                        ),
-                      )
-                    ],
+              title: "Send it?",
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    "Review your audio snippet before sending it",
+                    style: context.theme.textTheme.bodyLarge,
                   ),
-                  actions: <Widget>[
-                    TextButton(
-                      child: Text(
-                        "Discard",
-                        style: context.theme.textTheme.bodyLarge!.copyWith(
-                          color: Get.context!.theme.colorScheme.primary,
-                        ),
-                      ),
-                      onPressed: () {
-                        onDeleteRecording(file.path!);
-                        Navigator.of(context, rootNavigator: true).pop();
-                      },
+                  Container(height: 10.0),
+                  ConstrainedBox(
+                    constraints: BoxConstraints(maxWidth: context.width * 0.6),
+                    child: AudioPlayer(
+                      key: Key("AudioMessage-$path"),
+                      file: file,
+                      attachment: null,
                     ),
-                    TextButton(
-                      child: Text(
-                        "Send",
-                        style: context.theme.textTheme.bodyLarge!.copyWith(
-                          color: Get.context!.theme.colorScheme.primary,
-                        ),
-                      ),
-                      onPressed: () async {
-                        await controller!.send(SendData(
-                          attachments: [file],
-                          text: "",
-                          subject: "",
-                          isAudioMessage: true,
-                        ));
-                        onDeleteRecording(file.path!);
-                        Navigator.of(context, rootNavigator: true).pop();
-                      },
-                    ),
-                  ],
-                );
-              },
+                  )
+                ],
+              ),
+              actions: <BBDialogAction>[
+                BBDialogAction(
+                  text: "Discard",
+                  isDestructive: true,
+                  onPressed: () {
+                    onDeleteRecording(file.path!);
+                    Navigator.of(context, rootNavigator: true).pop();
+                  },
+                ),
+                BBDialogAction(
+                  text: "Send",
+                  isDefault: true,
+                  onPressed: () async {
+                    await controller!.send(SendData(
+                      attachments: [file],
+                      text: "",
+                      subject: "",
+                      isAudioMessage: true,
+                    ));
+                    onDeleteRecording(file.path!);
+                    Navigator.of(context, rootNavigator: true).pop();
+                  },
+                ),
+              ],
             );
           }
         },

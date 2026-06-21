@@ -27,42 +27,27 @@ class _ChatInfoState extends State<ChatInfo> with ThemeHelpers {
   Chat get chat => widget.chat;
 
   Future<bool?> showMethodDialog(String title) async {
-    return await showDialog<bool>(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
-            title: Text(
-              title,
-              style: context.theme.textTheme.titleLarge,
-            ),
-            content: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (SettingsSvc.settings.enablePrivateAPI.value && chat.isIMessage)
-                  Text(
-                      "Local - Changes only apply to this device.\nPrivate API - Changes will apply to everyone's devices.",
-                      style: context.theme.textTheme.bodyLarge),
-              ],
-            ),
-            actions: [
-              TextButton(
-                  child: Text("Local",
-                      style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.primary)),
-                  onPressed: () {
-                    Navigator.of(context).pop(false);
-                  }),
-              TextButton(
-                  child: Text("Private API",
-                      style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.primary)),
-                  onPressed: () {
-                    Navigator.of(context).pop(true);
-                  }),
-            ],
-          );
-        });
+    return await showBBDialog<bool>(
+      context: context,
+      title: title,
+      content: SettingsSvc.settings.enablePrivateAPI.value && chat.isIMessage
+          ? Text(
+              "Local - Changes only apply to this device.\nPrivate API - Changes will apply to everyone's devices.",
+              style: context.theme.textTheme.bodyLarge,
+            )
+          : null,
+      actions: [
+        BBDialogAction(
+          text: "Local",
+          onPressed: () => Navigator.of(context, rootNavigator: true).pop(false),
+        ),
+        BBDialogAction(
+          text: "Private API",
+          isDefault: true,
+          onPressed: () => Navigator.of(context, rootNavigator: true).pop(true),
+        ),
+      ],
+    );
   }
 
   void updatePhoto() async {

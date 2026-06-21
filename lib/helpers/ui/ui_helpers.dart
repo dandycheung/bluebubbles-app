@@ -759,6 +759,7 @@ Future<ui.Image> loadImage(Uint8List data) async {
   return completer.future;
 }
 
+@Deprecated('Use showAreYouSure() from dialog_helpers.dart instead')
 Widget areYouSure(BuildContext context,
     {Widget? content,
     String? title = "Are you sure?",

@@ -1,3 +1,4 @@
+import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/services/services.dart';
 import 'package:bluebubbles/utils/logger/logger.dart';
 import 'package:desktop_webview_auth/desktop_webview_auth.dart';
@@ -134,28 +135,19 @@ Future<String?> googleOAuth(
   if (Platform.isAndroid || kIsWeb) {
     // on web, show a dialog to make sure users allow scopes
     if (kIsWeb) {
-      await showDialog(
+      await showBBDialog(
         context: context,
         barrierDismissible: false,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
-            title: Text("Important Notice", style: context.theme.textTheme.titleLarge),
-            content: Text(
-              'Please make sure to allow BlueBubbles to see, edit, configure, and delete your Google Cloud data after signing in. BlueBubbles will only use this ability to find your server URL.',
-              style: context.theme.textTheme.bodyLarge,
-            ),
-            actions: <Widget>[
-              TextButton(
-                child: Text("OK",
-                    style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.primary)),
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-              ),
-            ],
-          );
-        },
+        title: "Important Notice",
+        body:
+            'Please make sure to allow BlueBubbles to see, edit, configure, and delete your Google Cloud data after signing in. BlueBubbles will only use this ability to find your server URL.',
+        actions: [
+          BBDialogAction(
+            text: "OK",
+            isDefault: true,
+            onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
+          ),
+        ],
       );
     }
 

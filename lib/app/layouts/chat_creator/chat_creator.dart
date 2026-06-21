@@ -27,6 +27,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
+import 'package:dio/dio.dart' show Response;
 import 'package:get/get.dart' hide Response;
 import 'package:slugify/slugify.dart';
 import 'package:bluebubbles/models/models.dart' show ContactSearchResult;
@@ -634,12 +635,21 @@ class ChatCreatorState extends State<ChatCreator> with ThemeHelpers {
                                   if (!createCompleter!.isCompleted) createCompleter?.completeError(error);
                                   return;
                                 }
-                                showDialog(
-                                    barrierDismissible: false,
-                                    context: context,
-                                    builder: (BuildContext dialogContext) {
-                                      return ChatCreatorDialogs.buildCreateChatErrorDialog(dialogContext, error);
-                                    });
+                                showBBDialog(
+                                  barrierDismissible: false,
+                                  context: context,
+                                  title: 'Failed to create chat!',
+                                  body: error is Response
+                                      ? 'Reason: (${error.data["error"]["type"]}) -> ${error.data["error"]["message"]}'
+                                      : error.toString(),
+                                  actions: [
+                                    BBDialogAction(
+                                      text: 'OK',
+                                      isDefault: true,
+                                      onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
+                                    ),
+                                  ],
+                                );
                                 if (!createCompleter!.isCompleted) {
                                   createCompleter?.completeError(error);
                                 }

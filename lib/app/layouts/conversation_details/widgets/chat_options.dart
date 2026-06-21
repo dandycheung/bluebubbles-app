@@ -77,53 +77,34 @@ class _ChatOptionsState extends State<ChatOptions> with ThemeHelpers {
                   ),
                   onTap: () async {
                     if (chat.customAvatarPath != null) {
-                      showDialog(
+                      showBBDialog(
                         context: context,
-                        builder: (BuildContext context) {
-                          return AlertDialog(
-                              backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
-                              title: Text("Custom Avatar", style: context.theme.textTheme.titleLarge),
-                              content: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                mainAxisSize: MainAxisSize.min,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text("You already have a custom avatar for this chat. What would you like to do?",
-                                      style: context.theme.textTheme.bodyLarge),
-                                ],
-                              ),
-                              actions: <Widget>[
-                                TextButton(
-                                  child: Text("Cancel",
-                                      style: context.theme.textTheme.bodyLarge!
-                                          .copyWith(color: context.theme.colorScheme.primary)),
-                                  onPressed: () {
-                                    Navigator.of(context).pop();
-                                  },
-                                ),
-                                TextButton(
-                                  child: Text("Reset",
-                                      style: context.theme.textTheme.bodyLarge!
-                                          .copyWith(color: context.theme.colorScheme.primary)),
-                                  onPressed: () async {
-                                    await ChatsSvc.setChatCustomAvatarPath(chat, null);
-                                    Navigator.of(context, rootNavigator: true).pop();
-                                  },
-                                ),
-                                TextButton(
-                                  child: Text("Set New",
-                                      style: context.theme.textTheme.bodyLarge!
-                                          .copyWith(color: context.theme.colorScheme.primary)),
-                                  onPressed: () async {
-                                    Navigator.of(context).pop();
-                                    final result = await Get.to<String?>(() => AvatarCrop(chat: chat));
-                                    if (result != null) {
-                                      await ChatsSvc.setChatCustomAvatarPath(chat, result);
-                                    }
-                                  },
-                                ),
-                              ]);
-                        },
+                        title: "Custom Avatar",
+                        body: "You already have a custom avatar for this chat. What would you like to do?",
+                        actions: [
+                          BBDialogAction(
+                            text: "Cancel",
+                            onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
+                          ),
+                          BBDialogAction(
+                            text: "Reset",
+                            onPressed: () async {
+                              await ChatsSvc.setChatCustomAvatarPath(chat, null);
+                              Navigator.of(context, rootNavigator: true).pop();
+                            },
+                          ),
+                          BBDialogAction(
+                            text: "Set New",
+                            isDefault: true,
+                            onPressed: () async {
+                              Navigator.of(context, rootNavigator: true).pop();
+                              final result = await Get.to<String?>(() => AvatarCrop(chat: chat));
+                              if (result != null) {
+                                await ChatsSvc.setChatCustomAvatarPath(chat, result);
+                              }
+                            },
+                          ),
+                        ],
                       );
                     } else {
                       final result = await Get.to<String?>(() => AvatarCrop(chat: chat));
@@ -146,55 +127,35 @@ class _ChatOptionsState extends State<ChatOptions> with ThemeHelpers {
                   onTap: () {
                     final backgroundPath = FilesystemSvc.getExistingChatBackgroundPath(chat.guid);
                     if (backgroundPath != null) {
-                      showDialog(
+                      showBBDialog(
                         context: context,
-                        builder: (BuildContext context) {
-                          return AlertDialog(
-                            backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
-                            title: Text("Custom Background", style: context.theme.textTheme.titleLarge),
-                            content: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  "You already have a custom background for this chat. What would you like to do?",
-                                  style: context.theme.textTheme.bodyLarge,
-                                ),
-                              ],
-                            ),
-                            actions: <Widget>[
-                              TextButton(
-                                child: Text("Cancel",
-                                    style: context.theme.textTheme.bodyLarge!
-                                        .copyWith(color: context.theme.colorScheme.primary)),
-                                onPressed: () {
-                                  Navigator.of(context).pop();
-                                },
-                              ),
-                              TextButton(
-                                child: Text("Remove",
-                                    style: context.theme.textTheme.bodyLarge!
-                                        .copyWith(color: context.theme.colorScheme.error)),
-                                onPressed: () async {
-                                  final File bgFile = File(backgroundPath);
-                                  if (await bgFile.exists()) bgFile.delete();
-                                  await ChatsSvc.setChatCustomBackgroundPath(chat, null);
-                                  if (context.mounted) Navigator.of(context, rootNavigator: true).pop();
-                                },
-                              ),
-                              TextButton(
-                                child: Text("Set New",
-                                    style: context.theme.textTheme.bodyLarge!
-                                        .copyWith(color: context.theme.colorScheme.primary)),
-                                onPressed: () {
-                                  Navigator.of(context).pop();
-                                  Get.to(() => BackgroundCrop(chat: chat));
-                                },
-                              ),
-                            ],
-                          );
-                        },
+                        title: "Custom Background",
+                        body: "You already have a custom background for this chat. What would you like to do?",
+                        actions: [
+                          BBDialogAction(
+                            text: "Cancel",
+                            onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
+                          ),
+                          BBDialogAction(
+                            text: "Remove",
+                            isDestructive: true,
+                            color: context.theme.colorScheme.error,
+                            onPressed: () async {
+                              final File bgFile = File(backgroundPath);
+                              if (await bgFile.exists()) bgFile.delete();
+                              await ChatsSvc.setChatCustomBackgroundPath(chat, null);
+                              if (context.mounted) Navigator.of(context, rootNavigator: true).pop();
+                            },
+                          ),
+                          BBDialogAction(
+                            text: "Set New",
+                            isDefault: true,
+                            onPressed: () {
+                              Navigator.of(context, rootNavigator: true).pop();
+                              Get.to(() => BackgroundCrop(chat: chat));
+                            },
+                          ),
+                        ],
                       );
                     } else {
                       Get.to(() => BackgroundCrop(chat: chat));
@@ -466,37 +427,26 @@ class _ChatOptionsState extends State<ChatOptions> with ThemeHelpers {
                     child: Icon(iOS ? CupertinoIcons.trash : Icons.delete_outlined),
                   ),
                   onTap: () {
-                    showDialog(
+                    showBBDialog(
                       context: context,
-                      builder: (BuildContext context) {
-                        return AlertDialog(
-                            backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
-                            title: Text("Are You Sure?", style: context.theme.textTheme.titleLarge),
-                            content: Text(
-                              'Clearing the transcript will permanently delete all messages in this chat. It will also prevent any previous messages from being loaded by the app, until you perform a full reset.',
-                              style: context.theme.textTheme.bodyLarge,
-                            ),
-                            actions: <Widget>[
-                              TextButton(
-                                child: Text("Cancel",
-                                    style: context.theme.textTheme.bodyLarge!
-                                        .copyWith(color: context.theme.colorScheme.primary)),
-                                onPressed: () {
-                                  Navigator.of(context).pop();
-                                },
-                              ),
-                              TextButton(
-                                child: Text("Yes",
-                                    style: context.theme.textTheme.bodyLarge!
-                                        .copyWith(color: context.theme.colorScheme.primary)),
-                                onPressed: () async {
-                                  Navigator.of(context).pop();
-                                  chat.clearTranscript();
-                                  EventDispatcherSvc.emit("refresh-messagebloc", {"chatGuid": chat.guid});
-                                },
-                              ),
-                            ]);
-                      },
+                      title: "Are You Sure?",
+                      body:
+                          'Clearing the transcript will permanently delete all messages in this chat. It will also prevent any previous messages from being loaded by the app, until you perform a full reset.',
+                      actions: [
+                        BBDialogAction(
+                          text: "Cancel",
+                          onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
+                        ),
+                        BBDialogAction(
+                          text: "Yes",
+                          isDefault: true,
+                          onPressed: () async {
+                            Navigator.of(context, rootNavigator: true).pop();
+                            chat.clearTranscript();
+                            EventDispatcherSvc.emit("refresh-messagebloc", {"chatGuid": chat.guid});
+                          },
+                        ),
+                      ],
                     );
                   },
                 ),
@@ -692,37 +642,25 @@ class _ChatOptionsState extends State<ChatOptions> with ThemeHelpers {
   }
 
   void _showCancelConfirmation(BuildContext context) {
-    showDialog(
+    showBBDialog(
       context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
-          title: Text("Cancel Outgoing Messages?", style: context.theme.textTheme.titleLarge),
-          content: Text(
-            'This will cancel all messages currently waiting to be sent in this chat. They will be marked as failed.',
-            style: context.theme.textTheme.bodyLarge,
-          ),
-          actions: <Widget>[
-            TextButton(
-              child: Text(
-                "Keep Sending",
-                style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.primary),
-              ),
-              onPressed: () => Navigator.of(context).pop(),
-            ),
-            TextButton(
-              child: Text(
-                "Cancel Messages",
-                style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.error),
-              ),
-              onPressed: () async {
-                Navigator.of(context).pop();
-                await OutgoingMsgHandler.cancelPendingForChat(chat.guid);
-              },
-            ),
-          ],
-        );
-      },
+      title: "Cancel Outgoing Messages?",
+      body: 'This will cancel all messages currently waiting to be sent in this chat. They will be marked as failed.',
+      actions: [
+        BBDialogAction(
+          text: "Keep Sending",
+          onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
+        ),
+        BBDialogAction(
+          text: "Cancel Messages",
+          isDestructive: true,
+          color: context.theme.colorScheme.error,
+          onPressed: () async {
+            Navigator.of(context, rootNavigator: true).pop();
+            await OutgoingMsgHandler.cancelPendingForChat(chat.guid);
+          },
+        ),
+      ],
     );
   }
 }

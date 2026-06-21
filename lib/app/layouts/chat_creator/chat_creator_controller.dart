@@ -521,13 +521,10 @@ class ChatCreatorController extends StatefulController {
             'Finding or creating chat...',
             style: ctx.theme.textTheme.titleLarge,
           ),
-          content: SizedBox(
+          content: const SizedBox(
             height: 70,
             child: Center(
-              child: CircularProgressIndicator(
-                backgroundColor: ctx.theme.colorScheme.surfaceContainerHighest,
-                valueColor: AlwaysStoppedAnimation<Color>(ctx.theme.colorScheme.primary),
-              ),
+              child: CircularProgressIndicator(),
             ),
           ),
         ),
@@ -590,28 +587,20 @@ class ChatCreatorController extends StatefulController {
         _createCompleter?.completeError(error);
         isSending.value = false;
 
-        showDialog(
+        showBBDialog(
           barrierDismissible: false,
           context: context,
-          builder: (ctx) => AlertDialog(
-            backgroundColor: ctx.theme.colorScheme.surfaceContainerHighest,
-            title: Text('Failed to create chat!', style: ctx.theme.textTheme.titleLarge),
-            content: Text(
-              error is Response
-                  ? 'Reason: (${(error as dynamic).data["error"]["type"]}) -> ${(error as dynamic).data["error"]["message"]}'
-                  : error.toString(),
-              style: ctx.theme.textTheme.bodyLarge,
+          title: 'Failed to create chat!',
+          body: error is Response
+              ? 'Reason: (${(error as dynamic).data["error"]["type"]}) -> ${(error as dynamic).data["error"]["message"]}'
+              : error.toString(),
+          actions: [
+            BBDialogAction(
+              text: 'OK',
+              isDefault: true,
+              onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(ctx, rootNavigator: true).pop(),
-                child: Text(
-                  'OK',
-                  style: ctx.theme.textTheme.bodyLarge!.copyWith(color: ctx.theme.colorScheme.primary),
-                ),
-              ),
-            ],
-          ),
+          ],
         );
         return;
       }

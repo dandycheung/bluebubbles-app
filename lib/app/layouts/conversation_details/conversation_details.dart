@@ -175,36 +175,48 @@ class _ConversationDetailsState extends State<ConversationDetails> with WidgetsB
                               child: Icon(Icons.error_outline, color: context.theme.colorScheme.error, size: 20),
                             ),
                             onTap: () async {
-                              showDialog(
-                                  context: context,
-                                  builder: (BuildContext context) {
-                                    return AlertDialog(
-                                      backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
-                                      title: Text(
-                                        "Leaving chat...",
-                                        style: context.theme.textTheme.titleLarge,
-                                      ),
-                                      content: SizedBox(
-                                        height: 70,
-                                        child: Center(
-                                          child: CircularProgressIndicator(
-                                            backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
-                                            valueColor:
-                                                AlwaysStoppedAnimation<Color>(context.theme.colorScheme.primary),
+                              await showAreYouSure(
+                                context,
+                                title: "Leave Chat?",
+                                content: const Text(
+                                    "Are you sure you want to leave this chat? You will no longer receive messages from this group."),
+                                yesText: "Leave",
+                                yesColor: context.theme.colorScheme.error,
+                                onNo: () => Navigator.of(context, rootNavigator: true).pop(),
+                                onYes: () async {
+                                  Navigator.of(context, rootNavigator: true).pop();
+                                  showDialog(
+                                      context: context,
+                                      builder: (BuildContext context) {
+                                        return AlertDialog(
+                                          backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
+                                          title: Text(
+                                            "Leaving chat...",
+                                            style: context.theme.textTheme.titleLarge,
                                           ),
-                                        ),
-                                      ),
-                                    );
-                                  });
-                              final response = await HttpSvc.chat.leave(chat.guid);
-                              if (!context.mounted) return;
-                              if (response.statusCode == 200) {
-                                Navigator.of(context, rootNavigator: true).pop();
-                                showSnackbar("Notice", "Left chat successfully!");
-                              } else {
-                                Navigator.of(context, rootNavigator: true).pop();
-                                showSnackbar("Error", "Failed to leave chat!");
-                              }
+                                          content: SizedBox(
+                                            height: 70,
+                                            child: Center(
+                                              child: CircularProgressIndicator(
+                                                backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
+                                                valueColor:
+                                                    AlwaysStoppedAnimation<Color>(context.theme.colorScheme.primary),
+                                              ),
+                                            ),
+                                          ),
+                                        );
+                                      });
+                                  final response = await HttpSvc.chat.leave(chat.guid);
+                                  if (!context.mounted) return;
+                                  if (response.statusCode == 200) {
+                                    Navigator.of(context, rootNavigator: true).pop();
+                                    showSnackbar("Notice", "Left chat successfully!");
+                                  } else {
+                                    Navigator.of(context, rootNavigator: true).pop();
+                                    showSnackbar("Error", "Failed to leave chat!");
+                                  }
+                                },
+                              );
                             },
                           );
                         }),

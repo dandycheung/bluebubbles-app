@@ -20,16 +20,9 @@ void copyText(MessagePopupActionContext ctx) {
 }
 
 void copySelection(MessagePopupActionContext ctx) {
-  final adaptiveTheme = Theme.of(ctx.context);
-  showDialog(
+  showBBDialog(
     context: ctx.context,
-    builder: (context) => Theme(
-      data: adaptiveTheme,
-      child: AlertDialog(
-        backgroundColor: adaptiveTheme.colorScheme.surfaceContainerHighest,
-        title: Text("Copy Selection", style: adaptiveTheme.textTheme.titleLarge),
-        content: SelectableText(ctx.part.fullText, style: adaptiveTheme.extension<BubbleText>()!.bubbleText),
-      ),
-    ),
+    title: "Copy Selection",
+    content: SelectableText(ctx.part.fullText, style: Theme.of(ctx.context).extension<BubbleText>()!.bubbleText),
   );
 }

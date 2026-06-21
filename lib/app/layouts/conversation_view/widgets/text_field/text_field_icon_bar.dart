@@ -80,48 +80,46 @@ class TextFieldIconBar extends StatelessWidget {
                   ));
                 }
               } else if (kIsWeb) {
-                showDialog(
-                    context: context,
-                    builder: (context) => AlertDialog(
-                          title: Text("What would you like to do?", style: context.theme.textTheme.titleLarge),
-                          content: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              mainAxisSize: MainAxisSize.min,
-                              children: <Widget>[
-                                ListTile(
-                                  title: Text("Upload file", style: Theme.of(context).textTheme.bodyLarge),
-                                  onTap: () async {
-                                    final res = await FilePicker.pickFiles(withData: true, allowMultiple: true);
-                                    if (res == null || res.files.isEmpty || res.files.first.bytes == null) {
-                                      return;
-                                    }
+                showBBDialog(
+                  context: context,
+                  title: "What would you like to do?",
+                  content: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      ListTile(
+                        title: Text("Upload file", style: Theme.of(context).textTheme.bodyLarge),
+                        onTap: () async {
+                          final res = await FilePicker.pickFiles(withData: true, allowMultiple: true);
+                          if (res == null || res.files.isEmpty || res.files.first.bytes == null) {
+                            return;
+                          }
 
-                                    for (pf.PlatformFile e in res.files) {
-                                      if (e.size / 1024000 > 1000) {
-                                        showSnackbar(
-                                            "Error", "This file is over 1 GB! Please compress it before sending.");
-                                        continue;
-                                      }
-                                      controller.pickedAttachments.add(PlatformFile(
-                                        path: null,
-                                        name: e.name,
-                                        size: e.size,
-                                        bytes: e.bytes!,
-                                      ));
-                                    }
-                                    Get.back();
-                                  },
-                                ),
-                                ListTile(
-                                  title: Text("Send location", style: Theme.of(context).textTheme.bodyLarge),
-                                  onTap: () async {
-                                    Share.location(_chat);
-                                    Get.back();
-                                  },
-                                ),
-                              ]),
-                          backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
-                        ));
+                          for (pf.PlatformFile e in res.files) {
+                            if (e.size / 1024000 > 1000) {
+                              showSnackbar("Error", "This file is over 1 GB! Please compress it before sending.");
+                              continue;
+                            }
+                            controller.pickedAttachments.add(PlatformFile(
+                              path: null,
+                              name: e.name,
+                              size: e.size,
+                              bytes: e.bytes!,
+                            ));
+                          }
+                          Get.back();
+                        },
+                      ),
+                      ListTile(
+                        title: Text("Send location", style: Theme.of(context).textTheme.bodyLarge),
+                        onTap: () async {
+                          Share.location(_chat);
+                          Get.back();
+                        },
+                      ),
+                    ],
+                  ),
+                );
               } else {
                 if (!_showAttachmentPicker) {
                   controller.focusNode.unfocus();

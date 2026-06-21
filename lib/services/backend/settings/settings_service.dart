@@ -227,105 +227,101 @@ class SettingsService {
     final ScrollController controller = ScrollController();
     if (_showingPapiPopup) Navigator.of(Get.context!).pop();
     _showingPapiPopup = true;
-    await showDialog(
+    await showBBDialog(
       context: Get.context!,
       barrierDismissible: false,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text("Private API Features"),
-          content: Column(
+      title: "Private API Features",
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ConstrainedBox(
+            constraints: BoxConstraints(maxHeight: min(Get.context!.height / 3, Get.context!.height - 300)),
+            child: ScrollbarWrapper(
+              controller: controller,
+              showScrollbar: true,
+              child: SingleChildScrollView(
+                controller: controller,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text("You've enabled Private API Features on your server!"),
+                    const SizedBox(height: 10),
+                    const Text("Private API features give you the ability to:"),
+                    const Text(" - Send & Receive typing indicators"),
+                    const Text(" - Send tapbacks, effects, and mentions"),
+                    const Text(" - Send messages with subject lines"),
+                    if (_serverDetails.value.isMinBigSur) const Text(" - Send replies"),
+                    if (_serverDetails.value.isMinVentura) const Text(" - Edit & Unsend messages"),
+                    const SizedBox(height: 10),
+                    const Text(" - Mark chats read on the Mac server"),
+                    if (_serverDetails.value.isMinVentura) const Text(" - Mark chats as unread on the Mac server"),
+                    const SizedBox(height: 10),
+                    const Text(" - Rename group chats"),
+                    const Text(" - Add & remove people from group chats"),
+                    if (_serverDetails.value.isMinBigSur) const Text(" - Change the group chat photo"),
+                    if (_serverDetails.value.isMinBigSur) const SizedBox(height: 10),
+                    if (_serverDetails.value.isMinMonterey) const Text(" - View Focus statuses"),
+                    if (_serverDetails.value.isMinBigSur) const Text(" - Use Find My Friends"),
+                    if (_serverDetails.value.isMinBigSur) const Text(" - Be notified of incoming FaceTime calls"),
+                    if (_serverDetails.value.isMinVentura) const Text(" - Answer FaceTime calls (experimental)"),
+                    const SizedBox(height: 10),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              ConstrainedBox(
-                constraints: BoxConstraints(maxHeight: min(context.height / 3, Get.context!.height - 300)),
-                child: ScrollbarWrapper(
-                  controller: controller,
-                  showScrollbar: true,
-                  child: SingleChildScrollView(
-                    controller: controller,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text("You've enabled Private API Features on your server!"),
-                        const SizedBox(height: 10),
-                        const Text("Private API features give you the ability to:"),
-                        const Text(" - Send & Receive typing indicators"),
-                        const Text(" - Send tapbacks, effects, and mentions"),
-                        const Text(" - Send messages with subject lines"),
-                        if (_serverDetails.value.isMinBigSur) const Text(" - Send replies"),
-                        if (_serverDetails.value.isMinVentura) const Text(" - Edit & Unsend messages"),
-                        const SizedBox(height: 10),
-                        const Text(" - Mark chats read on the Mac server"),
-                        if (_serverDetails.value.isMinVentura) const Text(" - Mark chats as unread on the Mac server"),
-                        const SizedBox(height: 10),
-                        const Text(" - Rename group chats"),
-                        const Text(" - Add & remove people from group chats"),
-                        if (_serverDetails.value.isMinBigSur) const Text(" - Change the group chat photo"),
-                        if (_serverDetails.value.isMinBigSur) const SizedBox(height: 10),
-                        if (_serverDetails.value.isMinMonterey) const Text(" - View Focus statuses"),
-                        if (_serverDetails.value.isMinBigSur) const Text(" - Use Find My Friends"),
-                        if (_serverDetails.value.isMinBigSur) const Text(" - Be notified of incoming FaceTime calls"),
-                        if (_serverDetails.value.isMinVentura) const Text(" - Answer FaceTime calls (experimental)"),
-                        const SizedBox(height: 10),
-                      ],
+              Align(
+                alignment: Alignment.center,
+                child: ElevatedButton(
+                  onPressed: () async {
+                    await PrefsSvc.server.markPrivateApiEnableTipShown();
+                    if (Get.context == null) return;
+                    Navigator.of(Get.context!, rootNavigator: true).pop();
+                    NavigationSvc.closeSettings(Get.context!);
+                    NavigationSvc.closeAllConversationView(Get.context!);
+                    ChatsSvc.setAllInactive();
+                    await Navigator.of(Get.context!).push(
+                      ThemeSwitcher.buildPageRoute(
+                        builder: (BuildContext context) {
+                          return SettingsPage(
+                            initialPage: PrivateAPIPanel(
+                              enablePrivateAPIonInit: true,
+                            ),
+                          );
+                        },
+                      ),
+                    );
+                  },
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8),
+                    child: Text(
+                      "Enable Private API Features",
+                      textScaler: TextScaler.linear(1.2),
                     ),
                   ),
                 ),
               ),
-              const SizedBox(height: 20),
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Align(
-                    alignment: Alignment.center,
-                    child: ElevatedButton(
-                      onPressed: () async {
-                        await PrefsSvc.server.markPrivateApiEnableTipShown();
-                        if (!context.mounted) return;
-                        Navigator.of(context).pop();
-                        NavigationSvc.closeSettings(context);
-                        NavigationSvc.closeAllConversationView(context);
-                        ChatsSvc.setAllInactive();
-                        await Navigator.of(Get.context!).push(
-                          ThemeSwitcher.buildPageRoute(
-                            builder: (BuildContext context) {
-                              return SettingsPage(
-                                initialPage: PrivateAPIPanel(
-                                  enablePrivateAPIonInit: true,
-                                ),
-                              );
-                            },
-                          ),
-                        );
-                      },
-                      child: const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 8),
-                        child: Text(
-                          "Enable Private API Features",
-                          textScaler: TextScaler.linear(1.2),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Align(
-                    alignment: Alignment.center,
-                    child: TextButton(
-                      onPressed: () async {
-                        await PrefsSvc.server.markPrivateApiEnableTipShown();
-                        if (!context.mounted) return;
-                        Navigator.of(context).pop();
-                      },
-                      child: const Text("Don't ask again"),
-                    ),
-                  )
-                ],
-              ),
+              const SizedBox(height: 10),
+              Align(
+                alignment: Alignment.center,
+                child: TextButton(
+                  onPressed: () async {
+                    await PrefsSvc.server.markPrivateApiEnableTipShown();
+                    if (Get.context == null) return;
+                    Navigator.of(Get.context!, rootNavigator: true).pop();
+                  },
+                  child: const Text("Don't ask again"),
+                ),
+              )
             ],
           ),
-        );
-      },
+        ],
+      ),
     );
     _showingPapiPopup = false;
   }
@@ -389,53 +385,44 @@ class SettingsService {
       return;
     }
 
-    showDialog(
+    showBBDialog(
       context: Get.context!,
-      builder: (context) => AlertDialog(
-        backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
-        title: Text("Server Update Check", style: context.theme.textTheme.titleLarge),
-        content: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            const SizedBox(
-              height: 15.0,
-            ),
-            Text(updateInfo.available ? "Updates available:" : "Your server is up-to-date!",
-                style: context.theme.textTheme.bodyLarge),
-            const SizedBox(
-              height: 15.0,
-            ),
-            if (updateInfo.version != null)
-              Text(
-                  "Version: ${updateInfo.version ?? "Unknown"}\nRelease Date: ${updateInfo.releaseDate ?? "Unknown"}\nRelease Name: ${updateInfo.releaseName ?? "Unknown"}\n\nWarning: Installing the update will briefly disconnect you.",
-                  style: context.theme.textTheme.bodyLarge)
-          ],
-        ),
-        actions: [
-          TextButton(
-            child: Text("OK",
-                style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.primary)),
-            onPressed: () async {
-              if (updateInfo.version != null) {
-                await PrefsSvc.server.setServerUpdateCheckVersion(updateInfo.version!);
-              }
-              Navigator.of(context).pop();
-            },
-          ),
-          TextButton(
-            child: Text("Install",
-                style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.primary)),
-            onPressed: () async {
-              if (updateInfo.version != null) {
-                await PrefsSvc.server.setServerUpdateCheckVersion(updateInfo.version!);
-              }
-              HttpSvc.server.installUpdate();
-              Navigator.of(context).pop();
-            },
-          ),
+      title: "Server Update Check",
+      content: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          const SizedBox(height: 15.0),
+          Text(updateInfo.available ? "Updates available:" : "Your server is up-to-date!"),
+          const SizedBox(height: 15.0),
+          if (updateInfo.version != null)
+            Text(
+              "Version: ${updateInfo.version ?? "Unknown"}\nRelease Date: ${updateInfo.releaseDate ?? "Unknown"}\nRelease Name: ${updateInfo.releaseName ?? "Unknown"}\n\nWarning: Installing the update will briefly disconnect you.",
+            )
         ],
       ),
+      actions: [
+        BBDialogAction(
+          text: "OK",
+          onPressed: () async {
+            if (updateInfo.version != null) {
+              await PrefsSvc.server.setServerUpdateCheckVersion(updateInfo.version!);
+            }
+            Navigator.of(Get.context!, rootNavigator: true).pop();
+          },
+        ),
+        BBDialogAction(
+          text: "Install",
+          isDefault: true,
+          onPressed: () async {
+            if (updateInfo.version != null) {
+              await PrefsSvc.server.setServerUpdateCheckVersion(updateInfo.version!);
+            }
+            HttpSvc.server.installUpdate();
+            Navigator.of(Get.context!, rootNavigator: true).pop();
+          },
+        ),
+      ],
     );
   }
 
@@ -514,46 +501,38 @@ class SettingsService {
     }
     if (!updateInfo.available) return;
 
-    showDialog(
+    showBBDialog(
       context: Get.context!,
-      builder: (context) => AlertDialog(
-        backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
-        title: Text("App Update Check", style: context.theme.textTheme.titleLarge),
-        content: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            const SizedBox(
-              height: 15.0,
-            ),
-            Text("Updates available:", style: context.theme.textTheme.bodyLarge),
-            const SizedBox(
-              height: 15.0,
-            ),
-            Text(
-                "Version: ${updateInfo.version}\nRelease Date: ${buildDate(updateInfo.latestRelease.createdAt)}\nRelease Name: ${updateInfo.latestRelease.name}",
-                style: context.theme.textTheme.bodyLarge)
-          ],
-        ),
-        actions: [
-          if (updateInfo.latestRelease.htmlUrl != null)
-            TextButton(
-              child: Text("Download",
-                  style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.primary)),
-              onPressed: () async {
-                await launchUrl(Uri.parse(updateInfo.latestRelease.htmlUrl!), mode: LaunchMode.externalApplication);
-              },
-            ),
-          TextButton(
-            child: Text("OK",
-                style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.primary)),
-            onPressed: () async {
-              await PrefsSvc.server.setClientUpdateCheckCode(updateInfo.code);
-              Navigator.of(context).pop();
-            },
+      title: "App Update Check",
+      content: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          const SizedBox(height: 15.0),
+          const Text("Updates available:"),
+          const SizedBox(height: 15.0),
+          Text(
+            "Version: ${updateInfo.version}\nRelease Date: ${buildDate(updateInfo.latestRelease.createdAt)}\nRelease Name: ${updateInfo.latestRelease.name}",
           ),
         ],
       ),
+      actions: [
+        if (updateInfo.latestRelease.htmlUrl != null)
+          BBDialogAction(
+            text: "Download",
+            onPressed: () async {
+              await launchUrl(Uri.parse(updateInfo.latestRelease.htmlUrl!), mode: LaunchMode.externalApplication);
+            },
+          ),
+        BBDialogAction(
+          text: "OK",
+          isDefault: true,
+          onPressed: () async {
+            await PrefsSvc.server.setClientUpdateCheckCode(updateInfo.code);
+            Navigator.of(Get.context!, rootNavigator: true).pop();
+          },
+        ),
+      ],
     );
   }
 }

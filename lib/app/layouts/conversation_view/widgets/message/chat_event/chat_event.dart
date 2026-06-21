@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:bluebubbles/app/state/message_state_scope.dart';
 import 'package:bluebubbles/database/models.dart';
+import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/services/services.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -43,38 +44,31 @@ class ChatEvent extends StatelessWidget {
                   DateFormat("MMMM d, yyyy h:mm:ss a").format(DateTime.fromMillisecondsSinceEpoch(map["dateEdited"]));
             }
             String str = encoder.convert(map);
-            showDialog(
+            showBBDialog(
               context: context,
-              builder: (context) => AlertDialog(
-                title: Text(
-                  "Message Info",
-                  style: context.theme.textTheme.titleLarge,
-                ),
-                backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
-                content: SizedBox(
-                  width: NavigationSvc.width(context) * 3 / 5,
-                  height: context.height * 1 / 4,
-                  child: Container(
-                    padding: const EdgeInsets.all(10.0),
-                    decoration: BoxDecoration(
-                        color: context.theme.colorScheme.surface,
-                        borderRadius: const BorderRadius.all(Radius.circular(10))),
-                    child: SingleChildScrollView(
-                      child: SelectableText(
-                        str,
-                        style: context.theme.textTheme.bodyLarge,
-                      ),
+              title: "Message Info",
+              content: SizedBox(
+                width: NavigationSvc.width(context) * 3 / 5,
+                height: context.height * 1 / 4,
+                child: Container(
+                  padding: const EdgeInsets.all(10.0),
+                  decoration: BoxDecoration(
+                      color: context.theme.colorScheme.surface,
+                      borderRadius: const BorderRadius.all(Radius.circular(10))),
+                  child: SingleChildScrollView(
+                    child: SelectableText(
+                      str,
+                      style: context.theme.textTheme.bodyLarge,
                     ),
                   ),
                 ),
-                actions: [
-                  TextButton(
-                    child: Text("Close",
-                        style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.primary)),
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
-                ],
               ),
+              actions: [
+                BBDialogAction(
+                  text: "Close",
+                  onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
+                ),
+              ],
             );
           },
           child: Obx(() {

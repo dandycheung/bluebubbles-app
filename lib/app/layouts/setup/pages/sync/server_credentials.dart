@@ -718,31 +718,18 @@ class _ServerCredentialsState extends State<ServerCredentials> with ThemeHelpers
         await SettingsSvc.saveFCMData(fcmData);
       } catch (_) {
         if (Platform.isAndroid) {
-          showDialog(
-            barrierDismissible: false,
+          showBBDialog(
             context: Get.context!,
-            builder: (BuildContext context) {
-              return AlertDialog(
-                title: Text(
-                  "No Firebase Detected",
-                  style: context.theme.textTheme.titleLarge,
-                ),
-                content: Text(
-                  "We couldn't find a Firebase setup on your server. To receive notifications, please enable the background service option from Settings > Misc & Advanced.",
-                  style: context.theme.textTheme.bodyLarge,
-                ),
-                backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
-                actions: <Widget>[
-                  TextButton(
-                    child: Text("Close",
-                        style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.primary)),
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                    },
-                  ),
-                ],
-              );
-            },
+            barrierDismissible: false,
+            title: "No Firebase Detected",
+            body:
+                "We couldn't find a Firebase setup on your server. To receive notifications, please enable the background service option from Settings > Misc & Advanced.",
+            actions: [
+              BBDialogAction(
+                text: "Close",
+                onPressed: () => Navigator.of(Get.context!, rootNavigator: true).pop(),
+              ),
+            ],
           );
         }
       }

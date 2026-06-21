@@ -522,49 +522,39 @@ Future<void> goToFindMy(BuildContext context) async {
 }
 
 void logout(BuildContext context) {
-  showDialog(
+  showBBDialog(
     barrierDismissible: false,
     context: context,
-    builder: (BuildContext context) {
-      return AlertDialog(
-        title: Text(
-          "Are you sure?",
-          style: context.theme.textTheme.titleLarge,
-        ),
-        backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
-        actions: <Widget>[
-          TextButton(
-            child: Text("No",
-                style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.primary)),
-            onPressed: () {
-              Navigator.of(context).pop();
-            },
-          ),
-          TextButton(
-            child: Text("Yes",
-                style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.primary)),
-            onPressed: () async {
-              FilesystemSvc.deleteDB();
-              SocketSvc.forgetConnection();
-              SettingsSvc.settings = Settings();
-              SettingsSvc.fcmData = FCMData();
-              await PrefsSvc.admin.clearAll();
-              await PrefsSvc.theme.setSelectedThemes(
-                darkTheme: "OLED Dark",
-                lightTheme: "Bright White",
-              );
-              Get.offAll(
-                  () => const PopScope(
-                        canPop: false,
-                        child: TitleBarWrapper(child: SetupView()),
-                      ),
-                  duration: Duration.zero,
-                  transition: Transition.noTransition);
-            },
-          ),
-        ],
-      );
-    },
+    title: "Are you sure?",
+    actions: [
+      BBDialogAction(
+        text: "No",
+        onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
+      ),
+      BBDialogAction(
+        text: "Yes",
+        isDefault: true,
+        onPressed: () async {
+          Navigator.of(context, rootNavigator: true).pop();
+          FilesystemSvc.deleteDB();
+          SocketSvc.forgetConnection();
+          SettingsSvc.settings = Settings();
+          SettingsSvc.fcmData = FCMData();
+          await PrefsSvc.admin.clearAll();
+          await PrefsSvc.theme.setSelectedThemes(
+            darkTheme: "OLED Dark",
+            lightTheme: "Bright White",
+          );
+          Get.offAll(
+              () => const PopScope(
+                    canPop: false,
+                    child: TitleBarWrapper(child: SetupView()),
+                  ),
+              duration: Duration.zero,
+              transition: Transition.noTransition);
+        },
+      ),
+    ],
   );
 }
 
