@@ -211,6 +211,7 @@ Future<Null> initApp(bool bubble, List<String> arguments) async {
           home: Main(
         lightTheme: light,
         darkTheme: dark,
+        savedThemeMode: await AdaptiveTheme.getThemeMode(),
       )));
     } else {
       runApp(FailureToStart(e: exception, s: stacktrace));
@@ -273,8 +274,9 @@ class DesktopWindowListener extends WindowListener {
 class Main extends StatelessWidget {
   final ThemeData darkTheme;
   final ThemeData lightTheme;
+  final AdaptiveThemeMode? savedThemeMode;
 
-  const Main({super.key, required this.lightTheme, required this.darkTheme});
+  const Main({super.key, required this.lightTheme, required this.darkTheme, this.savedThemeMode});
 
   @override
   Widget build(BuildContext context) {
@@ -283,7 +285,7 @@ class Main extends StatelessWidget {
           textSelectionTheme: TextSelectionThemeData(selectionColor: lightTheme.colorScheme.primary)),
       dark:
           darkTheme.copyWith(textSelectionTheme: TextSelectionThemeData(selectionColor: darkTheme.colorScheme.primary)),
-      initial: AdaptiveThemeMode.system,
+      initial: savedThemeMode ?? AdaptiveThemeMode.system,
       builder: (theme, darkTheme) => GetMaterialApp(
         debugShowCheckedModeBanner: false,
         title: 'BlueBubbles',
