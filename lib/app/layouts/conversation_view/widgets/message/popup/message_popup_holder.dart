@@ -49,13 +49,17 @@ class _MessagePopupHolderState extends State<MessagePopupHolder> with ThemeHelpe
   Future<void> _waitForKeyboardDismiss() async {
     final completer = Completer<void>();
     void check() {
-      if (!mounted) { completer.complete(); return; }
+      if (!mounted) {
+        completer.complete();
+        return;
+      }
       if (MediaQuery.viewInsetsOf(context).bottom <= 0) {
         completer.complete();
       } else {
         WidgetsBinding.instance.addPostFrameCallback((_) => check());
       }
     }
+
     WidgetsBinding.instance.addPostFrameCallback((_) => check());
     return completer.future;
   }
