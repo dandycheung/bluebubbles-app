@@ -38,8 +38,8 @@ class FindMyDeviceListTile extends StatelessWidget {
             ? () async {
                 await controller.panelController.close();
                 await controller.completer.future;
-                final marker = controller.markers.values.firstWhere((e) =>
-                    e.point.latitude == item.location?.latitude && e.point.longitude == item.location?.longitude);
+                final marker = controller.markers[item.id];
+                if (marker == null) return;
                 controller.popupController.showPopupsOnlyFor([marker]);
                 controller.mapController.move(LatLng(item.location!.latitude!, item.location!.longitude!), 10);
               }

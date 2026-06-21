@@ -285,7 +285,7 @@ class _SendAnimationState extends CustomState<SendAnimation, SendData, Conversat
     return AnimatedPositioned(
       duration: Duration(milliseconds: message != null ? duration : 0),
       bottom: message != null ? _animationBottomOffset : 0,
-      right: samsung ? -38 : (iOS ? -5.0 : 5.0),
+      right: samsung ? -38 : -5.0,
       curve: curve,
       onEnd: () async {
         if (message != null) {

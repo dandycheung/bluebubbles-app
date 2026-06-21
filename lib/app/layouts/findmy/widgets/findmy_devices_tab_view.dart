@@ -16,12 +16,7 @@ class FindMyDevicesTabView extends StatelessWidget {
       final allDevices = controller.devices.where((item) => !item.isConsideredAccessory).toList();
 
       final devicesWithLocation =
-          allDevices.where((item) => (item.address?.label ?? item.address?.mapItemFullAddress) != null).map((element) {
-        if (element.safeLocations.isNotEmpty && element.safeLocations.first.name != null) {
-          element.address?.label = element.safeLocations.first.name;
-        }
-        return element;
-      }).toList();
+          allDevices.where((item) => (item.address?.label ?? item.address?.mapItemFullAddress) != null).toList();
 
       final devicesWithoutLocation =
           allDevices.where((item) => (item.address?.label ?? item.address?.mapItemFullAddress) == null).toList();
