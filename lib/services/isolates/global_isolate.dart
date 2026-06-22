@@ -644,6 +644,7 @@ enum IsolateRequestType {
 
   // Chat actions
   clearNotificationForChat,
+  markAllChatsRead,
   markChatReadUnread,
   startTyping,
   stopTyping,

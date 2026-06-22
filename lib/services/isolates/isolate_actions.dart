@@ -58,6 +58,7 @@ class IsolateActons {
 
     // Chat
     IsolateRequestType.clearNotificationForChat: ChatActions.clearNotificationForChat,
+    IsolateRequestType.markAllChatsRead: ChatActions.markAllChatsRead,
     IsolateRequestType.markChatReadUnread: ChatActions.markChatReadUnread,
     IsolateRequestType.startTyping: ChatActions.startTyping,
     IsolateRequestType.stopTyping: ChatActions.stopTyping,
