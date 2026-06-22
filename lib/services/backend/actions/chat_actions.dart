@@ -27,7 +27,9 @@ class ChatActions {
       Database.chats.putMany(chats);
     });
 
-    if (shouldMarkOnServer && SettingsSvc.settings.enablePrivateAPI.value && SettingsSvc.settings.privateMarkChatAsRead.value) {
+    if (shouldMarkOnServer &&
+        SettingsSvc.settings.enablePrivateAPI.value &&
+        SettingsSvc.settings.privateMarkChatAsRead.value) {
       for (final c in chats) {
         await HttpSvc.chat.markRead(c.guid);
       }

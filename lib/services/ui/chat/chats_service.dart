@@ -597,7 +597,8 @@ class ChatsService {
       if (chatIds.isEmpty) return;
 
       // Phase 2: DB write + HTTP calls dispatched to background isolate
-      final shouldMark = SettingsSvc.settings.enablePrivateAPI.value && SettingsSvc.settings.privateMarkChatAsRead.value;
+      final shouldMark =
+          SettingsSvc.settings.enablePrivateAPI.value && SettingsSvc.settings.privateMarkChatAsRead.value;
       await ChatInterface.markAllChatsRead(chatIds: chatIds, shouldMarkOnServer: shouldMark);
     } catch (e, stack) {
       Logger.error("Error marking all chats as read", error: e, trace: stack, tag: "ChatsService");
