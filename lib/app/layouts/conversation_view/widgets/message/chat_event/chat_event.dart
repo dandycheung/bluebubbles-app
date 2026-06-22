@@ -91,13 +91,15 @@ class ChatEvent extends StatelessWidget {
               textAlign: TextAlign.center,
             );
             if (!hasBackground) return textWidget;
-            return Container(
-              padding: const EdgeInsets.symmetric(vertical: 3, horizontal: 10),
-              decoration: BoxDecoration(
-                color: context.theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.75),
-                borderRadius: BorderRadius.circular(12),
+            return Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 3, horizontal: 10),
+                decoration: BoxDecoration(
+                  color: context.theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.75),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: textWidget,
               ),
-              child: textWidget,
             );
           }),
         ),
