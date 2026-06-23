@@ -49,7 +49,9 @@ class Chat {
   void setLatestMessage(Message m) {
     dbLatestMessage.target = m;
     dbOnlyLatestMessageDate = m.dateCreated;
-    unawaited(saveAsync(updateLatestMessage: true));
+    if (id != null) {
+      unawaited(saveAsync(updateLatestMessage: true));
+    }
   }
 
   DateTime? dateDeleted;
@@ -868,7 +870,7 @@ class Chat {
       "textFieldText": textFieldText,
       "textFieldAttachments": textFieldAttachments,
       "dbOnlyLatestMessageDate": dbOnlyLatestMessageDate?.millisecondsSinceEpoch,
-      "dbLatestMessageId": dbLatestMessage.targetId,
+      "dbLatestMessageId": dbLatestMessage.target?.id ?? (id != null ? dbLatestMessage.targetId : null),
     };
   }
 }
