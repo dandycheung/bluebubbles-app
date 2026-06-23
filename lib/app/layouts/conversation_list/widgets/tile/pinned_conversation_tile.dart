@@ -297,7 +297,16 @@ class _ChatTitleState extends CustomState<ChatTitle, void, ConversationTileContr
 
         // Get title from ChatState - it handles all title logic including redacted mode
         final chatState = ChatsSvc.getChatState(controller.chat.guid);
-        final _title = chatState?.title.value ?? controller.chat.getTitle();
+        final String _title;
+        final isDm = !controller.chat.isGroup && isNullOrEmpty(controller.chat.displayName);
+        if (isDm && chatState != null && chatState.participants.isNotEmpty) {
+          // Match iOS pinned tile: nickname if set, otherwise first name
+          _title = chatState.participants.first.reactionDisplayName.value ??
+              chatState.title.value ??
+              controller.chat.getTitle();
+        } else {
+          _title = chatState?.title.value ?? controller.chat.getTitle();
+        }
         final unread = chatState?.hasUnreadMessage.value ?? false;
 
         // Reserve equal horizontal space on both sides so the text stays
