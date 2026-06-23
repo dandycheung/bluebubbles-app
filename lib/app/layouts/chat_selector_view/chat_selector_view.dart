@@ -73,6 +73,7 @@ class ChatSelectorViewState extends State<ChatSelectorView> with ThemeHelpers {
   @override
   Widget build(BuildContext context) {
     return BBScaffold(
+      safeAreaTop: true,
       appBar: BBAppBar(
         titleText: "Select a Chat",
         leading: buildBackButton(context),
