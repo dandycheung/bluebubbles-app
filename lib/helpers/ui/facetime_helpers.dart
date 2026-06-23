@@ -18,8 +18,10 @@ Map<String, Route> faceTimeOverlays = {}; // Map from call uuid to overlay route
 void hideFaceTimeOverlay(String callUuid) {
   NotificationsSvc.clearFaceTimeNotification(callUuid);
   if (faceTimeOverlays.containsKey(callUuid)) {
-    Get.removeRoute(faceTimeOverlays[callUuid]!);
-    faceTimeOverlays.remove(callUuid);
+    final route = faceTimeOverlays.remove(callUuid)!;
+    if (Get.context != null) {
+      Navigator.of(Get.context!, rootNavigator: true).removeRoute(route);
+    }
   }
 }
 
@@ -39,7 +41,11 @@ Future<void> showFaceTimeOverlay(String callUuid, String caller, Uint8List? chat
   showDialog(
       context: Get.context!,
       barrierDismissible: false,
-      builder: (_) {
+      builder: (dialogContext) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          final route = ModalRoute.of(dialogContext);
+          if (route != null) faceTimeOverlays[callUuid] = route;
+        });
         return BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 2, sigmaY: 2),
           child: AlertDialog(
@@ -98,15 +104,14 @@ Future<void> showFaceTimeOverlay(String callUuid, String caller, Uint8List? chat
                 ),
                 onPressed: () {
                   hideFaceTimeOverlay(callUuid);
+                  // Fallback in case the route capture hasn't fired yet
+                  if (Navigator.of(dialogContext, rootNavigator: true).canPop()) {
+                    Navigator.of(dialogContext, rootNavigator: true).pop();
+                  }
                 },
               ),
             ],
           ),
         );
-      }).then((_) => faceTimeOverlays.remove(
-          callUuid) /* Not explicitly necessary since all ways of closing the dialog do this, but just in case */
-      );
-
-  // Save dialog as overlay route
-  faceTimeOverlays[callUuid] = Get.rawRoute!;
+      }).then((_) => faceTimeOverlays.remove(callUuid));
 }

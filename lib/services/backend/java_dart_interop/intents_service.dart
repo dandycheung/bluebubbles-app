@@ -152,7 +152,7 @@ class IntentsService {
       Logger.warn("Failed to fetch FaceTime answer link", error: e, trace: s, tag: 'IntentsService');
     }
     if (Get.context != null) {
-      Navigator.of(Get.context!).pop();
+      Navigator.of(Get.context!, rootNavigator: true).pop();
     }
     if (link == null) {
       return showSnackbar("Failed to answer FaceTime", "Unable to generate FaceTime link!");
