@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import androidx.lifecycle.Observer
 import androidx.work.Data
+import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequest
 import androidx.work.OutOfQuotaPolicy
 import androidx.work.WorkInfo
@@ -28,7 +29,17 @@ object DartWorkManager {
                 .putString("data", gson.toJson(arguments).toString()).build())
             .addTag(Constants.dartWorkerTag)
             .build()
-        WorkManager.getInstance(context).enqueue(work)
+        // Use unique work to prevent a binder storm when multiple FCM messages arrive
+        // simultaneously (e.g. after waking from sleep). Parallel enqueue() calls each
+        // trigger separate JobScheduler binder calls, which can exceed Android's cached-process
+        // threshold and cause the OS to kill the process before any message is processed.
+        // APPEND_OR_REPLACE chains jobs sequentially (safe: workerEngine is a singleton) and
+        // keeps all messages — unlike KEEP (drops) or REPLACE (cancels in-progress work).
+        WorkManager.getInstance(context).enqueueUniqueWork(
+            Constants.dartWorkerTag,
+            ExistingWorkPolicy.APPEND_OR_REPLACE,
+            work
+        )
 
         // Observe when the worker is finished and run the provided callback
         lateinit var observer: Observer<WorkInfo>
