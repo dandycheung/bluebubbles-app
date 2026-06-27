@@ -574,27 +574,36 @@ class ChatsService {
     _scheduleListVersionUpdate(immediate: true);
   }
 
-  void markAllAsRead() {
-    final _chats = Database.chats.query(Chat_.hasUnreadMessage.equals(true)).build().find();
-    for (Chat c in _chats) {
-      c.hasUnreadMessage = false;
-      if (c.id != null) {
-        MethodChannelSvc.actions.deleteNotification(
-          notificationId: c.id!,
-          tag: NotificationsService.NEW_MESSAGE_TAG,
-        );
-      }
-      if (SettingsSvc.settings.enablePrivateAPI.value && SettingsSvc.settings.privateMarkChatAsRead.value) {
-        HttpSvc.chat.markRead(c.guid);
+  Future<void> markAllAsRead() async {
+    try {
+      // Phase 1: instant UI update from in-memory state — no DB query needed
+      final unreadStates = chatStates.values.where((s) => s.hasUnreadMessage.value).toList();
+      final chatIds = <int>[];
+
+      for (final state in unreadStates) {
+        state.hasUnreadMessage.value = false;
+        final id = state.chat.id;
+        if (id != null) {
+          chatIds.add(id);
+          if (!kIsDesktop && !kIsWeb) {
+            MethodChannelSvc.actions.deleteNotification(
+              notificationId: id,
+              tag: NotificationsService.NEW_MESSAGE_TAG,
+            );
+          }
+        }
       }
 
-      // Update chat state if it exists
-      final state = chatStates[c.guid];
-      if (state != null) {
-        state.hasUnreadMessage.value = false;
-      }
+      if (chatIds.isEmpty) return;
+
+      // Phase 2: DB write + HTTP calls dispatched to background isolate
+      final shouldMark =
+          SettingsSvc.settings.enablePrivateAPI.value && SettingsSvc.settings.privateMarkChatAsRead.value;
+      await ChatInterface.markAllChatsRead(chatIds: chatIds, shouldMarkOnServer: shouldMark);
+    } catch (e, stack) {
+      Logger.error("Error marking all chats as read", error: e, trace: stack, tag: "ChatsService");
+      showToast("Failed to mark all chats as read!");
     }
-    Database.chats.putMany(_chats);
   }
 
   void updateChatPinIndex(int oldIndex, int newIndex) {

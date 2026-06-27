@@ -13,7 +13,6 @@ import 'package:bluebubbles/app/layouts/conversation_view/widgets/message/popup/
 import 'package:bluebubbles/app/layouts/conversation_view/widgets/message/popup/message_popup_action_context.dart';
 import 'package:bluebubbles/app/layouts/conversation_view/widgets/message/popup/reaction_picker_clipper.dart';
 import 'package:bluebubbles/app/layouts/conversation_view/widgets/message/popup/widgets/reaction_details.dart';
-import 'package:bluebubbles/app/components/custom/custom_cupertino_alert_dialog.dart';
 import 'package:bluebubbles/app/layouts/findmy/findmy_pin_clipper.dart';
 import 'package:bluebubbles/app/wrappers/bb_app_bar.dart';
 import 'package:bluebubbles/app/wrappers/bb_scaffold.dart';
@@ -671,22 +670,9 @@ class _MessagePopupState extends State<MessagePopup> with SingleTickerProviderSt
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: allActions.sublist(numberToShow - 1),
                     );
-                    final adaptiveTheme = context.theme;
-                    showDialog(
-                      useRootNavigator: false,
+                    showBBDialog(
                       context: context,
-                      builder: (context) => Theme(
-                        data: adaptiveTheme,
-                        child: SettingsSvc.settings.skin.value == Skins.iOS
-                            ? CupertinoAlertDialog(
-                                backgroundColor: adaptiveTheme.colorScheme.surfaceContainerHighest,
-                                content: content,
-                              )
-                            : AlertDialog(
-                                backgroundColor: adaptiveTheme.colorScheme.surfaceContainerHighest,
-                                content: content,
-                              ),
-                      ),
+                      content: content,
                     );
                   },
                   title: 'More...',

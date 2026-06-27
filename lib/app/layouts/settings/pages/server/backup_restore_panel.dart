@@ -346,99 +346,85 @@ class _BackupRestorePanelState extends State<BackupRestorePanel> with ThemeHelpe
                                 getBackups();
                               }
 
-                              showDialog(
-                                  context: context,
-                                  builder: (context) {
-                                    return AlertDialog(
-                                      title: Text(
-                                        "Settings Backup Creation",
-                                        style: context.theme.textTheme.titleLarge,
-                                      ),
-                                      backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
-                                      content: Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Focus(
-                                            onKeyEvent: (node, event) {
-                                              if (event is KeyDownEvent &&
-                                                  !HardwareKeyboard.instance.isShiftPressed &&
-                                                  event.logicalKey == LogicalKeyboardKey.tab) {
-                                                node.nextFocus();
-                                                return KeyEventResult.handled;
-                                              }
-                                              return KeyEventResult.ignored;
-                                            },
-                                            child: TextField(
-                                              cursorColor: context.theme.colorScheme.primary,
-                                              autocorrect: true,
-                                              autofocus: true,
-                                              controller: nameController,
-                                              textInputAction: TextInputAction.next,
-                                              decoration: InputDecoration(
-                                                enabledBorder: OutlineInputBorder(
-                                                    borderSide: BorderSide(color: context.theme.colorScheme.outline),
-                                                    borderRadius: BorderRadius.circular(20)),
-                                                focusedBorder: OutlineInputBorder(
-                                                    borderSide: BorderSide(color: context.theme.colorScheme.primary),
-                                                    borderRadius: BorderRadius.circular(20)),
-                                                labelText: "Name",
-                                              ),
-                                            ),
-                                          ),
-                                          const SizedBox(height: 10),
-                                          Focus(
-                                            onKeyEvent: (node, event) {
-                                              if (event is KeyDownEvent &&
-                                                  HardwareKeyboard.instance.isShiftPressed &&
-                                                  event.logicalKey == LogicalKeyboardKey.tab) {
-                                                node.previousFocus();
-                                                node.previousFocus(); // This is intentional. Should probably figure out why it's needed
-                                                return KeyEventResult.handled;
-                                              }
-                                              return KeyEventResult.ignored;
-                                            },
-                                            child: TextField(
-                                              cursorColor: context.theme.colorScheme.primary,
-                                              autocorrect: true,
-                                              autofocus: false,
-                                              controller: descController,
-                                              textInputAction: TextInputAction.next,
-                                              onSubmitted: (_) {
-                                                onDone.call(context);
-                                              },
-                                              decoration: InputDecoration(
-                                                enabledBorder: OutlineInputBorder(
-                                                    borderSide: BorderSide(color: context.theme.colorScheme.outline),
-                                                    borderRadius: BorderRadius.circular(20)),
-                                                focusedBorder: OutlineInputBorder(
-                                                    borderSide: BorderSide(color: context.theme.colorScheme.primary),
-                                                    borderRadius: BorderRadius.circular(20)),
-                                                labelText: "Description (Optional)",
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      actions: [
-                                        TextButton(
-                                          child: Text("Cancel",
-                                              style: context.theme.textTheme.bodyLarge!
-                                                  .copyWith(color: context.theme.colorScheme.primary)),
-                                          onPressed: () {
-                                            Navigator.of(context, rootNavigator: true).pop();
-                                          },
+                              showBBDialog(
+                                context: context,
+                                title: "Settings Backup Creation",
+                                content: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Focus(
+                                      onKeyEvent: (node, event) {
+                                        if (event is KeyDownEvent &&
+                                            !HardwareKeyboard.instance.isShiftPressed &&
+                                            event.logicalKey == LogicalKeyboardKey.tab) {
+                                          node.nextFocus();
+                                          return KeyEventResult.handled;
+                                        }
+                                        return KeyEventResult.ignored;
+                                      },
+                                      child: TextField(
+                                        cursorColor: context.theme.colorScheme.primary,
+                                        autocorrect: true,
+                                        autofocus: true,
+                                        controller: nameController,
+                                        textInputAction: TextInputAction.next,
+                                        decoration: InputDecoration(
+                                          enabledBorder: OutlineInputBorder(
+                                              borderSide: BorderSide(color: context.theme.colorScheme.outline),
+                                              borderRadius: BorderRadius.circular(20)),
+                                          focusedBorder: OutlineInputBorder(
+                                              borderSide: BorderSide(color: context.theme.colorScheme.primary),
+                                              borderRadius: BorderRadius.circular(20)),
+                                          labelText: "Name",
                                         ),
-                                        TextButton(
-                                          child: Text("OK",
-                                              style: context.theme.textTheme.bodyLarge!
-                                                  .copyWith(color: context.theme.colorScheme.primary)),
-                                          onPressed: () {
-                                            onDone.call(context);
-                                          },
+                                      ),
+                                    ),
+                                    const SizedBox(height: 10),
+                                    Focus(
+                                      onKeyEvent: (node, event) {
+                                        if (event is KeyDownEvent &&
+                                            HardwareKeyboard.instance.isShiftPressed &&
+                                            event.logicalKey == LogicalKeyboardKey.tab) {
+                                          node.previousFocus();
+                                          node.previousFocus(); // This is intentional. Should probably figure out why it's needed
+                                          return KeyEventResult.handled;
+                                        }
+                                        return KeyEventResult.ignored;
+                                      },
+                                      child: TextField(
+                                        cursorColor: context.theme.colorScheme.primary,
+                                        autocorrect: true,
+                                        autofocus: false,
+                                        controller: descController,
+                                        textInputAction: TextInputAction.next,
+                                        onSubmitted: (_) {
+                                          onDone.call(context);
+                                        },
+                                        decoration: InputDecoration(
+                                          enabledBorder: OutlineInputBorder(
+                                              borderSide: BorderSide(color: context.theme.colorScheme.outline),
+                                              borderRadius: BorderRadius.circular(20)),
+                                          focusedBorder: OutlineInputBorder(
+                                              borderSide: BorderSide(color: context.theme.colorScheme.primary),
+                                              borderRadius: BorderRadius.circular(20)),
+                                          labelText: "Description (Optional)",
                                         ),
-                                      ],
-                                    );
-                                  });
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                actions: [
+                                  BBDialogAction(
+                                    text: "Cancel",
+                                    onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
+                                  ),
+                                  BBDialogAction(
+                                    text: "OK",
+                                    isDefault: true,
+                                    onPressed: () => onDone.call(context),
+                                  ),
+                                ],
+                              );
                             },
                           ),
                         ),

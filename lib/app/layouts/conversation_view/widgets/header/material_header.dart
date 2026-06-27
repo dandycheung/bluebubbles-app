@@ -138,46 +138,34 @@ class MaterialHeader extends StatelessWidget implements PreferredSizeWidget {
                       }
                       Navigator.of(context).pop();
                     } else if (value == 2) {
-                      showDialog(
+                      showBBDialog(
                         barrierDismissible: false,
                         context: context,
-                        builder: (BuildContext context) {
-                          return AlertDialog(
-                            title: Text(
-                              "Are you sure?",
-                              style: context.theme.textTheme.titleLarge,
-                            ),
-                            content: Text("This chat will be deleted from this device only",
-                                style: context.theme.textTheme.bodyLarge),
-                            backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
-                            actions: <Widget>[
-                              TextButton(
-                                child: Text("No",
-                                    style: context.theme.textTheme.bodyLarge!
-                                        .copyWith(color: context.theme.colorScheme.primary)),
-                                onPressed: () {
-                                  if (Get.isSnackbarOpen) {
-                                    Get.closeAllSnackbars();
-                                  }
-                                  Navigator.of(context).pop();
-                                },
-                              ),
-                              TextButton(
-                                child: Text("Yes",
-                                    style: context.theme.textTheme.bodyLarge!
-                                        .copyWith(color: context.theme.colorScheme.primary)),
-                                onPressed: () async {
-                                  ChatsSvc.removeChat(controller.chat);
-                                  ChatsSvc.softDeleteChat(controller.chat);
-                                  if (Get.isSnackbarOpen) {
-                                    Get.closeAllSnackbars();
-                                  }
-                                  Navigator.of(context).pop();
-                                },
-                              ),
-                            ],
-                          );
-                        },
+                        title: "Are you sure?",
+                        body: "This chat will be deleted from this device only",
+                        actions: <BBDialogAction>[
+                          BBDialogAction(
+                            text: "No",
+                            onPressed: () {
+                              if (Get.isSnackbarOpen) {
+                                Get.closeAllSnackbars();
+                              }
+                              Navigator.of(context, rootNavigator: true).pop();
+                            },
+                          ),
+                          BBDialogAction(
+                            text: "Yes",
+                            isDestructive: true,
+                            onPressed: () async {
+                              ChatsSvc.removeChat(controller.chat);
+                              ChatsSvc.softDeleteChat(controller.chat);
+                              if (Get.isSnackbarOpen) {
+                                Get.closeAllSnackbars();
+                              }
+                              Navigator.of(context, rootNavigator: true).pop();
+                            },
+                          ),
+                        ],
                       );
                     } else if (value == 3) {
                       showBookmarksThread(controller, context);

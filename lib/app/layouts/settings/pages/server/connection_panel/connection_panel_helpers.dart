@@ -257,35 +257,31 @@ mixin ConnectionPanelHelpersMixin {
       SettingsSvc.fcmData.applicationID,
     ];
     final String qrtext = jsonEncode(json);
-    showDialog(
+    showBBDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
-        content: AspectRatio(
-          aspectRatio: 1,
-          child: SizedBox(
-            height: 320,
-            width: 320,
-            child: QrImageView(
-              data: qrtext,
-              version: QrVersions.auto,
-              size: 320,
-              gapless: true,
-              backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
-              eyeStyle: QrEyeStyle(color: context.theme.colorScheme.onSurfaceVariant),
-              dataModuleStyle: QrDataModuleStyle(color: context.theme.colorScheme.onSurfaceVariant),
-            ),
+      title: "QR Code",
+      content: AspectRatio(
+        aspectRatio: 1,
+        child: SizedBox(
+          height: 320,
+          width: 320,
+          child: QrImageView(
+            data: qrtext,
+            version: QrVersions.auto,
+            size: 320,
+            gapless: true,
+            backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
+            eyeStyle: QrEyeStyle(color: context.theme.colorScheme.onSurfaceVariant),
+            dataModuleStyle: QrDataModuleStyle(color: context.theme.colorScheme.onSurfaceVariant),
           ),
         ),
-        title: Text("QR Code", style: context.theme.textTheme.titleLarge),
-        actions: <Widget>[
-          TextButton(
-            child: Text("Dismiss",
-                style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.primary)),
-            onPressed: () => Navigator.of(context).pop(),
-          ),
-        ],
       ),
+      actions: [
+        BBDialogAction(
+          text: "Dismiss",
+          onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
+        ),
+      ],
     );
   }
 
@@ -561,41 +557,35 @@ mixin ConnectionPanelHelpersMixin {
                     onChanged: (bool val) async {
                       if (val) {
                         final TextEditingController portController = TextEditingController();
-                        await showDialog(
+                        await showBBDialog(
                           context: context,
-                          builder: (_) => AlertDialog(
-                            actions: [
-                              TextButton(
-                                child: Text("Cancel",
-                                    style: context.theme.textTheme.bodyLarge!
-                                        .copyWith(color: context.theme.colorScheme.primary)),
-                                onPressed: () => Get.back(),
-                              ),
-                              TextButton(
-                                child: Text("OK",
-                                    style: context.theme.textTheme.bodyLarge!
-                                        .copyWith(color: context.theme.colorScheme.primary)),
-                                onPressed: () async {
-                                  if (portController.text.isEmpty || !portController.text.isNumericOnly) {
-                                    showSnackbar("Error", "Enter a valid port!");
-                                    return;
-                                  }
-                                  Navigator.of(context, rootNavigator: true).pop();
-                                  SettingsSvc.settings.localhostPort.value = portController.text;
-                                },
-                              ),
-                            ],
-                            content: TextField(
-                              controller: portController,
-                              decoration: const InputDecoration(
-                                labelText: "Port Number",
-                                border: OutlineInputBorder(),
-                              ),
-                              keyboardType: TextInputType.number,
+                          title: "Enter Server Port",
+                          content: TextField(
+                            controller: portController,
+                            decoration: const InputDecoration(
+                              labelText: "Port Number",
+                              border: OutlineInputBorder(),
                             ),
-                            title: Text("Enter Server Port", style: context.theme.textTheme.titleLarge),
-                            backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
+                            keyboardType: TextInputType.number,
                           ),
+                          actions: [
+                            BBDialogAction(
+                              text: "Cancel",
+                              onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
+                            ),
+                            BBDialogAction(
+                              text: "OK",
+                              isDefault: true,
+                              onPressed: () async {
+                                if (portController.text.isEmpty || !portController.text.isNumericOnly) {
+                                  showSnackbar("Error", "Enter a valid port!");
+                                  return;
+                                }
+                                Navigator.of(context, rootNavigator: true).pop();
+                                SettingsSvc.settings.localhostPort.value = portController.text;
+                              },
+                            ),
+                          ],
                         );
                       } else {
                         SettingsSvc.settings.localhostPort.value = null;

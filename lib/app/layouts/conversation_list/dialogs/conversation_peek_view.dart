@@ -362,40 +362,26 @@ class _ConversationPeekViewState extends State<ConversationPeekView>
         color: Colors.transparent,
         child: InkWell(
           onTap: () async {
-            await showDialog(
+            await showBBDialog(
               barrierDismissible: false,
               context: context,
-              builder: (BuildContext dialogContext) {
-                return AlertDialog(
-                  title: Text(
-                    "Are you sure?",
-                    style: dialogContext.theme.textTheme.titleLarge,
-                  ),
-                  content: Text("This chat will be deleted from this device only",
-                      style: dialogContext.theme.textTheme.bodyLarge),
-                  backgroundColor: dialogContext.theme.colorScheme.surfaceContainerHighest,
-                  actions: <Widget>[
-                    TextButton(
-                      child: Text("No",
-                          style: dialogContext.theme.textTheme.bodyLarge!
-                              .copyWith(color: dialogContext.theme.colorScheme.primary)),
-                      onPressed: () {
-                        Navigator.of(dialogContext).pop();
-                      },
-                    ),
-                    TextButton(
-                      child: Text("Yes",
-                          style: dialogContext.theme.textTheme.bodyLarge!
-                              .copyWith(color: dialogContext.theme.colorScheme.primary)),
-                      onPressed: () {
-                        ChatsSvc.removeChat(widget.chat);
-                        ChatsSvc.softDeleteChat(widget.chat);
-                        Navigator.of(dialogContext).pop();
-                      },
-                    ),
-                  ],
-                );
-              },
+              title: "Are you sure?",
+              body: "This chat will be deleted from this device only",
+              actions: [
+                BBDialogAction(
+                  text: "No",
+                  onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
+                ),
+                BBDialogAction(
+                  text: "Yes",
+                  isDefault: true,
+                  onPressed: () {
+                    ChatsSvc.removeChat(widget.chat);
+                    ChatsSvc.softDeleteChat(widget.chat);
+                    Navigator.of(context, rootNavigator: true).pop();
+                  },
+                ),
+              ],
             );
             if (mounted) popPeekView();
           },

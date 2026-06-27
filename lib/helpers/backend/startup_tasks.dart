@@ -131,9 +131,6 @@ class StartupTasks {
     await ChatsSvc.init(headless: headless);
     Logger.info("ChatsService ready");
 
-    Logger.info("Registering TypingIndicatorService...");
-    GetIt.I.registerSingleton<TypingIndicatorService>(TypingIndicatorService());
-    Logger.info("TypingIndicatorService ready");
   }
 
   static Future<void> _initHttpService() async {
@@ -252,6 +249,7 @@ class StartupTasks {
     Logger.info("Registering ChatsService, SocketService, and NotificationsService...");
     await setSplashStatus("Loading chats...");
     GetIt.I.registerSingleton<ChatsService>(ChatsService());
+    GetIt.I.registerSingleton<TypingIndicatorService>(TypingIndicatorService());
     GetIt.I.registerSingleton<SocketService>(SocketService());
     await _waitForInterop(notifications: true);
 

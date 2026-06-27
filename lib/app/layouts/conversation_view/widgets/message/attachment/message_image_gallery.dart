@@ -185,31 +185,24 @@ class _MessageImageGalleryState extends State<MessageImageGallery> with ThemeHel
   }
 
   void _showGalleryPopup(BuildContext context, String title) {
-    showDialog(
+    showBBDialog(
       context: context,
-      useRootNavigator: false,
-      builder: (ctx) {
-        return AlertDialog(
-          backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-          title: Text(title, style: Theme.of(context).textTheme.titleLarge),
-          contentPadding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-          content: SizedBox(
-            width: 500,
-            height: 400,
-            child: GridView.builder(
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3,
-                mainAxisSpacing: 8,
-                crossAxisSpacing: 8,
-              ),
-              itemCount: _attachments.length,
-              itemBuilder: (context, index) {
-                return MediaGalleryCard(attachment: _attachments[index], showSenderAvatar: false);
-              },
-            ),
+      title: title,
+      content: SizedBox(
+        width: 500,
+        height: 400,
+        child: GridView.builder(
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 3,
+            mainAxisSpacing: 8,
+            crossAxisSpacing: 8,
           ),
-        );
-      },
+          itemCount: _attachments.length,
+          itemBuilder: (context, index) {
+            return MediaGalleryCard(attachment: _attachments[index], showSenderAvatar: false);
+          },
+        ),
+      ),
     );
   }
 

@@ -253,8 +253,8 @@ class GlobalIsolate {
   }
 
   /// Requests graceful shutdown:
-  /// - rejects new [send]/[broadcast] calls immediately
-  /// - stops the isolate once all in-flight requests complete (or immediately if none)
+  /// - continues to accept new [send]/[broadcast] calls during drain
+  /// - stops the isolate once all pending requests complete (or immediately if none)
   ///
   /// Returns a Future that completes when the isolate has fully stopped.
   /// Safe to fire-and-forget with [unawaited] if the caller doesn't need to wait.
@@ -321,9 +321,6 @@ class GlobalIsolate {
 
   /// Sends a request to the isolate and waits for a response
   Future<T> send<T>(IsolateRequestType type, {dynamic input, Duration? customTimeout}) async {
-    if (_shutdownPending) {
-      return Future.error('$isolateDebugName is shutting down; request $type rejected');
-    }
     await _ensureStarted();
 
     final requestId = const Uuid().v4();
@@ -358,10 +355,6 @@ class GlobalIsolate {
 
   /// Fire-and-forget send (no response expected)
   void broadcast(IsolateRequestType type, dynamic input) {
-    if (_shutdownPending) {
-      Logger.warn('$isolateDebugName is shutting down; broadcast $type rejected');
-      return;
-    }
     _ensureStarted().then((_) {
       _scheduleIdleShutdown();
 
@@ -644,6 +637,7 @@ enum IsolateRequestType {
 
   // Chat actions
   clearNotificationForChat,
+  markAllChatsRead,
   markChatReadUnread,
   startTyping,
   stopTyping,

@@ -418,26 +418,27 @@ class _ThemeStudioPanelState extends CustomState<ThemeStudioPanel, void, ThemeSt
   /// Shows a dialog asking the user what to do with unsaved changes.
   /// Returns true if navigation should proceed (discard or apply+navigate).
   Future<bool> _confirmDiscard(BuildContext context) async {
-    final result = await showDialog<_PendingAction>(
+    final result = await showBBDialog<_PendingAction>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text("Unsaved Changes"),
-        content: const Text("You have pending changes that haven't been applied. What would you like to do?"),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(_PendingAction.cancel),
-            child: const Text("Keep Editing"),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(_PendingAction.discard),
-            child: Text("Discard", style: TextStyle(color: context.theme.colorScheme.error)),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(_PendingAction.apply),
-            child: const Text("Apply & Exit"),
-          ),
-        ],
-      ),
+      title: "Unsaved Changes",
+      body: "You have pending changes that haven't been applied. What would you like to do?",
+      actions: [
+        BBDialogAction(
+          text: "Keep Editing",
+          onPressed: () => Navigator.of(context, rootNavigator: true).pop(_PendingAction.cancel),
+        ),
+        BBDialogAction(
+          text: "Discard",
+          isDestructive: true,
+          color: context.theme.colorScheme.error,
+          onPressed: () => Navigator.of(context, rootNavigator: true).pop(_PendingAction.discard),
+        ),
+        BBDialogAction(
+          text: "Apply & Exit",
+          isDefault: true,
+          onPressed: () => Navigator.of(context, rootNavigator: true).pop(_PendingAction.apply),
+        ),
+      ],
     );
     if (result == _PendingAction.apply && context.mounted) {
       await controller.applyChanges(context);
