@@ -15,7 +15,7 @@ permissions:
   contents: write # attach artifacts to releases on tag builds
 
 env:
-  FLUTTER_VERSION: "3.44.2"
+  FLUTTER_VERSION: "3.44.4"
 
 jobs:
   windows:

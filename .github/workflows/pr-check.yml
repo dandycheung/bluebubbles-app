@@ -17,7 +17,7 @@ concurrency:
 
 env:
   # Matches the pin in windows/build.ps1 and linux/build.sh.
-  FLUTTER_VERSION: "3.44.2"
+  FLUTTER_VERSION: "3.44.4"
 
 jobs:
   analyze:

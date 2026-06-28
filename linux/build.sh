@@ -3,7 +3,7 @@ trap "exit" INT
 set -eux
 
 # Flutter version to build with; override with the FLUTTER_VERSION env var.
-FLUTTER_VERSION="${FLUTTER_VERSION:-3.44.2}"
+FLUTTER_VERSION="${FLUTTER_VERSION:-3.44.4}"
 
 cd "$(dirname "$0")/.."
 
