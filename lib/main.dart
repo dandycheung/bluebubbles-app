@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:isolate';
 import 'dart:math';
 import 'dart:ui';
@@ -71,8 +72,21 @@ Future<Null> initApp(bool bubble, List<String> arguments) async {
     void Function()? detachSplashStatus;
     if (kIsDesktop && !bubble && arguments.firstOrNull != "minimized") {
       const splashChannel = MethodChannel('bluebubbles/splash');
+      bool titleBarApplied = false;
       void pushStatus() {
         splashChannel.invokeMethod('setStatus', StartupTasks.status.value).catchError((_) => null);
+
+        final phase = StartupTasks.status.value;
+        if (Platform.isLinux && !titleBarApplied && phase != "Starting..." && phase != "Loading settings...") {
+          titleBarApplied = true;
+          unawaited(() async {
+            await windowManager.ensureInitialized();
+            await windowManager.setTitleBarStyle(
+                SettingsSvc.settings.titleBarStyle.value == BBTitleBarStyle.native
+                    ? TitleBarStyle.normal
+                    : TitleBarStyle.hidden);
+          }());
+        }
       }
 
       StartupTasks.status.addListener(pushStatus);
@@ -159,17 +173,21 @@ Future<Null> initApp(bool bubble, List<String> arguments) async {
           width = width.clamp(300, max(300, primary.size.width));
           height = height.clamp(300, max(300, primary.size.height));
 
-
-          final centered = await calcWindowPosition(Size(width, height), Alignment.center);
-          double posX = PrefsSvc.desktop.getWindowX() ?? centered.dx;
-          double posY = PrefsSvc.desktop.getWindowY() ?? centered.dy;
-          posX = posX.clamp(0, max(0, primary.size.width - width));
-          posY = posY.clamp(0, max(0, primary.size.height - height));
-
-          // Apply size and position in one call.
-          await windowManager.setBounds(Rect.fromLTWH(posX, posY, width, height));
+          if (isWaylandSession) {
+            // Wayland forbids a client from positioning itself, so only restore
+            // the size and leave placement to the compositor.
+            await windowManager.setSize(Size(width, height));
+          } else {
+            // Restore position otherwise
+            final centered = await calcWindowPosition(Size(width, height), Alignment.center);
+            double posX = PrefsSvc.desktop.getWindowX() ?? centered.dx;
+            double posY = PrefsSvc.desktop.getWindowY() ?? centered.dy;
+            posX = posX.clamp(0, max(0, primary.size.width - width));
+            posY = posY.clamp(0, max(0, primary.size.height - height));
+            await windowManager.setBounds(Rect.fromLTWH(posX, posY, width, height));
+            await PrefsSvc.desktop.setWindowOffsets(x: posX, y: posY);
+          }
           await PrefsSvc.desktop.setWindowDimensions(width: width, height: height);
-          await PrefsSvc.desktop.setWindowOffsets(x: posX, y: posY);
 
           await windowManager.setTitle('BlueBubbles');
           if (arguments.firstOrNull != "minimized") {
@@ -181,6 +199,7 @@ Future<Null> initApp(bool bubble, List<String> arguments) async {
             await const MethodChannel('bluebubbles/splash').invokeMethod('closeSplash');
           } catch (_) {}
           detachSplashStatus?.call();
+          unawaited(ThemeSvc.initDynamicColorsDeferred()); // Linux: deferred past splash
           bool shouldAuthenticate = SettingsSvc.canAuthenticate && SettingsSvc.settings.shouldSecure.value;
           if (!shouldAuthenticate) {
             ChatsSvc.init();
@@ -223,6 +242,11 @@ Future<Null> initApp(bool bubble, List<String> arguments) async {
     Logger.error("Unhandled Exception", trace: stackTrace, error: error);
   });
 }
+
+bool get isWaylandSession =>
+    Platform.isLinux &&
+    (Platform.environment['XDG_SESSION_TYPE'] == 'wayland' ||
+        Platform.environment.containsKey('WAYLAND_DISPLAY'));
 
 class DesktopWindowListener extends WindowListener {
   DesktopWindowListener._();
@@ -267,6 +291,8 @@ class DesktopWindowListener extends WindowListener {
   void onWindowClose() async {
     if (await windowManager.isPreventClose()) {
       await windowManager.hide();
+    } else if (Platform.isLinux) {
+      exit(0);
     }
   }
 }
@@ -589,10 +615,8 @@ class _HomeState extends State<Home> with WidgetsBindingObserver, TrayListener {
         await windowManager.hide();
         break;
       case 'close_app':
-        if (await windowManager.isPreventClose()) {
-          await windowManager.setPreventClose(false);
-        }
-        await windowManager.close();
+        await windowManager.setPreventClose(false);
+        await windowManager.destroy();
         break;
     }
   }

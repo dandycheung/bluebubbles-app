@@ -37,18 +37,22 @@ namespace {
 
 constexpr wchar_t kSplashClassName[] = L"BlueBubblesSplashWindow";
 
-// Logical (96-DPI) layout; scaled per-monitor.
-constexpr int kWindowW = 320;
-constexpr int kWindowH = 240;
+// Logical (96-DPI) layout; scaled per-monitor. 4:3 window (360x480) matching the
+// Linux splash. Content tops are within a kContentH-tall box that is centered
+// vertically in the window (see oy in Paint), so a window resize only touches
+// kWindowW/kWindowH.
+constexpr int kWindowW = 360;
+constexpr int kWindowH = 480;
+constexpr int kContentH = 300;
 constexpr int kIcon = 72;
-constexpr int kIconTop = 34;
-constexpr int kVersionTop = 116;
-constexpr int kVersionHeight = 16;
-constexpr int kSpinnerTop = 148;
+constexpr int kIconTop = 40;
+constexpr int kVersionTop = 124;
+constexpr int kVersionHeight = 18;
+constexpr int kSpinnerTop = 168;
 constexpr int kSpinner = 26;
 constexpr int kSpinnerStroke = 3;
-constexpr int kStatusTop = 190;
-constexpr int kStatusHeight = 18;
+constexpr int kStatusTop = 224;
+constexpr int kStatusHeight = 40;
 constexpr int kVersionFont = 12;
 constexpr int kStatusFont = 12;
 
@@ -156,9 +160,12 @@ void Paint(HWND hwnd) {
   FillRect(mem, &rc, bg);
   DeleteObject(bg);
 
+  // Center the content box vertically within the window (matches Linux's oy).
+  int oy = (kWindowH - kContentH) / 2;
+
   if (g_splash_icon) {
     int icon = S(kIcon);
-    DrawIconEx(mem, (w - icon) / 2, S(kIconTop), g_splash_icon, icon, icon, 0, nullptr, DI_NORMAL);
+    DrawIconEx(mem, (w - icon) / 2, S(kIconTop + oy), g_splash_icon, icon, icon, 0, nullptr, DI_NORMAL);
   }
 
   std::wstring status;
@@ -172,15 +179,15 @@ void Paint(HWND hwnd) {
     g.SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
     g.SetTextRenderingHint(Gdiplus::TextRenderingHintClearTypeGridFit);
 
-    DrawCenteredText(g, g_version_line, kVersionTop, kVersionHeight, kVersionFont, 120, w);
-    DrawCenteredText(g, status, kStatusTop, kStatusHeight, kStatusFont, 165, w);
+    DrawCenteredText(g, g_version_line, kVersionTop + oy, kVersionHeight, kVersionFont, 120, w);
+    DrawCenteredText(g, status, kStatusTop + oy, kStatusHeight, kStatusFont, 165, w);
 
     // Rotating arc spinner in the BlueBubbles brand blue.
     Gdiplus::Pen pen(Gdiplus::Color(255, 25, 130, 252), static_cast<Gdiplus::REAL>(S(kSpinnerStroke)));
     pen.SetStartCap(Gdiplus::LineCapRound);
     pen.SetEndCap(Gdiplus::LineCapRound);
     int spin = S(kSpinner);
-    g.DrawArc(&pen, (w - spin) / 2, S(kSpinnerTop), spin, spin,
+    g.DrawArc(&pen, (w - spin) / 2, S(kSpinnerTop + oy), spin, spin,
               static_cast<Gdiplus::REAL>(g_angle), 270.0f);
   }
 
