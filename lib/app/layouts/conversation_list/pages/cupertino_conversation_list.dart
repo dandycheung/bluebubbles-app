@@ -314,7 +314,7 @@ class CupertinoConversationListState extends State<CupertinoConversationList> wi
                                     )
                                   : const SizedBox.shrink());
 
-                              final topDivider = index == 0 && !hasPinnedChats
+                              final topDivider = index == 0 && hasPinnedChats
                                   ? Obx(() => !SettingsSvc.settings.hideDividers.value
                                       ? Padding(
                                           padding: EdgeInsets.only(
