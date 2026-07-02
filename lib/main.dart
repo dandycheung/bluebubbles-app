@@ -164,7 +164,11 @@ Future<Null> initApp(bool bubble, List<String> arguments) async {
           } else {
             await windowManager.hide();
           }
-          bool shouldAuthenticate = SettingsSvc.canAuthenticate && SettingsSvc.settings.shouldSecure.value;
+          // secure_application / local auth has no working Linux implementation,
+          // so never gate startup behind it there (otherwise ChatsSvc/SocketSvc
+          // would never init, since the auth flow can't complete).
+          bool shouldAuthenticate =
+              !Platform.isLinux && SettingsSvc.canAuthenticate && SettingsSvc.settings.shouldSecure.value;
           if (!shouldAuthenticate) {
             ChatsSvc.init();
             SocketSvc.init();
@@ -334,7 +338,13 @@ class Main extends StatelessWidget {
         builder: (context, child) => SafeArea(
           top: false,
           bottom: false,
-          child: SecureApplication(
+          // secure_application has no Linux implementation; mounting it (and the
+          // SecureGate below) throws MissingPluginException on every lifecycle
+          // event, which breaks window close/hide once the app is past setup.
+          // Bypass the secure wrapper entirely on Linux.
+          child: Platform.isLinux
+              ? TitleBarWrapper(child: child ?? Container())
+              : SecureApplication(
             child: Builder(
               builder: (context) {
                 if (SettingsSvc.canAuthenticate && (!LifecycleSvc.isAlive || !StartupTasks.uiReady.isCompleted)) {
