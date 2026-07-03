@@ -181,21 +181,57 @@ class OutgoingMessageHandler {
     // Prepare items (writes temp messages / copies attachment files to disk).
     // prepMessage may return multiple Message objects when it splits a URL
     // message into two parts (pre-Big Sur macOS compatibility).
-    final returned = await _prepItem(item);
-
-    if (returned is List<Message>) {
-      // prepMessage already saved each message to the DB; create a queue
-      // entry for each one with the message that was actually saved.
-      for (final m in returned) {
-        _queue.add(_OutgoingEntry(_copyWithMessage(item, m)));
+    //
+    // The prep phase writes the temp record via the GlobalIsolate, which can
+    // throw if the isolate is mid-restart. If that escapes queue() (usually a
+    // fire-and-forget call) the message is *silently dropped* — never queued,
+    // never sent, never marked failed. So:
+    //  - Retry a transient failure, but ONLY while the temp is still unsaved.
+    //    prepMessage regenerates the temp GUID on each call, so retrying after a
+    //    partial save would duplicate the message; the "not in DB" guard makes
+    //    the save-phase-failure case (the churn case) safe to re-run.
+    //  - After retries are exhausted (or the temp was already saved), surface it
+    //    as a failed message so it's visible + retryable rather than lost.
+    const int maxPrepAttempts = 3;
+    for (int attempt = 1;; attempt++) {
+      dynamic returned;
+      try {
+        returned = await _prepItem(item);
+      } catch (ex, st) {
+        final guid = item.message.guid;
+        final tempSaved = guid != null && Message.findOne(guid: guid) != null;
+        if (!tempSaved && attempt < maxPrepAttempts) {
+          Logger.warn('Outgoing prep attempt $attempt failed; retrying', error: ex, trace: st, tag: _tag);
+          await Future.delayed(Duration(milliseconds: 250 * attempt));
+          continue;
+        }
+        await _finalizeOutgoingFailure(
+          item.chat,
+          item.message,
+          guid ?? '',
+          logMessage: 'Failed to prepare outgoing message after $attempt attempt(s)',
+          error: ex,
+          stack: st,
+        );
+        item.completer?.completeError(ex);
+        return;
       }
-    } else {
-      // Attachment: prepAttachment already saved it; keep the original item.
-      _queue.add(_OutgoingEntry(item));
-    }
 
-    pendingChatGuids.add(item.chat.guid);
-    unawaited(_processNext());
+      if (returned is List<Message>) {
+        // prepMessage already saved each message to the DB; create a queue
+        // entry for each one with the message that was actually saved.
+        for (final m in returned) {
+          _queue.add(_OutgoingEntry(_copyWithMessage(item, m)));
+        }
+      } else {
+        // Attachment: prepAttachment already saved it; keep the original item.
+        _queue.add(_OutgoingEntry(item));
+      }
+
+      pendingChatGuids.add(item.chat.guid);
+      unawaited(_processNext());
+      return;
+    }
   }
 
   OutgoingQueueItem _copyWithMessage(OutgoingQueueItem item, Message message) {
