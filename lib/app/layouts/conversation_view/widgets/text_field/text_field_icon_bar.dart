@@ -1,10 +1,7 @@
-import 'dart:async';
-
 import 'package:bluebubbles/app/layouts/conversation_view/widgets/text_field/conversation_text_field_local_controller.dart';
 import 'package:bluebubbles/database/models.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/services/services.dart';
-import 'package:bluebubbles/utils/logger/logger.dart';
 import 'package:bluebubbles/utils/share.dart';
 import 'package:chunked_stream/chunked_stream.dart';
 import 'package:file_picker/file_picker.dart' as pf;
@@ -12,13 +9,11 @@ import 'package:file_picker/file_picker.dart' hide PlatformFile;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:get/get.dart';
-import 'package:tenor_flutter/tenor_flutter.dart';
 import 'package:universal_io/io.dart';
 
 /// Left-side icon buttons in the conversation text field row:
-/// add (+), GIF, emoji picker toggle, and location share.
+/// add (+), emoji picker toggle, and location share.
 ///
 /// All button logic is self-contained here; heavy async flows reference
 /// [controller] and [localController] directly.
@@ -130,99 +125,6 @@ class TextFieldIconBar extends StatelessWidget {
             },
           ),
         ),
-        if (!kIsWeb && !Platform.isAndroid)
-          IconButton(
-              icon: Icon(Icons.gif, color: context.theme.colorScheme.outline, size: 28),
-              onPressed: () async {
-                if (kIsDesktop || kIsWeb) {
-                  controller.showingOverlays = true;
-                }
-                Tenor tenor = Tenor(apiKey: kIsWeb ? TENOR_API_KEY : dotenv.get('TENOR_API_KEY'));
-                TextEditingController tenorController = TextEditingController();
-                FocusNode focus = FocusNode();
-                Future<TenorResult?> resultFuture = tenor.showAsBottomSheet(
-                  maxExtent: 0.8,
-                  minExtent: 0.5,
-                  debounce: const Duration(seconds: 1),
-                  context: context,
-                  searchFieldController: tenorController,
-                  // Copied and slightly modified from source, just so I can autofocus
-                  searchFieldWidget: Padding(
-                    padding: const EdgeInsets.all(8),
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        TextField(
-                          focusNode: focus,
-                          controller: tenorController,
-                          decoration: InputDecoration(
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide: const BorderSide(
-                                width: 0,
-                                style: BorderStyle.none,
-                              ),
-                            ),
-                            contentPadding: const EdgeInsets.fromLTRB(28, 5, 32, 7),
-                            filled: true,
-                            hintStyle: const TenorSearchFieldStyle().hintStyle,
-                            hintText: "Search Tenor",
-                            isCollapsed: true,
-                            isDense: true,
-                          ),
-                          style: context.theme.textTheme.bodyMedium!,
-                        ),
-                        const Positioned(
-                          left: 4,
-                          child: Icon(
-                            Icons.search,
-                            color: Color(0xFF8A8A86),
-                            size: 22,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  style: TenorStyle(
-                    color: context.theme.colorScheme.surfaceContainerHighest,
-                    attributionStyle: TenorAttributionStyle(brightnes: context.theme.brightness),
-                    tabBarStyle: TenorTabBarStyle(
-                      decoration: BoxDecoration(
-                          color: context.theme.colorScheme.surfaceContainerHighest,
-                          borderRadius: BorderRadius.circular(8)),
-                      indicator: BoxDecoration(
-                        color: context.theme.colorScheme.primary,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      labelColor: context.theme.colorScheme.onSurface,
-                      unselectedLabelColor: context.theme.colorScheme.onSurface.withValues(alpha: 0.5),
-                    ),
-                  ),
-                );
-                focus.requestFocus();
-                TenorResult? result = await resultFuture;
-                if (kIsDesktop || kIsWeb) {
-                  controller.showingOverlays = false;
-                }
-                final selectedGif = result?.media.tinyGif ?? result?.media.tinyGifTransparent;
-                if (result != null && selectedGif != null) {
-                  final response = await HttpSvc.downloadFromUrl(selectedGif.url);
-                  if (response.statusCode == 200) {
-                    try {
-                      final Uint8List data = response.data;
-                      controller.pickedAttachments.add(PlatformFile(
-                        path: null,
-                        name: "${result.id}.gif",
-                        size: data.length,
-                        bytes: data,
-                      ));
-                      return;
-                    } catch (e, s) {
-                      Logger.warn("Failed to attach GIF from picker", error: e, trace: s, tag: 'TextFieldIconBar');
-                    }
-                  }
-                }
-              }),
         if (kIsDesktop || kIsWeb)
           IconButton(
             icon: Icon(_iOS ? CupertinoIcons.smiley_fill : Icons.emoji_emotions,

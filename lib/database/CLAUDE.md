@@ -11,7 +11,7 @@ Conditional imports resolve the correct implementation at compile time.
 
 ## Key Entities (`io/`) → `io/CLAUDE.md`
 - `chat.dart`, `message.dart`, `attachment.dart`, `handle.dart`
-- `contact.dart`, `contact_v2.dart`, `theme.dart`, `fcm_data.dart`, `tenor.dart`
+- `contact.dart`, `contact_v2.dart`, `theme.dart`, `fcm_data.dart`
 
 ## Key Shared Models (`global/`) → `global/CLAUDE.md`
 - `settings.dart`, `message_part.dart`, `attributed_body.dart`
