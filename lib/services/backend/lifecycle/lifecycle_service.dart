@@ -73,6 +73,12 @@ class LifecycleService with WidgetsBindingObserver {
     statesSinceLastResume.add(state);
 
     if (state == AppLifecycleState.resumed) {
+      // If we resumed before the pause-initiated isolate drain finished, cancel
+      // it so foreground sends/receives aren't rejected (Android-only drain).
+      if (Platform.isAndroid && GetIt.I.isRegistered<GlobalIsolate>()) {
+        GetIt.I<GlobalIsolate>().cancelDrain();
+      }
+
       // Restore active-chat liveness immediately to avoid a race where
       // incoming messages are processed while lifecycle is already resumed
       // but chat state is still marked dead from the previous close().

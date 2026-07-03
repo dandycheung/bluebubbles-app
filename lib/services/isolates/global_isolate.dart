@@ -253,7 +253,8 @@ class GlobalIsolate {
   }
 
   /// Requests graceful shutdown:
-  /// - continues to accept new [send]/[broadcast] calls during drain
+  /// - [broadcast] calls are still accepted during the drain; a new [send]
+  ///   cancels the drain instead (a pending message means the app is active again)
   /// - stops the isolate once all pending requests complete (or immediately if none)
   ///
   /// Returns a Future that completes when the isolate has fully stopped.
@@ -278,6 +279,21 @@ class GlobalIsolate {
       'Will stop when all pending requests complete.',
     );
     return _drainCompleter!.future;
+  }
+
+  /// Cancels an in-progress drain because the app is active again (resumed, or a
+  /// new [send] arrived — e.g. a background notification quick-reply). Keeps the
+  /// isolate running and clears the reject flag so outgoing sends and incoming
+  /// message writes are not dropped. No-op if nothing is draining.
+  void cancelDrain() {
+    if (_drainCompleter == null && !_shutdownPending) return;
+    Logger.info('$isolateDebugName drain cancelled — new activity, keeping isolate alive.');
+    _shutdownPending = false;
+    final completer = _drainCompleter;
+    _drainCompleter = null;
+    if (completer != null && !completer.isCompleted) completer.complete();
+    // Restore normal idle-based shutdown so the isolate still stops if it goes idle.
+    _scheduleIdleShutdown();
   }
 
   /// Closes the isolate and clears all listeners
@@ -321,6 +337,12 @@ class GlobalIsolate {
 
   /// Sends a request to the isolate and waits for a response
   Future<T> send<T>(IsolateRequestType type, {dynamic input, Duration? customTimeout}) async {
+    // A new request means the app is active again. Cancel any in-progress drain
+    // rather than rejecting — dropping a message (outgoing send or incoming DB
+    // write) is far worse than delaying a graceful idle shutdown.
+    if (_shutdownPending) {
+      cancelDrain();
+    }
     await _ensureStarted();
 
     final requestId = const Uuid().v4();
