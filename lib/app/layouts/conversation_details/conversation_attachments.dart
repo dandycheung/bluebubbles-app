@@ -3,6 +3,7 @@ import 'package:bluebubbles/app/layouts/conversation_details/widgets/attachments
 import 'package:bluebubbles/app/layouts/conversation_details/widgets/documents_section.dart';
 import 'package:bluebubbles/app/layouts/conversation_details/widgets/links_section.dart';
 import 'package:bluebubbles/app/layouts/conversation_details/widgets/locations_section.dart';
+import 'package:bluebubbles/app/layouts/conversation_details/widgets/media_filters_sheet.dart';
 import 'package:bluebubbles/app/layouts/conversation_details/widgets/media_grid_section.dart';
 import 'package:bluebubbles/app/state/chat_state_scope.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
@@ -60,6 +61,16 @@ class _ConversationAttachmentsState extends State<ConversationAttachments> with 
   List<Attachment> locations = <Attachment>[];
   bool isLoadingAttachments = false;
   final RxList<String> selected = <String>[].obs;
+  MediaFilter _mediaFilter = MediaFilter.all;
+
+  void _onMediaFilterChanged(MediaFilter filter) {
+    if (_mediaFilter == filter) return;
+    final filtered = filterMedia(media, filter);
+    setState(() {
+      _mediaFilter = filter;
+      selected.removeWhere((guid) => !filtered.any((e) => e.guid != null && e.guid == guid));
+    });
+  }
 
   @override
   void initState() {
@@ -147,6 +158,15 @@ class _ConversationAttachmentsState extends State<ConversationAttachments> with 
                 materialSubtitle: materialSubtitle,
                 actions: widget.section == AttachmentSectionType.media
                     ? [
+                        MediaFiltersButton(
+                          mediaFilter: _mediaFilter,
+                          onPressed: () => showMediaFiltersSheet(
+                            context,
+                            tileColor: scaffoldTileColor,
+                            mediaFilter: _mediaFilter,
+                            onChanged: _onMediaFilterChanged,
+                          ),
+                        ),
                         Obx(() {
                           if (selected.isNotEmpty) {
                             return IconButton(
@@ -205,6 +225,8 @@ class _ConversationAttachmentsState extends State<ConversationAttachments> with 
             isLoading: isLoadingAttachments,
             fullPage: true,
             crossAxisCount: 3,
+            mediaFilter: _mediaFilter,
+            onMediaFilterChanged: _onMediaFilterChanged,
           ),
         ];
       case AttachmentSectionType.links:

@@ -21,6 +21,8 @@ class MediaGridSection extends StatefulWidget {
   final bool isLoading;
   final bool fullPage;
   final int? crossAxisCount;
+  final MediaFilter mediaFilter;
+  final ValueChanged<MediaFilter>? onMediaFilterChanged;
 
   const MediaGridSection({
     super.key,
@@ -30,6 +32,8 @@ class MediaGridSection extends StatefulWidget {
     required this.isLoading,
     this.fullPage = false,
     this.crossAxisCount,
+    this.mediaFilter = MediaFilter.all,
+    this.onMediaFilterChanged,
   });
 
   @override
@@ -40,9 +44,8 @@ class _MediaGridSectionState extends State<MediaGridSection> with ThemeHelpers {
   static const int _chunkSize = 24;
   late int _displayCount = widget.fullPage ? _chunkSize : kAttachmentPreviewLimit;
   bool _loadingMore = false;
-  MediaFilter _mediaFilter = MediaFilter.all;
 
-  List<Attachment> get _filteredMedia => filterMedia(widget.media, _mediaFilter);
+  List<Attachment> get _filteredMedia => filterMedia(widget.media, widget.mediaFilter);
 
   @override
   void didUpdateWidget(MediaGridSection oldWidget) {
@@ -55,18 +58,10 @@ class _MediaGridSectionState extends State<MediaGridSection> with ThemeHelpers {
     }
     if (oldWidget.fullPage != widget.fullPage) {
       _displayCount = widget.fullPage ? _chunkSize : kAttachmentPreviewLimit;
-      _mediaFilter = MediaFilter.all;
     }
-  }
-
-  void _onMediaFilterChanged(MediaFilter filter) {
-    if (_mediaFilter == filter) return;
-    final filtered = filterMedia(widget.media, filter);
-    setState(() {
-      _mediaFilter = filter;
-      _displayCount = _chunkSize;
-      widget.selected.removeWhere((guid) => !filtered.any((e) => e.guid != null && e.guid == guid));
-    });
+    if (oldWidget.mediaFilter != widget.mediaFilter) {
+      _displayCount = widget.fullPage ? _chunkSize : kAttachmentPreviewLimit;
+    }
   }
 
   int get _visibleCount {
@@ -168,11 +163,11 @@ class _MediaGridSectionState extends State<MediaGridSection> with ThemeHelpers {
             },
           ),
         ),
-      if (widget.fullPage && !widget.isLoading)
+      if (widget.fullPage && !widget.isLoading && widget.onMediaFilterChanged != null)
         SliverToBoxAdapter(
           child: MediaFilterSelector(
-            value: _mediaFilter,
-            onChanged: _onMediaFilterChanged,
+            value: widget.mediaFilter,
+            onChanged: widget.onMediaFilterChanged!,
           ),
         ),
       if (widget.isLoading)
@@ -188,7 +183,7 @@ class _MediaGridSectionState extends State<MediaGridSection> with ThemeHelpers {
             padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 20.0),
             child: Center(
               child: Text(
-                widget.fullPage ? _mediaFilter.emptyMessage : "No images or videos",
+                widget.fullPage ? widget.mediaFilter.emptyMessage : "No images or videos",
                 style: context.theme.textTheme.bodyMedium!.copyWith(
                   color: context.theme.colorScheme.outline,
                 ),
