@@ -3,6 +3,8 @@ import 'dart:math';
 import 'package:bluebubbles/app/layouts/conversation_details/attachment_section_type.dart';
 import 'package:bluebubbles/app/layouts/conversation_details/conversation_attachments.dart';
 import 'package:bluebubbles/app/layouts/conversation_details/widgets/attachment_section_header.dart';
+import 'package:bluebubbles/app/layouts/conversation_details/widgets/links_search_helper.dart';
+import 'package:bluebubbles/app/layouts/conversation_list/pages/search/conversation_search_field.dart';
 import 'package:bluebubbles/app/layouts/conversation_view/widgets/message/interactive/url_preview.dart';
 import 'package:bluebubbles/database/database.dart';
 import 'package:bluebubbles/database/models.dart';
@@ -35,6 +37,21 @@ class _LinksSectionState extends State<LinksSection> with ThemeHelpers {
   List<Message> links = [];
   bool _isLoading = true;
   bool _loadingMore = false;
+  String _searchQuery = '';
+
+  List<Message> get _displayedLinks {
+    if (!widget.fullPage || _searchQuery.isEmpty) return links;
+    return filterAndSortLinks(links, _searchQuery);
+  }
+
+  void _applySearchQuery(String query) {
+    final nextQuery = query.trim();
+    if (nextQuery == _searchQuery) return;
+    setState(() {
+      _searchQuery = nextQuery;
+      _displayCount = widget.fullPage ? _chunkSize : kAttachmentPreviewLimit;
+    });
+  }
 
   @override
   void initState() {
@@ -82,19 +99,19 @@ class _LinksSectionState extends State<LinksSection> with ThemeHelpers {
   }
 
   int get _visibleCount {
-    if (widget.fullPage) return min(_displayCount, links.length);
-    return min(kAttachmentPreviewLimit, links.length);
+    if (widget.fullPage) return min(_displayCount, _displayedLinks.length);
+    return min(kAttachmentPreviewLimit, _displayedLinks.length);
   }
 
   void _loadMore() {
-    if (_loadingMore || _displayCount >= links.length) return;
+    if (_loadingMore || _displayCount >= _displayedLinks.length) return;
     _loadingMore = true;
-    setState(() => _displayCount = min(_displayCount + _chunkSize, links.length));
+    setState(() => _displayCount = min(_displayCount + _chunkSize, _displayedLinks.length));
     _loadingMore = false;
   }
 
   Widget _buildLinkTile(BuildContext context, int index) {
-    if (links[index].payloadData?.urlData?.firstOrNull == null) {
+    if (_displayedLinks[index].payloadData?.urlData?.firstOrNull == null) {
       return const Text("Failed to load link!");
     }
     return Material(
@@ -104,7 +121,7 @@ class _LinksSectionState extends State<LinksSection> with ThemeHelpers {
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
         onTap: () async {
-          final data = links[index].payloadData!.urlData!.first;
+          final data = _displayedLinks[index].payloadData!.urlData!.first;
           if ((data.url ?? data.originalUrl) == null) return;
           await launchUrl(
             Uri.parse((data.url ?? data.originalUrl)!),
@@ -113,7 +130,7 @@ class _LinksSectionState extends State<LinksSection> with ThemeHelpers {
         },
         child: Center(
           child: UrlPreview(
-            data: links[index].payloadData!.urlData!.first,
+            data: _displayedLinks[index].payloadData!.urlData!.first,
           ),
         ),
       ),
@@ -139,6 +156,16 @@ class _LinksSectionState extends State<LinksSection> with ThemeHelpers {
               ),
             ),
           ),
+        if (widget.fullPage)
+          SliverToBoxAdapter(
+            child: Obx(() {
+              final submitOnly = SettingsSvc.settings.highPerfMode.value;
+              return ConversationSearchField(
+                onChanged: submitOnly ? null : _applySearchQuery,
+                onSubmitted: _applySearchQuery,
+              );
+            }),
+          ),
         if (_isLoading)
           SliverToBoxAdapter(
             child: Padding(
@@ -146,13 +173,13 @@ class _LinksSectionState extends State<LinksSection> with ThemeHelpers {
               child: Center(child: buildProgressIndicator(context, size: 24)),
             ),
           )
-        else if (links.isEmpty)
+        else if (_displayedLinks.isEmpty)
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 20.0),
               child: Center(
                 child: Text(
-                  "No links",
+                  links.isEmpty ? "No links" : "No matching links",
                   style: context.theme.textTheme.bodyMedium!.copyWith(
                     color: context.theme.colorScheme.outline,
                   ),
@@ -165,7 +192,7 @@ class _LinksSectionState extends State<LinksSection> with ThemeHelpers {
                 padding: EdgeInsets.only(
                   left: SettingsSvc.settings.skin.value == Skins.iOS ? 20 : 10,
                   right: SettingsSvc.settings.skin.value == Skins.iOS ? 20 : 10,
-                  top: widget.fullPage ? 10 : 0,
+                  top: 0,
                   bottom: 10,
                 ),
                 sliver: SliverToBoxAdapter(
@@ -180,7 +207,7 @@ class _LinksSectionState extends State<LinksSection> with ThemeHelpers {
                   ),
                 ),
               )),
-          if (widget.fullPage && _displayCount < links.length)
+          if (widget.fullPage && _displayCount < _displayedLinks.length)
             SliverToBoxAdapter(
               child: Builder(
                 builder: (context) {
