@@ -10,7 +10,8 @@ enum AttachmentSectionType {
 const int kAttachmentPreviewLimit = 6;
 
 extension AttachmentSectionTypeLabels on AttachmentSectionType {
-  String get title {
+  /// ALL CAPS label for section headers on the conversation details screen.
+  String get sectionLabel {
     switch (this) {
       case AttachmentSectionType.media:
         return "IMAGES & VIDEOS";
@@ -20,6 +21,20 @@ extension AttachmentSectionTypeLabels on AttachmentSectionType {
         return "LOCATIONS";
       case AttachmentSectionType.documents:
         return "OTHER FILES";
+    }
+  }
+
+  /// Title case label for the attachments page app bar.
+  String get pageTitle {
+    switch (this) {
+      case AttachmentSectionType.media:
+        return "Images & Videos";
+      case AttachmentSectionType.links:
+        return "Links";
+      case AttachmentSectionType.locations:
+        return "Locations";
+      case AttachmentSectionType.documents:
+        return "Other Files";
     }
   }
 }

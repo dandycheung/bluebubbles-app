@@ -131,7 +131,7 @@ class _LinksSectionState extends State<LinksSection> with ThemeHelpers {
         if (!widget.fullPage)
           SliverToBoxAdapter(
             child: AttachmentSectionHeader(
-              title: AttachmentSectionType.links.title,
+              title: AttachmentSectionType.links.sectionLabel,
               onShowMore: () => ConversationAttachments.open(
                 context,
                 chat: widget.chat,

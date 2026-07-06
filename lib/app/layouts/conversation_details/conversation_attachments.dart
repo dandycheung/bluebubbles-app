@@ -140,7 +140,7 @@ class _ConversationAttachmentsState extends State<ConversationAttachments> with 
           ),
           child: Obx(() => SettingsScaffold(
                 headerColor: scaffoldHeaderColor,
-                title: widget.section.title,
+                title: widget.section.pageTitle,
                 tileColor: scaffoldTileColor,
                 initialHeader: null,
                 iosSubtitle: iosSubtitle,

@@ -76,7 +76,7 @@ class _DocumentsSectionState extends State<DocumentsSection> {
         if (!widget.fullPage)
           SliverToBoxAdapter(
             child: AttachmentSectionHeader(
-              title: AttachmentSectionType.documents.title,
+              title: AttachmentSectionType.documents.sectionLabel,
               onShowMore: () => ConversationAttachments.open(
                 context,
                 chat: widget.chat,

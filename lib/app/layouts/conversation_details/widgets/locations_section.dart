@@ -105,7 +105,7 @@ class _LocationsSectionState extends State<LocationsSection> {
         if (!widget.fullPage)
           SliverToBoxAdapter(
             child: AttachmentSectionHeader(
-              title: AttachmentSectionType.locations.title,
+              title: AttachmentSectionType.locations.sectionLabel,
               onShowMore: () => ConversationAttachments.open(
                 context,
                 chat: widget.chat,
