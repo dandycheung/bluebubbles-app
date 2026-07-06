@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:bluebubbles/app/layouts/conversation_details/attachment_section_type.dart';
 import 'package:bluebubbles/app/layouts/conversation_details/conversation_attachments.dart';
 import 'package:bluebubbles/app/layouts/conversation_details/widgets/attachment_section_header.dart';
+import 'package:bluebubbles/app/layouts/conversation_details/widgets/media_filter_selector.dart';
 import 'package:bluebubbles/app/layouts/conversation_details/widgets/media_gallery_card.dart';
 import 'package:bluebubbles/database/models.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
@@ -39,6 +40,9 @@ class _MediaGridSectionState extends State<MediaGridSection> with ThemeHelpers {
   static const int _chunkSize = 24;
   late int _displayCount = widget.fullPage ? _chunkSize : kAttachmentPreviewLimit;
   bool _loadingMore = false;
+  MediaFilter _mediaFilter = MediaFilter.all;
+
+  List<Attachment> get _filteredMedia => filterMedia(widget.media, _mediaFilter);
 
   @override
   void didUpdateWidget(MediaGridSection oldWidget) {
@@ -51,14 +55,25 @@ class _MediaGridSectionState extends State<MediaGridSection> with ThemeHelpers {
     }
     if (oldWidget.fullPage != widget.fullPage) {
       _displayCount = widget.fullPage ? _chunkSize : kAttachmentPreviewLimit;
+      _mediaFilter = MediaFilter.all;
     }
+  }
+
+  void _onMediaFilterChanged(MediaFilter filter) {
+    if (_mediaFilter == filter) return;
+    final filtered = filterMedia(widget.media, filter);
+    setState(() {
+      _mediaFilter = filter;
+      _displayCount = _chunkSize;
+      widget.selected.removeWhere((guid) => !filtered.any((e) => e.guid != null && e.guid == guid));
+    });
   }
 
   int get _visibleCount {
     if (widget.fullPage) {
-      return min(_displayCount, widget.media.length);
+      return min(_displayCount, _filteredMedia.length);
     }
-    return min(kAttachmentPreviewLimit, widget.media.length);
+    return min(kAttachmentPreviewLimit, _filteredMedia.length);
   }
 
   int get _gridCrossAxisCount {
@@ -67,17 +82,18 @@ class _MediaGridSectionState extends State<MediaGridSection> with ThemeHelpers {
   }
 
   void _loadMore() {
-    if (_loadingMore || _displayCount >= widget.media.length) return;
+    if (_loadingMore || _displayCount >= _filteredMedia.length) return;
     _loadingMore = true;
-    setState(() => _displayCount = min(_displayCount + _chunkSize, widget.media.length));
+    setState(() => _displayCount = min(_displayCount + _chunkSize, _filteredMedia.length));
     _loadingMore = false;
   }
 
   Widget _buildGridItem(BuildContext context, int index) {
+    final attachment = _filteredMedia[index];
     return Obx(() => AnimatedContainer(
           duration: const Duration(milliseconds: 250),
           margin: EdgeInsets.all(
-            widget.selected.contains(widget.media[index].guid) ? 10 : 0,
+            widget.selected.contains(attachment.guid) ? 10 : 0,
           ),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(20),
@@ -86,18 +102,18 @@ class _MediaGridSectionState extends State<MediaGridSection> with ThemeHelpers {
           child: GestureDetector(
             onTap: widget.selected.isNotEmpty
                 ? () {
-                    if (widget.selected.contains(widget.media[index].guid)) {
-                      widget.selected.remove(widget.media[index].guid!);
+                    if (widget.selected.contains(attachment.guid)) {
+                      widget.selected.remove(attachment.guid!);
                     } else {
-                      widget.selected.add(widget.media[index].guid!);
+                      widget.selected.add(attachment.guid!);
                     }
                   }
                 : null,
             onLongPress: () {
-              if (widget.selected.contains(widget.media[index].guid)) {
-                widget.selected.remove(widget.media[index].guid!);
+              if (widget.selected.contains(attachment.guid)) {
+                widget.selected.remove(attachment.guid!);
               } else {
-                widget.selected.add(widget.media[index].guid!);
+                widget.selected.add(attachment.guid!);
               }
             },
             child: AbsorbPointer(
@@ -106,9 +122,9 @@ class _MediaGridSectionState extends State<MediaGridSection> with ThemeHelpers {
                 alignment: Alignment.center,
                 children: [
                   MediaGalleryCard(
-                    attachment: widget.media[index],
+                    attachment: attachment,
                   ),
-                  if (widget.selected.contains(widget.media[index].guid))
+                  if (widget.selected.contains(attachment.guid))
                     Container(
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
@@ -152,6 +168,13 @@ class _MediaGridSectionState extends State<MediaGridSection> with ThemeHelpers {
             },
           ),
         ),
+      if (widget.fullPage && !widget.isLoading)
+        SliverToBoxAdapter(
+          child: MediaFilterSelector(
+            value: _mediaFilter,
+            onChanged: _onMediaFilterChanged,
+          ),
+        ),
       if (widget.isLoading)
         SliverToBoxAdapter(
           child: Padding(
@@ -159,13 +182,13 @@ class _MediaGridSectionState extends State<MediaGridSection> with ThemeHelpers {
             child: Center(child: buildProgressIndicator(context, size: 24)),
           ),
         )
-      else if (widget.media.isEmpty)
+      else if (_filteredMedia.isEmpty)
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 20.0),
             child: Center(
               child: Text(
-                "No images or videos",
+                widget.fullPage ? _mediaFilter.emptyMessage : "No images or videos",
                 style: context.theme.textTheme.bodyMedium!.copyWith(
                   color: context.theme.colorScheme.outline,
                 ),
@@ -193,7 +216,7 @@ class _MediaGridSectionState extends State<MediaGridSection> with ThemeHelpers {
                 ),
               ),
             )),
-        if (widget.fullPage && _displayCount < widget.media.length)
+        if (widget.fullPage && _displayCount < _filteredMedia.length)
           SliverToBoxAdapter(
             child: Builder(
               builder: (context) {
