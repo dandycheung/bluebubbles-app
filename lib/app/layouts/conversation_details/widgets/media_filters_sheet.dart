@@ -1,13 +1,19 @@
 import 'package:bluebubbles/app/components/avatars/contact_avatar_widget.dart';
 import 'package:bluebubbles/app/components/bb_chip.dart';
 import 'package:bluebubbles/app/layouts/conversation_details/attachment_section_type.dart';
+import 'package:bluebubbles/app/layouts/conversation_details/dialogs/timeframe_picker.dart';
 import 'package:bluebubbles/database/models.dart';
+import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/services/services.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 
-typedef MediaFiltersChanged = void Function(MediaFilter typeFilter, MediaSenderFilter senderFilter);
+typedef MediaFiltersChanged = void Function(
+  MediaFilter typeFilter,
+  MediaSenderFilter senderFilter,
+  DateTime? sinceDate,
+);
 
 void showMediaFiltersSheet(
   BuildContext context, {
@@ -15,6 +21,7 @@ void showMediaFiltersSheet(
   required Color tileColor,
   required MediaFilter mediaFilter,
   required MediaSenderFilter senderFilter,
+  required DateTime? sinceDate,
   required MediaFiltersChanged onChanged,
 }) {
   HapticFeedback.lightImpact();
@@ -25,6 +32,7 @@ void showMediaFiltersSheet(
     builder: (sheetContext) {
       var currentTypeFilter = mediaFilter;
       var currentSenderFilter = senderFilter;
+      var currentSinceDate = sinceDate;
 
       return StatefulBuilder(
         builder: (context, setSheetState) {
@@ -38,10 +46,20 @@ void showMediaFiltersSheet(
               );
           final primaryColor = Theme.of(context).colorScheme.primary;
 
-          void updateFilters({MediaFilter? type, MediaSenderFilter? sender}) {
+          void updateFilters({
+            MediaFilter? type,
+            MediaSenderFilter? sender,
+            DateTime? date,
+            bool clearDate = false,
+          }) {
             if (type != null) currentTypeFilter = type;
             if (sender != null) currentSenderFilter = sender;
-            onChanged(currentTypeFilter, currentSenderFilter);
+            if (clearDate) {
+              currentSinceDate = null;
+            } else if (date != null) {
+              currentSinceDate = date;
+            }
+            onChanged(currentTypeFilter, currentSenderFilter, currentSinceDate);
             setSheetState(() {});
           }
 
@@ -176,6 +194,61 @@ void showMediaFiltersSheet(
                       ),
                     ),
                   ),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 16, left: 10),
+                    child: Text("Date", style: sectionLabelStyle),
+                  ),
+                  Material(
+                    color: Colors.transparent,
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 4, left: 10, right: 10),
+                      child: Wrap(
+                        spacing: 6,
+                        runSpacing: 0,
+                        children: [
+                          BBChip(
+                            avatar: CircleAvatar(
+                              backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                              child: Icon(
+                                Icons.calendar_today_outlined,
+                                color: primaryColor,
+                                size: 12,
+                              ),
+                            ),
+                            label: currentSinceDate != null
+                                ? Text(
+                                    "Since ${buildFullDate(currentSinceDate!, includeTime: currentSinceDate!.isToday(), useTodayYesterday: true)}",
+                                    style: labelStyle,
+                                    overflow: TextOverflow.ellipsis,
+                                  )
+                                : Text("Filter by Date", style: labelStyle),
+                            onDeleted: currentSinceDate == null
+                                ? null
+                                : () => updateFilters(clearDate: true),
+                            onPressed: () async {
+                              final picked = await showTimeframePicker(
+                                "Since When?",
+                                context,
+                                customTimeframes: {
+                                  "1 Hour": 1,
+                                  "1 Day": 24,
+                                  "1 Week": 168,
+                                  "1 Month": 720,
+                                  "6 Months": 4320,
+                                  "1 Year": 8760,
+                                },
+                                selectionSuffix: "Ago",
+                                useTodayYesterday: true,
+                              );
+                              if (picked != null) {
+                                updateFilters(date: picked);
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -232,6 +305,7 @@ class _ParticipantSenderChip extends StatelessWidget {
 class MediaFiltersButton extends StatelessWidget {
   final MediaFilter mediaFilter;
   final MediaSenderFilter senderFilter;
+  final DateTime? sinceDate;
   final Color? iconColor;
   final VoidCallback onPressed;
 
@@ -239,13 +313,15 @@ class MediaFiltersButton extends StatelessWidget {
     super.key,
     required this.mediaFilter,
     required this.senderFilter,
+    required this.sinceDate,
     required this.onPressed,
     this.iconColor,
   });
 
   @override
   Widget build(BuildContext context) {
-    final hasActiveFilter = mediaFilter != MediaFilter.all || senderFilter.isActive;
+    final hasActiveFilter =
+        mediaFilter != MediaFilter.all || senderFilter.isActive || sinceDate != null;
     final color = iconColor ?? Theme.of(context).colorScheme.primary;
 
     return SizedBox(

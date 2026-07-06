@@ -108,10 +108,20 @@ List<Attachment> applyMediaFilters(
   List<Attachment> media, {
   required MediaFilter typeFilter,
   required MediaSenderFilter senderFilter,
+  DateTime? sinceDate,
 }) {
-  final byType = filterMedia(media, typeFilter);
-  if (!senderFilter.isActive) return byType;
-  return byType.where((e) => attachmentMatchesSenderFilter(e, senderFilter)).toList();
+  var result = filterMedia(media, typeFilter);
+  if (senderFilter.isActive) {
+    result = result.where((e) => attachmentMatchesSenderFilter(e, senderFilter)).toList();
+  }
+  if (sinceDate != null) {
+    result = result.where((e) {
+      final created = e.message.target?.dateCreated;
+      if (created == null) return false;
+      return !created.isBefore(sinceDate);
+    }).toList();
+  }
+  return result;
 }
 
 extension AttachmentSectionTypeLabels on AttachmentSectionType {

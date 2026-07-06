@@ -23,6 +23,7 @@ class MediaGridSection extends StatefulWidget {
   final int? crossAxisCount;
   final MediaFilter mediaFilter;
   final MediaSenderFilter senderFilter;
+  final DateTime? sinceDate;
   final ValueChanged<MediaFilter>? onMediaFilterChanged;
 
   const MediaGridSection({
@@ -35,6 +36,7 @@ class MediaGridSection extends StatefulWidget {
     this.crossAxisCount,
     this.mediaFilter = MediaFilter.all,
     this.senderFilter = const MediaSenderFilter.any(),
+    this.sinceDate,
     this.onMediaFilterChanged,
   });
 
@@ -51,6 +53,7 @@ class _MediaGridSectionState extends State<MediaGridSection> with ThemeHelpers {
         widget.media,
         typeFilter: widget.mediaFilter,
         senderFilter: widget.senderFilter,
+        sinceDate: widget.sinceDate,
       );
 
   @override
@@ -69,6 +72,9 @@ class _MediaGridSectionState extends State<MediaGridSection> with ThemeHelpers {
       _displayCount = widget.fullPage ? _chunkSize : kAttachmentPreviewLimit;
     }
     if (oldWidget.senderFilter != widget.senderFilter) {
+      _displayCount = widget.fullPage ? _chunkSize : kAttachmentPreviewLimit;
+    }
+    if (oldWidget.sinceDate != widget.sinceDate) {
       _displayCount = widget.fullPage ? _chunkSize : kAttachmentPreviewLimit;
     }
   }

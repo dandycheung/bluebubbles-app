@@ -63,22 +63,29 @@ class _ConversationAttachmentsState extends State<ConversationAttachments> with 
   final RxList<String> selected = <String>[].obs;
   MediaFilter _mediaFilter = MediaFilter.all;
   MediaSenderFilter _senderFilter = const MediaSenderFilter.any();
+  DateTime? _sinceDate;
 
-  void _onFiltersChanged(MediaFilter typeFilter, MediaSenderFilter senderFilter) {
-    if (_mediaFilter == typeFilter && _senderFilter == senderFilter) return;
+  void _onFiltersChanged(MediaFilter typeFilter, MediaSenderFilter senderFilter, DateTime? sinceDate) {
+    if (_mediaFilter == typeFilter &&
+        _senderFilter == senderFilter &&
+        _sinceDate == sinceDate) {
+      return;
+    }
     final filtered = applyMediaFilters(
       media,
       typeFilter: typeFilter,
       senderFilter: senderFilter,
+      sinceDate: sinceDate,
     );
     setState(() {
       _mediaFilter = typeFilter;
       _senderFilter = senderFilter;
+      _sinceDate = sinceDate;
       selected.removeWhere((guid) => !filtered.any((e) => e.guid != null && e.guid == guid));
     });
   }
 
-  void _onMediaFilterChanged(MediaFilter filter) => _onFiltersChanged(filter, _senderFilter);
+  void _onMediaFilterChanged(MediaFilter filter) => _onFiltersChanged(filter, _senderFilter, _sinceDate);
 
   @override
   void initState() {
@@ -169,12 +176,14 @@ class _ConversationAttachmentsState extends State<ConversationAttachments> with 
                         MediaFiltersButton(
                           mediaFilter: _mediaFilter,
                           senderFilter: _senderFilter,
+                          sinceDate: _sinceDate,
                           onPressed: () => showMediaFiltersSheet(
                             context,
                             chat: widget.chat,
                             tileColor: scaffoldTileColor,
                             mediaFilter: _mediaFilter,
                             senderFilter: _senderFilter,
+                            sinceDate: _sinceDate,
                             onChanged: _onFiltersChanged,
                           ),
                         ),
@@ -238,6 +247,7 @@ class _ConversationAttachmentsState extends State<ConversationAttachments> with 
             crossAxisCount: 3,
             mediaFilter: _mediaFilter,
             senderFilter: _senderFilter,
+            sinceDate: _sinceDate,
             onMediaFilterChanged: _onMediaFilterChanged,
           ),
         ];
