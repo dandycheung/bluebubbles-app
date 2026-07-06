@@ -9,20 +9,22 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 
-typedef MediaFiltersChanged = void Function(
+typedef AttachmentFiltersChanged = void Function(
   MediaFilter typeFilter,
   MediaSenderFilter senderFilter,
   DateTime? sinceDate,
 );
 
-void showMediaFiltersSheet(
+/// Opens the shared attachment filters bottom sheet.
+void showAttachmentFiltersSheet(
   BuildContext context, {
   required Chat chat,
   required Color tileColor,
-  required MediaFilter mediaFilter,
   required MediaSenderFilter senderFilter,
   required DateTime? sinceDate,
-  required MediaFiltersChanged onChanged,
+  required AttachmentFiltersChanged onChanged,
+  MediaFilter mediaFilter = MediaFilter.all,
+  bool showTypeSection = true,
 }) {
   HapticFeedback.lightImpact();
   showModalBottomSheet<void>(
@@ -158,42 +160,44 @@ void showMediaFiltersSheet(
                       ),
                     ),
                   ),
-                  Padding(
-                    padding: const EdgeInsets.only(top: 16, left: 10),
-                    child: Text("Type", style: sectionLabelStyle),
-                  ),
-                  Material(
-                    color: Colors.transparent,
-                    child: Padding(
-                      padding: const EdgeInsets.only(top: 4, left: 10, right: 10),
-                      child: Wrap(
-                        spacing: 6,
-                        runSpacing: 0,
-                        children: [
-                          if (currentTypeFilter != MediaFilter.videos)
-                            BBChip(
-                              showCheckmark: true,
-                              selected: currentTypeFilter == MediaFilter.images,
-                              checkmarkColor: primaryColor,
-                              label: Text("Images", style: labelStyle),
-                              onSelected: (selected) {
-                                updateFilters(type: selected ? MediaFilter.images : MediaFilter.all);
-                              },
-                            ),
-                          if (currentTypeFilter != MediaFilter.images)
-                            BBChip(
-                              showCheckmark: true,
-                              selected: currentTypeFilter == MediaFilter.videos,
-                              checkmarkColor: primaryColor,
-                              label: Text("Videos", style: labelStyle),
-                              onSelected: (selected) {
-                                updateFilters(type: selected ? MediaFilter.videos : MediaFilter.all);
-                              },
-                            ),
-                        ],
+                  if (showTypeSection) ...[
+                    Padding(
+                      padding: const EdgeInsets.only(top: 16, left: 10),
+                      child: Text("Type", style: sectionLabelStyle),
+                    ),
+                    Material(
+                      color: Colors.transparent,
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 4, left: 10, right: 10),
+                        child: Wrap(
+                          spacing: 6,
+                          runSpacing: 0,
+                          children: [
+                            if (currentTypeFilter != MediaFilter.videos)
+                              BBChip(
+                                showCheckmark: true,
+                                selected: currentTypeFilter == MediaFilter.images,
+                                checkmarkColor: primaryColor,
+                                label: Text("Images", style: labelStyle),
+                                onSelected: (selected) {
+                                  updateFilters(type: selected ? MediaFilter.images : MediaFilter.all);
+                                },
+                              ),
+                            if (currentTypeFilter != MediaFilter.images)
+                              BBChip(
+                                showCheckmark: true,
+                                selected: currentTypeFilter == MediaFilter.videos,
+                                checkmarkColor: primaryColor,
+                                label: Text("Videos", style: labelStyle),
+                                onSelected: (selected) {
+                                  updateFilters(type: selected ? MediaFilter.videos : MediaFilter.all);
+                                },
+                              ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
+                  ],
                   Padding(
                     padding: const EdgeInsets.only(top: 16, left: 10),
                     child: Text("Date", style: sectionLabelStyle),
@@ -302,26 +306,27 @@ class _ParticipantSenderChip extends StatelessWidget {
 }
 
 /// Filter button with badge, matching the search filters trigger.
-class MediaFiltersButton extends StatelessWidget {
-  final MediaFilter mediaFilter;
+class AttachmentFiltersButton extends StatelessWidget {
   final MediaSenderFilter senderFilter;
   final DateTime? sinceDate;
+  final MediaFilter? mediaFilter;
   final Color? iconColor;
   final VoidCallback onPressed;
 
-  const MediaFiltersButton({
+  const AttachmentFiltersButton({
     super.key,
-    required this.mediaFilter,
     required this.senderFilter,
     required this.sinceDate,
     required this.onPressed,
+    this.mediaFilter,
     this.iconColor,
   });
 
   @override
   Widget build(BuildContext context) {
-    final hasActiveFilter =
-        mediaFilter != MediaFilter.all || senderFilter.isActive || sinceDate != null;
+    final hasActiveFilter = (mediaFilter != null && mediaFilter != MediaFilter.all) ||
+        senderFilter.isActive ||
+        sinceDate != null;
     final color = iconColor ?? Theme.of(context).colorScheme.primary;
 
     return SizedBox(

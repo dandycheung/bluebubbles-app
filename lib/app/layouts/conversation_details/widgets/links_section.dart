@@ -20,11 +20,15 @@ import 'package:url_launcher/url_launcher.dart';
 class LinksSection extends StatefulWidget {
   final Chat chat;
   final bool fullPage;
+  final MediaSenderFilter senderFilter;
+  final DateTime? sinceDate;
 
   const LinksSection({
     super.key,
     required this.chat,
     this.fullPage = false,
+    this.senderFilter = const MediaSenderFilter.any(),
+    this.sinceDate,
   });
 
   @override
@@ -39,9 +43,19 @@ class _LinksSectionState extends State<LinksSection> with ThemeHelpers {
   bool _loadingMore = false;
   String _searchQuery = '';
 
+  List<Message> get _filteredLinks {
+    if (!widget.fullPage) return links;
+    return applyMessageFilters(
+      links,
+      senderFilter: widget.senderFilter,
+      sinceDate: widget.sinceDate,
+    );
+  }
+
   List<Message> get _displayedLinks {
-    if (!widget.fullPage || _searchQuery.isEmpty) return links;
-    return filterAndSortLinks(links, _searchQuery);
+    final filtered = _filteredLinks;
+    if (!widget.fullPage || _searchQuery.isEmpty) return filtered;
+    return filterAndSortLinks(filtered, _searchQuery);
   }
 
   void _applySearchQuery(String query) {
@@ -66,7 +80,9 @@ class _LinksSectionState extends State<LinksSection> with ThemeHelpers {
   @override
   void didUpdateWidget(LinksSection oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.fullPage != widget.fullPage) {
+    if (oldWidget.fullPage != widget.fullPage ||
+        oldWidget.senderFilter != widget.senderFilter ||
+        oldWidget.sinceDate != widget.sinceDate) {
       _displayCount = widget.fullPage ? _chunkSize : kAttachmentPreviewLimit;
     }
   }

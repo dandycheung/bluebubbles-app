@@ -71,17 +71,19 @@ class _ConversationAttachmentsState extends State<ConversationAttachments> with 
         _sinceDate == sinceDate) {
       return;
     }
-    final filtered = applyMediaFilters(
-      media,
-      typeFilter: typeFilter,
-      senderFilter: senderFilter,
-      sinceDate: sinceDate,
-    );
     setState(() {
       _mediaFilter = typeFilter;
       _senderFilter = senderFilter;
       _sinceDate = sinceDate;
-      selected.removeWhere((guid) => !filtered.any((e) => e.guid != null && e.guid == guid));
+      if (widget.section == AttachmentSectionType.media) {
+        final filtered = applyMediaFilters(
+          media,
+          typeFilter: typeFilter,
+          senderFilter: senderFilter,
+          sinceDate: sinceDate,
+        );
+        selected.removeWhere((guid) => !filtered.any((e) => e.guid != null && e.guid == guid));
+      }
     });
   }
 
@@ -171,52 +173,7 @@ class _ConversationAttachmentsState extends State<ConversationAttachments> with 
                 initialHeader: null,
                 iosSubtitle: iosSubtitle,
                 materialSubtitle: materialSubtitle,
-                actions: widget.section == AttachmentSectionType.media
-                    ? [
-                        MediaFiltersButton(
-                          mediaFilter: _mediaFilter,
-                          senderFilter: _senderFilter,
-                          sinceDate: _sinceDate,
-                          onPressed: () => showMediaFiltersSheet(
-                            context,
-                            chat: widget.chat,
-                            tileColor: scaffoldTileColor,
-                            mediaFilter: _mediaFilter,
-                            senderFilter: _senderFilter,
-                            sinceDate: _sinceDate,
-                            onChanged: _onFiltersChanged,
-                          ),
-                        ),
-                        Obx(() {
-                          if (selected.isNotEmpty) {
-                            return IconButton(
-                              icon: Icon(iOS ? CupertinoIcons.xmark : Icons.close,
-                                  color: context.theme.colorScheme.onSurface),
-                              onPressed: () => selected.clear(),
-                            );
-                          }
-                          return const SizedBox.shrink();
-                        }),
-                        Obx(() {
-                          if (selected.isNotEmpty) {
-                            return IconButton(
-                              icon: Icon(iOS ? CupertinoIcons.cloud_download : Icons.file_download,
-                                  color: context.theme.colorScheme.onSurface),
-                              onPressed: () {
-                                final attachments = media.where((e) => selected.contains(e.guid!));
-                                for (final a in attachments) {
-                                  final file = AttachmentsSvc.getContent(a, autoDownload: false);
-                                  if (file is PlatformFile) {
-                                    AttachmentsSvc.saveToDisk(file);
-                                  }
-                                }
-                              },
-                            );
-                          }
-                          return const SizedBox.shrink();
-                        }),
-                      ]
-                    : const [],
+                actions: _buildAppBarActions(context, scaffoldTileColor),
                 bodySlivers: [
                   if (isLoadingAttachments)
                     SliverToBoxAdapter(
@@ -253,7 +210,12 @@ class _ConversationAttachmentsState extends State<ConversationAttachments> with 
         ];
       case AttachmentSectionType.links:
         return [
-          LinksSection(chat: widget.chat, fullPage: true),
+          LinksSection(
+            chat: widget.chat,
+            fullPage: true,
+            senderFilter: _senderFilter,
+            sinceDate: _sinceDate,
+          ),
         ];
       case AttachmentSectionType.locations:
         return [
@@ -273,6 +235,74 @@ class _ConversationAttachmentsState extends State<ConversationAttachments> with 
             fullPage: true,
           ),
         ];
+    }
+  }
+
+  List<Widget> _buildAppBarActions(BuildContext context, Color scaffoldTileColor) {
+    switch (widget.section) {
+      case AttachmentSectionType.media:
+        return [
+          AttachmentFiltersButton(
+            mediaFilter: _mediaFilter,
+            senderFilter: _senderFilter,
+            sinceDate: _sinceDate,
+            onPressed: () => showAttachmentFiltersSheet(
+              context,
+              chat: widget.chat,
+              tileColor: scaffoldTileColor,
+              mediaFilter: _mediaFilter,
+              senderFilter: _senderFilter,
+              sinceDate: _sinceDate,
+              onChanged: _onFiltersChanged,
+            ),
+          ),
+          Obx(() {
+            if (selected.isNotEmpty) {
+              return IconButton(
+                icon: Icon(iOS ? CupertinoIcons.xmark : Icons.close, color: context.theme.colorScheme.onSurface),
+                onPressed: () => selected.clear(),
+              );
+            }
+            return const SizedBox.shrink();
+          }),
+          Obx(() {
+            if (selected.isNotEmpty) {
+              return IconButton(
+                icon: Icon(iOS ? CupertinoIcons.cloud_download : Icons.file_download,
+                    color: context.theme.colorScheme.onSurface),
+                onPressed: () {
+                  final attachments = media.where((e) => selected.contains(e.guid!));
+                  for (final a in attachments) {
+                    final file = AttachmentsSvc.getContent(a, autoDownload: false);
+                    if (file is PlatformFile) {
+                      AttachmentsSvc.saveToDisk(file);
+                    }
+                  }
+                },
+              );
+            }
+            return const SizedBox.shrink();
+          }),
+        ];
+      case AttachmentSectionType.links:
+        return [
+          AttachmentFiltersButton(
+            senderFilter: _senderFilter,
+            sinceDate: _sinceDate,
+            onPressed: () => showAttachmentFiltersSheet(
+              context,
+              chat: widget.chat,
+              tileColor: scaffoldTileColor,
+              senderFilter: _senderFilter,
+              sinceDate: _sinceDate,
+              onChanged: _onFiltersChanged,
+              showTypeSection: false,
+            ),
+          ),
+        ];
+      case AttachmentSectionType.locations:
+      case AttachmentSectionType.documents:
+        return const [];
     }
   }
 }

@@ -79,11 +79,8 @@ class MediaSenderFilter {
   int get hashCode => Object.hash(kind, participant?.address);
 }
 
-bool attachmentMatchesSenderFilter(Attachment attachment, MediaSenderFilter filter) {
+bool messageMatchesSenderFilter(Message message, MediaSenderFilter filter) {
   if (!filter.isActive) return true;
-
-  final message = attachment.message.target;
-  if (message == null) return false;
 
   switch (filter.kind) {
     case MediaSenderFilterKind.any:
@@ -102,6 +99,31 @@ bool attachmentMatchesSenderFilter(Attachment attachment, MediaSenderFilter filt
       }
       return participant.originalROWID != null && message.handleId == participant.originalROWID;
   }
+}
+
+bool attachmentMatchesSenderFilter(Attachment attachment, MediaSenderFilter filter) {
+  final message = attachment.message.target;
+  if (message == null) return false;
+  return messageMatchesSenderFilter(message, filter);
+}
+
+List<Message> applyMessageFilters(
+  List<Message> messages, {
+  required MediaSenderFilter senderFilter,
+  DateTime? sinceDate,
+}) {
+  var result = messages;
+  if (senderFilter.isActive) {
+    result = result.where((e) => messageMatchesSenderFilter(e, senderFilter)).toList();
+  }
+  if (sinceDate != null) {
+    result = result.where((e) {
+      final created = e.dateCreated;
+      if (created == null) return false;
+      return !created.isBefore(sinceDate);
+    }).toList();
+  }
+  return result;
 }
 
 List<Attachment> applyMediaFilters(
