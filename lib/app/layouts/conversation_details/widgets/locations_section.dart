@@ -20,6 +20,7 @@ class LocationsSection extends StatefulWidget {
   final List<Attachment> locations;
   final bool isLoading;
   final bool fullPage;
+  final AttachmentFiltersState filters;
 
   const LocationsSection({
     super.key,
@@ -27,6 +28,7 @@ class LocationsSection extends StatefulWidget {
     required this.locations,
     this.isLoading = false,
     this.fullPage = false,
+    this.filters = const AttachmentFiltersState(),
   });
 
   @override
@@ -38,31 +40,41 @@ class _LocationsSectionState extends State<LocationsSection> {
   late int _displayCount = widget.fullPage ? _chunkSize : kAttachmentPreviewLimit;
   bool _loadingMore = false;
 
+  List<Attachment> get _displayedLocations {
+    if (!widget.fullPage) return widget.locations;
+    return applyFileFilters(
+      widget.locations,
+      typeFilter: FileTypeFilter.all,
+      senderFilter: widget.filters.senderFilter,
+      sinceDate: widget.filters.sinceDate,
+    );
+  }
+
   @override
   void didUpdateWidget(LocationsSection oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.locations.length != widget.locations.length) {
       _displayCount = widget.fullPage ? _chunkSize : kAttachmentPreviewLimit;
     }
-    if (oldWidget.fullPage != widget.fullPage) {
+    if (oldWidget.fullPage != widget.fullPage || oldWidget.filters != widget.filters) {
       _displayCount = widget.fullPage ? _chunkSize : kAttachmentPreviewLimit;
     }
   }
 
   int get _visibleCount {
-    if (widget.fullPage) return min(_displayCount, widget.locations.length);
-    return min(kAttachmentPreviewLimit, widget.locations.length);
+    if (widget.fullPage) return min(_displayCount, _displayedLocations.length);
+    return min(kAttachmentPreviewLimit, _displayedLocations.length);
   }
 
   void _loadMore() {
-    if (_loadingMore || _displayCount >= widget.locations.length) return;
+    if (_loadingMore || _displayCount >= _displayedLocations.length) return;
     _loadingMore = true;
-    setState(() => _displayCount = min(_displayCount + _chunkSize, widget.locations.length));
+    setState(() => _displayCount = min(_displayCount + _chunkSize, _displayedLocations.length));
     _loadingMore = false;
   }
 
   Widget _buildLocationTile(BuildContext context, int index) {
-    if (AttachmentsSvc.getContent(widget.locations[index]) is! PlatformFile) {
+    if (AttachmentsSvc.getContent(_displayedLocations[index]) is! PlatformFile) {
       return const Text("Failed to load location!");
     }
     return Material(
@@ -72,7 +84,7 @@ class _LocationsSectionState extends State<LocationsSection> {
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
         onTap: () async {
-          final attachment = widget.locations[index];
+          final attachment = _displayedLocations[index];
           if (attachment.mimeType?.contains("location") ?? false) {
             final location = attachment.transferName;
             if (location != null) {
@@ -84,10 +96,11 @@ class _LocationsSectionState extends State<LocationsSection> {
         child: Center(
           child: UrlPreview(
             data: UrlPreviewData(
-              title: "Location from ${DateFormat.yMd().format(widget.locations[index].message.target!.dateCreated!)}",
+              title:
+                  "Location from ${DateFormat.yMd().format(_displayedLocations[index].message.target!.dateCreated!)}",
               siteName: "Tap to open",
             ),
-            file: AttachmentsSvc.getContent(widget.locations[index]),
+            file: AttachmentsSvc.getContent(_displayedLocations[index]),
           ),
         ),
       ),
@@ -121,13 +134,13 @@ class _LocationsSectionState extends State<LocationsSection> {
               child: Center(child: buildProgressIndicator(context, size: 24)),
             ),
           )
-        else if (widget.locations.isEmpty)
+        else if (_displayedLocations.isEmpty)
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 20.0),
               child: Center(
                 child: Text(
-                  "No locations",
+                  widget.locations.isEmpty ? "No locations" : "No matching locations",
                   style: context.theme.textTheme.bodyMedium!.copyWith(
                     color: context.theme.colorScheme.outline,
                   ),
@@ -155,7 +168,7 @@ class _LocationsSectionState extends State<LocationsSection> {
                   ),
                 ),
               )),
-          if (widget.fullPage && _displayCount < widget.locations.length)
+          if (widget.fullPage && _displayCount < _displayedLocations.length)
             SliverToBoxAdapter(
               child: Builder(
                 builder: (context) {

@@ -217,6 +217,7 @@ class _ConversationAttachmentsState extends State<ConversationAttachments> with 
             locations: locations,
             isLoading: isLoadingAttachments,
             fullPage: true,
+            filters: _filters,
           ),
         ];
       case AttachmentSectionType.documents:
@@ -307,7 +308,20 @@ class _ConversationAttachmentsState extends State<ConversationAttachments> with 
           ),
         ];
       case AttachmentSectionType.locations:
-        return const [];
+        return [
+          AttachmentFiltersButton(
+            filters: _filters,
+            typeSection: AttachmentFiltersTypeSection.none,
+            onPressed: () => showAttachmentFiltersSheet(
+              context,
+              chat: widget.chat,
+              tileColor: scaffoldTileColor,
+              filters: _filters,
+              onChanged: _onFiltersChanged,
+              typeSection: AttachmentFiltersTypeSection.none,
+            ),
+          ),
+        ];
     }
   }
 }
