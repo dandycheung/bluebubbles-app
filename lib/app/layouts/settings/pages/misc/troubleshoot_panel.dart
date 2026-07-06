@@ -1,4 +1,5 @@
 import 'package:bluebubbles/app/layouts/chat_selector_view/chat_selector_view.dart';
+import 'package:bluebubbles/app/layouts/settings/pages/misc/soft_deleted_chats_panel.dart';
 import 'package:bluebubbles/app/layouts/settings/pages/misc/logging_panel.dart';
 import 'package:bluebubbles/app/layouts/settings/widgets/content/log_level_selector.dart';
 import 'package:bluebubbles/app/layouts/settings/widgets/content/next_button.dart';
@@ -275,6 +276,18 @@ class _TroubleshootPanelState extends State<TroubleshootPanel> with ThemeHelpers
                   ]),
                 SettingsHeader(iosSubtitle: iosSubtitle, materialSubtitle: materialSubtitle, text: "Troubleshooting"),
                 SettingsSection(backgroundColor: tileColor, children: [
+                  SettingsTile(
+                    onTap: () => NavigationSvc.pushSettings(context, const SoftDeletedChatsPanel()),
+                    leading: const SettingsLeadingIcon(
+                      iosIcon: CupertinoIcons.trash_slash,
+                      materialIcon: Icons.restore_from_trash,
+                      containerColor: Colors.orangeAccent,
+                    ),
+                    title: "View Soft-Deleted Chats",
+                    subtitle: "Shows only soft-deleted chats. Allows restoring them back to the main chat list.",
+                    trailing: const NextButton(),
+                  ),
+                  const SettingsDivider(padding: EdgeInsets.only(left: 16.0)),
                   SettingsTile(
                       onTap: () async {
                         NavigationSvc.pushSettings(
