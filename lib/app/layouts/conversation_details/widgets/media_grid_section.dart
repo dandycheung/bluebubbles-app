@@ -141,12 +141,15 @@ class _MediaGridSectionState extends State<MediaGridSection> with ThemeHelpers {
         SliverToBoxAdapter(
           child: AttachmentSectionHeader(
             title: AttachmentSectionType.media.sectionLabel,
-            onShowMore: () => ConversationAttachments.open(
-              context,
-              chat: widget.chat,
-              section: AttachmentSectionType.media,
-              media: widget.media,
-            ),
+            onShowMore: () {
+              widget.selected.clear();
+              ConversationAttachments.open(
+                context,
+                chat: widget.chat,
+                section: AttachmentSectionType.media,
+                media: widget.media,
+              );
+            },
           ),
         ),
       if (widget.isLoading)
