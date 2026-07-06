@@ -62,15 +62,23 @@ class _ConversationAttachmentsState extends State<ConversationAttachments> with 
   bool isLoadingAttachments = false;
   final RxList<String> selected = <String>[].obs;
   MediaFilter _mediaFilter = MediaFilter.all;
+  MediaSenderFilter _senderFilter = const MediaSenderFilter.any();
 
-  void _onMediaFilterChanged(MediaFilter filter) {
-    if (_mediaFilter == filter) return;
-    final filtered = filterMedia(media, filter);
+  void _onFiltersChanged(MediaFilter typeFilter, MediaSenderFilter senderFilter) {
+    if (_mediaFilter == typeFilter && _senderFilter == senderFilter) return;
+    final filtered = applyMediaFilters(
+      media,
+      typeFilter: typeFilter,
+      senderFilter: senderFilter,
+    );
     setState(() {
-      _mediaFilter = filter;
+      _mediaFilter = typeFilter;
+      _senderFilter = senderFilter;
       selected.removeWhere((guid) => !filtered.any((e) => e.guid != null && e.guid == guid));
     });
   }
+
+  void _onMediaFilterChanged(MediaFilter filter) => _onFiltersChanged(filter, _senderFilter);
 
   @override
   void initState() {
@@ -160,11 +168,14 @@ class _ConversationAttachmentsState extends State<ConversationAttachments> with 
                     ? [
                         MediaFiltersButton(
                           mediaFilter: _mediaFilter,
+                          senderFilter: _senderFilter,
                           onPressed: () => showMediaFiltersSheet(
                             context,
+                            chat: widget.chat,
                             tileColor: scaffoldTileColor,
                             mediaFilter: _mediaFilter,
-                            onChanged: _onMediaFilterChanged,
+                            senderFilter: _senderFilter,
+                            onChanged: _onFiltersChanged,
                           ),
                         ),
                         Obx(() {
@@ -226,6 +237,7 @@ class _ConversationAttachmentsState extends State<ConversationAttachments> with 
             fullPage: true,
             crossAxisCount: 3,
             mediaFilter: _mediaFilter,
+            senderFilter: _senderFilter,
             onMediaFilterChanged: _onMediaFilterChanged,
           ),
         ];

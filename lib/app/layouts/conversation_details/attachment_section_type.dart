@@ -52,6 +52,68 @@ List<Attachment> filterMedia(List<Attachment> media, MediaFilter filter) {
   }
 }
 
+enum MediaSenderFilterKind { any, fromYou, fromOthers, participant }
+
+class MediaSenderFilter {
+  final MediaSenderFilterKind kind;
+  final Handle? participant;
+
+  const MediaSenderFilter._(this.kind, this.participant);
+
+  const MediaSenderFilter.any() : this._(MediaSenderFilterKind.any, null);
+  const MediaSenderFilter.fromYou() : this._(MediaSenderFilterKind.fromYou, null);
+  const MediaSenderFilter.fromOthers() : this._(MediaSenderFilterKind.fromOthers, null);
+  const MediaSenderFilter.participant(Handle handle) : this._(MediaSenderFilterKind.participant, handle);
+
+  bool get isActive => kind != MediaSenderFilterKind.any;
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is MediaSenderFilter &&
+        other.kind == kind &&
+        other.participant?.address == participant?.address;
+  }
+
+  @override
+  int get hashCode => Object.hash(kind, participant?.address);
+}
+
+bool attachmentMatchesSenderFilter(Attachment attachment, MediaSenderFilter filter) {
+  if (!filter.isActive) return true;
+
+  final message = attachment.message.target;
+  if (message == null) return false;
+
+  switch (filter.kind) {
+    case MediaSenderFilterKind.any:
+      return true;
+    case MediaSenderFilterKind.fromYou:
+      return message.isFromMe == true;
+    case MediaSenderFilterKind.fromOthers:
+      return message.isFromMe != true;
+    case MediaSenderFilterKind.participant:
+      final participant = filter.participant;
+      if (participant == null) return true;
+      final messageHandle = message.handleRelation.target;
+      if (messageHandle != null) {
+        return messageHandle.address == participant.address ||
+            (participant.originalROWID != null && messageHandle.originalROWID == participant.originalROWID);
+      }
+      return participant.originalROWID != null && message.handleId == participant.originalROWID;
+  }
+}
+
+List<Attachment> applyMediaFilters(
+  List<Attachment> media, {
+  required MediaFilter typeFilter,
+  required MediaSenderFilter senderFilter,
+}) {
+  final byType = filterMedia(media, typeFilter);
+  if (!senderFilter.isActive) return byType;
+  return byType.where((e) => attachmentMatchesSenderFilter(e, senderFilter)).toList();
+}
+
 extension AttachmentSectionTypeLabels on AttachmentSectionType {
   /// ALL CAPS label for section headers on the conversation details screen.
   String get sectionLabel {

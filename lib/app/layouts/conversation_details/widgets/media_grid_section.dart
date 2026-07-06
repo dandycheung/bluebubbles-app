@@ -22,6 +22,7 @@ class MediaGridSection extends StatefulWidget {
   final bool fullPage;
   final int? crossAxisCount;
   final MediaFilter mediaFilter;
+  final MediaSenderFilter senderFilter;
   final ValueChanged<MediaFilter>? onMediaFilterChanged;
 
   const MediaGridSection({
@@ -33,6 +34,7 @@ class MediaGridSection extends StatefulWidget {
     this.fullPage = false,
     this.crossAxisCount,
     this.mediaFilter = MediaFilter.all,
+    this.senderFilter = const MediaSenderFilter.any(),
     this.onMediaFilterChanged,
   });
 
@@ -45,7 +47,11 @@ class _MediaGridSectionState extends State<MediaGridSection> with ThemeHelpers {
   late int _displayCount = widget.fullPage ? _chunkSize : kAttachmentPreviewLimit;
   bool _loadingMore = false;
 
-  List<Attachment> get _filteredMedia => filterMedia(widget.media, widget.mediaFilter);
+  List<Attachment> get _filteredMedia => applyMediaFilters(
+        widget.media,
+        typeFilter: widget.mediaFilter,
+        senderFilter: widget.senderFilter,
+      );
 
   @override
   void didUpdateWidget(MediaGridSection oldWidget) {
@@ -60,6 +66,9 @@ class _MediaGridSectionState extends State<MediaGridSection> with ThemeHelpers {
       _displayCount = widget.fullPage ? _chunkSize : kAttachmentPreviewLimit;
     }
     if (oldWidget.mediaFilter != widget.mediaFilter) {
+      _displayCount = widget.fullPage ? _chunkSize : kAttachmentPreviewLimit;
+    }
+    if (oldWidget.senderFilter != widget.senderFilter) {
       _displayCount = widget.fullPage ? _chunkSize : kAttachmentPreviewLimit;
     }
   }
