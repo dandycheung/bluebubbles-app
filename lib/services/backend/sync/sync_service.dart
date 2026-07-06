@@ -207,7 +207,7 @@ class SyncService {
         final contactsV2 = await ContactsSvcV2.getAllContacts();
         final _contacts = <Map<String, dynamic>>[];
         for (final c in contactsV2) {
-          _contacts.add(c.toMap());
+          _contacts.add(c.toServerMap());
         }
 
         await ContactV2Interface.uploadContacts(_contacts);
