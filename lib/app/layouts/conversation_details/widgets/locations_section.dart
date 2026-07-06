@@ -1,5 +1,8 @@
 import 'dart:math';
 
+import 'package:bluebubbles/app/layouts/conversation_details/attachment_section_type.dart';
+import 'package:bluebubbles/app/layouts/conversation_details/conversation_attachments.dart';
+import 'package:bluebubbles/app/layouts/conversation_details/widgets/attachment_section_header.dart';
 import 'package:bluebubbles/app/layouts/conversation_view/widgets/message/interactive/url_preview.dart';
 import 'package:bluebubbles/database/models.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
@@ -13,13 +16,17 @@ import 'package:url_launcher/url_launcher.dart';
 
 /// Widget that handles locations section display
 class LocationsSection extends StatefulWidget {
+  final Chat chat;
   final List<Attachment> locations;
   final bool isLoading;
+  final bool fullPage;
 
   const LocationsSection({
     super.key,
+    required this.chat,
     required this.locations,
     this.isLoading = false,
+    this.fullPage = false,
   });
 
   @override
@@ -28,14 +35,63 @@ class LocationsSection extends StatefulWidget {
 
 class _LocationsSectionState extends State<LocationsSection> {
   static const int _chunkSize = 10;
-  int _displayCount = _chunkSize;
+  late int _displayCount = widget.fullPage ? _chunkSize : kAttachmentPreviewLimit;
+  bool _loadingMore = false;
 
   @override
   void didUpdateWidget(LocationsSection oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.locations.length != widget.locations.length) {
-      _displayCount = _chunkSize;
+      _displayCount = widget.fullPage ? _chunkSize : kAttachmentPreviewLimit;
     }
+    if (oldWidget.fullPage != widget.fullPage) {
+      _displayCount = widget.fullPage ? _chunkSize : kAttachmentPreviewLimit;
+    }
+  }
+
+  int get _visibleCount {
+    if (widget.fullPage) return min(_displayCount, widget.locations.length);
+    return min(kAttachmentPreviewLimit, widget.locations.length);
+  }
+
+  void _loadMore() {
+    if (_loadingMore || _displayCount >= widget.locations.length) return;
+    _loadingMore = true;
+    setState(() => _displayCount = min(_displayCount + _chunkSize, widget.locations.length));
+    _loadingMore = false;
+  }
+
+  Widget _buildLocationTile(BuildContext context, int index) {
+    if (AttachmentsSvc.getContent(widget.locations[index]) is! PlatformFile) {
+      return const Text("Failed to load location!");
+    }
+    return Material(
+      color: context.theme.colorScheme.surfaceContainerHighest,
+      borderRadius: BorderRadius.circular(20),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: () async {
+          final attachment = widget.locations[index];
+          if (attachment.mimeType?.contains("location") ?? false) {
+            final location = attachment.transferName;
+            if (location != null) {
+              final uri = Uri.parse("https://maps.google.com/?q=$location");
+              await launchUrl(uri, mode: LaunchMode.externalApplication);
+            }
+          }
+        },
+        child: Center(
+          child: UrlPreview(
+            data: UrlPreviewData(
+              title: "Location from ${DateFormat.yMd().format(widget.locations[index].message.target!.dateCreated!)}",
+              siteName: "Tap to open",
+            ),
+            file: AttachmentsSvc.getContent(widget.locations[index]),
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -46,24 +102,23 @@ class _LocationsSectionState extends State<LocationsSection> {
 
     return SliverMainAxisGroup(
       slivers: [
-        SliverPadding(
-          padding: const EdgeInsets.only(top: 20, bottom: 5, left: 20),
-          sliver: SliverToBoxAdapter(
-            child: Text(
-              "LOCATIONS",
-              style: context.theme.textTheme.bodyMedium!.copyWith(
-                color: context.theme.colorScheme.outline,
+        if (!widget.fullPage)
+          SliverToBoxAdapter(
+            child: AttachmentSectionHeader(
+              title: AttachmentSectionType.locations.title,
+              onShowMore: () => ConversationAttachments.open(
+                context,
+                chat: widget.chat,
+                section: AttachmentSectionType.locations,
+                locations: widget.locations,
               ),
             ),
           ),
-        ),
         if (widget.isLoading)
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 20.0),
-              child: Center(
-                child: buildProgressIndicator(context, size: 24),
-              ),
+              child: Center(child: buildProgressIndicator(context, size: 24)),
             ),
           )
         else if (widget.locations.isEmpty)
@@ -85,7 +140,7 @@ class _LocationsSectionState extends State<LocationsSection> {
                 padding: EdgeInsets.only(
                   left: SettingsSvc.settings.skin.value == Skins.iOS ? 20 : 10,
                   right: SettingsSvc.settings.skin.value == Skins.iOS ? 20 : 10,
-                  top: 10,
+                  top: widget.fullPage ? 10 : 0,
                   bottom: 10,
                 ),
                 sliver: SliverToBoxAdapter(
@@ -95,54 +150,23 @@ class _LocationsSectionState extends State<LocationsSection> {
                     crossAxisSpacing: 10,
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
-                    itemBuilder: (context, index) {
-                      if (AttachmentsSvc.getContent(widget.locations[index]) is! PlatformFile) {
-                        return const Text("Failed to load location!");
-                      }
-                      return Material(
-                        color: context.theme.colorScheme.surfaceContainerHighest,
-                        borderRadius: BorderRadius.circular(20),
-                        clipBehavior: Clip.antiAlias,
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(20),
-                          onTap: () async {
-                            final attachment = widget.locations[index];
-                            if (attachment.mimeType?.contains("location") ?? false) {
-                              // Launch the location in maps
-                              final location = attachment.transferName;
-                              if (location != null) {
-                                final uri = Uri.parse("https://maps.google.com/?q=$location");
-                                await launchUrl(uri, mode: LaunchMode.externalApplication);
-                              }
-                            }
-                          },
-                          child: Center(
-                            child: UrlPreview(
-                              data: UrlPreviewData(
-                                title:
-                                    "Location from ${DateFormat.yMd().format(widget.locations[index].message.target!.dateCreated!)}",
-                                siteName: "Tap to open",
-                              ),
-                              file: AttachmentsSvc.getContent(widget.locations[index]),
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                    itemCount: min(_displayCount, widget.locations.length),
+                    itemBuilder: (context, index) => _buildLocationTile(context, index),
+                    itemCount: _visibleCount,
                   ),
                 ),
               )),
-          if (_displayCount < widget.locations.length)
+          if (widget.fullPage && _displayCount < widget.locations.length)
             SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: Center(
-                  child: TextButton(
-                    onPressed: () => setState(() => _displayCount += _chunkSize),
-                    child: const Text("Show more"),
-                  ),
-                ),
+              child: Builder(
+                builder: (context) {
+                  if (!_loadingMore) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) => _loadMore());
+                  }
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 20.0),
+                    child: Center(child: buildProgressIndicator(context, size: 24)),
+                  );
+                },
               ),
             ),
         ],

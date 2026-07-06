@@ -1,5 +1,8 @@
 import 'dart:math';
 
+import 'package:bluebubbles/app/layouts/conversation_details/attachment_section_type.dart';
+import 'package:bluebubbles/app/layouts/conversation_details/conversation_attachments.dart';
+import 'package:bluebubbles/app/layouts/conversation_details/widgets/attachment_section_header.dart';
 import 'package:bluebubbles/app/layouts/conversation_details/widgets/media_gallery_card.dart';
 import 'package:bluebubbles/database/models.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
@@ -10,13 +13,19 @@ import 'package:get/get.dart';
 
 /// Widget that handles documents/files section display
 class DocumentsSection extends StatefulWidget {
+  final Chat chat;
   final List<Attachment> docs;
   final bool isLoading;
+  final bool fullPage;
+  final int? crossAxisCount;
 
   const DocumentsSection({
     super.key,
+    required this.chat,
     required this.docs,
     this.isLoading = false,
+    this.fullPage = false,
+    this.crossAxisCount,
   });
 
   @override
@@ -25,14 +34,35 @@ class DocumentsSection extends StatefulWidget {
 
 class _DocumentsSectionState extends State<DocumentsSection> {
   static const int _chunkSize = 24;
-  int _displayCount = _chunkSize;
+  late int _displayCount = widget.fullPage ? _chunkSize : kAttachmentPreviewLimit;
+  bool _loadingMore = false;
 
   @override
   void didUpdateWidget(DocumentsSection oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.docs.length != widget.docs.length) {
-      _displayCount = _chunkSize;
+      _displayCount = widget.fullPage ? _chunkSize : kAttachmentPreviewLimit;
     }
+    if (oldWidget.fullPage != widget.fullPage) {
+      _displayCount = widget.fullPage ? _chunkSize : kAttachmentPreviewLimit;
+    }
+  }
+
+  int get _visibleCount {
+    if (widget.fullPage) return min(_displayCount, widget.docs.length);
+    return min(kAttachmentPreviewLimit, widget.docs.length);
+  }
+
+  int get _gridCrossAxisCount {
+    if (widget.crossAxisCount != null) return widget.crossAxisCount!;
+    return max(2, NavigationSvc.width(context) ~/ 200);
+  }
+
+  void _loadMore() {
+    if (_loadingMore || _displayCount >= widget.docs.length) return;
+    _loadingMore = true;
+    setState(() => _displayCount = min(_displayCount + _chunkSize, widget.docs.length));
+    _loadingMore = false;
   }
 
   @override
@@ -43,24 +73,23 @@ class _DocumentsSectionState extends State<DocumentsSection> {
 
     return SliverMainAxisGroup(
       slivers: [
-        SliverPadding(
-          padding: const EdgeInsets.only(top: 20, bottom: 5, left: 20),
-          sliver: SliverToBoxAdapter(
-            child: Text(
-              "OTHER FILES",
-              style: context.theme.textTheme.bodyMedium!.copyWith(
-                color: context.theme.colorScheme.outline,
+        if (!widget.fullPage)
+          SliverToBoxAdapter(
+            child: AttachmentSectionHeader(
+              title: AttachmentSectionType.documents.title,
+              onShowMore: () => ConversationAttachments.open(
+                context,
+                chat: widget.chat,
+                section: AttachmentSectionType.documents,
+                docs: widget.docs,
               ),
             ),
           ),
-        ),
         if (widget.isLoading)
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 20.0),
-              child: Center(
-                child: buildProgressIndicator(context, size: 24),
-              ),
+              child: Center(child: buildProgressIndicator(context, size: 24)),
             ),
           )
         else if (widget.docs.isEmpty)
@@ -82,36 +111,34 @@ class _DocumentsSectionState extends State<DocumentsSection> {
                 padding: EdgeInsets.only(
                   left: SettingsSvc.settings.skin.value == Skins.iOS ? 20 : 10,
                   right: SettingsSvc.settings.skin.value == Skins.iOS ? 20 : 10,
-                  top: 10,
+                  top: widget.fullPage ? 10 : 0,
                   bottom: 10,
                 ),
                 sliver: SliverGrid(
                   gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: max(2, NavigationSvc.width(context) ~/ 200),
+                    crossAxisCount: _gridCrossAxisCount,
                     mainAxisSpacing: 10,
                     crossAxisSpacing: 10,
                     childAspectRatio: 1.75,
                   ),
                   delegate: SliverChildBuilderDelegate(
-                    (context, int index) {
-                      return MediaGalleryCard(
-                        attachment: widget.docs[index],
-                      );
-                    },
-                    childCount: min(_displayCount, widget.docs.length),
+                    (context, int index) => MediaGalleryCard(attachment: widget.docs[index]),
+                    childCount: _visibleCount,
                   ),
                 ),
               )),
-          if (_displayCount < widget.docs.length)
+          if (widget.fullPage && _displayCount < widget.docs.length)
             SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: Center(
-                  child: TextButton(
-                    onPressed: () => setState(() => _displayCount += _chunkSize),
-                    child: const Text("Show more"),
-                  ),
-                ),
+              child: Builder(
+                builder: (context) {
+                  if (!_loadingMore) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) => _loadMore());
+                  }
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 20.0),
+                    child: Center(child: buildProgressIndicator(context, size: 24)),
+                  );
+                },
               ),
             ),
         ],

@@ -225,10 +225,10 @@ class _ConversationDetailsState extends State<ConversationDetails> with WidgetsB
                       padding: EdgeInsets.symmetric(vertical: 10),
                     ),
                     ChatOptions(chat: chat),
-                    MediaGridSection(media: media, selected: selected, isLoading: isLoadingAttachments),
+                    MediaGridSection(chat: chat, media: media, selected: selected, isLoading: isLoadingAttachments),
                     LinksSection(chat: chat),
-                    LocationsSection(locations: locations, isLoading: isLoadingAttachments),
-                    DocumentsSection(docs: docs, isLoading: isLoadingAttachments),
+                    LocationsSection(chat: chat, locations: locations, isLoading: isLoadingAttachments),
+                    DocumentsSection(chat: chat, docs: docs, isLoading: isLoadingAttachments),
                     const SliverPadding(
                       padding: EdgeInsets.only(top: 50),
                     ),

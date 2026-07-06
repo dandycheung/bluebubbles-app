@@ -1,5 +1,8 @@
 import 'dart:math';
 
+import 'package:bluebubbles/app/layouts/conversation_details/attachment_section_type.dart';
+import 'package:bluebubbles/app/layouts/conversation_details/conversation_attachments.dart';
+import 'package:bluebubbles/app/layouts/conversation_details/widgets/attachment_section_header.dart';
 import 'package:bluebubbles/app/layouts/conversation_view/widgets/message/interactive/url_preview.dart';
 import 'package:bluebubbles/database/database.dart';
 import 'package:bluebubbles/database/models.dart';
@@ -14,10 +17,12 @@ import 'package:url_launcher/url_launcher.dart';
 /// Widget that handles links section display with loading state
 class LinksSection extends StatefulWidget {
   final Chat chat;
+  final bool fullPage;
 
   const LinksSection({
     super.key,
     required this.chat,
+    this.fullPage = false,
   });
 
   @override
@@ -26,9 +31,10 @@ class LinksSection extends StatefulWidget {
 
 class _LinksSectionState extends State<LinksSection> with ThemeHelpers {
   static const int _chunkSize = 20;
-  int _displayCount = _chunkSize;
+  late int _displayCount = widget.fullPage ? _chunkSize : kAttachmentPreviewLimit;
   List<Message> links = [];
   bool _isLoading = true;
+  bool _loadingMore = false;
 
   @override
   void initState() {
@@ -40,11 +46,17 @@ class _LinksSectionState extends State<LinksSection> with ThemeHelpers {
     }
   }
 
+  @override
+  void didUpdateWidget(LinksSection oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.fullPage != widget.fullPage) {
+      _displayCount = widget.fullPage ? _chunkSize : kAttachmentPreviewLimit;
+    }
+  }
+
   Future<void> _fetchLinks() async {
     if (kIsWeb || widget.chat.id == null) {
-      setState(() {
-        _isLoading = false;
-      });
+      setState(() => _isLoading = false);
       return;
     }
 
@@ -65,12 +77,47 @@ class _LinksSectionState extends State<LinksSection> with ThemeHelpers {
         });
       }
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  int get _visibleCount {
+    if (widget.fullPage) return min(_displayCount, links.length);
+    return min(kAttachmentPreviewLimit, links.length);
+  }
+
+  void _loadMore() {
+    if (_loadingMore || _displayCount >= links.length) return;
+    _loadingMore = true;
+    setState(() => _displayCount = min(_displayCount + _chunkSize, links.length));
+    _loadingMore = false;
+  }
+
+  Widget _buildLinkTile(BuildContext context, int index) {
+    if (links[index].payloadData?.urlData?.firstOrNull == null) {
+      return const Text("Failed to load link!");
+    }
+    return Material(
+      color: context.theme.colorScheme.surfaceContainerHighest,
+      borderRadius: BorderRadius.circular(20),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: () async {
+          final data = links[index].payloadData!.urlData!.first;
+          if ((data.url ?? data.originalUrl) == null) return;
+          await launchUrl(
+            Uri.parse((data.url ?? data.originalUrl)!),
+            mode: LaunchMode.externalApplication,
+          );
+        },
+        child: Center(
+          child: UrlPreview(
+            data: links[index].payloadData!.urlData!.first,
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -81,24 +128,22 @@ class _LinksSectionState extends State<LinksSection> with ThemeHelpers {
 
     return SliverMainAxisGroup(
       slivers: [
-        SliverPadding(
-          padding: const EdgeInsets.only(top: 20, bottom: 5, left: 20),
-          sliver: SliverToBoxAdapter(
-            child: Text(
-              "LINKS",
-              style: context.theme.textTheme.bodyMedium!.copyWith(
-                color: context.theme.colorScheme.outline,
+        if (!widget.fullPage)
+          SliverToBoxAdapter(
+            child: AttachmentSectionHeader(
+              title: AttachmentSectionType.links.title,
+              onShowMore: () => ConversationAttachments.open(
+                context,
+                chat: widget.chat,
+                section: AttachmentSectionType.links,
               ),
             ),
           ),
-        ),
         if (_isLoading)
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 20.0),
-              child: Center(
-                child: buildProgressIndicator(context, size: 24),
-              ),
+              child: Center(child: buildProgressIndicator(context, size: 24)),
             ),
           )
         else if (links.isEmpty)
@@ -120,7 +165,7 @@ class _LinksSectionState extends State<LinksSection> with ThemeHelpers {
                 padding: EdgeInsets.only(
                   left: SettingsSvc.settings.skin.value == Skins.iOS ? 20 : 10,
                   right: SettingsSvc.settings.skin.value == Skins.iOS ? 20 : 10,
-                  top: 10,
+                  top: widget.fullPage ? 10 : 0,
                   bottom: 10,
                 ),
                 sliver: SliverToBoxAdapter(
@@ -130,46 +175,23 @@ class _LinksSectionState extends State<LinksSection> with ThemeHelpers {
                     crossAxisSpacing: 10,
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
-                    itemBuilder: (context, index) {
-                      if (links[index].payloadData?.urlData?.firstOrNull == null) {
-                        return const Text("Failed to load link!");
-                      }
-                      return Material(
-                        color: context.theme.colorScheme.surfaceContainerHighest,
-                        borderRadius: BorderRadius.circular(20),
-                        clipBehavior: Clip.antiAlias,
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(20),
-                          onTap: () async {
-                            final data = links[index].payloadData!.urlData!.first;
-                            if ((data.url ?? data.originalUrl) == null) return;
-                            await launchUrl(
-                              Uri.parse((data.url ?? data.originalUrl)!),
-                              mode: LaunchMode.externalApplication,
-                            );
-                          },
-                          child: Center(
-                            child: UrlPreview(
-                              data: links[index].payloadData!.urlData!.first,
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                    itemCount: min(_displayCount, links.length),
+                    itemBuilder: (context, index) => _buildLinkTile(context, index),
+                    itemCount: _visibleCount,
                   ),
                 ),
               )),
-          if (_displayCount < links.length)
+          if (widget.fullPage && _displayCount < links.length)
             SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: Center(
-                  child: TextButton(
-                    onPressed: () => setState(() => _displayCount += _chunkSize),
-                    child: const Text("Show more"),
-                  ),
-                ),
+              child: Builder(
+                builder: (context) {
+                  if (!_loadingMore) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) => _loadMore());
+                  }
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 20.0),
+                    child: Center(child: buildProgressIndicator(context, size: 24)),
+                  );
+                },
               ),
             ),
         ],
