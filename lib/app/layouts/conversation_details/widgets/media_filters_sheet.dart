@@ -9,22 +9,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 
-typedef AttachmentFiltersChanged = void Function(
-  MediaFilter typeFilter,
-  MediaSenderFilter senderFilter,
-  DateTime? sinceDate,
-);
+typedef AttachmentFiltersChanged = void Function(AttachmentFiltersState filters);
 
 /// Opens the shared attachment filters bottom sheet.
 void showAttachmentFiltersSheet(
   BuildContext context, {
   required Chat chat,
   required Color tileColor,
-  required MediaSenderFilter senderFilter,
-  required DateTime? sinceDate,
+  required AttachmentFiltersState filters,
   required AttachmentFiltersChanged onChanged,
-  MediaFilter mediaFilter = MediaFilter.all,
-  bool showTypeSection = true,
+  AttachmentFiltersTypeSection typeSection = AttachmentFiltersTypeSection.media,
 }) {
   HapticFeedback.lightImpact();
   showModalBottomSheet<void>(
@@ -32,9 +26,7 @@ void showAttachmentFiltersSheet(
     backgroundColor: Colors.transparent,
     isScrollControlled: true,
     builder: (sheetContext) {
-      var currentTypeFilter = mediaFilter;
-      var currentSenderFilter = senderFilter;
-      var currentSinceDate = sinceDate;
+      var currentFilters = filters;
 
       return StatefulBuilder(
         builder: (context, setSheetState) {
@@ -50,28 +42,29 @@ void showAttachmentFiltersSheet(
 
           void updateFilters({
             MediaFilter? type,
+            FileTypeFilter? fileType,
             MediaSenderFilter? sender,
             DateTime? date,
             bool clearDate = false,
           }) {
-            if (type != null) currentTypeFilter = type;
-            if (sender != null) currentSenderFilter = sender;
-            if (clearDate) {
-              currentSinceDate = null;
-            } else if (date != null) {
-              currentSinceDate = date;
-            }
-            onChanged(currentTypeFilter, currentSenderFilter, currentSinceDate);
+            currentFilters = currentFilters.copyWith(
+              mediaFilter: type,
+              fileTypeFilter: fileType,
+              senderFilter: sender,
+              sinceDate: date,
+              clearSinceDate: clearDate,
+            );
+            onChanged(currentFilters);
             setSheetState(() {});
           }
 
-          final showFromYou = currentSenderFilter.kind != MediaSenderFilterKind.fromOthers &&
-              currentSenderFilter.kind != MediaSenderFilterKind.participant;
+          final showFromYou = currentFilters.senderFilter.kind != MediaSenderFilterKind.fromOthers &&
+              currentFilters.senderFilter.kind != MediaSenderFilterKind.participant;
           final showFromOthers = chat.isGroup &&
-              currentSenderFilter.kind != MediaSenderFilterKind.fromYou &&
-              currentSenderFilter.kind != MediaSenderFilterKind.participant;
-          final showParticipants = currentSenderFilter.kind != MediaSenderFilterKind.fromYou &&
-              currentSenderFilter.kind != MediaSenderFilterKind.fromOthers;
+              currentFilters.senderFilter.kind != MediaSenderFilterKind.fromYou &&
+              currentFilters.senderFilter.kind != MediaSenderFilterKind.participant;
+          final showParticipants = currentFilters.senderFilter.kind != MediaSenderFilterKind.fromYou &&
+              currentFilters.senderFilter.kind != MediaSenderFilterKind.fromOthers;
 
           return Container(
             constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.75),
@@ -106,7 +99,7 @@ void showAttachmentFiltersSheet(
                           if (showFromYou)
                             BBChip(
                               showCheckmark: true,
-                              selected: currentSenderFilter.kind == MediaSenderFilterKind.fromYou,
+                              selected: currentFilters.senderFilter.kind == MediaSenderFilterKind.fromYou,
                               checkmarkColor: primaryColor,
                               avatar: CircleAvatar(
                                 backgroundColor: Theme.of(context).colorScheme.primaryContainer,
@@ -128,7 +121,7 @@ void showAttachmentFiltersSheet(
                           if (showFromOthers)
                             BBChip(
                               showCheckmark: true,
-                              selected: currentSenderFilter.kind == MediaSenderFilterKind.fromOthers,
+                              selected: currentFilters.senderFilter.kind == MediaSenderFilterKind.fromOthers,
                               checkmarkColor: primaryColor,
                               label: Text("From Others", style: labelStyle),
                               onSelected: (selected) {
@@ -140,14 +133,14 @@ void showAttachmentFiltersSheet(
                             ),
                           if (showParticipants)
                             for (final handle in chat.handles)
-                              if (currentSenderFilter.kind != MediaSenderFilterKind.participant ||
-                                  currentSenderFilter.participant?.address == handle.address)
+                              if (currentFilters.senderFilter.kind != MediaSenderFilterKind.participant ||
+                                  currentFilters.senderFilter.participant?.address == handle.address)
                                 _ParticipantSenderChip(
                                   handle: handle,
                                   labelStyle: labelStyle,
                                   primaryColor: primaryColor,
-                                  selected: currentSenderFilter.kind == MediaSenderFilterKind.participant &&
-                                      currentSenderFilter.participant?.address == handle.address,
+                                  selected: currentFilters.senderFilter.kind == MediaSenderFilterKind.participant &&
+                                      currentFilters.senderFilter.participant?.address == handle.address,
                                   onSelected: (selected) {
                                     updateFilters(
                                       sender: selected
@@ -160,7 +153,7 @@ void showAttachmentFiltersSheet(
                       ),
                     ),
                   ),
-                  if (showTypeSection) ...[
+                  if (typeSection == AttachmentFiltersTypeSection.media) ...[
                     Padding(
                       padding: const EdgeInsets.only(top: 16, left: 10),
                       child: Text("Type", style: sectionLabelStyle),
@@ -173,24 +166,75 @@ void showAttachmentFiltersSheet(
                           spacing: 6,
                           runSpacing: 0,
                           children: [
-                            if (currentTypeFilter != MediaFilter.videos)
+                            if (currentFilters.mediaFilter != MediaFilter.videos)
                               BBChip(
                                 showCheckmark: true,
-                                selected: currentTypeFilter == MediaFilter.images,
+                                selected: currentFilters.mediaFilter == MediaFilter.images,
                                 checkmarkColor: primaryColor,
                                 label: Text("Images", style: labelStyle),
                                 onSelected: (selected) {
                                   updateFilters(type: selected ? MediaFilter.images : MediaFilter.all);
                                 },
                               ),
-                            if (currentTypeFilter != MediaFilter.images)
+                            if (currentFilters.mediaFilter != MediaFilter.images)
                               BBChip(
                                 showCheckmark: true,
-                                selected: currentTypeFilter == MediaFilter.videos,
+                                selected: currentFilters.mediaFilter == MediaFilter.videos,
                                 checkmarkColor: primaryColor,
                                 label: Text("Videos", style: labelStyle),
                                 onSelected: (selected) {
                                   updateFilters(type: selected ? MediaFilter.videos : MediaFilter.all);
+                                },
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                  if (typeSection == AttachmentFiltersTypeSection.files) ...[
+                    Padding(
+                      padding: const EdgeInsets.only(top: 16, left: 10),
+                      child: Text("Types", style: sectionLabelStyle),
+                    ),
+                    Material(
+                      color: Colors.transparent,
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 4, left: 10, right: 10),
+                        child: Wrap(
+                          spacing: 6,
+                          runSpacing: 0,
+                          children: [
+                            if (currentFilters.fileTypeFilter != FileTypeFilter.audio &&
+                                currentFilters.fileTypeFilter != FileTypeFilter.other)
+                              BBChip(
+                                showCheckmark: true,
+                                selected: currentFilters.fileTypeFilter == FileTypeFilter.documents,
+                                checkmarkColor: primaryColor,
+                                label: Text("Documents", style: labelStyle),
+                                onSelected: (selected) {
+                                  updateFilters(fileType: selected ? FileTypeFilter.documents : FileTypeFilter.all);
+                                },
+                              ),
+                            if (currentFilters.fileTypeFilter != FileTypeFilter.documents &&
+                                currentFilters.fileTypeFilter != FileTypeFilter.other)
+                              BBChip(
+                                showCheckmark: true,
+                                selected: currentFilters.fileTypeFilter == FileTypeFilter.audio,
+                                checkmarkColor: primaryColor,
+                                label: Text("Audio", style: labelStyle),
+                                onSelected: (selected) {
+                                  updateFilters(fileType: selected ? FileTypeFilter.audio : FileTypeFilter.all);
+                                },
+                              ),
+                            if (currentFilters.fileTypeFilter != FileTypeFilter.documents &&
+                                currentFilters.fileTypeFilter != FileTypeFilter.audio)
+                              BBChip(
+                                showCheckmark: true,
+                                selected: currentFilters.fileTypeFilter == FileTypeFilter.other,
+                                checkmarkColor: primaryColor,
+                                label: Text("Other", style: labelStyle),
+                                onSelected: (selected) {
+                                  updateFilters(fileType: selected ? FileTypeFilter.other : FileTypeFilter.all);
                                 },
                               ),
                           ],
@@ -219,14 +263,14 @@ void showAttachmentFiltersSheet(
                                 size: 12,
                               ),
                             ),
-                            label: currentSinceDate != null
+                            label: currentFilters.sinceDate != null
                                 ? Text(
-                                    "Since ${buildFullDate(currentSinceDate!, includeTime: currentSinceDate!.isToday(), useTodayYesterday: true)}",
+                                    "Since ${buildFullDate(currentFilters.sinceDate!, includeTime: currentFilters.sinceDate!.isToday(), useTodayYesterday: true)}",
                                     style: labelStyle,
                                     overflow: TextOverflow.ellipsis,
                                   )
                                 : Text("Filter by Date", style: labelStyle),
-                            onDeleted: currentSinceDate == null
+                            onDeleted: currentFilters.sinceDate == null
                                 ? null
                                 : () => updateFilters(clearDate: true),
                             onPressed: () async {
@@ -307,26 +351,22 @@ class _ParticipantSenderChip extends StatelessWidget {
 
 /// Filter button with badge, matching the search filters trigger.
 class AttachmentFiltersButton extends StatelessWidget {
-  final MediaSenderFilter senderFilter;
-  final DateTime? sinceDate;
-  final MediaFilter? mediaFilter;
+  final AttachmentFiltersState filters;
+  final AttachmentFiltersTypeSection typeSection;
   final Color? iconColor;
   final VoidCallback onPressed;
 
   const AttachmentFiltersButton({
     super.key,
-    required this.senderFilter,
-    required this.sinceDate,
+    required this.filters,
+    required this.typeSection,
     required this.onPressed,
-    this.mediaFilter,
     this.iconColor,
   });
 
   @override
   Widget build(BuildContext context) {
-    final hasActiveFilter = (mediaFilter != null && mediaFilter != MediaFilter.all) ||
-        senderFilter.isActive ||
-        sinceDate != null;
+    final hasActiveFilter = filters.hasActiveFilter(typeSection);
     final color = iconColor ?? Theme.of(context).colorScheme.primary;
 
     return SizedBox(

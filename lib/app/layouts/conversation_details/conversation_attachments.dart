@@ -61,33 +61,26 @@ class _ConversationAttachmentsState extends State<ConversationAttachments> with 
   List<Attachment> locations = <Attachment>[];
   bool isLoadingAttachments = false;
   final RxList<String> selected = <String>[].obs;
-  MediaFilter _mediaFilter = MediaFilter.all;
-  MediaSenderFilter _senderFilter = const MediaSenderFilter.any();
-  DateTime? _sinceDate;
+  AttachmentFiltersState _filters = const AttachmentFiltersState();
 
-  void _onFiltersChanged(MediaFilter typeFilter, MediaSenderFilter senderFilter, DateTime? sinceDate) {
-    if (_mediaFilter == typeFilter &&
-        _senderFilter == senderFilter &&
-        _sinceDate == sinceDate) {
-      return;
-    }
+  void _onFiltersChanged(AttachmentFiltersState filters) {
+    if (_filters == filters) return;
     setState(() {
-      _mediaFilter = typeFilter;
-      _senderFilter = senderFilter;
-      _sinceDate = sinceDate;
+      _filters = filters;
       if (widget.section == AttachmentSectionType.media) {
         final filtered = applyMediaFilters(
           media,
-          typeFilter: typeFilter,
-          senderFilter: senderFilter,
-          sinceDate: sinceDate,
+          typeFilter: filters.mediaFilter,
+          senderFilter: filters.senderFilter,
+          sinceDate: filters.sinceDate,
         );
         selected.removeWhere((guid) => !filtered.any((e) => e.guid != null && e.guid == guid));
       }
     });
   }
 
-  void _onMediaFilterChanged(MediaFilter filter) => _onFiltersChanged(filter, _senderFilter, _sinceDate);
+  void _onMediaFilterChanged(MediaFilter filter) =>
+      _onFiltersChanged(_filters.copyWith(mediaFilter: filter));
 
   @override
   void initState() {
@@ -202,9 +195,9 @@ class _ConversationAttachmentsState extends State<ConversationAttachments> with 
             isLoading: isLoadingAttachments,
             fullPage: true,
             crossAxisCount: 3,
-            mediaFilter: _mediaFilter,
-            senderFilter: _senderFilter,
-            sinceDate: _sinceDate,
+            mediaFilter: _filters.mediaFilter,
+            senderFilter: _filters.senderFilter,
+            sinceDate: _filters.sinceDate,
             onMediaFilterChanged: _onMediaFilterChanged,
           ),
         ];
@@ -213,8 +206,8 @@ class _ConversationAttachmentsState extends State<ConversationAttachments> with 
           LinksSection(
             chat: widget.chat,
             fullPage: true,
-            senderFilter: _senderFilter,
-            sinceDate: _sinceDate,
+            senderFilter: _filters.senderFilter,
+            sinceDate: _filters.sinceDate,
           ),
         ];
       case AttachmentSectionType.locations:
@@ -233,6 +226,7 @@ class _ConversationAttachmentsState extends State<ConversationAttachments> with 
             docs: docs,
             isLoading: isLoadingAttachments,
             fullPage: true,
+            filters: _filters,
           ),
         ];
     }
@@ -243,17 +237,15 @@ class _ConversationAttachmentsState extends State<ConversationAttachments> with 
       case AttachmentSectionType.media:
         return [
           AttachmentFiltersButton(
-            mediaFilter: _mediaFilter,
-            senderFilter: _senderFilter,
-            sinceDate: _sinceDate,
+            filters: _filters,
+            typeSection: AttachmentFiltersTypeSection.media,
             onPressed: () => showAttachmentFiltersSheet(
               context,
               chat: widget.chat,
               tileColor: scaffoldTileColor,
-              mediaFilter: _mediaFilter,
-              senderFilter: _senderFilter,
-              sinceDate: _sinceDate,
+              filters: _filters,
               onChanged: _onFiltersChanged,
+              typeSection: AttachmentFiltersTypeSection.media,
             ),
           ),
           Obx(() {
@@ -287,21 +279,34 @@ class _ConversationAttachmentsState extends State<ConversationAttachments> with 
       case AttachmentSectionType.links:
         return [
           AttachmentFiltersButton(
-            senderFilter: _senderFilter,
-            sinceDate: _sinceDate,
+            filters: _filters,
+            typeSection: AttachmentFiltersTypeSection.none,
             onPressed: () => showAttachmentFiltersSheet(
               context,
               chat: widget.chat,
               tileColor: scaffoldTileColor,
-              senderFilter: _senderFilter,
-              sinceDate: _sinceDate,
+              filters: _filters,
               onChanged: _onFiltersChanged,
-              showTypeSection: false,
+              typeSection: AttachmentFiltersTypeSection.none,
+            ),
+          ),
+        ];
+      case AttachmentSectionType.documents:
+        return [
+          AttachmentFiltersButton(
+            filters: _filters,
+            typeSection: AttachmentFiltersTypeSection.files,
+            onPressed: () => showAttachmentFiltersSheet(
+              context,
+              chat: widget.chat,
+              tileColor: scaffoldTileColor,
+              filters: _filters,
+              onChanged: _onFiltersChanged,
+              typeSection: AttachmentFiltersTypeSection.files,
             ),
           ),
         ];
       case AttachmentSectionType.locations:
-      case AttachmentSectionType.documents:
         return const [];
     }
   }
