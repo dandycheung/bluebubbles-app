@@ -238,6 +238,7 @@ class _MediaGalleryCardState extends State<MediaGalleryCard> with AutomaticKeepA
         });
       } else if (content is Attachment) {
         // Attachment not downloaded yet
+        addPadding = false;
         final mimeType = attachment.mimeType ?? '';
         final friendlyType = mimeTypeToFriendlyName(mimeType);
         final totalBytes = attachment.totalBytes ?? 0;
