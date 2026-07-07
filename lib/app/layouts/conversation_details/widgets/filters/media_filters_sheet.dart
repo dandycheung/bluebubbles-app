@@ -268,9 +268,7 @@ void showAttachmentFiltersSheet(
                                     overflow: TextOverflow.ellipsis,
                                   )
                                 : Text("Filter by Date", style: labelStyle),
-                            onDeleted: currentFilters.sinceDate == null
-                                ? null
-                                : () => updateFilters(clearDate: true),
+                            onDeleted: currentFilters.sinceDate == null ? null : () => updateFilters(clearDate: true),
                             onPressed: () async {
                               final picked = await showTimeframePicker(
                                 "Since When?",

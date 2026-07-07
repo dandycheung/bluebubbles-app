@@ -87,9 +87,7 @@ class MediaSenderFilter {
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
-    return other is MediaSenderFilter &&
-        other.kind == kind &&
-        other.participant?.address == participant?.address;
+    return other is MediaSenderFilter && other.kind == kind && other.participant?.address == participant?.address;
   }
 
   @override

@@ -120,7 +120,6 @@ class StartupTasks {
     GetIt.I.registerSingleton<ChatsService>(ChatsService());
     await ChatsSvc.init(headless: headless);
     Logger.info("ChatsService ready");
-
   }
 
   static Future<void> _initHttpService() async {

@@ -31,12 +31,15 @@ class _SoftDeletedChatsPanelState extends State<SoftDeletedChatsPanel> with Them
       if (mounted) setState(() => _loaded = true);
       return;
     }
-    final query = (Database.chats.query(Chat_.dateDeleted.notNull())
-          ..order(Chat_.dateDeleted, flags: Order.descending))
-        .build();
+    final query =
+        (Database.chats.query(Chat_.dateDeleted.notNull())..order(Chat_.dateDeleted, flags: Order.descending)).build();
     final results = await runAsync(() => query.find());
     query.close();
-    if (mounted) setState(() { _deletedChats = results; _loaded = true; });
+    if (mounted)
+      setState(() {
+        _deletedChats = results;
+        _loaded = true;
+      });
   }
 
   Future<void> _restore(Chat chat) async {

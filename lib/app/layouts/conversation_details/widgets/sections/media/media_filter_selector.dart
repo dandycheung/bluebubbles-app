@@ -57,8 +57,7 @@ class MediaFilterSelector extends StatelessWidget {
                   selectedBackgroundColor: theme.colorScheme.primary,
                 ),
                 segments: [
-                  for (final filter in MediaFilter.values)
-                    ButtonSegment(value: filter, label: Text(filter.label)),
+                  for (final filter in MediaFilter.values) ButtonSegment(value: filter, label: Text(filter.label)),
                 ],
                 selected: {value},
                 onSelectionChanged: (selection) => onChanged(selection.first),

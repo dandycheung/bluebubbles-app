@@ -79,8 +79,7 @@ class _ConversationAttachmentsState extends State<ConversationAttachments> with 
     });
   }
 
-  void _onMediaFilterChanged(MediaFilter filter) =>
-      _onFiltersChanged(_filters.copyWith(mediaFilter: filter));
+  void _onMediaFilterChanged(MediaFilter filter) => _onFiltersChanged(_filters.copyWith(mediaFilter: filter));
 
   @override
   void initState() {
