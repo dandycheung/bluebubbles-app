@@ -208,7 +208,7 @@ class _LinksSectionState extends State<LinksSection> with ThemeHelpers {
                 padding: EdgeInsets.only(
                   left: SettingsSvc.settings.skin.value == Skins.iOS ? 20 : 10,
                   right: SettingsSvc.settings.skin.value == Skins.iOS ? 20 : 10,
-                  top: 0,
+                  top: widget.fullPage ? 10 : 0,
                   bottom: 10,
                 ),
                 sliver: SliverToBoxAdapter(
