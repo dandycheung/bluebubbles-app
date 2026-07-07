@@ -148,11 +148,9 @@ class _DocumentsSectionState extends State<DocumentsSection> with ThemeHelpers {
           )
         else ...[
           Obx(() => SliverPadding(
-                padding: EdgeInsets.only(
-                  left: SettingsSvc.settings.skin.value == Skins.iOS ? 20 : 10,
-                  right: SettingsSvc.settings.skin.value == Skins.iOS ? 20 : 10,
-                  top: 0,
-                  bottom: 10,
+                padding: attachmentSectionListPadding(
+                  fullPage: widget.fullPage,
+                  iOS: SettingsSvc.settings.skin.value == Skins.iOS,
                 ),
                 sliver: SliverGrid(
                   gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(

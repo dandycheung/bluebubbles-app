@@ -1,4 +1,5 @@
 import 'package:bluebubbles/database/models.dart';
+import 'package:flutter/material.dart';
 
 /// Attachment categories shown in conversation details and the attachments page.
 enum AttachmentSectionType {
@@ -10,6 +11,22 @@ enum AttachmentSectionType {
 
 /// Max items shown per section on the conversation details preview.
 const int kAttachmentPreviewLimit = 6;
+
+/// Horizontal inset for attachment section list/grid content.
+int attachmentSectionHorizontalPadding({required bool fullPage, required bool iOS}) {
+  if (fullPage) return iOS ? 12 : 8;
+  return iOS ? 20 : 10;
+}
+
+EdgeInsets attachmentSectionListPadding({
+  required bool fullPage,
+  required bool iOS,
+  double top = 0,
+  double bottom = 10,
+}) {
+  final inset = attachmentSectionHorizontalPadding(fullPage: fullPage, iOS: iOS).toDouble();
+  return EdgeInsets.only(left: inset, right: inset, top: top, bottom: bottom);
+}
 
 enum MediaFilter {
   all,
@@ -23,7 +40,7 @@ extension MediaFilterLabels on MediaFilter {
       case MediaFilter.all:
         return "All";
       case MediaFilter.images:
-        return "Images";
+        return "Photos";
       case MediaFilter.videos:
         return "Videos";
     }
@@ -32,9 +49,9 @@ extension MediaFilterLabels on MediaFilter {
   String get emptyMessage {
     switch (this) {
       case MediaFilter.all:
-        return "No images or videos";
+        return "No photos or videos";
       case MediaFilter.images:
-        return "No images";
+        return "No photos";
       case MediaFilter.videos:
         return "No videos";
     }
@@ -268,7 +285,7 @@ extension AttachmentSectionTypeLabels on AttachmentSectionType {
   String get sectionLabel {
     switch (this) {
       case AttachmentSectionType.media:
-        return "IMAGES & VIDEOS";
+        return "PHOTOS & VIDEOS";
       case AttachmentSectionType.links:
         return "LINKS";
       case AttachmentSectionType.locations:
@@ -282,7 +299,7 @@ extension AttachmentSectionTypeLabels on AttachmentSectionType {
   String get pageTitle {
     switch (this) {
       case AttachmentSectionType.media:
-        return "Images & Videos";
+        return "Photos & Videos";
       case AttachmentSectionType.links:
         return "Links";
       case AttachmentSectionType.locations:

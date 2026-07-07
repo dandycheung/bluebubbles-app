@@ -198,7 +198,7 @@ class _MediaGridSectionState extends State<MediaGridSection> with ThemeHelpers {
             padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 20.0),
             child: Center(
               child: Text(
-                widget.fullPage ? widget.mediaFilter.emptyMessage : "No images or videos",
+                widget.fullPage ? widget.mediaFilter.emptyMessage : "No photos or videos",
                 style: context.theme.textTheme.bodyMedium!.copyWith(
                   color: context.theme.colorScheme.outline,
                 ),
@@ -208,11 +208,10 @@ class _MediaGridSectionState extends State<MediaGridSection> with ThemeHelpers {
         )
       else ...[
         Obx(() => SliverPadding(
-              padding: EdgeInsets.only(
-                left: SettingsSvc.settings.skin.value == Skins.iOS ? 20 : 10,
-                right: SettingsSvc.settings.skin.value == Skins.iOS ? 20 : 10,
+              padding: attachmentSectionListPadding(
+                fullPage: widget.fullPage,
+                iOS: SettingsSvc.settings.skin.value == Skins.iOS,
                 top: widget.fullPage ? 10 : 0,
-                bottom: 10,
               ),
               sliver: SliverGrid(
                 gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(

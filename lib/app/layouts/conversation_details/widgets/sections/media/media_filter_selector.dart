@@ -20,47 +20,50 @@ class MediaFilterSelector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
-      child: Obx(() {
-        SettingsSvc.settings.skin.value;
-        if (_isIOS) {
-          return CupertinoSlidingSegmentedControl<MediaFilter>(
-            groupValue: value,
-            thumbColor: theme.colorScheme.primary,
-            children: {
-              for (final filter in MediaFilter.values)
-                filter: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                  child: Text(
-                    filter.label,
-                    style: TextStyle(
-                      color: value == filter ? theme.colorScheme.onPrimary : null,
+    return Obx(() {
+      SettingsSvc.settings.skin.value;
+      final horizontal = attachmentSectionHorizontalPadding(
+        fullPage: true,
+        iOS: SettingsSvc.settings.skin.value == Skins.iOS,
+      );
+      return Padding(
+        padding: EdgeInsets.fromLTRB(horizontal.toDouble(), 12, horizontal.toDouble(), 4),
+        child: _isIOS
+            ? CupertinoSlidingSegmentedControl<MediaFilter>(
+                groupValue: value,
+                thumbColor: theme.colorScheme.primary,
+                children: {
+                  for (final filter in MediaFilter.values)
+                    filter: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      child: Text(
+                        filter.label,
+                        style: theme.textTheme.bodyLarge!.copyWith(
+                          color: value == filter ? theme.colorScheme.onPrimary : null,
+                        ),
+                      ),
                     ),
-                  ),
+                },
+                onValueChanged: (filter) {
+                  if (filter != null) onChanged(filter);
+                },
+              )
+            : SegmentedButton<MediaFilter>(
+                showSelectedIcon: false,
+                style: SegmentedButton.styleFrom(
+                  textStyle: theme.textTheme.bodyLarge,
+                  foregroundColor: theme.colorScheme.onSurface,
+                  selectedForegroundColor: theme.colorScheme.onPrimary,
+                  selectedBackgroundColor: theme.colorScheme.primary,
                 ),
-            },
-            onValueChanged: (filter) {
-              if (filter != null) onChanged(filter);
-            },
-          );
-        }
-
-        return SegmentedButton<MediaFilter>(
-          showSelectedIcon: false,
-          style: SegmentedButton.styleFrom(
-            foregroundColor: theme.colorScheme.onSurface,
-            selectedForegroundColor: theme.colorScheme.onPrimary,
-            selectedBackgroundColor: theme.colorScheme.primary,
-          ),
-          segments: [
-            for (final filter in MediaFilter.values)
-              ButtonSegment(value: filter, label: Text(filter.label)),
-          ],
-          selected: {value},
-          onSelectionChanged: (selection) => onChanged(selection.first),
-        );
-      }),
-    );
+                segments: [
+                  for (final filter in MediaFilter.values)
+                    ButtonSegment(value: filter, label: Text(filter.label)),
+                ],
+                selected: {value},
+                onSelectionChanged: (selection) => onChanged(selection.first),
+              ),
+      );
+    });
   }
 }

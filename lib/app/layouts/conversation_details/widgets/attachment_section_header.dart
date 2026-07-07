@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// Section header row with ALL CAPS label and always-visible "Show more" action.
+/// Section header row with ALL CAPS label and always-visible "See More" action.
 class AttachmentSectionHeader extends StatelessWidget {
   final String title;
   final VoidCallback onShowMore;
@@ -28,7 +28,7 @@ class AttachmentSectionHeader extends StatelessWidget {
           ),
           TextButton(
             onPressed: onShowMore,
-            child: const Text("Show more"),
+            child: const Text("See More"),
           ),
         ],
       ),

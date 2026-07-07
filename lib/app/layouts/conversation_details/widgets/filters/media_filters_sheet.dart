@@ -171,7 +171,7 @@ void showAttachmentFiltersSheet(
                                 showCheckmark: true,
                                 selected: currentFilters.mediaFilter == MediaFilter.images,
                                 checkmarkColor: primaryColor,
-                                label: Text("Images", style: labelStyle),
+                                label: Text(MediaFilter.images.label, style: labelStyle),
                                 onSelected: (selected) {
                                   updateFilters(type: selected ? MediaFilter.images : MediaFilter.all);
                                 },
@@ -351,6 +351,9 @@ class _ParticipantSenderChip extends StatelessWidget {
 
 /// Filter button with badge, matching the search filters trigger.
 class AttachmentFiltersButton extends StatelessWidget {
+  /// Trailing inset of the tune icon within the 48px [IconButton] touch target.
+  static const double _iconTrailingInset = 12;
+
   final AttachmentFiltersState filters;
   final AttachmentFiltersTypeSection typeSection;
   final Color? iconColor;
@@ -369,34 +372,45 @@ class AttachmentFiltersButton extends StatelessWidget {
     final hasActiveFilter = filters.hasActiveFilter(typeSection);
     final color = iconColor ?? Theme.of(context).colorScheme.primary;
 
-    return SizedBox(
-      width: 48,
-      height: 48,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          if (hasActiveFilter)
-            Positioned(
-              top: 8,
-              right: 8,
-              child: Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primary,
-                  shape: BoxShape.circle,
+    return Obx(() {
+      final horizontalPadding = attachmentSectionHorizontalPadding(
+        fullPage: true,
+        iOS: SettingsSvc.settings.skin.value == Skins.iOS,
+      ).toDouble();
+      final rightMargin = (horizontalPadding - _iconTrailingInset).clamp(0.0, double.infinity);
+
+      return Padding(
+        padding: EdgeInsets.only(right: rightMargin),
+        child: SizedBox(
+          width: 48,
+          height: 48,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              if (hasActiveFilter)
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primary,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
                 ),
+              IconButton(
+                onPressed: () {
+                  HapticFeedback.lightImpact();
+                  onPressed();
+                },
+                icon: Icon(Icons.tune, color: color),
               ),
-            ),
-          IconButton(
-            onPressed: () {
-              HapticFeedback.lightImpact();
-              onPressed();
-            },
-            icon: Icon(Icons.tune, color: color),
+            ],
           ),
-        ],
-      ),
-    );
+        ),
+      );
+    });
   }
 }

@@ -150,11 +150,10 @@ class _LocationsSectionState extends State<LocationsSection> {
           )
         else ...[
           Obx(() => SliverPadding(
-                padding: EdgeInsets.only(
-                  left: SettingsSvc.settings.skin.value == Skins.iOS ? 20 : 10,
-                  right: SettingsSvc.settings.skin.value == Skins.iOS ? 20 : 10,
+                padding: attachmentSectionListPadding(
+                  fullPage: widget.fullPage,
+                  iOS: SettingsSvc.settings.skin.value == Skins.iOS,
                   top: widget.fullPage ? 10 : 0,
-                  bottom: 10,
                 ),
                 sliver: SliverToBoxAdapter(
                   child: MasonryGridView.count(
