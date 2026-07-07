@@ -92,9 +92,7 @@ void showAttachmentFiltersSheet(
                     color: Colors.transparent,
                     child: Padding(
                       padding: const EdgeInsets.only(top: 4, left: 10, right: 10),
-                      child: Wrap(
-                        spacing: 6,
-                        runSpacing: 0,
+                      child: _FilterChipWrap(
                         children: [
                           if (showFromYou)
                             BBChip(
@@ -305,6 +303,35 @@ void showAttachmentFiltersSheet(
       );
     },
   );
+}
+
+/// Wraps filter chips with a max width of ~half the row so long sender labels
+/// ellipsize instead of forcing one chip per line.
+class _FilterChipWrap extends StatelessWidget {
+  final List<Widget> children;
+
+  const _FilterChipWrap({required this.children});
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const spacing = 6.0;
+        final chipMaxWidth = (constraints.maxWidth - spacing) / 2;
+        return Wrap(
+          spacing: spacing,
+          runSpacing: spacing,
+          children: [
+            for (final child in children)
+              ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: chipMaxWidth),
+                child: child,
+              ),
+          ],
+        );
+      },
+    );
+  }
 }
 
 class _ParticipantSenderChip extends StatelessWidget {
