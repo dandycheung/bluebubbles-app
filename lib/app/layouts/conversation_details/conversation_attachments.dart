@@ -1,10 +1,10 @@
 import 'package:bluebubbles/app/layouts/conversation_details/attachment_section_type.dart';
 import 'package:bluebubbles/app/layouts/conversation_details/widgets/attachments_loader.dart';
-import 'package:bluebubbles/app/layouts/conversation_details/widgets/documents_section.dart';
-import 'package:bluebubbles/app/layouts/conversation_details/widgets/links_section.dart';
-import 'package:bluebubbles/app/layouts/conversation_details/widgets/locations_section.dart';
-import 'package:bluebubbles/app/layouts/conversation_details/widgets/media_filters_sheet.dart';
-import 'package:bluebubbles/app/layouts/conversation_details/widgets/media_grid_section.dart';
+import 'package:bluebubbles/app/layouts/conversation_details/widgets/filters/media_filters_sheet.dart';
+import 'package:bluebubbles/app/layouts/conversation_details/widgets/sections/documents/documents_section.dart';
+import 'package:bluebubbles/app/layouts/conversation_details/widgets/sections/links/links_section.dart';
+import 'package:bluebubbles/app/layouts/conversation_details/widgets/sections/locations/locations_section.dart';
+import 'package:bluebubbles/app/layouts/conversation_details/widgets/sections/media/media_grid_section.dart';
 import 'package:bluebubbles/app/state/chat_state_scope.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/app/layouts/settings/widgets/settings_widgets.dart';

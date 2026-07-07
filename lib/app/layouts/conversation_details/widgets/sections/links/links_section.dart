@@ -3,7 +3,7 @@ import 'dart:math';
 import 'package:bluebubbles/app/layouts/conversation_details/attachment_section_type.dart';
 import 'package:bluebubbles/app/layouts/conversation_details/conversation_attachments.dart';
 import 'package:bluebubbles/app/layouts/conversation_details/widgets/attachment_section_header.dart';
-import 'package:bluebubbles/app/layouts/conversation_details/widgets/links_search_helper.dart';
+import 'package:bluebubbles/app/layouts/conversation_details/widgets/sections/links/links_search_helper.dart';
 import 'package:bluebubbles/app/layouts/conversation_list/pages/search/conversation_search_field.dart';
 import 'package:bluebubbles/app/layouts/conversation_view/widgets/message/interactive/url_preview.dart';
 import 'package:bluebubbles/database/database.dart';
