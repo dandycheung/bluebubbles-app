@@ -578,7 +578,7 @@ class NotificationsService {
       _desktopNotificationPlayer = player;
       await player.setVolume(SettingsSvc.settings.desktopNotificationSoundVolume.value.toDouble());
       await player.open(Media(SettingsSvc.settings.desktopNotificationSoundPath.value!));
-      player.stream.completed.firstWhere((completed) => completed).then((_) async {
+      player.stream.completed.firstWhere((completed) => completed, orElse: () => false).then((_) async {
         await Future.delayed(const Duration(milliseconds: 450));
         if (_desktopNotificationPlayer == player) {
           await player.dispose();
