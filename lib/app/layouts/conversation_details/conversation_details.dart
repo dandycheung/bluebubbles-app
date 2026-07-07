@@ -3,10 +3,10 @@ import 'package:flutter_acrylic/flutter_acrylic.dart';
 import 'package:bluebubbles/app/layouts/conversation_details/widgets/chat_info.dart';
 import 'package:bluebubbles/app/state/chat_state_scope.dart';
 import 'package:bluebubbles/app/layouts/conversation_details/widgets/chat_options.dart';
-import 'package:bluebubbles/app/layouts/conversation_details/widgets/documents_section.dart';
-import 'package:bluebubbles/app/layouts/conversation_details/widgets/links_section.dart';
-import 'package:bluebubbles/app/layouts/conversation_details/widgets/locations_section.dart';
-import 'package:bluebubbles/app/layouts/conversation_details/widgets/media_grid_section.dart';
+import 'package:bluebubbles/app/layouts/conversation_details/widgets/sections/documents/documents_section.dart';
+import 'package:bluebubbles/app/layouts/conversation_details/widgets/sections/links/links_section.dart';
+import 'package:bluebubbles/app/layouts/conversation_details/widgets/sections/locations/locations_section.dart';
+import 'package:bluebubbles/app/layouts/conversation_details/widgets/sections/media/media_grid_section.dart';
 import 'package:bluebubbles/app/layouts/conversation_details/widgets/participants_list.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/app/layouts/settings/widgets/settings_widgets.dart';
@@ -225,10 +225,10 @@ class _ConversationDetailsState extends State<ConversationDetails> with WidgetsB
                       padding: EdgeInsets.symmetric(vertical: 10),
                     ),
                     ChatOptions(chat: chat),
-                    MediaGridSection(media: media, selected: selected, isLoading: isLoadingAttachments),
+                    MediaGridSection(chat: chat, media: media, selected: selected, isLoading: isLoadingAttachments),
                     LinksSection(chat: chat),
-                    LocationsSection(locations: locations, isLoading: isLoadingAttachments),
-                    DocumentsSection(docs: docs, isLoading: isLoadingAttachments),
+                    LocationsSection(chat: chat, locations: locations, isLoading: isLoadingAttachments),
+                    DocumentsSection(chat: chat, docs: docs, isLoading: isLoadingAttachments),
                     const SliverPadding(
                       padding: EdgeInsets.only(top: 50),
                     ),
