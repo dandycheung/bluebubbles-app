@@ -3,11 +3,14 @@ package com.bluebubbles.messaging.services.backend_ui_interop
 import android.content.Context
 import android.util.Log
 import androidx.lifecycle.Observer
+import androidx.work.BackoffPolicy
 import androidx.work.Data
 import androidx.work.OneTimeWorkRequest
 import androidx.work.OutOfQuotaPolicy
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
+import androidx.work.WorkRequest
+import java.util.concurrent.TimeUnit
 import com.bluebubbles.messaging.Constants
 import com.google.gson.GsonBuilder
 import com.google.gson.ToNumberPolicy
@@ -23,6 +26,9 @@ object DartWorkManager {
             .create()
         val work = OneTimeWorkRequest.Builder(DartWorker::class.java)
             .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
+            // Retries redeliver dropped events (e.g. notifications); use the minimum
+            // backoff so a retried notification arrives seconds late, not minutes.
+            .setBackoffCriteria(BackoffPolicy.LINEAR, WorkRequest.MIN_BACKOFF_MILLIS, TimeUnit.MILLISECONDS)
             .setInputData(Data.Builder()
                 .putString("method", method)
                 .putString("data", gson.toJson(arguments).toString()).build())

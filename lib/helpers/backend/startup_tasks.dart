@@ -454,6 +454,12 @@ class StartupTasks {
       await NetworkTasks.detectLocalhost();
     }
 
+    // Flush any contact sync deferred while the app was backgrounded
+    // (contact change events are queued instead of synced while cached).
+    if (GetIt.I.isRegistered<ContactServiceV2>() && GetIt.I.isReadySync<ContactServiceV2>()) {
+      unawaited(ContactsSvcV2.runPendingContactSync());
+    }
+
     // On app resume, use the global isolate so it's ready for other tasks.
     if (GetIt.I.isRegistered<SyncService>()) {
       if (!Platform.isAndroid) {

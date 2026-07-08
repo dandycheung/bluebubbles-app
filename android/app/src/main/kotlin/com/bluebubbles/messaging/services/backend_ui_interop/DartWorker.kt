@@ -56,6 +56,23 @@ class DartWorker(context: Context, workerParams: WorkerParameters): ListenableWo
         var workerEngine: FlutterEngine? = null
         var engineReady = Mutex()
         var engineCleanup = Mutex()
+
+        // Number of times a worker is re-enqueued after a transient failure before giving up.
+        // The FCM payload lives in the work's input data, so each retry re-delivers the event.
+        const val MAX_RETRY_ATTEMPTS = 3
+    }
+
+    /// Engine startup and method-channel failures are almost always transient (fresh headless
+    /// process still initializing, engine handshake timeout, Dart handler not yet registered).
+    /// Returning failure() drops the event permanently — retry with a cap instead.
+    private fun retryOrFail(method: String): Result {
+        return if (runAttemptCount < MAX_RETRY_ATTEMPTS) {
+            Log.w(Constants.logTag, "Retrying worker with method $method (attempt ${runAttemptCount + 1} of $MAX_RETRY_ATTEMPTS)")
+            Result.retry()
+        } else {
+            Log.e(Constants.logTag, "Worker with method $method failed after $MAX_RETRY_ATTEMPTS retries — giving up")
+            Result.failure()
+        }
     }
 
     override fun startWork(): ListenableFuture<Result> {
@@ -72,11 +89,16 @@ class DartWorker(context: Context, workerParams: WorkerParameters): ListenableWo
             Log.d(Constants.logTag, "Using DartWorker engine to send to Dart")
         }
         return CoroutineScope(Dispatchers.Main).future {
-            engineReady.withLock {
-                if (MainActivity.getEngine() == null && workerEngine == null) {
-                    Log.d(Constants.logTag, "Initializing engine for worker with method $method")
-                    initNewEngine()
+            try {
+                engineReady.withLock {
+                    if (MainActivity.getEngine() == null && workerEngine == null) {
+                        Log.d(Constants.logTag, "Initializing engine for worker with method $method")
+                        initNewEngine()
+                    }
                 }
+            } catch (e: Exception) {
+                Log.e(Constants.logTag, "Engine init failed for worker with method $method: ${e.message}")
+                return@future retryOrFail(method)
             }
             Log.d(Constants.logTag, "Sending event, '$method' to Dart")
 
@@ -84,7 +106,7 @@ class DartWorker(context: Context, workerParams: WorkerParameters): ListenableWo
                 var engineToUse: FlutterEngine? = MainActivity.getEngine() ?: workerEngine
                 if (engineToUse == null) {
                     Log.d(Constants.logTag, "Engine is null, cannot send method $method to Dart")
-                    return@future Result.failure()
+                    return@future retryOrFail(method)
                 }
 
                 Log.d(Constants.logTag, "Registering engine lifecycle listener")
@@ -110,14 +132,16 @@ class DartWorker(context: Context, workerParams: WorkerParameters): ListenableWo
                             }
     
                             override fun error(errorCode: String, errorMessage: String?, errorDetails: Any?) {
-                                Log.e(Constants.logTag, "Worker with method $method failed!")
-                                if (cont.isActive) cont.resume(Result.failure())
+                                Log.e(Constants.logTag, "Worker with method $method failed! ($errorCode: $errorMessage)")
+                                if (cont.isActive) cont.resume(retryOrFail(method))
                                 closeEngineIfNeeded()
                             }
-    
+
                             override fun notImplemented() {
+                                // notImplemented also fires when the Dart side hasn't registered its
+                                // method-call handler yet (engine still starting up), so treat it as transient.
                                 Log.e(Constants.logTag, "Worker with method $method not implemented on Dart side")
-                                if (cont.isActive) cont.resume(Result.failure())
+                                if (cont.isActive) cont.resume(retryOrFail(method))
                                 closeEngineIfNeeded()
                             }
                         })
@@ -127,14 +151,15 @@ class DartWorker(context: Context, workerParams: WorkerParameters): ListenableWo
                 if (callResult == null) {
                     Log.e(Constants.logTag, "Method $method invocation timed out after 120s")
                     closeEngineIfNeeded()
-                    return@future Result.failure()
+                    return@future retryOrFail(method)
                 }
 
-                Log.d(Constants.logTag, "Worker with method $method completed successfully")
-                return@future Result.success()
+                // callResult carries the outcome resumed by the method-channel callback
+                // (success, retry, or failure) — don't collapse it to success.
+                return@future callResult
             } catch (e: Exception) {
                 Log.d(Constants.logTag, "Error sending method $method to Dart: ${e.message}")
-                return@future Result.failure()
+                return@future retryOrFail(method)
             }
         }
     }
