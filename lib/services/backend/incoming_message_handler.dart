@@ -379,7 +379,9 @@ class IncomingMessageHandler {
         unawaited(ChatsSvc.setChatHasUnread(c, false, force: true));
       }
 
-      ChatsSvc.updateChat(c, override: true);
+      if (!ChatsSvc.updateChat(c, override: true)) {
+        await ChatsSvc.addChat(c, immediate: true);
+      }
       ChatsSvc.updateChatLatestMessage(c.guid, saved);
     }
 
