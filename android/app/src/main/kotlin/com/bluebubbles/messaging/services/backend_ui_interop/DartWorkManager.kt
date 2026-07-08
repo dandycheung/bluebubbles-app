@@ -36,29 +36,34 @@ object DartWorkManager {
             .build()
         WorkManager.getInstance(context).enqueue(work)
 
-        // Observe when the worker is finished and run the provided callback
-        lateinit var observer: Observer<WorkInfo>
-        observer = Observer { workInfo ->
-            if (workInfo.state.isFinished) {
-                Log.d(Constants.logTag, "Running callback after worker with method $method completed (state: ${workInfo.state})")
-                try {
-                    callback()
-                } catch (e: Exception) {
-                    Log.e(Constants.logTag, "Error running callback for worker $method", e)
-                }
-                CoroutineScope(Dispatchers.Main).launch {
-                    try {
-                        WorkManager.getInstance(context).getWorkInfoByIdLiveData(work.id).removeObserver(observer)
-                    } catch (e: Exception) {
-                        Log.e(Constants.logTag, "Error removing observer for worker $method", e)
-                    }
-                }
-            }
-        }
-        // Cannot observe unless running on main thread
+        // Observe when the worker is finished and run the provided callback.
+        // Everything runs on the main thread (LiveData requirement), and we must hold
+        // the ONE LiveData instance: getWorkInfoByIdLiveData returns a new instance per
+        // call, so removing the observer from a second instance would be a no-op and
+        // leak the observer (and its Room subscription) for the life of the process.
         CoroutineScope(Dispatchers.Main).launch {
             try {
-                WorkManager.getInstance(context).getWorkInfoByIdLiveData(work.id).observeForever(observer)
+                val liveData = WorkManager.getInstance(context).getWorkInfoByIdLiveData(work.id)
+                // WorkInfo? — the LiveData emits null once the work record is pruned;
+                // a non-null Observer<WorkInfo> would NPE on that emission and crash the process.
+                lateinit var observer: Observer<WorkInfo?>
+                observer = Observer { workInfo ->
+                    if (workInfo != null && !workInfo.state.isFinished) return@Observer
+                    // Remove first (we're on the main thread, so this is synchronous) so a
+                    // re-emission can't run the callback twice.
+                    liveData.removeObserver(observer)
+                    if (workInfo == null) {
+                        Log.w(Constants.logTag, "Work record for method $method was pruned before completion was observed")
+                        return@Observer
+                    }
+                    Log.d(Constants.logTag, "Running callback after worker with method $method completed (state: ${workInfo.state})")
+                    try {
+                        callback()
+                    } catch (e: Exception) {
+                        Log.e(Constants.logTag, "Error running callback for worker $method", e)
+                    }
+                }
+                liveData.observeForever(observer)
             } catch (e: Exception) {
                 Log.e(Constants.logTag, "Error observing worker $method", e)
             }
