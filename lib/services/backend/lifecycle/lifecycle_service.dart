@@ -25,12 +25,15 @@ class LifecycleService with WidgetsBindingObserver {
   bool windowFocused = true;
   bool? wasActiveAliveBefore;
 
-  bool get isAlive => kIsWeb
-      ? !(window.document.hidden ?? false)
-      : kIsDesktop
-          ? windowFocused
-          : (WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed ||
-              IsolateNameServer.lookupPortByName('bg_isolate') != null);
+  bool get isAlive {
+    if (kIsWeb) return !(window.document.hidden ?? false);
+    if (kIsDesktop) return windowFocused;
+    // Headless isolates may not have a widgets binding (e.g. the GlobalIsolate),
+    // where touching WidgetsBinding.instance throws — rely on the port marker only.
+    if (headless) return IsolateNameServer.lookupPortByName('bg_isolate') != null;
+    return WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed ||
+        IsolateNameServer.lookupPortByName('bg_isolate') != null;
+  }
 
   AppLifecycleState? get currentState => WidgetsBinding.instance.lifecycleState;
 
@@ -41,6 +44,16 @@ class LifecycleService with WidgetsBindingObserver {
       statesSinceLastResume.contains(AppLifecycleState.inactive) ||
       statesSinceLastResume.contains(AppLifecycleState.detached);
   bool get hasResumed => statesSinceLastResume.contains(AppLifecycleState.resumed);
+
+  /// Whether the app was genuinely backgrounded since the last resume — sent to
+  /// the app switcher or home screen (`paused`), or the activity was destroyed
+  /// (`detached`). Deliberately does NOT count `hidden`: overlays launched from
+  /// within the app (share sheet, file picker, etc.) hide the activity without
+  /// the user ever leaving it, and resuming from those should not be treated as
+  /// a return from the background.
+  bool get wasBackgrounded =>
+      statesSinceLastResume.contains(AppLifecycleState.paused) ||
+      statesSinceLastResume.contains(AppLifecycleState.detached);
 
   Future<void> init({bool headless = false, bool isBubble = false}) async {
     Logger.debug("Initializing LifecycleService${headless ? " in headless mode" : ""}");
@@ -104,7 +117,7 @@ class LifecycleService with WidgetsBindingObserver {
       if (isBubble) {
         closeBubble();
       } else {
-        unawaited(close());
+        unawaited(close(triggerState: state));
       }
     }
 
@@ -153,10 +166,30 @@ class LifecycleService with WidgetsBindingObserver {
     IsolateNameServer.registerPortWithName(port.sendPort, 'bg_isolate');
   }
 
-  Future<void> close() async {
+  /// [triggerState] is the lifecycle state that caused this close. Cleanup
+  /// decisions must use it rather than the live [currentState]: by the time the
+  /// awaits below complete, the state may have moved on (e.g. paused → detached
+  /// when the activity is destroyed), which previously skipped cleanup entirely
+  /// and left the app permanently reporting isAlive == true.
+  Future<void> close({AppLifecycleState? triggerState}) async {
     // DO NOT remove observer here, it needs to stay registered to receive resumed events.
     // Leaving this commented out as a reminder.
     // WidgetsBinding.instance.removeObserver(this);
+
+    // Flip liveness state FIRST and synchronously — everything below can await
+    // (or fail), and isAlive must not report "alive" while we're backgrounded.
+    if (kIsDesktop) {
+      windowFocused = false;
+    }
+
+    // `hidden` is deliberately NOT treated as backgrounded: in-app overlays
+    // (share sheet, file picker) hide the activity without the user leaving
+    // the app, and we don't want liveness or sync behavior to change for those.
+    final backgrounded =
+        triggerState == AppLifecycleState.paused || triggerState == AppLifecycleState.detached;
+    if (Platform.isAndroid && backgrounded) {
+      IsolateNameServer.removePortNameMapping('bg_isolate');
+    }
 
     if (kIsDesktop && GetIt.I.isRegistered<ChatsService>()) {
       wasActiveAliveBefore = ChatsSvc.activeChat?.isAlive.value;
@@ -168,15 +201,23 @@ class LifecycleService with WidgetsBindingObserver {
 
     // Stop any active typing indicators before draining the isolate so the
     // HTTP request completes and the recipient's typing indicator is cleared.
+    // Never let a failed network call abort the rest of the teardown — this
+    // previously leaked the alive-marker port and left the socket connected
+    // in the background.
     if (GetIt.I.isRegistered<TypingIndicatorService>()) {
-      await TypingIndicatorSvc.stopAllTyping();
+      try {
+        await TypingIndicatorSvc.stopAllTyping();
+      } catch (e, stack) {
+        Logger.warn("Failed to stop typing indicators during close",
+            error: e, trace: stack, tag: "LifecycleService");
+      }
     }
 
-    // Only stop the isolate and disconnect if the app is paused.
-    // This is when the app is actually in the background. If it's inactive or hidden,
-    // the app is still technically in the foregronud, but might just be obscured.
-    if (Platform.isAndroid && currentState == AppLifecycleState.paused) {
-      IsolateNameServer.removePortNameMapping('bg_isolate');
+    // Only stop the isolate and disconnect if the app is actually backgrounded
+    // (paused, or detached when the activity is destroyed). If it's inactive or
+    // hidden, the app may still technically be in the foreground, just obscured.
+    if (Platform.isAndroid &&
+        (triggerState == AppLifecycleState.paused || triggerState == AppLifecycleState.detached)) {
       if (GetIt.I.isRegistered<SocketService>()) {
         GetIt.I<SocketService>().disconnect();
       }
@@ -195,10 +236,6 @@ class LifecycleService with WidgetsBindingObserver {
         ConversationViewController _cvc = cvc(activeChat.chat);
         _cvc.lastFocusedNode.unfocus();
       }
-    }
-
-    if (kIsDesktop) {
-      windowFocused = false;
     }
   }
 

@@ -54,6 +54,12 @@ class IntentsService {
   void handleIntent(Intent? intent) async {
     if (intent == null) return;
 
+    // Every activity launch tells us whether we're running as a bubble. Set it
+    // for ALL intents, not just chat-opens — otherwise isBubble stays true after
+    // a bubble session when the app is next opened from the launcher or a share
+    // sheet, misrouting lifecycle teardown to closeBubble() indefinitely.
+    LifecycleSvc.isBubble = intent.extra?["bubble"] == true;
+
     switch (intent.action) {
       case "android.intent.action.SEND":
       case "android.intent.action.SEND_MULTIPLE":
@@ -105,8 +111,6 @@ class IntentsService {
           }
         } else if (intent.extra?["chatGuid"] != null) {
           final guid = intent.extra!["chatGuid"]!;
-          final bubble = intent.extra!["bubble"] == true;
-          LifecycleSvc.isBubble = bubble;
           await openChat(guid);
         } else if (intent.extra?["callUuid"] != null) {
           await StartupTasks.waitForUI();

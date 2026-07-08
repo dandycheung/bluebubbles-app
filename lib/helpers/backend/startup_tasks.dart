@@ -466,7 +466,10 @@ class StartupTasks {
         unawaited(SyncSvc.startIncrementalSync(useGlobalIsolate: true));
       } else if (lifecycle == null ||
           !lifecycle.hasResumed ||
-          (lifecycle.currentState == AppLifecycleState.resumed && lifecycle.wasPaused)) {
+          // wasBackgrounded (paused/detached, NOT hidden): sync only when the user
+          // actually left the app — not when resuming from an in-app overlay like
+          // the share sheet, which hides the activity without leaving the app.
+          (lifecycle.currentState == AppLifecycleState.resumed && lifecycle.wasBackgrounded)) {
         unawaited(SyncSvc.startIncrementalSync(useGlobalIsolate: true));
       }
     }
