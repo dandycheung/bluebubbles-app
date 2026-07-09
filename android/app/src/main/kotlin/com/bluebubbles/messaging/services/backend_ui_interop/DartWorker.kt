@@ -11,6 +11,7 @@ import androidx.work.WorkerParameters
 import com.bluebubbles.messaging.Constants
 import com.bluebubbles.messaging.MainActivity
 import com.bluebubbles.messaging.R
+import com.bluebubbles.messaging.utils.PersistentLog
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.gson.GsonBuilder
@@ -59,18 +60,27 @@ class DartWorker(context: Context, workerParams: WorkerParameters): ListenableWo
 
         // Number of times a worker is re-enqueued after a transient failure before giving up.
         // The FCM payload lives in the work's input data, so each retry re-delivers the event.
-        const val MAX_RETRY_ATTEMPTS = 3
+        // With the exponential backoff configured in DartWorkManager (10s base), retries land
+        // at roughly 10s/20s/40s/80s/160s — spanning ~5 minutes so they can outlast a
+        // memory-pressure spike instead of all burning out inside it.
+        const val MAX_RETRY_ATTEMPTS = 5
+
+        // Cold engine boots on a thrashing device can legitimately take a long time
+        const val ENGINE_READY_TIMEOUT_MS = 60_000L
     }
 
     /// Engine startup and method-channel failures are almost always transient (fresh headless
     /// process still initializing, engine handshake timeout, Dart handler not yet registered).
     /// Returning failure() drops the event permanently — retry with a cap instead.
-    private fun retryOrFail(method: String): Result {
+    /// Every decision is persisted via PersistentLog so failures survive logcat rollover.
+    private fun retryOrFail(method: String, reason: String): Result {
         return if (runAttemptCount < MAX_RETRY_ATTEMPTS) {
-            Log.w(Constants.logTag, "Retrying worker with method $method (attempt ${runAttemptCount + 1} of $MAX_RETRY_ATTEMPTS)")
+            Log.w(Constants.logTag, "Retrying worker with method $method: $reason (attempt ${runAttemptCount + 1} of $MAX_RETRY_ATTEMPTS)")
+            PersistentLog.log(applicationContext, "Worker '$method' failed: $reason — retrying (attempt ${runAttemptCount + 1} of $MAX_RETRY_ATTEMPTS)")
             Result.retry()
         } else {
-            Log.e(Constants.logTag, "Worker with method $method failed after $MAX_RETRY_ATTEMPTS retries — giving up")
+            Log.e(Constants.logTag, "Worker with method $method failed after $MAX_RETRY_ATTEMPTS retries — giving up ($reason)")
+            PersistentLog.log(applicationContext, "Worker '$method' failed: $reason — GIVING UP after $MAX_RETRY_ATTEMPTS retries, event dropped")
             Result.failure()
         }
     }
@@ -101,14 +111,14 @@ class DartWorker(context: Context, workerParams: WorkerParameters): ListenableWo
                 }
             } catch (e: Exception) {
                 Log.e(Constants.logTag, "Engine init failed for worker with method $method: ${e.message}")
-                return@future retryOrFail(method)
+                return@future retryOrFail(method, "engine init failed: ${e.message}")
             }
             Log.d(Constants.logTag, "Sending event, '$method' to Dart")
 
             try {
                 if (engineToUse == null) {
                     Log.d(Constants.logTag, "Engine is null, cannot send method $method to Dart")
-                    return@future retryOrFail(method)
+                    return@future retryOrFail(method, "engine was null after init")
                 }
 
                 Log.d(Constants.logTag, "Invoking method channel...")
@@ -123,7 +133,7 @@ class DartWorker(context: Context, workerParams: WorkerParameters): ListenableWo
     
                             override fun error(errorCode: String, errorMessage: String?, errorDetails: Any?) {
                                 Log.e(Constants.logTag, "Worker with method $method failed! ($errorCode: $errorMessage)")
-                                if (cont.isActive) cont.resume(retryOrFail(method))
+                                if (cont.isActive) cont.resume(retryOrFail(method, "Dart returned error $errorCode: $errorMessage"))
                                 closeEngineIfNeeded()
                             }
 
@@ -131,7 +141,7 @@ class DartWorker(context: Context, workerParams: WorkerParameters): ListenableWo
                                 // notImplemented also fires when the Dart side hasn't registered its
                                 // method-call handler yet (engine still starting up), so treat it as transient.
                                 Log.e(Constants.logTag, "Worker with method $method not implemented on Dart side")
-                                if (cont.isActive) cont.resume(retryOrFail(method))
+                                if (cont.isActive) cont.resume(retryOrFail(method, "method not implemented on Dart side"))
                                 closeEngineIfNeeded()
                             }
                         })
@@ -141,7 +151,7 @@ class DartWorker(context: Context, workerParams: WorkerParameters): ListenableWo
                 if (callResult == null) {
                     Log.e(Constants.logTag, "Method $method invocation timed out after 120s")
                     closeEngineIfNeeded()
-                    return@future retryOrFail(method)
+                    return@future retryOrFail(method, "method invocation timed out after 120s")
                 }
 
                 // callResult carries the outcome resumed by the method-channel callback
@@ -149,7 +159,7 @@ class DartWorker(context: Context, workerParams: WorkerParameters): ListenableWo
                 return@future callResult
             } catch (e: Exception) {
                 Log.d(Constants.logTag, "Error sending method $method to Dart: ${e.message}")
-                return@future retryOrFail(method)
+                return@future retryOrFail(method, "exception sending to Dart: ${e.message}")
             }
         }
     }
@@ -169,7 +179,7 @@ class DartWorker(context: Context, workerParams: WorkerParameters): ListenableWo
             val info = ApplicationInfoLoader.load(applicationContext)
             workerEngine = FlutterEngine(applicationContext, null, FlutterJNI(), null, false)
             registerWorkerPlugins(workerEngine!!)
-            val ready = withTimeoutOrNull(30_000L) {
+            val ready = withTimeoutOrNull(ENGINE_READY_TIMEOUT_MS) {
                 suspendCancellableCoroutine<Unit> { cont ->
                     // set up the method channel to receive events from Dart
                     MethodChannel(workerEngine!!.dartExecutor.binaryMessenger, Constants.methodChannel).setMethodCallHandler {
@@ -191,10 +201,11 @@ class DartWorker(context: Context, workerParams: WorkerParameters): ListenableWo
             }
 
             if (ready == null) {
-                throw Exception("DartWorker engine 'ready' handshake timed out after 30s")
+                throw Exception("DartWorker engine 'ready' handshake timed out after ${ENGINE_READY_TIMEOUT_MS / 1000}s")
             }
         } catch (e: Exception) {
             Log.e(Constants.logTag, "Engine init failed (${e.message}) — destroying engine")
+            PersistentLog.log(applicationContext, "DartWorker engine init failed: ${e.message} — engine destroyed")
             workerEngine?.destroy()
             workerEngine = null
             throw e

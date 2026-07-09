@@ -26,9 +26,11 @@ object DartWorkManager {
             .create()
         val work = OneTimeWorkRequest.Builder(DartWorker::class.java)
             .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
-            // Retries redeliver dropped events (e.g. notifications); use the minimum
-            // backoff so a retried notification arrives seconds late, not minutes.
-            .setBackoffCriteria(BackoffPolicy.LINEAR, WorkRequest.MIN_BACKOFF_MILLIS, TimeUnit.MILLISECONDS)
+            // Retries redeliver dropped events (e.g. notifications). Exponential from the
+            // 10s minimum (~10s/20s/40s/80s/160s) so the retry window spans ~5 minutes —
+            // long enough to outlast a memory-pressure spike that makes cold engine boots
+            // fail repeatedly, while the first retry still lands within seconds.
+            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, WorkRequest.MIN_BACKOFF_MILLIS, TimeUnit.MILLISECONDS)
             .setInputData(Data.Builder()
                 .putString("method", method)
                 .putString("data", gson.toJson(arguments).toString()).build())

@@ -24,7 +24,7 @@ class BlueBubblesFirebaseMessagingService: FirebaseMessagingService() {
 
         // check if the user configured "Send Events to Tasker"
         val prefs = applicationContext.getSharedPreferences("FlutterSharedPreferences", 0)
-        if (prefs.getBoolean("flutter.sendEventsToTasker", false)) {
+        if (prefs.getBoolean("sendEventsToTasker", false)) {
             Utils.getServerUrl(applicationContext, object : MethodChannel.Result {
                 override fun success(result: Any?) {
                     Log.d(Constants.logTag, "Got URL: $result - sending to Tasker...")

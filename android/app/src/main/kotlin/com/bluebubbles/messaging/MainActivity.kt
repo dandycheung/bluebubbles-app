@@ -87,7 +87,7 @@ class MainActivity : FlutterFragmentActivity() {
             Log.d(Constants.logTag, "BlueBubbles activity is being destroyed by the system")
 
             val prefs = applicationContext.getSharedPreferences("FlutterSharedPreferences", 0)
-            val keepAppAlive: Boolean = prefs.getBoolean("flutter.keepAppAlive", false)
+            val keepAppAlive: Boolean = prefs.getBoolean("keepAppAlive", false)
 
             // Create an intent to start the foreground service
             if (keepAppAlive) {

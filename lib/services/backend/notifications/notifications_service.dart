@@ -197,10 +197,11 @@ class NotificationsService {
   }
 
   Future<void> tryCreateNewMessageNotification(Message message, Chat chat) async {
-    if (message.isFromMe! || !message.handleRelation.hasValue) {
+    if ((message.isFromMe ?? false) || !message.handleRelation.hasValue) {
       if (!(message.isFromMe ?? false) && !message.handleRelation.hasValue) {
-        Logger.warn(
-          'Skipping notification for ${message.guid} — handle relation not resolved',
+        Logger.error(
+          'Skipping notification for ${message.guid} in chat ${chat.guid} — '
+          'handle relation not resolved (handleId=${message.handleId})',
           tag: 'NotificationsService',
         );
       }

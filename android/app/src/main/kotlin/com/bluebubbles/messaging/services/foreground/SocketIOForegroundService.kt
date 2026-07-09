@@ -81,10 +81,10 @@ class SocketIOForegroundService : Service() {
 
         try {
             val prefs = applicationContext.getSharedPreferences("FlutterSharedPreferences", 0)
-            val serverUrl: String? = prefs.getString("flutter.serverAddress", null)
-            val keepAppAlive: Boolean = prefs.getBoolean("flutter.keepAppAlive", false)
-            val storedPassword: String? = prefs.getString("flutter.guidAuthKey", null)
-            val customHeaders: String? = prefs.getString("flutter.customHeaders", null)
+            val serverUrl: String? = prefs.getString("serverAddress", null)
+            val keepAppAlive: Boolean = prefs.getBoolean("keepAppAlive", false)
+            val storedPassword: String? = prefs.getString("guidAuthKey", null)
+            val customHeaders: String? = prefs.getString("customHeaders", null)
 
             // Make sure the user has enabled the service
             if (!keepAppAlive) {

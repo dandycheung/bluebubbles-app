@@ -41,12 +41,12 @@ class FirebaseAuthHandler: MethodCallHandlerImpl() {
 
         // Fetch Firebase details directly from preferences
         val prefs = context.getSharedPreferences("FlutterSharedPreferences", 0)
-        val projectId: String? = prefs.getString("flutter.projectID", null)
-        val storageBucket: String? = prefs.getString("flutter.storageBucket", null)
-        val apiKey: String = prefs.getString("flutter.apiKey", null)!!
-        val databaseUrl: String? = prefs.getString("flutter.firebaseURL", null)
-        val gcmSenderId: String? = prefs.getString("flutter.clientID", null)
-        val applicationId: String = prefs.getString("flutter.applicationID", null)!!
+        val projectId: String? = prefs.getString("projectID", null)
+        val storageBucket: String? = prefs.getString("storageBucket", null)
+        val apiKey: String = prefs.getString("apiKey", null)!!
+        val databaseUrl: String? = prefs.getString("firebaseURL", null)
+        val gcmSenderId: String? = prefs.getString("clientID", null)
+        val applicationId: String = prefs.getString("applicationID", null)!!
 
         Log.d(Constants.logTag, "Authenticating client $applicationId with Firebase...")
         // Get a FirebaseApp (manually provide config since we fetch it dynamically)

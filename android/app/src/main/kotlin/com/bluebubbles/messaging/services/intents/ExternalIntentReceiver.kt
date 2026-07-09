@@ -19,7 +19,7 @@ class ExternalIntentReceiver: BroadcastReceiver() {
                 val password = intent.extras?.getString("password")
                 val identifier = intent.extras?.getString("id")
                 val prefs = context.getSharedPreferences("FlutterSharedPreferences", 0)
-                val storedPassword = prefs.getString("flutter.guidAuthKey", "")
+                val storedPassword = prefs.getString("guidAuthKey", "")
 
                 if (password == storedPassword) {
                     Utils.getServerUrl(context, object : MethodChannel.Result {

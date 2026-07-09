@@ -80,13 +80,13 @@ class InternalIntentReceiver: BroadcastReceiver() {
                     val messagingStyle = oldStyle ?: run {
                         Log.w(Constants.logTag, "Could not extract MessagingStyle, creating new one for reply")
                         Notification.MessagingStyle(Person.Builder()
-                            .setName(prefs.getString("flutter.userName", "You"))
+                            .setName(prefs.getString("userName", "You"))
                             .build()
                         )
                     }
                     val sender = Person.Builder()
-                        .setName(prefs.getString("flutter.userName", "You"))
-                    val avatarPath = prefs.getString("flutter.userAvatarPath", "")
+                        .setName(prefs.getString("userName", "You"))
+                    val avatarPath = prefs.getString("userAvatarPath", "")
                     if (avatarPath!!.isNotEmpty()) {
                         val file = File(avatarPath)
                         val bytes = ByteArray(file.length().toInt())

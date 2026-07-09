@@ -18,7 +18,7 @@ class AutoStartReceiver: BroadcastReceiver() {
             Intent.ACTION_BOOT_COMPLETED -> {
                 // Check to see if the foreground service is enabled
                 val prefs = context.getSharedPreferences("FlutterSharedPreferences", 0)
-                val keepAppAlive: Boolean = prefs.getBoolean("flutter.keepAppAlive", false)
+                val keepAppAlive: Boolean = prefs.getBoolean("keepAppAlive", false)
 
                 // If the service is enabled, start it
                 if (keepAppAlive) {
