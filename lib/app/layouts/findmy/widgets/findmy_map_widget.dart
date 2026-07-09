@@ -87,7 +87,9 @@ class FindMyMapWidget extends StatelessWidget {
   }
 
   Widget _buildDevicePopup(BuildContext context, FindMyDevice item) {
-    return Obx(() => Padding(
+    return Obx(() {
+      final hideContactInfo = shouldRedactFindMyContactInfo();
+      return Padding(
           padding: const EdgeInsets.only(bottom: 5.0),
           child: Container(
             decoration: BoxDecoration(
@@ -99,21 +101,29 @@ class FindMyMapWidget extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(SettingsSvc.settings.redactedMode.value ? "Device" : (item.name ?? "Unknown Device"),
+                Text(hideContactInfo ? "Device" : (item.name ?? "Unknown Device"),
                     style: context.theme.textTheme.labelLarge),
                 Text(
-                    SettingsSvc.settings.redactedMode.value
+                    hideContactInfo
                         ? "Location"
                         : (item.address?.label ?? item.address?.mapItemFullAddress ?? "No location found"),
                     style: context.theme.textTheme.bodySmall),
               ],
             ),
           ),
-        ));
+        );
+    });
   }
 
   Widget _buildFriendPopup(BuildContext context, FindMyFriend item) {
-    return Obx(() => Padding(
+    return Obx(() {
+      final hideContactInfo = shouldRedactFindMyContactInfo();
+      final handleState = item.handle != null ? HandleSvc.getOrCreateHandleState(item.handle!) : null;
+      final displayName = hideContactInfo
+          ? (handleState?.fakeName ?? 'Contact')
+          : (item.handle?.displayName ?? item.title ?? "Unknown Friend");
+
+      return Padding(
           padding: const EdgeInsets.only(bottom: 5.0),
           child: Container(
             decoration: BoxDecoration(
@@ -125,9 +135,8 @@ class FindMyMapWidget extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(item.handle?.displayName ?? item.title ?? "Unknown Friend",
-                    style: context.theme.textTheme.labelLarge),
-                Text(SettingsSvc.settings.redactedMode.value ? "Location" : (item.longAddress ?? "No location found"),
+                Text(displayName, style: context.theme.textTheme.labelLarge),
+                Text(hideContactInfo ? "Location" : (item.longAddress ?? "No location found"),
                     style: context.theme.textTheme.bodySmall),
                 if (item.lastUpdated != null && item.status != LocationStatus.live)
                   Text("Last updated ${buildDate(item.lastUpdated)}", style: context.theme.textTheme.bodySmall),
@@ -136,6 +145,7 @@ class FindMyMapWidget extends StatelessWidget {
               ],
             ),
           ),
-        ));
+        );
+    });
   }
 }
