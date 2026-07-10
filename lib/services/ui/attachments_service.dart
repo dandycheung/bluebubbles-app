@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:convert';
 
 import 'package:bluebubbles/database/models.dart';
@@ -406,18 +405,15 @@ class AttachmentsService extends GetxService {
       final pngFile = File(attachment.convertedPath);
       final thumbnail = File("${attachment.path}.thumbnail");
       final pngThumbnail = File("${attachment.convertedPath}.thumbnail");
+      final partial = File("${attachment.path}.part");
 
       try {
         if (await file.exists()) await file.delete();
         if (await pngFile.exists()) await pngFile.delete();
         if (await thumbnail.exists()) await thumbnail.delete();
         if (await pngThumbnail.exists()) await pngThumbnail.delete();
+        if (await partial.exists()) await partial.delete();
       } catch (_) {}
-
-      // Drop any stale decode from Flutter's in-memory image cache so the freshly
-      // downloaded bytes are re-decoded rather than serving the old (possibly failed)
-      // FileImage entry keyed by the now-reused file path.
-      evictImageCache(attachment);
     }
 
     bool updateAttachment = false;
@@ -523,19 +519,6 @@ class AttachmentsService extends GetxService {
     } catch (_) {
       return false;
     }
-  }
-
-  /// Evicts this attachment's decoded image from Flutter's in-memory [ImageCache].
-  ///
-  /// The cache is keyed by the [FileImage] provider (file path + scale). Because
-  /// [Attachment.path] is deterministic, a failed or partial decode stays cached for
-  /// the whole app session and any newly-written bytes at the same path keep serving the
-  /// stale result. Call this whenever the bytes on disk change (download complete,
-  /// redownload) so the next decode reads fresh bytes. No-op on web (no file paths).
-  void evictImageCache(Attachment attachment) {
-    if (kIsWeb) return;
-    unawaited(FileImage(File(attachment.path)).evict());
-    unawaited(FileImage(File(attachment.convertedPath)).evict());
   }
 
   /// Converts HEIC/TIFF images to PNG if needed (only on platforms that don't support them natively).
