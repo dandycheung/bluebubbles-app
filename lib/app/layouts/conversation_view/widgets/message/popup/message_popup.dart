@@ -174,8 +174,9 @@ class _MessagePopupState extends State<MessagePopup> with SingleTickerProviderSt
   }
 
   void popDetails({bool returnVal = true}) {
-    Navigator.popUntil(context, (route) => route is! DialogRoute);
-    Navigator.of(context).pop(returnVal);
+    final navigator = Navigator.of(context, rootNavigator: true);
+    navigator.popUntil((route) => route is! DialogRoute);
+    navigator.pop(returnVal);
   }
 
   @override
