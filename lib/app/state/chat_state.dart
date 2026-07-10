@@ -382,11 +382,17 @@ class ChatState {
     // Rebuild participants from the fresh DB handles on the incoming chat object so
     // we never read the stale cached ToMany on the original ChatState.chat.
     _updateParticipantsInternal(updatedChat.handles.toList());
-    updateLatestMessageInternal(updatedChat.dbLatestMessage.target);
-    // Refresh the title & subtitle so it reflects any updated handle display names
+    // Don't blank an existing preview when the incoming chat arrives without its
+    // dbLatestMessage relation loaded (e.g. a bare DB re-query). The latest
+    // message only moves forward; updateChatLatestMessage sets it authoritatively.
+    final incomingLatest = updatedChat.dbLatestMessage.target;
+    if (incomingLatest != null) {
+      updateLatestMessageInternal(incomingLatest);
+      updateSubtitleInternal(_computeSubtitle(incomingLatest));
+    }
+    // Refresh the title so it reflects any updated handle display names
     // (e.g. a group-event whose sender handle was just added to the DB).
     updateTitleInternal(_computeTitle());
-    updateSubtitleInternal(_computeSubtitle(updatedChat.dbLatestMessage.target));
 
     // NOTE: textFieldText and textFieldAttachments are intentionally NOT synced here.
     // They are purely client-side fields managed exclusively by setChatTextFieldText /

@@ -379,6 +379,10 @@ class IncomingMessageHandler {
         unawaited(ChatsSvc.setChatHasUnread(c, false, force: true));
       }
 
+      // Seed the latest message before the ChatState is built so a freshly-added
+      // chat's tile has its subtitle on first paint.
+      c.setLatestMessage(saved);
+
       if (!ChatsSvc.updateChat(c, override: true)) {
         await ChatsSvc.addChat(c, immediate: true);
       }
