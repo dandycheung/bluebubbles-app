@@ -441,10 +441,28 @@ class StartupTasks {
         // On desktop, always restore focus when the app is resumed (window regains focus).
         // On mobile, only refocus if the user has auto-open keyboard enabled AND the
         // conversation view is the active route (not obscured by ConversationDetails etc.).
-        if (kIsDesktop || SettingsSvc.settings.autoOpenKeyboard.value) {
-          ConversationViewController _cvc = cvc(activeChat.chat);
-          if (!_cvc.showingOverlays && !_cvc.showingSubRoute && _cvc.editing.isEmpty) {
+        ConversationViewController _cvc = cvc(activeChat.chat);
+        if (!_cvc.showingOverlays && !_cvc.showingSubRoute && _cvc.editing.isEmpty) {
+          if (kIsDesktop || SettingsSvc.settings.autoOpenKeyboard.value) {
             _cvc.lastFocusedNode.requestFocus();
+          } else if (_cvc.lastFocusedNode.hasFocus) {
+            // The field keeps its focus across a background/resume cycle, but
+            // the Android engine fails to restore the keyboard on resume: the
+            // OS shows it briefly, then the engine's input-connection restart
+            // dismisses it without notifying the framework, so focus and
+            // viewInsets are left as if the keyboard were still open (blank
+            // reserved space). Re-show it once the restart settles so the
+            // keyboard comes back exactly as the user left it.
+            //
+            // Workaround for https://github.com/flutter/flutter/issues/52599 —
+            // once the engine fix (https://github.com/flutter/flutter/pull/187778)
+            // ships in the Flutter version we build with, this block becomes a
+            // no-op and can be removed.
+            Future.delayed(const Duration(milliseconds: 200), () {
+              if (_cvc.lastFocusedNode.hasFocus && !_cvc.showingOverlays && !_cvc.showingSubRoute) {
+                SystemChannels.textInput.invokeMethod('TextInput.show');
+              }
+            });
           }
         }
       }

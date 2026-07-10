@@ -8,7 +8,6 @@ import 'package:bluebubbles/services/services.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/utils/logger/logger.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:bluebubbles/services/isolates/global_isolate.dart';
 
@@ -111,21 +110,6 @@ class LifecycleService with WidgetsBindingObserver {
 
       open();
     } else if (state != AppLifecycleState.inactive) {
-      // Unfocus the active text field synchronously, before hiding the native
-      // keyboard. Otherwise Flutter's FocusNode still believes it has focus
-      // while the native keyboard is gone, so `viewInsets`/Scaffold resize
-      // logic never gets a clean signal to collapse the reserved keyboard
-      // space on resume — it stays stuck until the user manually toggles focus.
-      if (GetIt.I.isRegistered<ChatsService>()) {
-        final activeChat = ChatsSvc.activeChat;
-        if (activeChat != null) {
-          cvc(activeChat.chat).lastFocusedNode.unfocus();
-        }
-      }
-
-      SystemChannels.textInput.invokeMethod('TextInput.hide').catchError((e, stack) {
-        Logger.error("Error caught while hiding keyboard!", error: e, trace: stack);
-      });
       if (isBubble) {
         closeBubble();
       } else {
@@ -242,13 +226,6 @@ class LifecycleService with WidgetsBindingObserver {
       }
     }
 
-    if (GetIt.I.isRegistered<ChatsService>()) {
-      final activeChat = ChatsSvc.activeChat;
-      if (activeChat != null) {
-        ConversationViewController _cvc = cvc(activeChat.chat);
-        _cvc.lastFocusedNode.unfocus();
-      }
-    }
   }
 
   void closeBubble() {
