@@ -1,7 +1,6 @@
 package com.bluebubbles.messaging.services.backend_ui_interop
 
 import android.content.Context
-import android.util.Log
 import androidx.lifecycle.Observer
 import androidx.work.BackoffPolicy
 import androidx.work.Data
@@ -12,6 +11,7 @@ import androidx.work.WorkManager
 import androidx.work.WorkRequest
 import java.util.concurrent.TimeUnit
 import com.bluebubbles.messaging.Constants
+import com.bluebubbles.messaging.utils.PersistentLog
 import com.google.gson.GsonBuilder
 import com.google.gson.ToNumberPolicy
 import kotlinx.coroutines.CoroutineScope
@@ -20,7 +20,7 @@ import kotlinx.coroutines.launch
 
 object DartWorkManager {
     fun createWorker(context: Context, method: String, arguments: HashMap<String, Any?>, callback: () -> (Unit)) {
-        Log.d(Constants.logTag, "Creating new ${Constants.dartWorkerTag} for method $method")
+        PersistentLog.d(context, Constants.logTag, "Creating new ${Constants.dartWorkerTag} for method $method")
         val gson = GsonBuilder()
             .setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE)
             .create()
@@ -55,19 +55,19 @@ object DartWorkManager {
                     // re-emission can't run the callback twice.
                     liveData.removeObserver(observer)
                     if (workInfo == null) {
-                        Log.w(Constants.logTag, "Work record for method $method was pruned before completion was observed")
+                        PersistentLog.w(context, Constants.logTag, "Work record for method $method was pruned before completion was observed")
                         return@Observer
                     }
-                    Log.d(Constants.logTag, "Running callback after worker with method $method completed (state: ${workInfo.state})")
+                    PersistentLog.d(context, Constants.logTag, "Running callback after worker with method $method completed (state: ${workInfo.state})")
                     try {
                         callback()
                     } catch (e: Exception) {
-                        Log.e(Constants.logTag, "Error running callback for worker $method", e)
+                        PersistentLog.e(context, Constants.logTag, "Error running callback for worker $method", e)
                     }
                 }
                 liveData.observeForever(observer)
             } catch (e: Exception) {
-                Log.e(Constants.logTag, "Error observing worker $method", e)
+                PersistentLog.e(context, Constants.logTag, "Error observing worker $method", e)
             }
         }
     }
