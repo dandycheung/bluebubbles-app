@@ -84,6 +84,11 @@ class BBScaffold extends StatelessWidget {
   /// Whether to apply right SafeArea padding to the body.
   final bool safeAreaRight;
 
+  /// Keeps the bottom SafeArea padding stable while the keyboard is visible
+  /// (SafeArea.maintainBottomViewPadding). Use when the body must not shift
+  /// as viewInsets animate.
+  final bool safeAreaMaintainBottomViewPadding;
+
   const BBScaffold({
     super.key,
     this.body,
@@ -104,6 +109,7 @@ class BBScaffold extends StatelessWidget {
     this.safeAreaBottom = true,
     this.safeAreaLeft = true,
     this.safeAreaRight = true,
+    this.safeAreaMaintainBottomViewPadding = false,
   });
 
   @override
@@ -129,6 +135,7 @@ class BBScaffold extends StatelessWidget {
             bottom: safeAreaBottom,
             left: safeAreaLeft,
             right: safeAreaRight,
+            maintainBottomViewPadding: safeAreaMaintainBottomViewPadding,
             child: body!,
           );
 
