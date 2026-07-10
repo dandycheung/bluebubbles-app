@@ -230,7 +230,7 @@ class _VideoPlayerState extends State<VideoPlayer> with AutomaticKeepAliveClient
       // Desktop/web: eager init (no thumbnail support there)
       initializeController();
     }
-    // Mobile with no cached controller: stay lazy — the thumbnail renders until the user taps play
+    // Mobile with no cached controller: stay lazy, the thumbnail renders until the user taps play
 
     if (!kIsDesktop && !kIsWeb) {
       if (file.path != null) {
@@ -252,7 +252,7 @@ class _VideoPlayerState extends State<VideoPlayer> with AutomaticKeepAliveClient
   }
 
   /// The thumbnail is generated from the video with orientation applied, so its dimensions are
-  /// the ground truth for the box size — DB dimensions can be missing or ignore rotation, and a
+  /// the ground truth for the box size, DB dimensions can be missing or ignore rotation, and a
   /// mismatch there causes a visible resize when playback starts.
   void _seedAspectRatioFromThumbnail() {
     final bytes = thumbnail;
@@ -324,7 +324,7 @@ class _VideoPlayerState extends State<VideoPlayer> with AutomaticKeepAliveClient
     if (hasListener) return;
 
     controller.rect.addListener(() {
-      // A null rect reports a 1.0 aspect ratio — don't clobber the DB-seeded value with it
+      // A null rect reports a 1.0 aspect ratio; don't clobber the DB-seeded value with it
       if (controller.rect.value == null) return;
       final ratio = controller.aspectRatio;
       if (aspectRatio.value != ratio) aspectRatio.value = ratio;

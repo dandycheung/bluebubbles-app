@@ -470,26 +470,59 @@ class AttachmentsService extends GetxService {
     }
   }
 
+  /// In-memory cache of video thumbnail bytes keyed by video file path, so widgets can render a
+  /// previously-loaded thumbnail synchronously (no async disk read → no placeholder flash).
+  final Map<String, Uint8List> _videoThumbnailMemCache = {};
+  static const int _videoThumbnailMemCacheMax = 64;
+
+  Uint8List? getCachedVideoThumbnailSync(String filePath) => _videoThumbnailMemCache[filePath];
+
+  void _memCacheVideoThumbnail(String filePath, Uint8List bytes) {
+    _videoThumbnailMemCache.remove(filePath);
+    _videoThumbnailMemCache[filePath] = bytes;
+    if (_videoThumbnailMemCache.length > _videoThumbnailMemCacheMax) {
+      _videoThumbnailMemCache.remove(_videoThumbnailMemCache.keys.first);
+    }
+  }
+
   Future<Uint8List?> getVideoThumbnail(String filePath, {bool useCachedFile = true}) async {
     final cachedFile = File("$filePath.thumbnail");
     if (useCachedFile) {
+      final memCached = _videoThumbnailMemCache[filePath];
+      if (memCached != null) return memCached;
       try {
-        return await cachedFile.readAsBytes();
+        final bytes = await cachedFile.readAsBytes();
+        if (!_isLowResThumbnail(bytes)) {
+          _memCacheVideoThumbnail(filePath, bytes);
+          return bytes;
+        }
       } catch (_) {}
     }
 
     final thumbnail = await VideoThumbnail.thumbnailData(
       video: filePath,
       imageFormat: ImageFormat.PNG,
-      maxWidth: 128, // specify the width of the thumbnail, let the height auto-scaled to keep the source aspect ratio
+      maxWidth: 512, // specify the width of the thumbnail, let the height auto-scaled to keep the source aspect ratio
       quality: 25,
     );
 
     if (!isNullOrEmpty(thumbnail) && useCachedFile) {
-      await cachedFile.writeAsBytes(thumbnail!);
+      _memCacheVideoThumbnail(filePath, thumbnail!);
+      await cachedFile.writeAsBytes(thumbnail);
     }
 
     return thumbnail;
+  }
+
+  /// Thumbnails were historically generated at 128px, which looks blurry now that video previews
+  /// render at message-bubble size — treat those disk caches as stale so they get regenerated.
+  bool _isLowResThumbnail(Uint8List bytes) {
+    try {
+      final size = isg.ImageSizeGetter.getSizeResult(isg.MemoryInput(bytes)).size;
+      return size.width < 256 && size.height < 256;
+    } catch (_) {
+      return false;
+    }
   }
 
   /// Evicts this attachment's decoded image from Flutter's in-memory [ImageCache].
