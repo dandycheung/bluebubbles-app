@@ -312,13 +312,28 @@ class ChatState {
   /// then recompute subtitle. Pass [handles] when calling from [updateFromChat] so
   /// the fresh DB handles are used instead of the potentially stale cached [ToMany].
   void _updateParticipantsInternal([List<Handle>? handles]) {
+    final newHandles = (handles ?? chat.handles).toList();
+
+    // Skip the RxList rebuild when the participant set is unchanged — clearing
+    // and re-adding notifies every watching Obx (avatars, titles) even though
+    // nothing changed, causing needless rebuild storms after contact syncs.
+    final unchanged = participants.length == newHandles.length &&
+        listEquals(
+          participants.map((hs) => hs.handle.id).toList(),
+          newHandles.map((h) => h.id).toList(),
+        );
+    if (unchanged) {
+      updateChatCreatorSubtitleInternal(_computeCreatorSubtitle());
+      return;
+    }
+
     for (final w in _participantWorkers) {
       w.dispose();
     }
     _participantWorkers.clear();
     participants
       ..clear()
-      ..addAll((handles ?? chat.handles).map((h) => HandleSvc.getOrCreateHandleState(h)));
+      ..addAll(newHandles.map((h) => HandleSvc.getOrCreateHandleState(h)));
     for (final hs in participants) {
       _participantWorkers.add(
         ever(hs.displayName, (_) => updateChatCreatorSubtitleInternal(_computeCreatorSubtitle())),

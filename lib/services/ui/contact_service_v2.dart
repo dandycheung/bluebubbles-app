@@ -234,23 +234,20 @@ class ContactServiceV2 {
         return;
       }
 
-      // Find all chats that have any of these handles as participants
-      for (final handleId in handleIds) {
-        final handle = Database.handles.get(handleId);
-        if (handle == null) continue;
+      // Single pass: load chats once and match participants against the handle
+      // ID set, instead of re-querying all chats (and lazily loading each
+      // chat's handles) once per affected handle.
+      final idSet = handleIds.toSet();
+      final query = Database.chats.query(Chat_.dateDeleted.isNull()).build();
+      final allChats = query.find();
+      query.close();
 
-        // Get all chats this handle participates in
-        final chatsWithHandle = Database.chats
-            .query(Chat_.dateDeleted.isNull())
-            .build()
-            .find()
-            .where((chat) => chat.handles.any((p) => p.id == handleId))
-            .toList();
-
-        // Update each chat in the ChatsService to trigger UI updates
-        for (final chat in chatsWithHandle) {
-          ChatsService chats = GetIt.I<ChatsService>();
-          chats.updateChat(chat, override: true);
+      final ChatsService chats = GetIt.I<ChatsService>();
+      for (final chat in allChats) {
+        if (chat.handles.any((p) => idSet.contains(p.id))) {
+          // Debounced (immediate: false) so a large sync batches into one
+          // chat-list version bump instead of one rebuild per chat.
+          chats.updateChat(chat, override: true, immediate: false);
         }
       }
     } catch (e, stack) {
