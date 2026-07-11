@@ -442,6 +442,11 @@ class ChatState {
     chat.lockChatName = updatedChat.lockChatName;
     chat.lockChatIcon = updatedChat.lockChatIcon;
     chat.lastReadMessageGuid = updatedChat.lastReadMessageGuid;
+
+    // Re-apply redaction over the fresh values if redacted mode is active.
+    if (SettingsSvc.settings.redactedMode.value) {
+      redactFields();
+    }
   }
 
   // ========== Internal Lifecycle State Update Methods ==========
@@ -485,6 +490,7 @@ class ChatState {
     if (!SettingsSvc.settings.redactedMode.value) return;
     if (!SettingsSvc.settings.hideContactInfo.value) return;
 
+    updateDisplayNameInternal(_cachedFakeName);
     updateTitleInternal(_cachedFakeName);
     updateChatCreatorSubtitleInternal('');
     // Recompute the message-preview subtitle so contact names and/or message
@@ -496,6 +502,7 @@ class ChatState {
 
   /// Restore contact information to original values from the underlying DB model.
   void unredactContactInfo() {
+    updateDisplayNameInternal(chat.displayName);
     updateTitleInternal(_computeTitle());
     updateChatCreatorSubtitleInternal(_computeCreatorSubtitle());
     // Recompute subtitle — hideMessageContent may still be active even after
