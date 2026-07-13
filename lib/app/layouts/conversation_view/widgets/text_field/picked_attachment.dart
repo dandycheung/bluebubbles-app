@@ -1,12 +1,12 @@
 import 'dart:async';
-import 'dart:typed_data';
 
 import 'package:animations/animations.dart';
 import 'package:bluebubbles/app/layouts/fullscreen_media/fullscreen_holder.dart';
-import 'package:bluebubbles/helpers/ui/theme_helpers.dart';
+import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/database/models.dart';
 import 'package:bluebubbles/services/services.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:mime_type/mime_type.dart';
@@ -44,7 +44,7 @@ class _PickedAttachmentState extends State<PickedAttachment> with AutomaticKeepA
   Future<void> load() async {
     final file = widget.data;
     final mimeType = mime(widget.data.name) ?? "";
-    if (mimeType.startsWith("video/") && Platform.isAndroid) {
+    if (mimeType.startsWith("video/") && !kIsWeb && !kIsDesktop) {
       try {
         imageBytes = await AttachmentsSvc.getVideoThumbnail(file.path!, useCachedFile: false);
       } catch (ex) {
@@ -135,8 +135,10 @@ class _PickedAttachmentState extends State<PickedAttachment> with AutomaticKeepA
                   );
                 },
                 closedBuilder: (_, openContainer) {
+                  final mimeType = mime(widget.data.name) ?? "";
+                  final isVideo = mimeType.startsWith("video/");
                   return InkWell(
-                    onTap: mime(widget.data.name)?.startsWith("image") ?? false ? openContainer : null,
+                    onTap: mimeType.startsWith("image") || isVideo ? openContainer : null,
                     child: Stack(
                       clipBehavior: Clip.none,
                       alignment: Alignment.topRight,
@@ -154,6 +156,16 @@ class _PickedAttachmentState extends State<PickedAttachment> with AutomaticKeepA
                                   maxLines: 3,
                                   textAlign: TextAlign.center,
                                 ),
+                              ),
+                            ),
+                          ),
+                        if (!isLoading && isVideo)
+                          Positioned.fill(
+                            child: Center(
+                              child: Icon(
+                                iOS ? CupertinoIcons.play_circle_fill : Icons.play_circle_filled,
+                                color: Colors.white,
+                                size: 40,
                               ),
                             ),
                           ),
