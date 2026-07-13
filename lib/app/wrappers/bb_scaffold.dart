@@ -106,7 +106,7 @@ class BBScaffold extends StatelessWidget {
     this.persistentFooterButtons,
     this.persistentFooterAlignment,
     this.safeAreaTop = false,
-    this.safeAreaBottom = true,
+    this.safeAreaBottom = false,
     this.safeAreaLeft = true,
     this.safeAreaRight = true,
     this.safeAreaMaintainBottomViewPadding = false,
