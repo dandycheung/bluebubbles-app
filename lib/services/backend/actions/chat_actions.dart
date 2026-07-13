@@ -254,8 +254,7 @@ class ChatActions {
       // "from me" marker (and fromMap defaults absent handleIds to 0). Attempting
       // resolution for them logged bogus "could not resolve handle" errors and, in
       // 1:1 chats, mislinked the RECIPIENT's handle as the message's sender.
-      final bool hasSenderHandle =
-          !(inputMessage.isFromMe ?? false) && (inputMessage.handleId ?? 0) != 0;
+      final bool hasSenderHandle = !(inputMessage.isFromMe ?? false) && (inputMessage.handleId ?? 0) != 0;
       Handle? handleToLink;
       if (inputMessage.handle == null && hasSenderHandle) {
         final handleQuery = handleBox.query(Handle_.originalROWID.equals(inputMessage.handleId!)).build();

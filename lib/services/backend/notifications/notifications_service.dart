@@ -133,9 +133,7 @@ class NotificationsService {
     final isGroup = chat.isGroup;
     final guid = chat.guid;
     final contactName = message.handleRelation.target?.displayName ?? "Unknown";
-    final title = isGroup
-        ? (ChatsSvc.getChatState(chat.guid)?.title.value ?? chat.getTitle())
-        : contactName;
+    final title = isGroup ? (ChatsSvc.getChatState(chat.guid)?.title.value ?? chat.getTitle()) : contactName;
     final text = hideContent ? "iMessage" : message.getNotificationText();
     final isReaction = !isNullOrEmpty(message.associatedMessageGuid);
 

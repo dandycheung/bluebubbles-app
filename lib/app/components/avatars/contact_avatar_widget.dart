@@ -21,6 +21,7 @@ class ContactAvatarWidget extends StatefulWidget {
       this.scaleSize = true,
       this.preferHighResAvatar = false,
       this.padding = EdgeInsets.zero});
+
   /// Canonical decode size for avatar images. Every avatar usage shares one
   /// ImageCache entry per file regardless of on-screen size — one decode per
   /// contact and a much higher cache-hit rate. The conversation list warm-up

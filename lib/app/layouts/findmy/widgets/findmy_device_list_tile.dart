@@ -23,9 +23,8 @@ class FindMyDeviceListTile extends StatelessWidget {
     return Obx(() {
       final hideContactInfo = shouldRedactFindMyContactInfo();
 
-      final displayName = hideContactInfo
-          ? (isItem ? "Item" : "Device")
-          : (item.name ?? (isItem ? "Unknown Item" : "Unknown Device"));
+      final displayName =
+          hideContactInfo ? (isItem ? "Item" : "Device") : (item.name ?? (isItem ? "Unknown Item" : "Unknown Device"));
 
       final displayLocation = hideContactInfo
           ? "Location"

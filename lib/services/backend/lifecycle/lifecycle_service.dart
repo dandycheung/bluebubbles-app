@@ -181,8 +181,7 @@ class LifecycleService with WidgetsBindingObserver {
     // `hidden` is deliberately NOT treated as backgrounded: in-app overlays
     // (share sheet, file picker) hide the activity without the user leaving
     // the app, and we don't want liveness or sync behavior to change for those.
-    final backgrounded =
-        triggerState == AppLifecycleState.paused || triggerState == AppLifecycleState.detached;
+    final backgrounded = triggerState == AppLifecycleState.paused || triggerState == AppLifecycleState.detached;
     if (Platform.isAndroid && backgrounded) {
       IsolateNameServer.removePortNameMapping('bg_isolate');
     }
@@ -204,8 +203,7 @@ class LifecycleService with WidgetsBindingObserver {
       try {
         await TypingIndicatorSvc.stopAllTyping();
       } catch (e, stack) {
-        Logger.warn("Failed to stop typing indicators during close",
-            error: e, trace: stack, tag: "LifecycleService");
+        Logger.warn("Failed to stop typing indicators during close", error: e, trace: stack, tag: "LifecycleService");
       }
     }
 
@@ -225,7 +223,6 @@ class LifecycleService with WidgetsBindingObserver {
         unawaited(GetIt.I<GlobalIsolate>().drainAndStop());
       }
     }
-
   }
 
   void closeBubble() {

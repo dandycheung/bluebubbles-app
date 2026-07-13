@@ -46,8 +46,7 @@ class SharedPreferencesService {
   static SharedPreferencesOptions get _options => (!kIsWeb && Platform.isAndroid)
       ? const SharedPreferencesAsyncAndroidOptions(
           backend: SharedPreferencesAndroidBackendLibrary.SharedPreferences,
-          originalSharedPreferencesOptions:
-              AndroidSharedPreferencesStoreOptions(fileName: 'FlutterSharedPreferences'),
+          originalSharedPreferencesOptions: AndroidSharedPreferencesStoreOptions(fileName: 'FlutterSharedPreferences'),
         )
       : const SharedPreferencesOptions();
 

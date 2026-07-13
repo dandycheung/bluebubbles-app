@@ -500,78 +500,78 @@ class _VideoPlayerState extends State<VideoPlayer> with AutomaticKeepAliveClient
                     ),
                   ))
               : thumbnail == null
-              ? Padding(
-                  padding: const EdgeInsets.all(15.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      PlayPauseButton(
-                        showPlayPauseOverlay: showPlayPauseOverlay,
-                        controller: videoController,
-                        hover: hover,
-                        customOnTap: _playInline,
+                  ? Padding(
+                      padding: const EdgeInsets.all(15.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          PlayPauseButton(
+                            showPlayPauseOverlay: showPlayPauseOverlay,
+                            controller: videoController,
+                            hover: hover,
+                            customOnTap: _playInline,
+                          ),
+                          const SizedBox(width: 10),
+                          Flexible(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  file.name,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: context.theme.textTheme.bodyMedium!.apply(fontWeightDelta: 2),
+                                ),
+                                const SizedBox(height: 2.5),
+                                Text(
+                                  "${(mime(file.name)?.split("/").lastOrNull ?? mime(file.name) ?? "file").toUpperCase()} • ${file.size.toDouble().getFriendlySize()}",
+                                  style: context.theme.textTheme.labelMedium!.copyWith(
+                                      fontWeight: FontWeight.normal, color: context.theme.colorScheme.outline),
+                                  overflow: TextOverflow.clip,
+                                  maxLines: 1,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 10),
-                      Flexible(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                    )
+                  : Obx(() => AspectRatio(
+                        aspectRatio: aspectRatio.value,
+                        child: Stack(
+                          alignment: Alignment.center,
                           children: [
-                            Text(
-                              file.name,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: context.theme.textTheme.bodyMedium!.apply(fontWeightDelta: 2),
+                            Positioned.fill(
+                              child: Image.memory(
+                                thumbnail!,
+                                // prevents the image widget from "refreshing" when the provider changes
+                                gaplessPlayback: true,
+                                filterQuality: FilterQuality.medium,
+                                fit: BoxFit.cover,
+                                frameBuilder: (context, child, frame, wasSyncLoaded) => wasSyncLoaded
+                                    ? child
+                                    : AnimatedOpacity(
+                                        opacity: frame == null ? 0 : 1,
+                                        duration: const Duration(milliseconds: 150),
+                                        child: child,
+                                      ),
+                              ),
                             ),
-                            const SizedBox(height: 2.5),
-                            Text(
-                              "${(mime(file.name)?.split("/").lastOrNull ?? mime(file.name) ?? "file").toUpperCase()} • ${file.size.toDouble().getFriendlySize()}",
-                              style: context.theme.textTheme.labelMedium!
-                                  .copyWith(fontWeight: FontWeight.normal, color: context.theme.colorScheme.outline),
-                              overflow: TextOverflow.clip,
-                              maxLines: 1,
+                            PlayPauseButton(
+                              showPlayPauseOverlay: showPlayPauseOverlay,
+                              controller: videoController,
+                              customOnTap: _playInline,
                             ),
+                            MuteButton(
+                                showPlayPauseOverlay: showPlayPauseOverlay,
+                                muted: muted,
+                                controller: videoController,
+                                isFromMe: isFromMe),
                           ],
                         ),
-                      ),
-                    ],
-                  ),
-                )
-              : Obx(() => AspectRatio(
-                    aspectRatio: aspectRatio.value,
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        Positioned.fill(
-                          child: Image.memory(
-                            thumbnail!,
-                            // prevents the image widget from "refreshing" when the provider changes
-                            gaplessPlayback: true,
-                            filterQuality: FilterQuality.medium,
-                            fit: BoxFit.cover,
-                            frameBuilder: (context, child, frame, wasSyncLoaded) => wasSyncLoaded
-                                ? child
-                                : AnimatedOpacity(
-                                    opacity: frame == null ? 0 : 1,
-                                    duration: const Duration(milliseconds: 150),
-                                    child: child,
-                                  ),
-                          ),
-                        ),
-                        PlayPauseButton(
-                          showPlayPauseOverlay: showPlayPauseOverlay,
-                          controller: videoController,
-                          customOnTap: _playInline,
-                        ),
-                        MuteButton(
-                            showPlayPauseOverlay: showPlayPauseOverlay,
-                            muted: muted,
-                            controller: videoController,
-                            isFromMe: isFromMe),
-                      ],
-                    ),
-                  ))),
+                      ))),
     );
   }
 
