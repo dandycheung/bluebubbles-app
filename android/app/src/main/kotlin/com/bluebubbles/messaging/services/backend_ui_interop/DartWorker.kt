@@ -89,22 +89,35 @@ class DartWorker(context: Context, workerParams: WorkerParameters): ListenableWo
                 .setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE)
                 .create()
 
-        val mainEngine = MainActivity.getEngine()
-        if (mainEngine != null) {
-            PersistentLog.d(applicationContext, Constants.logTag, "Using MainActivity engine to send to Dart")
-        } else {
-            PersistentLog.d(applicationContext, Constants.logTag, "Using DartWorker engine to send to Dart")
-        }
         return CoroutineScope(Dispatchers.Main).future {
             // Initialize AND select the engine under the same lock so a concurrent
             // cleanup can't destroy the engine between init and selection.
             val engineToUse: FlutterEngine? = try {
                 engineReady.withLock {
-                    if (MainActivity.getEngine() == null && workerEngine == null) {
-                        PersistentLog.d(applicationContext, Constants.logTag, "Initializing engine for worker with method $method")
-                        initNewEngine()
+                    // MainActivity.getEngine() can be non-null before its Dart isolate has
+                    // registered a method-call handler (the engine object is attached in
+                    // configureFlutterEngine, well before Dart's main() reaches
+                    // MethodChannelService.init()). Invoking into it during that window
+                    // always resolves notImplemented(). Only prefer it once Dart has
+                    // signaled "ready" on it. Otherwise, fall back to (or spin up) the
+                    // dedicated worker engine, which we know is ready before we ever use it.
+                    val mainEngine = MainActivity.getEngine()
+                    val mainEngineDartReady = MainActivity.isDartReady()
+                    val useMainEngine = mainEngine != null && mainEngineDartReady
+                    if (useMainEngine) {
+                        PersistentLog.d(applicationContext, Constants.logTag, "Using MainActivity engine to send to Dart (method=$method)")
+                    } else {
+                        if (mainEngine != null && !mainEngineDartReady) {
+                            PersistentLog.w(applicationContext, Constants.logTag, "MainActivity engine exists but Dart isn't ready yet — using DartWorker engine instead for method $method")
+                        } else {
+                            PersistentLog.d(applicationContext, Constants.logTag, "Using DartWorker engine to send to Dart (method=$method)")
+                        }
+                        if (workerEngine == null) {
+                            PersistentLog.d(applicationContext, Constants.logTag, "Initializing engine for worker with method $method")
+                            initNewEngine()
+                        }
                     }
-                    MainActivity.getEngine() ?: workerEngine
+                    if (useMainEngine) mainEngine else workerEngine
                 }
             } catch (e: Exception) {
                 PersistentLog.e(applicationContext, Constants.logTag, "Engine init failed for worker with method $method: ${e.message}", e)

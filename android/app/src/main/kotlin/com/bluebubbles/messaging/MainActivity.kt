@@ -1,6 +1,7 @@
 package com.bluebubbles.messaging
 
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import androidx.activity.ComponentActivity
 import com.bluebubbles.messaging.services.backend_ui_interop.MethodCallHandler
@@ -16,22 +17,49 @@ class MainActivity : FlutterFragmentActivity() {
     companion object {
         private val engineLock = Any()
         @Volatile private var _engine: FlutterEngine? = null
-        
+
+        // Whether the Dart side of [_engine] has finished registering its method-call
+        // handler (signaled via the "ready" method call — see MethodCallHandler).
+        // Always reset to false alongside [_engine] itself so a stale "ready" from a
+        // previous engine can never be mistaken for the current one's readiness.
+        @Volatile private var _dartReady = false
+
         fun getEngine(): FlutterEngine? {
             synchronized(engineLock) {
                 return _engine
             }
         }
-        
-        fun setEngine(newEngine: FlutterEngine?) {
+
+        fun setEngine(newEngine: FlutterEngine?, context: Context) {
             synchronized(engineLock) {
+                PersistentLog.d(
+                    context,
+                    Constants.logTag,
+                    "MainActivity engine ${if (newEngine != null) "set (${newEngine.hashCode()})" else "cleared"} — resetting dartReady to false"
+                )
                 _engine = newEngine
+                _dartReady = false
+            }
+        }
+
+        fun isDartReady(): Boolean {
+            synchronized(engineLock) {
+                return _dartReady
+            }
+        }
+
+        fun setDartReady(ready: Boolean, context: Context) {
+            synchronized(engineLock) {
+                if (_dartReady != ready) {
+                    PersistentLog.d(context, Constants.logTag, "MainActivity dartReady changing from $_dartReady to $ready")
+                }
+                _dartReady = ready
             }
         }
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
-        setEngine(flutterEngine)
+        setEngine(flutterEngine, this)
         super.configureFlutterEngine(flutterEngine)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, Constants.methodChannel).setMethodCallHandler {
             call, result -> MethodCallHandler().methodCallHandler(call, result, this)
@@ -76,7 +104,7 @@ class MainActivity : FlutterFragmentActivity() {
     override fun onDestroy() {
         PersistentLog.d(this, Constants.logTag, "BlueBubbles MainActivity is being destroyed")
         MethodCallHandler.clearNotificationListenerResult()
-        setEngine(null)
+        setEngine(null, this)
 
         // If we are finishing "gracefully", the dart code would have started the foreground service.
         // If we are finishing because the system is destroying the activity, we need to start the foreground service

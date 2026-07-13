@@ -101,6 +101,10 @@ class MethodCallHandler {
         when(call.method) {
             "ready" -> {
                 PersistentLog.d(context, Constants.logTag, "Dart engine is ready!")
+                // Only MainActivity's channel routes "ready" here. DartWorker's headless
+                // engine intercepts and resolves its own "ready" handshake locally (see
+                // DartWorker.initNewEngine), so this always reflects the main engine.
+                MainActivity.setDartReady(true, context)
                 result.success(null)
             }
             UnifiedPushHandler.tag -> UnifiedPushHandler().handleMethodCall(call, result, context)
