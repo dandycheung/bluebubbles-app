@@ -20,6 +20,11 @@ import 'package:universal_io/io.dart';
 
 const _tag = 'OutgoingMessageHandler';
 
+/// Outgoing-prep retry policy: retry a transient prep failure up to
+/// [_maxPrepAttempts] times, backing off [_retryBackoffMs] ms times the attempt.
+const _maxPrepAttempts = 3;
+const _retryBackoffMs = 250;
+
 // ignore: non_constant_identifier_names
 OutgoingMessageHandler get OutgoingMsgHandler => GetIt.I<OutgoingMessageHandler>();
 
@@ -178,60 +183,81 @@ class OutgoingMessageHandler {
   /// [OutgoingQueueItem.completer] resolves — i.e. when the HTTP response arrives
   /// or an error is surfaced.
   Future<void> queue(OutgoingQueueItem item) async {
-    // Prepare items (writes temp messages / copies attachment files to disk).
-    // prepMessage may return multiple Message objects when it splits a URL
-    // message into two parts (pre-Big Sur macOS compatibility).
-    //
-    // The prep phase writes the temp record via the GlobalIsolate, which can
-    // throw if the isolate is mid-restart. If that escapes queue() (usually a
-    // fire-and-forget call) the message is *silently dropped* — never queued,
-    // never sent, never marked failed. So:
-    //  - Retry a transient failure, but ONLY while the temp is still unsaved.
-    //    prepMessage regenerates the temp GUID on each call, so retrying after a
-    //    partial save would duplicate the message; the "not in DB" guard makes
-    //    the save-phase-failure case (the churn case) safe to re-run.
-    //  - After retries are exhausted (or the temp was already saved), surface it
-    //    as a failed message so it's visible + retryable rather than lost.
-    const int maxPrepAttempts = 3;
-    for (int attempt = 1;; attempt++) {
-      dynamic returned;
-      try {
-        returned = await _prepItem(item);
-      } catch (ex, st) {
-        final guid = item.message.guid;
-        final tempSaved = guid != null && Message.findOne(guid: guid) != null;
-        if (!tempSaved && attempt < maxPrepAttempts) {
-          Logger.warn('Outgoing prep attempt $attempt failed; retrying', error: ex, trace: st, tag: _tag);
-          await Future.delayed(Duration(milliseconds: 250 * attempt));
-          continue;
-        }
-        await _finalizeOutgoingFailure(
-          item.chat,
-          item.message,
-          guid ?? '',
-          logMessage: 'Failed to prepare outgoing message after $attempt attempt(s)',
-          error: ex,
-          stack: st,
-        );
-        item.completer?.completeError(ex);
-        return;
-      }
+    // Prep the item (writes temp messages / copies attachment files to disk),
+    // retrying a transient failure and surfacing a terminal one as a failed
+    // message so it is never silently dropped. See [_prepItemWithRetry].
+    final prep = await _prepItemWithRetry(item);
+    if (!prep.ok) return;
+    final returned = prep.result;
 
-      if (returned is List<Message>) {
-        // prepMessage already saved each message to the DB; create a queue
-        // entry for each one with the message that was actually saved.
-        for (final m in returned) {
-          _queue.add(_OutgoingEntry(_copyWithMessage(item, m)));
-        }
-      } else {
-        // Attachment: prepAttachment already saved it; keep the original item.
-        _queue.add(_OutgoingEntry(item));
+    if (returned is List<Message>) {
+      // prepMessage already saved each message to the DB; create a queue
+      // entry for each one with the message that was actually saved.
+      for (final m in returned) {
+        _queue.add(_OutgoingEntry(_copyWithMessage(item, m)));
       }
-
-      pendingChatGuids.add(item.chat.guid);
-      unawaited(_processNext());
-      return;
+    } else {
+      // Attachment: prepAttachment already saved it; keep the original item.
+      _queue.add(_OutgoingEntry(item));
     }
+
+    pendingChatGuids.add(item.chat.guid);
+    unawaited(_processNext());
+  }
+
+  /// Prep [item] with a bounded retry on transient failure.
+  ///
+  /// The prep phase writes the temp record via the GlobalIsolate, which can
+  /// throw if the isolate is mid-restart. If that escaped [queue] (usually a
+  /// fire-and-forget call) the message would be *silently dropped* — never
+  /// queued, sent, nor marked failed. So retry a transient failure, then surface
+  /// a terminal one as a failed message that is visible + retryable.
+  ///
+  /// Returns `(ok: true, result: <prep output>)` on success — result is a
+  /// `List<Message>` for messages and `null` for attachments — or
+  /// `(ok: false, ...)` once a terminal failure has been finalized (the caller
+  /// should stop).
+  Future<({bool ok, dynamic result})> _prepItemWithRetry(OutgoingQueueItem item) async {
+    // Every call site generates the temp GUID before queueing, so it is set.
+    final guid = item.message.guid!;
+    Object? lastError;
+    StackTrace? lastStack;
+    int attempts = 0;
+    for (int attempt = 1; attempt <= _maxPrepAttempts; attempt++) {
+      attempts = attempt;
+      try {
+        return (ok: true, result: await _prepItem(item));
+      } catch (ex, st) {
+        lastError = ex;
+        lastStack = st;
+        // Only retry while the temp record is still unsaved. prepMessage
+        // regenerates the temp GUID on each call, so retrying after a partial
+        // save would duplicate the message; the "not in DB" guard keeps the
+        // save-phase-failure (churn) case safe to re-run.
+        final tempSaved = Message.findOne(guid: guid) != null;
+        if (tempSaved || attempt >= _maxPrepAttempts) break;
+        Logger.warn('Outgoing prep attempt $attempt failed; retrying', error: ex, trace: st, tag: _tag);
+        await Future.delayed(Duration(milliseconds: _retryBackoffMs * attempt));
+      }
+    }
+
+    // Retries exhausted (or the temp was already saved): surface the failure as a
+    // failed message so it's visible + retryable rather than silently dropped.
+    //
+    // Limitation: when prepMessage splits a long URL into two messages (pre-Big
+    // Sur macOS), this tracks only item.message (the first). If message 1 saved
+    // but message 2 threw, message 1 is finalized as failed here and message 2's
+    // failure is not tracked separately.
+    await _finalizeOutgoingFailure(
+      item.chat,
+      item.message,
+      guid,
+      logMessage: 'Failed to prepare outgoing message after $attempts attempt(s)',
+      error: lastError,
+      stack: lastStack,
+    );
+    item.completer?.completeError(lastError ?? StateError('Outgoing prep failed'));
+    return (ok: false, result: null);
   }
 
   OutgoingQueueItem _copyWithMessage(OutgoingQueueItem item, Message message) {
