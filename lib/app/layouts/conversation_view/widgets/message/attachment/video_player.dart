@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:bluebubbles/app/layouts/conversation_view/widgets/message/reply/reply_bubble.dart';
-import 'package:bluebubbles/app/layouts/fullscreen_media/fullscreen_holder.dart';
+import 'package:bluebubbles/app/layouts/fullscreen_media/conversation_fullscreen_holder.dart';
 import 'package:bluebubbles/app/state/chat_state_scope.dart';
 import 'package:bluebubbles/app/wrappers/theme_switcher.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
@@ -396,7 +396,7 @@ class _VideoPlayerState extends State<VideoPlayer> with AutomaticKeepAliveClient
                     if (attachment.id == null) return;
                     await Navigator.of(Get.context!).push(
                       ThemeSwitcher.buildPageRoute(
-                        builder: (context) => FullscreenMediaHolder(
+                        builder: (context) => ConversationFullscreenHolder(
                           currentChat: currentChat,
                           attachment: attachment,
                           showInteractions: true,
@@ -414,7 +414,7 @@ class _VideoPlayerState extends State<VideoPlayer> with AutomaticKeepAliveClient
                   if (attachment.id == null) return;
                   await Navigator.of(Get.context!).push(
                     ThemeSwitcher.buildPageRoute(
-                      builder: (context) => FullscreenMediaHolder(
+                      builder: (context) => ConversationFullscreenHolder(
                         currentChat: currentChat,
                         attachment: attachment,
                         showInteractions: true,
@@ -475,7 +475,7 @@ class _VideoPlayerState extends State<VideoPlayer> with AutomaticKeepAliveClient
             if (attachment.id == null) return;
             await Navigator.of(Get.context!).push(
               ThemeSwitcher.buildPageRoute(
-                builder: (context) => FullscreenMediaHolder(
+                builder: (context) => ConversationFullscreenHolder(
                   currentChat: currentChat,
                   attachment: attachment,
                   showInteractions: true,
@@ -603,7 +603,7 @@ class FullscreenButton extends StatelessWidget {
               if (attachment.id == null) return;
               await Navigator.of(Get.context!).push(
                 ThemeSwitcher.buildPageRoute(
-                  builder: (context) => FullscreenMediaHolder(
+                  builder: (context) => ConversationFullscreenHolder(
                       currentChat: currentChat,
                       attachment: attachment,
                       showInteractions: true,
