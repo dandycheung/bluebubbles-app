@@ -129,6 +129,8 @@ class IncrementalSyncManager extends SyncManager {
     } catch (ex) {
       completeWithError(ex.toString());
     }
+
+    return completer!.future;
   }
 
   Future<void> startMin_1_6_0() async {
