@@ -81,7 +81,9 @@ class NotificationsService {
           onDidReceiveNotificationResponse: (NotificationResponse? response) {
             if (response?.payload != null) {
               if (GetIt.I.isRegistered<IntentsService>()) {
-                IntentsSvc.openChat(response!.payload);
+                // Fired for a notification tapped while the app was already attached
+                // and running, so activeChat is guaranteed to be in sync.
+                IntentsSvc.openChat(response!.payload, isInitialIntent: false);
               } else {
                 Logger.warn('IntentsService not registered, cannot open chat from notification tap');
               }
@@ -90,7 +92,9 @@ class NotificationsService {
       final details = await flnp.getNotificationAppLaunchDetails();
       if (details != null && details.didNotificationLaunchApp && details.notificationResponse?.payload != null) {
         if (GetIt.I.isRegistered<IntentsService>()) {
-          IntentsSvc.openChat(details.notificationResponse!.payload!);
+          // didNotificationLaunchApp means this tap is what launched the app — the
+          // widget tree is starting fresh, so activeChat can't be trusted here.
+          IntentsSvc.openChat(details.notificationResponse!.payload!, isInitialIntent: true);
         } else {
           Logger.warn('IntentsService not registered, cannot process notification launch payload');
         }
@@ -142,7 +146,7 @@ class NotificationsService {
       final notif =
           Notification(title, body: text, icon: "data:image/png;base64,${base64Encode(chatIcon)}", tag: message.guid);
       notif.onClick.listen((event) async {
-        await IntentsSvc.openChat(guid);
+        await IntentsSvc.openChat(guid, isInitialIntent: false);
       });
     } else if (kIsDesktop) {
       // Avatar loading is deferred to _buildAndShowToast — don't load it here.
