@@ -502,7 +502,6 @@ class NotificationsService {
           dateCreated: DateTime.now(),
           handleId: 0,
         );
-        _message.generateTempGuid();
         OutgoingMsgHandler.queue(
           OutgoingReaction(
             chat: chat,
