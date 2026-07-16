@@ -34,6 +34,10 @@ class BBDialogAction {
 ///
 /// Supply either [content] (a Widget) or [body] (a plain string) for the
 /// dialog body — [content] takes precedence if both are provided.
+///
+/// [bodyTextAlign] controls the text alignment of the dialog body. It applies
+/// directly to [body] and is also made available to [content] via a
+/// [DefaultTextStyle] so custom content can opt in by inheriting it.
 Future<T?> showBBDialog<T>({
   required BuildContext context,
   String? title,
@@ -41,9 +45,13 @@ Future<T?> showBBDialog<T>({
   String? body,
   List<BBDialogAction> actions = const [],
   bool barrierDismissible = true,
+  TextAlign? bodyTextAlign,
 }) {
   final skin = SettingsSvc.settings.skin.value;
-  final bodyWidget = content ?? (body != null ? Text(body) : null);
+  final rawBodyWidget = content ?? (body != null ? Text(body, textAlign: bodyTextAlign) : null);
+  final bodyWidget = bodyTextAlign != null && rawBodyWidget != null
+      ? DefaultTextStyle.merge(textAlign: bodyTextAlign, child: rawBodyWidget)
+      : rawBodyWidget;
 
   if (skin == Skins.iOS) {
     return showDialog<T>(
@@ -117,11 +125,11 @@ Future<void> showAreYouSure(
   required Function onNo,
   required Function onYes,
 }) {
-  final wrappedContent = content != null ? DefaultTextStyle.merge(textAlign: textAlign, child: content) : null;
   return showBBDialog(
     context: context,
     title: title,
-    content: wrappedContent,
+    content: content,
+    bodyTextAlign: textAlign,
     actions: [
       BBDialogAction(
         text: noText ?? "No",
