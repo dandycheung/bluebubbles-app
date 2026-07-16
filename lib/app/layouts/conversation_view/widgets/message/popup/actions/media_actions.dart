@@ -147,7 +147,7 @@ Future<void> downloadOriginalAttachments(MessagePopupActionContext ctx) async {
         text: "Close",
         onPressed: () async {
           Get.closeAllSnackbars();
-          Navigator.of(ctx.context).pop();
+          Navigator.of(ctx.context, rootNavigator: true).pop();
           ctx.popDetails();
         },
       ),
@@ -224,7 +224,7 @@ Future<void> downloadLivePhoto(MessagePopupActionContext ctx) async {
         text: "Close",
         onPressed: () async {
           Get.closeAllSnackbars();
-          Navigator.of(ctx.context).pop();
+          Navigator.of(ctx.context, rootNavigator: true).pop();
           ctx.popDetails();
         },
       ),

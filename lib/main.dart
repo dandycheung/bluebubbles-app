@@ -200,7 +200,7 @@ Future<Null> initApp(bool bubble, List<String> arguments) async {
           } catch (_) {}
           detachSplashStatus?.call();
           unawaited(ThemeSvc.initDynamicColorsDeferred()); // Linux: deferred past splash
-          bool shouldAuthenticate = SettingsSvc.canAuthenticate && SettingsSvc.settings.shouldSecure.value;
+          bool shouldAuthenticate = !Platform.isLinux && SettingsSvc.canAuthenticate && SettingsSvc.settings.shouldSecure.value;
           if (!shouldAuthenticate) {
             ChatsSvc.init();
             SocketSvc.init();
@@ -376,97 +376,103 @@ class Main extends StatelessWidget {
         builder: (context, child) => SafeArea(
           top: false,
           bottom: false,
-          child: SecureApplication(
-            child: Builder(
-              builder: (context) {
-                if (SettingsSvc.canAuthenticate && (!LifecycleSvc.isAlive || !StartupTasks.uiReady.isCompleted)) {
-                  if (SettingsSvc.settings.shouldSecure.value) {
-                    SecureApplicationProvider.of(context, listen: false)!.lock();
-                    if (SettingsSvc.settings.securityLevel.value == SecurityLevel.locked_and_secured) {
-                      SecureApplicationProvider.of(context, listen: false)!.secure();
-                    }
-                  }
-                }
-                return TitleBarWrapper(
-                  child: SecureGate(
-                    blurr: 5,
-                    opacity: 0,
-                    lockedBuilder: (context, controller) {
-                      final localAuth = LocalAuthentication();
-                      if (!isAuthing) {
-                        isAuthing = true;
-                        localAuth
-                            .authenticate(
-                          localizedReason: 'Please authenticate to unlock BlueBubbles',
-                          persistAcrossBackgrounding: true,
-                        )
-                            .then((result) {
-                          isAuthing = false;
-                          if (result) {
-                            if (!context.mounted) return;
-                            SecureApplicationProvider.of(context, listen: false)!.authSuccess(unlock: true);
-                            if (kIsDesktop) {
-                              Future.delayed(Duration.zero, () {
-                                ChatsSvc.init();
-                                SocketSvc.init();
+          // secure_application has no Linux implementation; mounting it (and the
+          // SecureGate below) throws MissingPluginException on every lifecycle
+          // event, which breaks window close/hide once the app is past setup.
+          // Bypass the secure wrapper entirely on Linux.
+          child: Platform.isLinux
+              ? TitleBarWrapper(child: child ?? Container())
+              : SecureApplication(
+                  child: Builder(
+                    builder: (context) {
+                      if (SettingsSvc.canAuthenticate && (!LifecycleSvc.isAlive || !StartupTasks.uiReady.isCompleted)) {
+                        if (SettingsSvc.settings.shouldSecure.value) {
+                          SecureApplicationProvider.of(context, listen: false)!.lock();
+                          if (SettingsSvc.settings.securityLevel.value == SecurityLevel.locked_and_secured) {
+                            SecureApplicationProvider.of(context, listen: false)!.secure();
+                          }
+                        }
+                      }
+                      return TitleBarWrapper(
+                        child: SecureGate(
+                          blurr: 5,
+                          opacity: 0,
+                          lockedBuilder: (context, controller) {
+                            final localAuth = LocalAuthentication();
+                            if (!isAuthing) {
+                              isAuthing = true;
+                              localAuth
+                                  .authenticate(
+                                localizedReason: 'Please authenticate to unlock BlueBubbles',
+                                persistAcrossBackgrounding: true,
+                              )
+                                  .then((result) {
+                                isAuthing = false;
+                                if (result) {
+                                  if (!context.mounted) return;
+                                  SecureApplicationProvider.of(context, listen: false)!.authSuccess(unlock: true);
+                                  if (kIsDesktop) {
+                                    Future.delayed(Duration.zero, () {
+                                      ChatsSvc.init();
+                                      SocketSvc.init();
+                                    });
+                                  }
+                                }
                               });
                             }
-                          }
-                        });
-                      }
-                      return Container(
-                        color: context.theme.colorScheme.surface,
-                        child: Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: <Widget>[
-                              Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                                child: Text(
-                                  "BlueBubbles is currently locked. Please unlock to access your messages.",
-                                  style: context.theme.textTheme.titleLarge,
-                                  textAlign: TextAlign.center,
+                            return Container(
+                              color: context.theme.colorScheme.surface,
+                              child: Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: <Widget>[
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                                      child: Text(
+                                        "BlueBubbles is currently locked. Please unlock to access your messages.",
+                                        style: context.theme.textTheme.titleLarge,
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ),
+                                    Container(height: 20.0),
+                                    ClipOval(
+                                      child: Material(
+                                        color: context.theme.colorScheme.primary, // button color
+                                        child: InkWell(
+                                          child: SizedBox(
+                                              width: 60,
+                                              height: 60,
+                                              child: Icon(Icons.lock_open, color: context.theme.colorScheme.onPrimary)),
+                                          onTap: () async {
+                                            final localAuth = LocalAuthentication();
+                                            bool didAuthenticate = await localAuth.authenticate(
+                                              localizedReason: 'Please authenticate to unlock BlueBubbles',
+                                              persistAcrossBackgrounding: true,
+                                            );
+                                            if (didAuthenticate) {
+                                              controller!.authSuccess(unlock: true);
+                                              if (kIsDesktop) {
+                                                Future.delayed(Duration.zero, () {
+                                                  ChatsSvc.init();
+                                                  SocketSvc.init();
+                                                });
+                                              }
+                                            }
+                                          },
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                              Container(height: 20.0),
-                              ClipOval(
-                                child: Material(
-                                  color: context.theme.colorScheme.primary, // button color
-                                  child: InkWell(
-                                    child: SizedBox(
-                                        width: 60,
-                                        height: 60,
-                                        child: Icon(Icons.lock_open, color: context.theme.colorScheme.onPrimary)),
-                                    onTap: () async {
-                                      final localAuth = LocalAuthentication();
-                                      bool didAuthenticate = await localAuth.authenticate(
-                                        localizedReason: 'Please authenticate to unlock BlueBubbles',
-                                        persistAcrossBackgrounding: true,
-                                      );
-                                      if (didAuthenticate) {
-                                        controller!.authSuccess(unlock: true);
-                                        if (kIsDesktop) {
-                                          Future.delayed(Duration.zero, () {
-                                            ChatsSvc.init();
-                                            SocketSvc.init();
-                                          });
-                                        }
-                                      }
-                                    },
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
+                            );
+                          },
+                          child: child ?? Container(),
                         ),
                       );
                     },
-                    child: child ?? Container(),
                   ),
-                );
-              },
-            ),
-          ),
+                ),
         ),
         defaultTransition: Transition.cupertino,
       ),

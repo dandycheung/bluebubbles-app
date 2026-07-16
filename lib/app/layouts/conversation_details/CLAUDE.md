@@ -4,6 +4,7 @@ Displayed as a right-side panel on tablet or pushed screen on mobile.
 
 ## Main Screen
 `conversation_details.dart` — top-level screen
+`conversation_attachments.dart` — full-page view for a single attachment category
 
 ## Dialogs (`dialogs/`)
 - `address_picker.dart` — pick which phone/email address to use for a contact
@@ -21,11 +22,13 @@ Displayed as a right-side panel on tablet or pushed screen on mobile.
 - `contact_tile.dart` — individual participant row (tappable → contact details)
 
 **Shared Media**
-- `media_grid_section.dart` — photo/video thumbnail grid
+- `attachment_section_header.dart` — section label + "Show more" action
 - `media_gallery_card.dart` — tappable media card → opens `FullscreenMedia`
 - `attachments_loader.dart` — attachment pagination and caching
+- `filters/media_filters_sheet.dart` — shared filters bottom sheet
 
-**Shared Content**
-- `links_section.dart` — shared URLs list
-- `documents_section.dart` — shared files/documents list
-- `locations_section.dart` — shared location messages list
+**Shared Content (`sections/`)**
+- `sections/media/` — images & videos grid + inline type selector
+- `sections/links/` — shared URLs list + search helper
+- `sections/documents/` — shared files list + search helper
+- `sections/locations/` — shared location messages list

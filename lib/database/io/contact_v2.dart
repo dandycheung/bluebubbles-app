@@ -204,6 +204,20 @@ class ContactV2 {
     });
   }
 
+  /// Formats this contact for the server upload API.
+  /// Field names match what the server expects (and sends back on fetch).
+  Map<String, dynamic> toServerMap() {
+    return {
+      'displayName': displayName,
+      'firstName': firstName,
+      'lastName': lastName,
+      'middleName': middleName,
+      'nickname': nickname,
+      'phoneNumbers': phoneNumbers.map((e) => {'address': e.number, 'label': e.label}).toList(),
+      'emails': emailAddresses.map((e) => {'address': e.address, 'label': e.label}).toList(),
+    };
+  }
+
   /// Convert to map for cross-isolate serialization
   Map<String, dynamic> toMap() {
     return {
