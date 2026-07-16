@@ -62,7 +62,6 @@ class SharedPreferencesService {
       await DesktopSharedPreferencesStore.register();
     }
 
-    const sharedPreferencesOptions = SharedPreferencesOptions();
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     await migrateLegacySharedPreferencesToSharedPreferencesAsyncIfNecessary(
       legacySharedPreferencesInstance: prefs,

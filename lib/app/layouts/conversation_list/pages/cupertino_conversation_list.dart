@@ -255,9 +255,6 @@ class CupertinoConversationListState extends State<CupertinoConversationList> wi
                       final _ = ChatsSvc.chatListVersion.value;
                       final _chats = ChatsSvc.getFilteredChats(
                           showArchived: showArchived, showUnknown: showUnknown, excludePinned: true);
-                      final _pinnedChats = ChatsSvc.getFilteredChats(
-                          showArchived: showArchived, showUnknown: showUnknown, pinnedOnly: true);
-                      final hasPinnedChats = _pinnedChats.isNotEmpty;
 
                       if (!loaded || _chats.isEmpty) {
                         return SliverToBoxAdapter(
