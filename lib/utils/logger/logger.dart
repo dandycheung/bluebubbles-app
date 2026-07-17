@@ -263,7 +263,7 @@ class BaseLogger {
       // Stream only the relevant tail of the file.
       final List<String> lines = await logFile
           .openRead(startOffset)
-          .transform(const Utf8Decoder(allowMalformed: true))
+          .transform(const Utf8Decoder(_allowMalformed: true))
           .transform(const LineSplitter())
           .toList();
 
