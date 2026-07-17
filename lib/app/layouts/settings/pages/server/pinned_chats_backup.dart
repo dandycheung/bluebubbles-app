@@ -17,6 +17,11 @@ class PinnedChatsRestoreResult {
 /// displayName, DM participant address, or full participant address set.
 class PinnedChatsBackup {
   static List<Map<String, dynamic>> exportList() {
+    // Deliberately not exporting chat.guid: it's assigned by the server, so
+    // the same logical conversation gets a different guid on a different
+    // server (or after a server reinstall). displayName/participant
+    // addresses are the only chat attributes that stay stable across
+    // servers, so they're what we match against on import instead.
     return ChatsSvc.pinnedChats.map((chat) {
       final addresses = chat.handles.map((h) => h.address).toList();
       final String type;
