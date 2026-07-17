@@ -72,6 +72,20 @@ class _DesktopPanelState extends State<DesktopPanel> with ThemeHelpers {
                         ),
                       )),
                   Obx(() => AnimatedSizeAndFade.showHide(
+                      show: SettingsSvc.settings.launchAtStartup.value,
+                      child: SettingsTile(
+                        leading: const SettingsLeadingIcon(
+                          iosIcon: CupertinoIcons.doc,
+                          materialIcon: Icons.description_outlined,
+                          containerColor: Colors.green,
+                        ),
+                        onTap: LaunchAtStartup.revealShortcut,
+                        title: "Show Startup Entry",
+                        subtitle: SettingsSvc.settings.launchAtStartup.value && LaunchAtStartup.shortcutPath != null
+                            ? "Startup entry: ${LaunchAtStartup.shortcutPath}"
+                            : "",
+                      ))),
+                  Obx(() => AnimatedSizeAndFade.showHide(
                         show: SettingsSvc.settings.launchAtStartup.value,
                         child: Column(
                           mainAxisSize: MainAxisSize.min,

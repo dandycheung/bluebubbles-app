@@ -255,9 +255,6 @@ class CupertinoConversationListState extends State<CupertinoConversationList> wi
                       final _ = ChatsSvc.chatListVersion.value;
                       final _chats = ChatsSvc.getFilteredChats(
                           showArchived: showArchived, showUnknown: showUnknown, excludePinned: true);
-                      final _pinnedChats = ChatsSvc.getFilteredChats(
-                          showArchived: showArchived, showUnknown: showUnknown, pinnedOnly: true);
-                      final hasPinnedChats = _pinnedChats.isNotEmpty;
 
                       if (!loaded || _chats.isEmpty) {
                         return SliverToBoxAdapter(
@@ -312,8 +309,8 @@ class CupertinoConversationListState extends State<CupertinoConversationList> wi
                                     )
                                   : const SizedBox.shrink());
 
-                              final topDivider = index == 0 && !hasPinnedChats
-                                  ? Obx(() => !SettingsSvc.settings.hideDividers.value
+                              final topDivider = index == 0
+                                  ? const SizedBox.shrink() : Obx(() => !SettingsSvc.settings.hideDividers.value
                                       ? Padding(
                                           padding: EdgeInsets.only(
                                               left: SettingsSvc.settings.denseChatTiles.value ? 70 : 82),
@@ -323,8 +320,7 @@ class CupertinoConversationListState extends State<CupertinoConversationList> wi
                                             height: 0.5,
                                           ),
                                         )
-                                      : const SizedBox.shrink())
-                                  : const SizedBox.shrink();
+                                  : const SizedBox.shrink());
 
                               return Column(
                                 mainAxisSize: MainAxisSize.min,

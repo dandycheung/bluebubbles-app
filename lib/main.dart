@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:isolate';
 import 'dart:math';
 import 'dart:ui';
@@ -11,6 +12,8 @@ import 'package:bluebubbles/helpers/backend/startup_tasks.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/services/network/http_overrides.dart';
 import 'package:bluebubbles/utils/logger/logger.dart';
+import 'package:bluebubbles/utils/media_kit_hot_restart_fix.dart'
+    if (dart.library.html) 'package:bluebubbles/utils/media_kit_hot_restart_fix_web.dart';
 import 'package:bluebubbles/utils/window_effects.dart';
 import 'package:bluebubbles/app/layouts/conversation_list/pages/conversation_list.dart';
 import 'package:bluebubbles/app/layouts/startup/failure_to_start.dart';
@@ -27,7 +30,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart' hide Priority;
 import 'package:flutter/services.dart';
 import 'package:flutter_acrylic/flutter_acrylic.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:get/get.dart';
 import 'package:google_ml_kit/google_ml_kit.dart' hide Message;
@@ -66,6 +68,34 @@ Future<Null> bubble() async {
 Future<Null> initApp(bool bubble, List<String> arguments) async {
   runZonedGuarded<Future<void>>(() async {
     WidgetsFlutterBinding.ensureInitialized();
+
+    /* ----- DESKTOP NATIVE SPLASH STATUS ----- */
+    // Pushes startup status to the native splash; detached once it's dismissed.
+    void Function()? detachSplashStatus;
+    if (kIsDesktop && !bubble && arguments.firstOrNull != "minimized") {
+      const splashChannel = MethodChannel('bluebubbles/splash');
+      bool titleBarApplied = false;
+      void pushStatus() {
+        splashChannel.invokeMethod('setStatus', StartupTasks.status.value).catchError((_) => null);
+
+        final phase = StartupTasks.status.value;
+        if (Platform.isLinux && !titleBarApplied && phase != "Starting..." && phase != "Loading settings...") {
+          titleBarApplied = true;
+          unawaited(() async {
+            await windowManager.ensureInitialized();
+            await windowManager.setTitleBarStyle(
+                SettingsSvc.settings.titleBarStyle.value == BBTitleBarStyle.native
+                    ? TitleBarStyle.normal
+                    : TitleBarStyle.hidden);
+          }());
+        }
+      }
+
+      StartupTasks.status.addListener(pushStatus);
+      pushStatus();
+      detachSplashStatus = () => StartupTasks.status.removeListener(pushStatus);
+    }
+
     await StartupTasks.initStartupServices(isBubble: bubble);
 
     /* ----- RANDOM STUFF INITIALIZATION ----- */
@@ -90,6 +120,7 @@ Future<Null> initApp(bool bubble, List<String> arguments) async {
       Future.microtask(() => initializeDateFormatting());
 
       /* ----- MEDIAKIT INITIALIZATION ----- */
+      clearLeakedMpvWakeupCallbacks(); // must run first — see media_kit_hot_restart_fix.dart
       MediaKit.ensureInitialized();
 
       /* ----- SPLASH SCREEN INITIALIZATION ----- */
@@ -139,24 +170,27 @@ Future<Null> initApp(bool bubble, List<String> arguments) async {
           await windowManager.setMinimumSize(const Size(300, 300));
           Display primary = await ScreenRetriever.instance.getPrimaryDisplay();
 
-          Size size = await windowManager.getSize();
-          double width = PrefsSvc.desktop.getWindowWidth() ?? size.width;
-          double height = PrefsSvc.desktop.getWindowHeight() ?? size.height;
+          double width = PrefsSvc.desktop.getWindowWidth() ?? 1280;
+          double height = PrefsSvc.desktop.getWindowHeight() ?? 720;
 
           width = width.clamp(300, max(300, primary.size.width));
           height = height.clamp(300, max(300, primary.size.height));
-          await windowManager.setSize(Size(width, height));
+
+          if (isWaylandSession) {
+            // Wayland forbids a client from positioning itself, so only restore
+            // the size and leave placement to the compositor.
+            await windowManager.setSize(Size(width, height));
+          } else {
+            // Restore position otherwise
+            final centered = await calcWindowPosition(Size(width, height), Alignment.center);
+            double posX = PrefsSvc.desktop.getWindowX() ?? centered.dx;
+            double posY = PrefsSvc.desktop.getWindowY() ?? centered.dy;
+            posX = posX.clamp(0, max(0, primary.size.width - width));
+            posY = posY.clamp(0, max(0, primary.size.height - height));
+            await windowManager.setBounds(Rect.fromLTWH(posX, posY, width, height));
+            await PrefsSvc.desktop.setWindowOffsets(x: posX, y: posY);
+          }
           await PrefsSvc.desktop.setWindowDimensions(width: width, height: height);
-
-          await windowManager.setAlignment(Alignment.center);
-          Offset offset = await windowManager.getPosition();
-          double? posX = PrefsSvc.desktop.getWindowX() ?? offset.dx;
-          double? posY = PrefsSvc.desktop.getWindowY() ?? offset.dy;
-
-          posX = posX.clamp(0, max(0, primary.size.width - width));
-          posY = posY.clamp(0, max(0, primary.size.height - height));
-          await windowManager.setPosition(Offset(posX, posY), animate: true);
-          await PrefsSvc.desktop.setWindowOffsets(x: posX, y: posY);
 
           await windowManager.setTitle('BlueBubbles');
           if (arguments.firstOrNull != "minimized") {
@@ -164,19 +198,17 @@ Future<Null> initApp(bool bubble, List<String> arguments) async {
           } else {
             await windowManager.hide();
           }
-          // secure_application / local auth has no working Linux implementation,
-          // so never gate startup behind it there (otherwise ChatsSvc/SocketSvc
-          // would never init, since the auth flow can't complete).
-          bool shouldAuthenticate =
-              !Platform.isLinux && SettingsSvc.canAuthenticate && SettingsSvc.settings.shouldSecure.value;
+          try {
+            await const MethodChannel('bluebubbles/splash').invokeMethod('closeSplash');
+          } catch (_) {}
+          detachSplashStatus?.call();
+          unawaited(ThemeSvc.initDynamicColorsDeferred()); // Linux: deferred past splash
+          bool shouldAuthenticate = !Platform.isLinux && SettingsSvc.canAuthenticate && SettingsSvc.settings.shouldSecure.value;
           if (!shouldAuthenticate) {
             ChatsSvc.init();
             SocketSvc.init();
           }
         });
-
-        /* ----- GIPHY API KEY INITIALIZATION ----- */
-        await dotenv.load(fileName: '.env', isOptional: true);
       }
 
       /* ----- EMOJI FONT INITIALIZATION ----- */
@@ -201,6 +233,7 @@ Future<Null> initApp(bool bubble, List<String> arguments) async {
           home: Main(
         lightTheme: light,
         darkTheme: dark,
+        savedThemeMode: await AdaptiveTheme.getThemeMode(),
       )));
     } else {
       runApp(FailureToStart(e: exception, s: stacktrace));
@@ -212,6 +245,11 @@ Future<Null> initApp(bool bubble, List<String> arguments) async {
     Logger.error("Unhandled Exception", trace: stackTrace, error: error);
   });
 }
+
+bool get isWaylandSession =>
+    Platform.isLinux &&
+    (Platform.environment['XDG_SESSION_TYPE'] == 'wayland' ||
+        Platform.environment.containsKey('WAYLAND_DISPLAY'));
 
 class DesktopWindowListener extends WindowListener {
   DesktopWindowListener._();
@@ -256,6 +294,8 @@ class DesktopWindowListener extends WindowListener {
   void onWindowClose() async {
     if (await windowManager.isPreventClose()) {
       await windowManager.hide();
+    } else if (Platform.isLinux) {
+      exit(0);
     }
   }
 }
@@ -263,8 +303,9 @@ class DesktopWindowListener extends WindowListener {
 class Main extends StatelessWidget {
   final ThemeData darkTheme;
   final ThemeData lightTheme;
+  final AdaptiveThemeMode? savedThemeMode;
 
-  const Main({super.key, required this.lightTheme, required this.darkTheme});
+  const Main({super.key, required this.lightTheme, required this.darkTheme, this.savedThemeMode});
 
   @override
   Widget build(BuildContext context) {
@@ -273,7 +314,7 @@ class Main extends StatelessWidget {
           textSelectionTheme: TextSelectionThemeData(selectionColor: lightTheme.colorScheme.primary)),
       dark:
           darkTheme.copyWith(textSelectionTheme: TextSelectionThemeData(selectionColor: darkTheme.colorScheme.primary)),
-      initial: AdaptiveThemeMode.system,
+      initial: savedThemeMode ?? AdaptiveThemeMode.system,
       builder: (theme, darkTheme) => GetMaterialApp(
         debugShowCheckedModeBanner: false,
         title: 'BlueBubbles',
@@ -583,10 +624,8 @@ class _HomeState extends State<Home> with WidgetsBindingObserver, TrayListener {
         await windowManager.hide();
         break;
       case 'close_app':
-        if (await windowManager.isPreventClose()) {
-          await windowManager.setPreventClose(false);
-        }
-        await windowManager.close();
+        await windowManager.setPreventClose(false);
+        await windowManager.destroy();
         break;
     }
   }

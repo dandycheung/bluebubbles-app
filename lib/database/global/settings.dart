@@ -654,6 +654,7 @@ class Settings {
     SettingsSvc.settings.save();
 
     if (!isIsolate) {
+      unawaited(PrefsInterface.syncAllSettings());
       EventDispatcherSvc.emit("theme-update", null);
     }
   }
@@ -813,12 +814,14 @@ class Settings {
   void setDetailsMenuActions(List<DetailsMenuAction> actions) {
     SettingsSvc.settings._detailsMenuActions.value =
         _filterDetailsMenuActions(actions, SettingsSvc.settings.detailsMenuActions);
-    SettingsSvc.settings.save();
+    // saveOneAsync (not save()) so the GlobalIsolate's copy is synced too, else it
+    // overwrites this on its next background settings write.
+    unawaited(SettingsSvc.settings.saveOneAsync('detailsMenuActions'));
   }
 
   void resetDetailsMenuActions() {
     SettingsSvc.settings._detailsMenuActions.value = DetailsMenuAction.values;
-    SettingsSvc.settings.save();
+    unawaited(SettingsSvc.settings.saveOneAsync('detailsMenuActions'));
   }
 }
 
