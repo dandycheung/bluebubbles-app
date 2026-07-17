@@ -1319,9 +1319,29 @@ class ChatsService {
   /// Update chat latest message and subtitle in response to a new or updated message.
   /// Called by IncomingMessageHandler and SyncService to keep ChatState as the single
   /// source of truth for the conversation tile subtitle.
-  void updateChatLatestMessage(String chatGuid, Message message) {
+  ///
+  /// Only moves the latest-message pointer forward in time — sync can report an
+  /// older delta message as a chat's latest, which would rewind its sort order.
+  /// The 2s tolerance allows a temp->real GUID swap. [allowOlder] opts out for the
+  /// post-deletion recompute, which must fall back to an older surviving message.
+  void updateChatLatestMessage(String chatGuid, Message message, {bool allowOlder = false}) {
     final state = getChatState(chatGuid);
     if (state == null) return;
+
+    if (!allowOlder) {
+      final current = state.latestMessage.value;
+      final currentDate = current?.dateCreated;
+      final incomingDate = message.dateCreated;
+      const staleTolerance = Duration(seconds: 2);
+      if (current != null &&
+          current.guid != message.guid &&
+          currentDate != null &&
+          currentDate.millisecondsSinceEpoch > 0 &&
+          incomingDate != null &&
+          incomingDate.isBefore(currentDate.subtract(staleTolerance))) {
+        return;
+      }
+    }
 
     state.updateLatestMessageInternal(message);
     final redacted = SettingsSvc.settings.redactedMode.value;
