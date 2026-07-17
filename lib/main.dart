@@ -83,10 +83,9 @@ Future<Null> initApp(bool bubble, List<String> arguments) async {
           titleBarApplied = true;
           unawaited(() async {
             await windowManager.ensureInitialized();
-            await windowManager.setTitleBarStyle(
-                SettingsSvc.settings.titleBarStyle.value == BBTitleBarStyle.native
-                    ? TitleBarStyle.normal
-                    : TitleBarStyle.hidden);
+            await windowManager.setTitleBarStyle(SettingsSvc.settings.titleBarStyle.value == BBTitleBarStyle.native
+                ? TitleBarStyle.normal
+                : TitleBarStyle.hidden);
           }());
         }
       }
@@ -203,7 +202,8 @@ Future<Null> initApp(bool bubble, List<String> arguments) async {
           } catch (_) {}
           detachSplashStatus?.call();
           unawaited(ThemeSvc.initDynamicColorsDeferred()); // Linux: deferred past splash
-          bool shouldAuthenticate = !Platform.isLinux && SettingsSvc.canAuthenticate && SettingsSvc.settings.shouldSecure.value;
+          bool shouldAuthenticate =
+              !Platform.isLinux && SettingsSvc.canAuthenticate && SettingsSvc.settings.shouldSecure.value;
           if (!shouldAuthenticate) {
             ChatsSvc.init();
             SocketSvc.init();
@@ -248,8 +248,7 @@ Future<Null> initApp(bool bubble, List<String> arguments) async {
 
 bool get isWaylandSession =>
     Platform.isLinux &&
-    (Platform.environment['XDG_SESSION_TYPE'] == 'wayland' ||
-        Platform.environment.containsKey('WAYLAND_DISPLAY'));
+    (Platform.environment['XDG_SESSION_TYPE'] == 'wayland' || Platform.environment.containsKey('WAYLAND_DISPLAY'));
 
 class DesktopWindowListener extends WindowListener {
   DesktopWindowListener._();

@@ -109,8 +109,7 @@ class _SamsungConversationListState extends State<SamsungConversationList> with 
                           child: Padding(
                             padding: const EdgeInsets.only(top: 50),
                             child: loaded
-                                ? buildEmptyChatListState(context,
-                                    showArchived: showArchived, showUnknown: showUnknown)
+                                ? buildEmptyChatListState(context, showArchived: showArchived, showUnknown: showUnknown)
                                 : Column(
                                     children: [
                                       Padding(
