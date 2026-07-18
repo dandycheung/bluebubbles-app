@@ -682,6 +682,8 @@ class ChatCreatorController extends StatefulController {
     await ChatsSvc.setChatTextFieldText(chat, '');
     await ChatsSvc.setChatTextFieldAttachments(chat, []);
 
+    FocusManager.instance.primaryFocus?.unfocus();
+
     isHeaderVisible.value = false;
     // Null the active controller so the inline MessagesView is removed from the
     // tree before the new ConversationView mounts — prevents GlobalKey conflicts
