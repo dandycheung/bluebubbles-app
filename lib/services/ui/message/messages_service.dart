@@ -67,6 +67,12 @@ class MessagesService extends GetxController {
   bool messagesLoaded = false;
   String? method;
 
+  /// The view (State) currently driving this service. When a second
+  /// ConversationView for the same chat is pushed (e.g. from a notification tap),
+  /// both routes share this tagged instance — the superseded view's dispose must
+  /// not delete it out from under its successor. See MessagesServiceMixin.
+  Object? owner;
+
   /// Map of message states for granular reactivity
   /// Key is message GUID, value is MessageState
   /// Provides O(1) lookups and granular observable fields
