@@ -254,7 +254,6 @@ class _ConversationListState extends CustomState<ConversationList, void, Convers
                           if (ChatsSvc.activeChat != null) {
                             cvc(ChatsSvc.activeChat!.chat).close();
                           }
-                          EventDispatcherSvc.emit('update-highlight', null);
                         }
                         return true;
                       }, id: 2);

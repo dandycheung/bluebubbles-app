@@ -41,7 +41,18 @@ class ChatsService {
   /// The map itself doesn't need to be Rx because the underlying ChatState fields are
   final Map<String, ChatState> chatStates = {};
 
-  ChatState? activeChat;
+  ChatState? _activeChat;
+  ChatState? get activeChat => _activeChat;
+  set activeChat(ChatState? value) {
+    _activeChat = value;
+    final guid = value?.chat.guid;
+    if (activeChatGuid.value != guid) activeChatGuid.value = guid;
+  }
+
+  /// Reactive guid of the active chat. Tiles observe this for highlighting instead
+  /// of a ChatState instance — it survives chatStates being cleared/rebuilt (reset,
+  /// reload) and never diverges from a permanent tile controller's captured state.
+  final RxnString activeChatGuid = RxnString();
 
   /// Sorted list of chats maintained for efficient access
   /// Updated on add/update using binary search insertion O(log n + n)
@@ -776,7 +787,6 @@ class ChatsService {
     });
 
     if (save) {
-      EventDispatcherSvc.emit("update-highlight", null);
       unawaited(PrefsSvc.messaging.clearLastOpenedChat());
     }
   }
@@ -796,29 +806,27 @@ class ChatsService {
 
   /// Set a chat as the active chat synchronously
   void setActiveChatSync(Chat chat, {bool clearNotifications = true, bool save = true}) {
-    EventDispatcherSvc.emit("update-highlight", chat.guid);
     Logger.debug('Setting active chat to ${chat.guid} (${chat.displayName})');
 
     // Get or create the chat state
-    final chatState = getChatState(chat.guid);
-    if (chatState != null) {
-      // Set this chat as active
-      activeChat = chatState;
-      chatState.updateActiveAndAliveInternal(true);
+    final chatState = getOrCreateChatState(chat);
 
-      // Clear all other chats to inactive
-      setAllInactiveSync(save: false, clearActive: false);
+    // Set this chat as active
+    activeChat = chatState;
+    chatState.updateActiveAndAliveInternal(true);
 
-      if (clearNotifications) {
-        // Defer the observable update to avoid updating during build phase
-        Future.microtask(() {
-          setChatHasUnread(chatState.chat, false, force: true);
-        });
-      }
+    // Clear all other chats to inactive
+    setAllInactiveSync(save: false, clearActive: false);
 
-      if (save) {
-        unawaited(PrefsSvc.messaging.setLastOpenedChat(chat.guid));
-      }
+    if (clearNotifications) {
+      // Defer the observable update to avoid updating during build phase
+      Future.microtask(() {
+        setChatHasUnread(chatState.chat, false, force: true);
+      });
+    }
+
+    if (save) {
+      unawaited(PrefsSvc.messaging.setLastOpenedChat(chat.guid));
     }
   }
 
@@ -831,7 +839,6 @@ class ChatsService {
   /// Set the active chat to alive
   void setActiveToAlive() {
     Logger.info('Setting active chat to alive: ${activeChat?.chat.guid}');
-    EventDispatcherSvc.emit("update-highlight", activeChat?.chat.guid);
     activeChat?.updateAliveInternal(true);
   }
 
@@ -1315,7 +1322,7 @@ class ChatsService {
   void reset({bool reinitWatchers = false}) {
     currentCount = 0;
     hasChats.value = false;
-    activeChat = null;
+    _activeChat = null;
     chatStates.clear();
     _sortedChats.clear();
     loadedAllChats = Completer();
