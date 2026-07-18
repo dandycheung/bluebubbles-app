@@ -545,7 +545,7 @@ class _HomeState extends State<Home> with WidgetsBindingObserver, TrayListener {
           if (await temp.exists()) await temp.delete(recursive: true);
 
           /* ----- BADGE ICON LISTENER ----- */
-          ChatsSvc.unreadCount.listen((count) async {
+          Future<void> updateBadge(int count) async {
             if (count == 0) {
               await WindowsTaskbar.resetOverlayIcon();
             } else if (count <= 9) {
@@ -553,7 +553,10 @@ class _HomeState extends State<Home> with WidgetsBindingObserver, TrayListener {
             } else {
               await WindowsTaskbar.setOverlayIcon(ThumbnailToolbarAssetIcon('assets/badges/badge-10.ico'));
             }
-          });
+          }
+
+          await updateBadge(ChatsSvc.unreadCount.value);
+          ChatsSvc.unreadCount.listen(updateBadge);
 
           /* ----- WINDOW EFFECT INITIALIZATION ----- */
           EventDispatcherSvc.stream.listen((event) async {
