@@ -1270,7 +1270,9 @@ class MessagesService extends GetxController {
     if (chat == null) return;
     final latest = Chat.getMessages(chat, limit: 1);
     if (latest.isNotEmpty) {
-      ChatsSvc.updateChatLatestMessage(tag, latest.first);
+      // The newest message was just deleted, so the surviving latest is older
+      // than the current pointer — allow the downgrade here specifically.
+      ChatsSvc.updateChatLatestMessage(tag, latest.first, allowOlder: true);
     }
   }
 
