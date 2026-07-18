@@ -257,8 +257,13 @@ class ChatsService {
       // This maintains proper ordering including pinIndex which DB queries cannot handle
       for (Chat c in chatBatch) {
         // Create ChatState and add to map
-        chatStates[c.guid] = ChatState(c);
-        _setupChatStateListeners(chatStates[c.guid]!);
+        final state = chatStates[c.guid] = ChatState(c);
+        _setupChatStateListeners(state);
+
+        if (activeChatGuid.value == c.guid) {
+          _activeChat = state;
+          state.updateActiveAndAliveInternal(true);
+        }
 
         // Add to sorted list
         _insertChatSorted(c);
