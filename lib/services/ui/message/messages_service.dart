@@ -24,6 +24,7 @@ MessagesService ensureMessagesSvc(String chatGuid) =>
     Get.put(
       MessagesService(chatGuid),
       tag: chatGuid,
+      permanent: true,
     );
 
 MessagesService registerMessagesSvc(MessagesService service) =>
@@ -31,6 +32,7 @@ MessagesService registerMessagesSvc(MessagesService service) =>
     Get.put(
       service,
       tag: service.tag,
+      permanent: true,
     );
 
 // ignore: non_constant_identifier_names
@@ -725,7 +727,7 @@ class MessagesService extends GetxController {
   void close({bool force = false}) {
     String? lastChat = lastReloadedChat();
     if (force || lastChat != tag) {
-      Get.delete<MessagesService>(tag: tag);
+      Get.delete<MessagesService>(tag: tag, force: true);
     }
 
     struct.flush();
@@ -740,7 +742,7 @@ class MessagesService extends GetxController {
   void reload() {
     messagesLoaded = false;
     Get.put<String>(tag, tag: 'lastReloadedChat');
-    Get.reload<MessagesService>(tag: tag);
+    Get.reload<MessagesService>(tag: tag, force: true);
   }
 
   /// Adds [message] to the active chat view if it is not already present.
