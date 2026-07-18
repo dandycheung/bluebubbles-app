@@ -51,10 +51,7 @@ bool get isSnap => !kIsWeb && Platform.isLinux && Platform.environment.containsK
 
 bool get isFlatpak => !kIsWeb && Platform.isLinux && Platform.environment.containsKey('FLATPAK_ID');
 
-bool get isMsix =>
-    !kIsWeb &&
-    Platform.isWindows &&
-    Platform.resolvedExecutable.contains('WindowsApps');
+bool get isMsix => !kIsWeb && Platform.isWindows && Platform.resolvedExecutable.contains('WindowsApps');
 
 /// From https://github.com/modulovalue/dart_intersperse/blob/master/lib/src/intersperse.dart
 Iterable<T> intersperse<T>(T element, Iterable<T> iterable) sync* {

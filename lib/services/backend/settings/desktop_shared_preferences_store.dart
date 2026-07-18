@@ -95,16 +95,13 @@ base class DesktopSharedPreferencesStore extends SharedPreferencesAsyncPlatform 
       _mutate((prefs) => prefs[key] = value);
 
   @override
-  Future<String?> getString(String key, SharedPreferencesOptions options) async =>
-      (await _readFile())[key] as String?;
+  Future<String?> getString(String key, SharedPreferencesOptions options) async => (await _readFile())[key] as String?;
 
   @override
-  Future<bool?> getBool(String key, SharedPreferencesOptions options) async =>
-      (await _readFile())[key] as bool?;
+  Future<bool?> getBool(String key, SharedPreferencesOptions options) async => (await _readFile())[key] as bool?;
 
   @override
-  Future<double?> getDouble(String key, SharedPreferencesOptions options) async =>
-      (await _readFile())[key] as double?;
+  Future<double?> getDouble(String key, SharedPreferencesOptions options) async => (await _readFile())[key] as double?;
 
   @override
   Future<int?> getInt(String key, SharedPreferencesOptions options) async => (await _readFile())[key] as int?;
@@ -266,7 +263,7 @@ base class DesktopSharedPreferencesStore extends SharedPreferencesAsyncPlatform 
   /// (e.g. the stock legacy store reading at startup) briefly holds it open,
   /// so retry a few times before giving up.
   Future<void> _renameWithRetry(File tmp, String targetPath) async {
-    for (int attempt = 1; ; attempt++) {
+    for (int attempt = 1;; attempt++) {
       try {
         tmp.renameSync(targetPath);
         return;

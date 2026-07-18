@@ -14,8 +14,8 @@ class LaunchAtStartup {
     final appName = FilesystemSvc.packageInfo.appName;
     if (Platform.isWindows) {
       if (isMsix) {
-        return p.join(Platform.environment['APPDATA']!, 'Microsoft', 'Windows', 'Start Menu', 'Programs',
-            'Startup', '$appName.lnk');
+        return p.join(Platform.environment['APPDATA']!, 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'Startup',
+            '$appName.lnk');
       }
       return 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run\\$appName';
     } else if (Platform.isLinux) {
@@ -31,9 +31,13 @@ class LaunchAtStartup {
     if (path == null) return;
     if (Platform.isWindows && !isMsix) {
       await Process.run('reg', [
-        'add', r'HKCU\Software\Microsoft\Windows\CurrentVersion\Applets\Regedit',
-        '/v', 'LastKey', '/d',
-        r'Computer\HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Run', '/f'
+        'add',
+        r'HKCU\Software\Microsoft\Windows\CurrentVersion\Applets\Regedit',
+        '/v',
+        'LastKey',
+        '/d',
+        r'Computer\HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Run',
+        '/f'
       ]);
       // regedit requires elevation; 'start' uses ShellExecute so the UAC prompt appears
       await Process.start('cmd', ['/c', 'start', '', 'regedit']);

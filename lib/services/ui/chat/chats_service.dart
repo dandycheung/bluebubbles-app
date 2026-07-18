@@ -901,6 +901,65 @@ class ChatsService {
     removeChat(chat);
   }
 
+  /// Performs a full messaging reset: wipes all Messages, Attachments, Chats,
+  /// Handles, and Contacts (ContactV2) from the database, deletes all
+  /// associated files from disk, and flushes every in-memory service cache
+  /// tied to that data.
+  ///
+  /// Does NOT touch Settings, themes, FCM data, or scheduled messages. Does
+  /// NOT show any confirmation UI — callers must confirm with the user
+  /// before invoking this.
+  Future<void> deleteAllMessagingData() async {
+    if (kIsWeb) return;
+
+    // Close any active conversation view first (mirrors deleteChat() above).
+    if (activeChat != null) {
+      NavigationSvc.closeAllConversationView(Get.context!);
+      setAllInactive();
+      await Future.delayed(const Duration(milliseconds: 500));
+    }
+
+    // Capture currently-registered per-chat MessagesService tags before
+    // init() below clears chatStates — it's our only enumeration source.
+    final chatGuids = chatStates.keys.toList();
+
+    Database.resetMessagingData();
+    await _deleteMessagingFiles();
+
+    for (final guid in chatGuids) {
+      maybeFindMessagesSvc(guid)?.close(force: true);
+    }
+    AttachmentsSvc.clearVideoThumbnailCache();
+    HandleSvc.reset();
+
+    // Use init() rather than reset() so the empty-database case is handled
+    // correctly: reset() alone leaves loadedFirstChatBatch=false forever since
+    // there are no chats left to trigger the "batch loaded" codepath, which
+    // left the conversation list stuck on "Loading chats..." indefinitely.
+    // init(force: true) calls reset() internally and then, for a zero-chat
+    // database, sets loadedFirstChatBatch=true and re-initializes DB watchers
+    // (same codepath FullSyncManager.complete() uses after a full resync).
+    await init(force: true);
+  }
+
+  /// Deletes on-disk messaging data: attachments (originals/thumbnails/live-photo
+  /// .mov), per-chat avatars, per-chat custom backgrounds, per-message balloon
+  /// bundle directories, cached URL preview images, and cached contact avatars.
+  Future<void> _deleteMessagingFiles() async {
+    final paths = [
+      FilesystemSvc.attachmentsPath,
+      FilesystemSvc.avatarsPath,
+      FilesystemSvc.customBackgroundsPath,
+      FilesystemSvc.messagesPath,
+      FilesystemSvc.urlPreviewsPath,
+      FilesystemSvc.contactAvatarsPath,
+    ];
+    for (final path in paths) {
+      final dir = Directory(path);
+      if (await dir.exists()) await dir.delete(recursive: true);
+    }
+  }
+
   /// Soft delete a chat with full UI cleanup and service state management
   Future<void> softDeleteChat(Chat chat) async {
     if (kIsWeb) return;
@@ -1272,9 +1331,29 @@ class ChatsService {
   /// Update chat latest message and subtitle in response to a new or updated message.
   /// Called by IncomingMessageHandler and SyncService to keep ChatState as the single
   /// source of truth for the conversation tile subtitle.
-  void updateChatLatestMessage(String chatGuid, Message message) {
+  ///
+  /// Only moves the latest-message pointer forward in time — sync can report an
+  /// older delta message as a chat's latest, which would rewind its sort order.
+  /// The 2s tolerance allows a temp->real GUID swap. [allowOlder] opts out for the
+  /// post-deletion recompute, which must fall back to an older surviving message.
+  void updateChatLatestMessage(String chatGuid, Message message, {bool allowOlder = false}) {
     final state = getChatState(chatGuid);
     if (state == null) return;
+
+    if (!allowOlder) {
+      final current = state.latestMessage.value;
+      final currentDate = current?.dateCreated;
+      final incomingDate = message.dateCreated;
+      const staleTolerance = Duration(seconds: 2);
+      if (current != null &&
+          current.guid != message.guid &&
+          currentDate != null &&
+          currentDate.millisecondsSinceEpoch > 0 &&
+          incomingDate != null &&
+          incomingDate.isBefore(currentDate.subtract(staleTolerance))) {
+        return;
+      }
+    }
 
     state.updateLatestMessageInternal(message);
     final redacted = SettingsSvc.settings.redactedMode.value;

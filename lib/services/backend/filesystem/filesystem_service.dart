@@ -138,8 +138,8 @@ class FilesystemService {
         final exeSegments = split(Platform.resolvedExecutable);
         final fullNameParts = exeSegments[exeSegments.indexOf('WindowsApps') + 1].split('_');
         final packageFamilyName = '${fullNameParts.first}_${fullNameParts.last}';
-        final Directory msixLocation = Directory(join(appDataRoot, "Local", "Packages",
-            packageFamilyName, "LocalCache", "Roaming", "BlueBubbles", "bluebubbles"));
+        final Directory msixLocation = Directory(join(appDataRoot, "Local", "Packages", packageFamilyName, "LocalCache",
+            "Roaming", "BlueBubbles", "bluebubbles"));
         // Check if the non-msix directory exists
         final Directory nonMsixLocation = Directory(join(appDataRoot, "Roaming", "BlueBubbles", "bluebubbles"));
         if (!msixLocation.existsSync() && nonMsixLocation.existsSync()) {

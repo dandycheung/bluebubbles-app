@@ -261,25 +261,22 @@ class CupertinoConversationListState extends State<CupertinoConversationList> wi
                           child: Center(
                             child: Padding(
                               padding: const EdgeInsets.only(top: 50.0),
-                              child: Column(
-                                children: [
-                                  Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: Text(
-                                      !loaded
-                                          ? "Loading chats..."
-                                          : showArchived
-                                              ? "You have no archived chats"
-                                              : showUnknown
-                                                  ? "You have no messages from unknown senders :)"
-                                                  : "You have no chats :(",
-                                      style: context.textTheme.labelLarge,
-                                      textAlign: TextAlign.center,
+                              child: loaded
+                                  ? buildEmptyChatListState(context,
+                                      showArchived: showArchived, showUnknown: showUnknown)
+                                  : Column(
+                                      children: [
+                                        Padding(
+                                          padding: const EdgeInsets.all(8.0),
+                                          child: Text(
+                                            "Loading chats...",
+                                            style: context.textTheme.labelLarge,
+                                            textAlign: TextAlign.center,
+                                          ),
+                                        ),
+                                        buildProgressIndicator(context, size: 15),
+                                      ],
                                     ),
-                                  ),
-                                  if (!loaded) buildProgressIndicator(context, size: 15),
-                                ],
-                              ),
                             ),
                           ),
                         );
@@ -313,7 +310,8 @@ class CupertinoConversationListState extends State<CupertinoConversationList> wi
                                   : const SizedBox.shrink());
 
                               final topDivider = index == 0
-                                  ? const SizedBox.shrink() : Obx(() => !SettingsSvc.settings.hideDividers.value
+                                  ? const SizedBox.shrink()
+                                  : Obx(() => !SettingsSvc.settings.hideDividers.value
                                       ? Padding(
                                           padding: EdgeInsets.only(
                                               left: SettingsSvc.settings.denseChatTiles.value ? 70 : 82),
@@ -323,7 +321,7 @@ class CupertinoConversationListState extends State<CupertinoConversationList> wi
                                             height: 0.5,
                                           ),
                                         )
-                                  : const SizedBox.shrink());
+                                      : const SizedBox.shrink());
 
                               return Column(
                                 mainAxisSize: MainAxisSize.min,

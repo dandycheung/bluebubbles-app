@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:bluebubbles/app/layouts/settings/pages/server/backup_restore_actions.dart';
 import 'package:bluebubbles/app/layouts/settings/pages/server/backup_restore_dialogs.dart';
 import 'package:bluebubbles/app/layouts/settings/pages/server/backup_restore_types.dart';
+import 'package:bluebubbles/app/layouts/settings/pages/server/pinned_chats_backup.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/app/layouts/settings/widgets/settings_widgets.dart';
 import 'package:bluebubbles/database/models.dart';
@@ -153,6 +154,7 @@ class _BackupRestorePanelState extends State<BackupRestorePanel> with ThemeHelpe
                                               Map<String, dynamic> json = SettingsSvc.settings.toMap(includeAll: false);
                                               json["description"] = item["description"];
                                               json["timestamp"] = DateTime.now().millisecondsSinceEpoch;
+                                              json["pinnedChats"] = PinnedChatsBackup.exportList();
                                               Response response = await HttpSvc.backup.setSettings(item["name"], json);
                                               Navigator.of(context, rootNavigator: true).pop();
                                               if (response.statusCode != 200) {
@@ -195,11 +197,21 @@ class _BackupRestorePanelState extends State<BackupRestorePanel> with ThemeHelpe
                                       content: const Text(
                                         "Are you sure you want to restore this backup, overwriting your current Settings?",
                                       ),
-                                      onYes: () {
+                                      onYes: () async {
                                         Navigator.of(context, rootNavigator: true).pop();
                                         try {
                                           Settings.updateFromMap(item);
                                           showSnackbar("Success", "Settings restored successfully");
+                                          final pinnedChats = item["pinnedChats"] as List<dynamic>?;
+                                          if (pinnedChats != null) {
+                                            final result = await PinnedChatsBackup.restore(pinnedChats);
+                                            if (result.skipped.isNotEmpty && context.mounted) {
+                                              BackupRestoreDialogs.showPinnedChatsRestoreSummary(
+                                                context: context,
+                                                skipped: result.skipped,
+                                              );
+                                            }
+                                          }
                                         } catch (e, s) {
                                           Logger.error("Failed to restore settings backup!", error: e, trace: s);
                                           showSnackbar(
@@ -279,6 +291,7 @@ class _BackupRestorePanelState extends State<BackupRestorePanel> with ThemeHelpe
                                 }
                                 final timestamp = DateTime.now().millisecondsSinceEpoch;
                                 json["timestamp"] = timestamp;
+                                json["pinnedChats"] = PinnedChatsBackup.exportList();
                                 if (destination.isCloud) {
                                   var response = await HttpSvc.backup.setSettings(name, json);
                                   if (response.statusCode != 200) {
@@ -459,13 +472,23 @@ class _BackupRestorePanelState extends State<BackupRestorePanel> with ThemeHelpe
                                 content: const Text(
                                   "Are you sure you want to restore this backup, overwriting your current Settings?",
                                 ),
-                                onYes: () {
+                                onYes: () async {
                                   Navigator.of(context, rootNavigator: true).pop();
                                   try {
                                     String jsonString = const Utf8Decoder().convert(res.files.first.bytes!);
                                     Map<String, dynamic> json = jsonDecode(jsonString);
                                     Settings.updateFromMap(json);
                                     showSnackbar("Success", "Settings restored successfully");
+                                    final pinnedChats = json["pinnedChats"] as List<dynamic>?;
+                                    if (pinnedChats != null) {
+                                      final result = await PinnedChatsBackup.restore(pinnedChats);
+                                      if (result.skipped.isNotEmpty && context.mounted) {
+                                        BackupRestoreDialogs.showPinnedChatsRestoreSummary(
+                                          context: context,
+                                          skipped: result.skipped,
+                                        );
+                                      }
+                                    }
                                   } catch (e, s) {
                                     Logger.error("Failed to restore settings backup!", error: e, trace: s);
                                     showSnackbar("Error", "Failed to restore settings backup! Error: ${e.toString()}");
