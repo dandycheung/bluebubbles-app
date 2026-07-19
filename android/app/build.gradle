@@ -129,9 +129,8 @@ android {
             productFlavors.alpha.signingConfig signingConfigs.release
             productFlavors.beta.signingConfig signingConfigs.release
             productFlavors.prod.signingConfig signingConfigs.release
-            minifyEnabled true
-            shrinkResources true
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            minifyEnabled false
+            shrinkResources false
         }
     }
     sourceSets {
