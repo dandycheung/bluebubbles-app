@@ -96,12 +96,26 @@ class ResolvedFileContent extends StatelessWidget {
     }
 
     if (attachment.mimeStart == "video" && !SettingsSvc.settings.highPerfMode.value) {
-      return VideoPlayer(
-        attachment: attachment,
-        file: file,
-        controller: cvController,
-        isFromMe: message.isFromMe!,
-        galleryAttachments: galleryAttachments,
+      return ClipRRect(
+        borderRadius: isiOS
+            ? BorderRadius.only(
+                topLeft: const Radius.circular(20.0),
+                topRight: const Radius.circular(20.0),
+                bottomLeft: forceAllCornersRounded
+                    ? const Radius.circular(20.0)
+                    : (message.isFromMe! ? const Radius.circular(20.0) : Radius.zero),
+                bottomRight: forceAllCornersRounded
+                    ? const Radius.circular(20.0)
+                    : (!message.isFromMe! ? const Radius.circular(20.0) : Radius.zero),
+              )
+            : const BorderRadius.all(Radius.circular(5.0)),
+        child: VideoPlayer(
+          attachment: attachment,
+          file: file,
+          controller: cvController,
+          isFromMe: message.isFromMe!,
+          galleryAttachments: galleryAttachments,
+        ),
       );
     }
 
