@@ -545,7 +545,7 @@ class _HomeState extends State<Home> with WidgetsBindingObserver, TrayListener {
 
           /* ----- BADGE ICON LISTENER ----- */
           Future<void> updateBadge(int count) async {
-            if (count == 0) {
+            if (count == 0 || !SettingsSvc.settings.windowsTaskbarBadge.value) {
               await WindowsTaskbar.resetOverlayIcon();
             } else if (count <= 9) {
               await WindowsTaskbar.setOverlayIcon(ThumbnailToolbarAssetIcon('assets/badges/badge-$count.ico'));
