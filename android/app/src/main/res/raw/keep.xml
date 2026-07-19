@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  flutter_local_notifications looks up ic_stat_icon by string name from Dart
+  (AndroidInitializationSettings('ic_stat_icon')), which the resource shrinker's
+  static analysis can't see, so it gets stripped from release builds without this.
+-->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@mipmap/ic_stat_icon,@drawable/ic_stat_icon" />
