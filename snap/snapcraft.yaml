@@ -117,8 +117,8 @@ parts:
       - alsa-mixin
       - fmedia
     source:
-      - on amd64: https://github.com/BlueBubblesApp/bluebubbles-app/releases/download/v2.0.0%2B87-desktop-b.3/bluebubbles-linux-x86_64.tar.gz
-      - on arm64: https://github.com/BlueBubblesApp/bluebubbles-app/releases/download/v2.0.0%2B87-desktop-b.3/bluebubbles-linux-aarch64.tar.gz
+      - on amd64: https://github.com/BlueBubblesApp/bluebubbles-app/releases/download/v2.0.0%2Bdesktop.86-b.9/bluebubbles-linux-x86_64.tar.gz
+      - on arm64: https://github.com/BlueBubblesApp/bluebubbles-app/releases/download/v2.0.0%2Bdesktop.86-b.9/bluebubbles-linux-aarch64.tar.gz
     plugin: nil
     override-build: |
       set -eux
