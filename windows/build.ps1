@@ -54,13 +54,18 @@ if ($Phase -ne 'Package') {
 
     Invoke-Checked $flutterCmd pub get --enforce-lockfile
 
-    # Runs `flutter build windows` and packages the MS Store MSIX
-    # (windows\bluebubbles-store.msix). Microsoft signs this one, so pass --store
-    # explicitly (store mode is no longer set in pubspec.yaml). Built from the
-    # unsigned Release output — Microsoft re-signs the package at ingestion.
-    # --windows-build-args=--no-pub: the inner `flutter build windows` reuses the
-    # lockfile-enforced resolution above instead of re-running pub get unenforced.
-    Invoke-Checked $dartCmd run msix:create --store --architecture $Arch '--windows-build-args=--no-pub' --output-name bluebubbles-store
+    # Build the app ourselves before packaging. msix aborts on arm64 if
+    # build\windows\arm64 doesn't already exist (configuration.dart:434), and it
+    # runs that check before it would build — so let flutter produce the
+    # arch-specific Release folder first, then have msix only package it
+    # (--build-windows false). --no-pub reuses the lockfile-enforced resolution above.
+    Invoke-Checked $flutterCmd build windows --no-pub
+
+    # Packages the MS Store MSIX (windows\bluebubbles-store.msix). Microsoft signs
+    # this one, so pass --store explicitly (store mode is no longer set in
+    # pubspec.yaml). Built from the unsigned Release output — Microsoft re-signs the
+    # package at ingestion.
+    Invoke-Checked $dartCmd run msix:create --store --architecture $Arch --build-windows false --output-name bluebubbles-store
 
     Get-FileHash 'windows\bluebubbles-store.msix' -Algorithm SHA256 | Format-List Path, Hash
 }
