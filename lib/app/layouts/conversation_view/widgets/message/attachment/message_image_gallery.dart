@@ -7,6 +7,7 @@ import 'package:bluebubbles/app/layouts/conversation_view/widgets/message/attach
 import 'package:bluebubbles/database/models.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/services/services.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -77,11 +78,17 @@ class _MessageImageGalleryState extends State<MessageImageGallery> with ThemeHel
   @override
   void didUpdateWidget(covariant MessageImageGallery oldWidget) {
     super.didUpdateWidget(oldWidget);
-    final diff = widget.attachments.filter((a) => !_imageSizes.containsKey(a.guid ?? a.transferName)).toList();
-    if (diff.isNotEmpty) {
+    final oldKeys = oldWidget.attachments.map((a) => a.guid ?? a.transferName).toList();
+    final newKeys = widget.attachments.map((a) => a.guid ?? a.transferName).toList();
+    if (!listEquals(oldKeys, newKeys)) {
       _currentIndex = 0;
       _imageSizes.clear();
       _loadImageSizes();
+    } else {
+      final diff = widget.attachments.filter((a) => !_imageSizes.containsKey(a.guid ?? a.transferName)).toList();
+      if (diff.isNotEmpty) {
+        _loadImageSizes();
+      }
     }
   }
 
