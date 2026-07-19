@@ -8,6 +8,7 @@ import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/app/layouts/settings/widgets/settings_widgets.dart';
 import 'package:bluebubbles/database/models.dart';
 import 'package:bluebubbles/services/services.dart';
+import 'package:bluebubbles/utils/file_utils.dart';
 import 'package:bluebubbles/utils/logger/logger.dart';
 import 'package:bluebubbles/utils/share.dart';
 import 'package:dio/dio.dart';
@@ -21,7 +22,6 @@ import 'package:intl/intl.dart';
 import 'package:path/path.dart' hide context;
 import 'package:universal_html/html.dart' as html;
 import 'package:universal_io/io.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 class BackupRestorePanel extends StatefulWidget {
   const BackupRestorePanel({super.key});
@@ -344,7 +344,7 @@ class _BackupRestorePanelState extends State<BackupRestorePanel> with ThemeHelpe
                                       ),
                                       onPressed: () {
                                         if (kIsDesktop) {
-                                          launchUrl(Uri.file(dirname(filePath)));
+                                          revealInFileManager(filePath);
                                         }
                                         Share.files([filePath]);
                                       },
@@ -744,7 +744,7 @@ class _BackupRestorePanelState extends State<BackupRestorePanel> with ThemeHelpe
                                     ),
                                     onPressed: () {
                                       if (kIsDesktop) {
-                                        launchUrl(Uri.file(dirname(filePath)));
+                                        revealInFileManager(filePath);
                                         return;
                                       }
                                       Share.files([filePath]);
