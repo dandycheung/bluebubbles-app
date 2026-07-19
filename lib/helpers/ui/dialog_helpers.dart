@@ -45,6 +45,7 @@ Future<T?> showBBDialog<T>({
   String? body,
   List<BBDialogAction> actions = const [],
   bool barrierDismissible = true,
+  bool useRootNavigator = true,
   TextAlign? bodyTextAlign,
 }) {
   final skin = SettingsSvc.settings.skin.value;
@@ -57,7 +58,7 @@ Future<T?> showBBDialog<T>({
     return showDialog<T>(
       context: context,
       barrierDismissible: barrierDismissible,
-      useRootNavigator: true,
+      useRootNavigator: useRootNavigator,
       builder: (ctx) => CupertinoTheme(
         // Bridge Material theme brightness into the Cupertino color system so
         // CupertinoDynamicColor.resolve picks the correct light/dark variants
