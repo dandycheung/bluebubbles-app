@@ -239,7 +239,7 @@ jobs:
           files: windows/bluebubbles_installer.exe
 
   windows-arm:
-    runs-on: windows-11-vs2026-arm
+    runs-on: windows-11-arm
     timeout-minutes: 60
     steps:
       - name: Support long paths
