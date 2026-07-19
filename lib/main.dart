@@ -545,16 +545,18 @@ class _HomeState extends State<Home> with WidgetsBindingObserver, TrayListener {
 
           /* ----- BADGE ICON LISTENER ----- */
           Future<void> updateBadge(int count) async {
-            if (count == 0 || !SettingsSvc.settings.windowsTaskbarBadge.value) {
-              await WindowsTaskbar.resetOverlayIcon();
-            } else if (count <= 9) {
-              await WindowsTaskbar.setOverlayIcon(ThumbnailToolbarAssetIcon('assets/badges/badge-$count.ico'));
-            } else {
-              await WindowsTaskbar.setOverlayIcon(ThumbnailToolbarAssetIcon('assets/badges/badge-10.ico'));
-            }
+            try {
+              if (count == 0 || !SettingsSvc.settings.windowsTaskbarBadge.value) {
+                await WindowsTaskbar.resetOverlayIcon();
+              } else if (count <= 9) {
+                await WindowsTaskbar.setOverlayIcon(ThumbnailToolbarAssetIcon('assets/badges/badge-$count.ico'));
+              } else {
+                await WindowsTaskbar.setOverlayIcon(ThumbnailToolbarAssetIcon('assets/badges/badge-10.ico'));
+              }
+            } catch (_) {}
           }
 
-          await updateBadge(ChatsSvc.unreadCount.value);
+          unawaited(updateBadge(ChatsSvc.unreadCount.value));
           ChatsSvc.unreadCount.listen(updateBadge);
 
           /* ----- WINDOW EFFECT INITIALIZATION ----- */
