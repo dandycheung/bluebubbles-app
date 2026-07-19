@@ -131,7 +131,10 @@ class CloudMessagingService {
     // Make sure we got a valid response back from the FCM auth
     if (isNullOrEmpty(result)) {
       Logger.warn("Empty results, not registering device with the server.", tag: 'FCM-Auth');
-      return;
+      throw Exception(
+          "Failed to get an FCM token from Firebase (empty result). This can happen if Firebase was "
+          "already initialized with stale credentials in this app session. Try fully closing and "
+          "reopening the app.");
     }
 
     // Register the FCM device to the server

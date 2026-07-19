@@ -389,10 +389,11 @@ class StartupTasks {
     unawaited(SettingsSvc.refreshServerDetails());
 
     // Only register FCM device on startup
-    // Don't await - let this happen in background
+    // Don't await. Let this happen in background
     Logger.info("Registering FCM device in background...");
     FirebaseSvc.registerDevice().catchError((e, s) {
       Logger.warn("Failed to register FCM device on startup!", error: e, trace: s);
+      showToast("Failed to register FCM device!", isError: true);
       return null; // Return null on error
     });
 
