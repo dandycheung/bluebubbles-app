@@ -108,6 +108,8 @@ jobs:
       - name: Package installer + msix (phase 2)
         run: .\windows\build.ps1 -Phase Package
         shell: pwsh
+        env:
+          PACKAGE_MSIX: ${{ steps.sign-payload.outcome == 'success' }}
 
       - name: Upload unsigned installer artifact
         id: upload-installer

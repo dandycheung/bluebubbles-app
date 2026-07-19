@@ -74,8 +74,15 @@ if ($Phase -ne 'Build') {
     # Build the directly-distributed MSIX, left unsigned for SignPath to sign in CI.
     # Reuses the Release output from the store build above. SIGNED_MSIX_PUBLISHER must
     # equal the SignPath certificate's subject DN, or Windows will reject the signature.
-    # Skipped when unset (e.g. local builds without signing configured).
-    if ($env:SIGNED_MSIX_PUBLISHER) {
+    # Only built when PACKAGE_MSIX=true (CI sets this when the payload was signed): an
+    # unsigned msix can't be installed, so packaging one for the signing fallback — or
+    # for a local build without signing — is pointless. Skipped when either is unset.
+    if ($env:PACKAGE_MSIX -eq 'true' -and $env:SIGNED_MSIX_PUBLISHER) {
+        # MakeAppx needs a valid X.500 DN here; a plain display name yields a cryptic
+        # 0x80080204 "manifest is not valid". Fail with a clear message instead.
+        if ($env:SIGNED_MSIX_PUBLISHER -notmatch '(^|,)\s*CN=') {
+            throw "SIGNED_MSIX_PUBLISHER must be an X.500 DN starting with 'CN=' (got: '$env:SIGNED_MSIX_PUBLISHER')."
+        }
         $msixArgs = @(
             '--build-windows', 'false',
             '--sign-msix', 'false',
