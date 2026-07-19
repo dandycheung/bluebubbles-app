@@ -52,7 +52,7 @@ class ConversationTileController extends StatefulController {
         ),
         (route) => route.isFirst,
       );
-    } else if (NavigationSvc.isTabletMode(context) && ChatsSvc.activeChat?.isAlive == false) {
+    } else if (NavigationSvc.isTabletMode(context) && ChatsSvc.activeChat?.isAlive.value == false) {
       // Pops chat details
       Get.back(id: 2);
     } else {
