@@ -133,10 +133,17 @@ parts:
       - libproxy1v5
       - net-tools
       - wmctrl
-      - zenity
     stage:
       - -usr/lib/*/libasound*
       - -usr/lib/*/libmpv.so*
+      - -usr/lib/*/libgtk-3*
+      - -usr/lib/*/libgdk-3*
+      - -usr/lib/*/libgdk_pixbuf-2.0*
+      - -usr/lib/*/gdk-pixbuf-2.0/**
+      - -usr/lib/*/librsvg-2*
+      - -usr/lib/*/libpango*
+      - -usr/lib/*/libcairo*
+      - -usr/lib/*/libharfbuzz*
 
   mpv:
     plugin: meson
