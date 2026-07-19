@@ -58,7 +58,9 @@ if ($Phase -ne 'Package') {
     # unsigned Release output — Microsoft re-signs the package at ingestion.
     # --windows-build-args=--no-pub: the inner `flutter build windows` reuses the
     # lockfile-enforced resolution above instead of re-running pub get unenforced.
-    Invoke-Checked $dartCmd run msix:create --store '--windows-build-args=--no-pub' --output-name bluebubbles-store
+    # --split-debug-info pulls the Dart AOT debug symbols out of the binary (they trip
+    # AV malware heuristics otherwise) into build\windows\symbols, which CI uploads.
+    Invoke-Checked $dartCmd run msix:create --store '--windows-build-args=--no-pub --split-debug-info=build/windows/symbols' --output-name bluebubbles-store
 
     Get-FileHash 'windows\bluebubbles-store.msix' -Algorithm SHA256 | Format-List Path, Hash
 }
