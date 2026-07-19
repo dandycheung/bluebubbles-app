@@ -193,6 +193,7 @@ class _MessageImageGalleryState extends State<MessageImageGallery> with ThemeHel
 
   void _showGalleryPopup(BuildContext context, String title) {
     showBBDialog(
+      useRootNavigator: false,
       context: context,
       title: title,
       content: SizedBox(

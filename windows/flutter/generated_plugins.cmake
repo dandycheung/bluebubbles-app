@@ -15,7 +15,6 @@ list(APPEND FLUTTER_PLUGIN_LIST
   geolocator_windows
   irondash_engine_context
   local_auth_windows
-  local_notifier
   maps_launcher
   media_kit_libs_windows_video
   media_kit_video

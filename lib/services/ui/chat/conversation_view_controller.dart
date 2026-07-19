@@ -241,7 +241,6 @@ class ConversationViewController extends StatefulController with GetSingleTicker
 
   void close() {
     updateSmartReplyLayout(visible: false, height: 0);
-    EventDispatcherSvc.emit("update-highlight", null);
     ChatsSvc.setAllInactiveSync();
     Get.delete<ConversationViewController>(tag: tag);
   }

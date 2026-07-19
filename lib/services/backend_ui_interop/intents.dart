@@ -63,7 +63,6 @@ class OpenNewChatCreatorAction extends Action<OpenNewChatCreatorIntent> {
   @override
   Object? invoke(covariant OpenNewChatCreatorIntent intent) {
     if (SettingsSvc.settings.finishedSetup.value) {
-      EventDispatcherSvc.emit("update-highlight", null);
       NavigationSvc.pushAndRemoveUntil(
         context,
         const NewChatCreator(),
