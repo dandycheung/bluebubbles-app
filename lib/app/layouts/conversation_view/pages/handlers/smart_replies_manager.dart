@@ -2,7 +2,7 @@ import 'package:bluebubbles/database/models.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
-import 'package:google_ml_kit/google_ml_kit.dart' hide Message;
+import 'package:google_mlkit_smart_reply/google_mlkit_smart_reply.dart' hide Message;
 
 /// Manages smart reply generation via ML Kit.
 ///
@@ -18,7 +18,7 @@ class SmartRepliesManager {
   final RxList<String> smartReplies = <String>[].obs;
 
   SmartRepliesManager() {
-    smartReply = GoogleMlKit.nlp.smartReply();
+    smartReply = SmartReply();
   }
 
   bool shouldShowSmartReplies(bool messagesEmpty) {
