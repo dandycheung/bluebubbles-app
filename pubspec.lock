@@ -810,14 +810,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.1.4"
-  flutter_audio_waveforms:
-    dependency: "direct main"
-    description:
-      name: flutter_audio_waveforms
-      sha256: "425dda9ee5ef9bb2ff2a2000b19ec595593b3baba6a1274da8d1d729846a144b"
-      url: "https://pub.dev"
-    source: hosted
-    version: "1.2.1+8"
   flutter_contacts:
     dependency: "direct main"
     description:
@@ -890,14 +882,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.0.4"
-  flutter_isolate:
-    dependency: "direct main"
-    description:
-      name: flutter_isolate
-      sha256: "36a84e1a22371d8092ea2121145b330c24fb272acb951fb30c60ba44926b8fb3"
-      url: "https://pub.dev"
-    source: hosted
-    version: "2.1.0"
   flutter_keyboard_visibility:
     dependency: "direct main"
     description:
