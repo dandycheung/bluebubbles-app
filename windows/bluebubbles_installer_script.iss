@@ -7,6 +7,10 @@
 #define MyAppURL "https://bluebubbles.app/"
 #define MyAppExeName "bluebubbles_app.exe"
 #define ProjectRoot ".."
+; Which build\windows\<arch> dir to package. Override with ISCC /DArch=arm64.
+#ifndef Arch
+  #define Arch "x64"
+#endif
 
 #include "CodeDependencies.iss"
 
@@ -51,12 +55,12 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-Source: "{#ProjectRoot}\build\windows\x64\runner\Release\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#ProjectRoot}\build\windows\x64\runner\Release\*.lib"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#ProjectRoot}\build\windows\x64\runner\Release\*.exp"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#ProjectRoot}\build\windows\x64\runner\Release\*.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#ProjectRoot}\build\windows\{#Arch}\runner\Release\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#ProjectRoot}\build\windows\{#Arch}\runner\Release\*.lib"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#ProjectRoot}\build\windows\{#Arch}\runner\Release\*.exp"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#ProjectRoot}\build\windows\{#Arch}\runner\Release\*.dll"; DestDir: "{app}"; Flags: ignoreversion
 // Source: "{#ProjectRoot}\windows\dlls\*.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#ProjectRoot}\build\windows\x64\runner\Release\data\*"; DestDir: "{app}\data"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#ProjectRoot}\build\windows\{#Arch}\runner\Release\data\*"; DestDir: "{app}\data"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 ; Wipe all DLLs before install; [Files] re-copies the current set right after.
