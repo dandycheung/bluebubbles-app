@@ -13,9 +13,7 @@
 #   windows\bluebubbles_installer.exe   (Package/All)
 param(
     [ValidateSet('All', 'Build', 'Package')]
-    [string]$Phase = 'All',
-    [ValidateSet('x64', 'arm64')]
-    [string]$Arch = $(if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64') { 'arm64' } else { 'x64' })
+    [string]$Phase = 'All'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -43,7 +41,7 @@ if ($env:FLUTTER_CMD) {
     $dartCmd = 'fvm', 'dart'
 }
 
-$releaseDir = "build\windows\$Arch\runner\Release"
+$releaseDir = 'build\windows\x64\runner\Release'
 
 if ($Phase -ne 'Package') {
     # --- Build phase: produce the Release\ output and the store MSIX ---
@@ -60,7 +58,7 @@ if ($Phase -ne 'Package') {
     # unsigned Release output — Microsoft re-signs the package at ingestion.
     # --windows-build-args=--no-pub: the inner `flutter build windows` reuses the
     # lockfile-enforced resolution above instead of re-running pub get unenforced.
-    Invoke-Checked $dartCmd run msix:create --store --architecture $Arch '--windows-build-args=--no-pub' --output-name bluebubbles-store
+    Invoke-Checked $dartCmd run msix:create --store '--windows-build-args=--no-pub' --output-name bluebubbles-store
 
     Get-FileHash 'windows\bluebubbles-store.msix' -Algorithm SHA256 | Format-List Path, Hash
 }
@@ -88,7 +86,6 @@ if ($Phase -ne 'Build') {
         $msixArgs = @(
             '--build-windows', 'false',
             '--sign-msix', 'false',
-            '--architecture', $Arch,
             '--publisher', $env:SIGNED_MSIX_PUBLISHER,
             '--output-name', 'bluebubbles'
         )
@@ -97,7 +94,7 @@ if ($Phase -ne 'Build') {
     }
 
     # Compile the Inno Setup installer
-    Invoke-Checked @($iscc) "/DArch=$Arch" 'windows\bluebubbles_installer_script.iss'
+    Invoke-Checked @($iscc) 'windows\bluebubbles_installer_script.iss'
 
     $hashTargets = @('windows\bluebubbles_installer.exe')
     if (Test-Path 'windows\bluebubbles.msix') { $hashTargets += 'windows\bluebubbles.msix' }

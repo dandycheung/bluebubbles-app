@@ -2,8 +2,6 @@ name: Desktop Builds
 
 on:
   push:
-    branches:
-      - joel/2.0/desktop/2.0.0.0
     tags:
       - "v*"
   workflow_dispatch:
@@ -237,58 +235,6 @@ jobs:
         uses: softprops/action-gh-release@v3
         with:
           files: windows/bluebubbles_installer.exe
-
-  windows-arm:
-    runs-on: windows-11-arm
-    timeout-minutes: 60
-    steps:
-      - name: Support long paths
-        run: git config --system core.longpaths true
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Install fvm (arm64)
-        shell: pwsh
-        run: |
-          $ver = (choco search fvm --exact --limit-output | Select-Object -First 1).Split('|')[1]
-          Invoke-WebRequest "https://github.com/conceptadev/fvm/releases/download/$ver/fvm-$ver-windows-arm64.zip" -OutFile fvm.zip
-          Expand-Archive fvm.zip -DestinationPath $HOME\fvm-cli -Force
-          "$HOME\fvm-cli\fvm" | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
-
-      - name: Cache Flutter SDK (fvm)
-        uses: actions/cache@v5
-        with:
-          path: ~/fvm
-          key: fvm-${{ runner.os }}-${{ runner.arch }}-${{ env.FLUTTER_VERSION }}
-
-      - name: Cache pub packages
-        uses: actions/cache@v5
-        with:
-          path: ~/AppData/Local/Pub/Cache
-          key: pub-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pubspec.lock') }}
-
-      - name: Build app + installer (arm64)
-        run: .\windows\build.ps1 -Arch arm64
-        shell: pwsh
-
-      - name: Upload unsigned installer artifact
-        uses: actions/upload-artifact@v7
-        with:
-          name: bluebubbles-installer-arm64-unsigned
-          path: windows/bluebubbles_installer.exe
-
-      - name: Upload store msix artifact
-        if: ${{ hashFiles('windows/bluebubbles-store.msix') != '' }}
-        uses: actions/upload-artifact@v7
-        with:
-          name: bluebubbles-msix-arm64-store
-          path: windows/bluebubbles-store.msix
-
-      - name: Upload debug symbols
-        uses: actions/upload-artifact@v7
-        with:
-          name: bluebubbles-windows-arm64-symbols
-          path: build/windows/symbols/
 
   linux:
     strategy:
