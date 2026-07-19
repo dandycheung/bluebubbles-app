@@ -17,6 +17,18 @@ import 'package:get/get.dart';
 import 'package:get_it/get_it.dart';
 import 'package:image/image.dart' as img;
 import 'package:universal_io/io.dart';
+import 'package:window_manager/window_manager.dart';
+
+/// Brings the desktop window to the foreground. On Linux `windowManager.show()` only un-hides a
+/// hidden window; a taskbar-minimized window must be restored (deiconified) first — so any handler
+/// reacting to a user action (notification/tray click) must call this, not bare `show()`.
+Future<void> showAndFocusWindow() async {
+  if (await windowManager.isMinimized()) {
+    await windowManager.restore();
+  }
+  await windowManager.show();
+  await windowManager.focus();
+}
 
 class BackButton extends StatelessWidget {
   final bool Function()? onPressed;

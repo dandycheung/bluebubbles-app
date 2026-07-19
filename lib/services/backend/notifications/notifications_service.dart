@@ -22,7 +22,6 @@ import 'package:synchronized/synchronized.dart';
 import 'package:timezone/timezone.dart';
 import 'package:universal_html/html.dart' hide File, Platform, Navigator;
 import 'package:universal_io/io.dart';
-import 'package:window_manager/window_manager.dart';
 import 'package:get_it/get_it.dart';
 
 // ignore: non_constant_identifier_names
@@ -330,12 +329,12 @@ class NotificationsService {
       avatarPath: path,
       body: "Incoming FaceTime ${isAudio ? 'Audio' : 'Video'} Call",
       onOpen: () async {
-        await windowManager.show();
+        await showAndFocusWindow();
       },
       onAnswer: callUuid == null
           ? null
           : () async {
-              await windowManager.show();
+              await showAndFocusWindow();
               await IntentsSvc.answerFaceTime(callUuid);
             },
       onDecline: callUuid == null
@@ -573,7 +572,7 @@ class NotificationsService {
     }
 
     await _openChat(chat);
-    await windowManager.show();
+    await showAndFocusWindow();
   }
 
   Future<void> _deleteTempFile(String path) async {
@@ -627,7 +626,7 @@ class NotificationsService {
         onOpen: () async {
           aliasesToast = null;
           aliasesToastText = null;
-          await windowManager.show();
+          await showAndFocusWindow();
         },
       );
     } else {
@@ -665,7 +664,7 @@ class NotificationsService {
         body: subtitle,
         onOpen: () async {
           failedToast = null;
-          await windowManager.show();
+          await showAndFocusWindow();
           if (scheduled) {
             Navigator.of(Get.context!).push(
               ThemeSwitcher.buildPageRoute(

@@ -600,7 +600,7 @@ class _HomeState extends State<Home> with WidgetsBindingObserver, TrayListener {
 
   @override
   void onTrayIconMouseDown() async {
-    await windowManager.show();
+    await showAndFocusWindow();
   }
 
   @override
@@ -616,7 +616,7 @@ class _HomeState extends State<Home> with WidgetsBindingObserver, TrayListener {
   void onTrayMenuItemClick(MenuItem menuItem) async {
     switch (menuItem.key) {
       case 'show_app':
-        await windowManager.show();
+        await showAndFocusWindow();
         break;
       case 'hide_app':
         await windowManager.hide();
@@ -728,7 +728,7 @@ Future<void> setSystemTrayContextMenu({bool windowHidden = false}) async {
         label: windowHidden ? 'Show App' : 'Hide App',
         onClicked: (st.MenuItemBase menuItem) async {
           if (windowHidden) {
-            await windowManager.show();
+            await showAndFocusWindow();
           } else {
             await windowManager.hide();
           }
