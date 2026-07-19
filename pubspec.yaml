@@ -77,7 +77,7 @@ dependencies:
   flutter_improved_scrolling: ^0.0.3
   flutter_isolate: ^2.1.0
   flutter_keyboard_visibility: ^6.0.0 # no desktop support
-  flutter_local_notifications: ^21.0.0 # mobile only
+  flutter_local_notifications: ^22.0.1
   flutter_map_marker_popup: ^8.1.0
   flutter_markdown_plus: ^1.0.7
   flutter_slidable: ^4.0.1
@@ -107,10 +107,6 @@ dependencies:
   languagetool_textfield: ^0.1.1
   launch_at_startup: ^0.5.1
   local_auth: ^3.0.1
-  local_notifier:
-    git:
-      url: https://github.com/BlueBubblesApp/local_notifier.git
-      ref: f9ab42b4fb76f601bdda6c1d677907d4b149c334
   maps_launcher: ^3.0.0+1
   logger: ^2.6.1
   material_color_utilities: ^0.13.0 # Pinned because of flutter SDK
@@ -199,6 +195,11 @@ dependencies:
   uuid: any
 dependency_overrides:
   clock: ^1.1.2 # encrypter_plus
+  flutter_local_notifications_windows: # no identity + crashing fixes + suppressPopup
+    git:
+      url: https://github.com/jjoelj/flutter_local_notifications.git
+      ref: 2423521a5c33fc2df51823734639e911bcfae891
+      path: flutter_local_notifications_windows
   flutter_map: # https://github.com/fleaflet/flutter_map/issues/2152
     git:
       url: https://github.com/fleaflet/flutter_map.git

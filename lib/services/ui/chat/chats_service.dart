@@ -8,6 +8,7 @@ import 'package:bluebubbles/helpers/backend/startup_tasks.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/database/models.dart';
 import 'package:bluebubbles/services/backend/interfaces/chat_interface.dart';
+import 'package:bluebubbles/services/backend/notifications/desktop_notification.dart';
 import 'package:bluebubbles/services/services.dart';
 import 'package:bluebubbles/utils/logger/logger.dart';
 import 'package:collection/collection.dart';
@@ -282,6 +283,12 @@ class ChatsService {
     // The listener only fires on changes, so we need an explicit call here to
     // seed the badge with the correct value before any message is received.
     _recalculateUnreadCount();
+
+    if (kIsDesktop) {
+      unawaited(
+        DesktopNotifications.cancelStale(keepGroups: chatStates.values.where((s) => s.hasUnreadMessage.value).map((s) => s.chat.guid).toList())
+      );
+    }
 
     // Initialize watchers AFTER loading all chats to avoid duplicates
     initDbWatchers();
