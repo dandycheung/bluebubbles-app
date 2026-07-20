@@ -7,11 +7,14 @@ import 'package:get/get.dart';
 import 'package:shimmer/shimmer.dart';
 
 class BatteryOptimizationCheck extends StatelessWidget {
+  const BatteryOptimizationCheck({super.key});
+
   @override
   Widget build(BuildContext context) {
     return SetupPageTemplate(
       title: "Battery Optimization",
-      subtitle: "We recommend disabling battery optimization for BlueBubbles to ensure you receive all your notifications.",
+      subtitle:
+          "We recommend disabling battery optimization for BlueBubbles to ensure you receive all your notifications.",
       belowSubtitle: FutureBuilder<bool?>(
         future: DisableBatteryOptimization.isAllBatteryOptimizationDisabled,
         initialData: false,
@@ -23,10 +26,12 @@ class BatteryOptimizationCheck extends StatelessWidget {
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: Text("Battery Optimization: ${disabled ? "Disabled" : "Enabled"}",
-                  style: context.theme.textTheme.bodyLarge!.apply(
-                    fontSizeDelta: 1.5,
-                    color: disabled ? Colors.green : context.theme.colorScheme.error,
-                  ).copyWith(height: 2)),
+                    style: context.theme.textTheme.bodyLarge!
+                        .apply(
+                          fontSizeDelta: 1.5,
+                          color: disabled ? Colors.green : context.theme.colorScheme.error,
+                        )
+                        .copyWith(height: 2)),
               ),
             );
           } else {
@@ -67,7 +72,9 @@ class BatteryOptimizationCheck extends StatelessWidget {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text("Go to settings", style: context.theme.textTheme.bodyLarge!.apply(fontSizeFactor: 1.1, color: Colors.white)),
+                          Text("Go to settings",
+                              style:
+                                  context.theme.textTheme.bodyLarge!.apply(fontSizeFactor: 1.1, color: Colors.white)),
                           const SizedBox(width: 10),
                           const Icon(Icons.arrow_forward, color: Colors.white, size: 20),
                         ],

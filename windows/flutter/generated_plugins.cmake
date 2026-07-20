@@ -15,7 +15,6 @@ list(APPEND FLUTTER_PLUGIN_LIST
   geolocator_windows
   irondash_engine_context
   local_auth_windows
-  local_notifier
   maps_launcher
   media_kit_libs_windows_video
   media_kit_video
@@ -24,12 +23,11 @@ list(APPEND FLUTTER_PLUGIN_LIST
   permission_handler_windows
   printing
   record_windows
-  screen_brightness_windows
-  screen_retriever
+  screen_retriever_windows
   secure_application
   share_plus
+  sqlite3_flutter_libs
   super_native_extensions
-  system_tray
   tray_manager
   url_launcher_windows
   window_manager
@@ -37,7 +35,8 @@ list(APPEND FLUTTER_PLUGIN_LIST
 )
 
 list(APPEND FLUTTER_FFI_PLUGIN_LIST
-  media_kit_native_event_loop
+  flutter_local_notifications_windows
+  jni
 )
 
 set(PLUGIN_BUNDLED_LIBRARIES)

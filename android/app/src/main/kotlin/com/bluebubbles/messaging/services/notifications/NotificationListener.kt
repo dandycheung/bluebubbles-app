@@ -10,21 +10,26 @@ import android.service.notification.NotificationListenerService
 import android.util.Log
 import com.bluebubbles.messaging.Constants
 import com.bluebubbles.messaging.services.backend_ui_interop.MethodCallHandler
+import com.bluebubbles.messaging.utils.PersistentLog
 
 import java.io.ByteArrayOutputStream
 
 /// Class used to listen for media notifications and fetch album art to update app theming
 class NotificationListener: NotificationListenerService() {
     companion object {
-        private var hasInit: Boolean = false
+        private val initLock = Any()
+        @Volatile private var hasInit: Boolean = false
 
         fun init(context: Context) {
             if (hasInit) return
-            val manager: MediaSessionManager = context.getSystemService(MediaSessionManager::class.java)
-            val sessionListener = MediaSessionListener()
-            sessionListener.init(context)
-            manager.addOnActiveSessionsChangedListener(sessionListener, ComponentName(context, this::class.java))
-            hasInit = true
+            synchronized(initLock) {
+                if (hasInit) return
+                val manager: MediaSessionManager = context.getSystemService(MediaSessionManager::class.java)
+                val sessionListener = MediaSessionListener()
+                sessionListener.init(context)
+                manager.addOnActiveSessionsChangedListener(sessionListener, ComponentName(context, this::class.java))
+                hasInit = true
+            }
         }
     }
 }
@@ -35,8 +40,13 @@ class MediaSessionListener: MediaSessionManager.OnActiveSessionsChangedListener 
         var oldControllers: MutableList<MediaController> = mutableListOf()
     }
 
+    // Retained so onActiveSessionsChanged (an interface callback with no Context
+    // parameter of its own) can still persist log entries.
+    private var appContext: Context? = null
+
     fun init(context: Context) {
-        Log.d(Constants.logTag, "Initializing media session listener...")
+        appContext = context.applicationContext
+        PersistentLog.d(context, Constants.logTag, "Initializing media session listener...")
         val manager: MediaSessionManager = context.getSystemService(MediaSessionManager::class.java)
         val controllers = manager.getActiveSessions(ComponentName(context, NotificationListener::class.java))
         onActiveSessionsChanged(controllers)
@@ -47,7 +57,7 @@ class MediaSessionListener: MediaSessionManager.OnActiveSessionsChangedListener 
             return
         }
 
-        Log.d(Constants.logTag, "Media session changed, unregistering and re-registering callbacks...")
+        appContext?.let { PersistentLog.d(it, Constants.logTag, "Media session changed, unregistering and re-registering callbacks...") }
         for (controller in oldControllers) {
             controller.unregisterCallback(callback)
         }

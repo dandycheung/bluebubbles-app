@@ -1,29 +1,33 @@
-import 'package:bluebubbles/app/wrappers/stateful_boilerplate.dart';
-import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/database/models.dart';
+import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/services/services.dart';
+import 'package:bluebubbles/services/backend/interfaces/sync_interface.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 class ChatSyncDialog extends StatefulWidget {
-  ChatSyncDialog({
+  const ChatSyncDialog({
     super.key,
     required this.chat,
     this.initialMessage,
-    this.withOffset = false,
-    this.limit = 100
+    required this.start,
+    required this.end,
   });
 
   final Chat chat;
   final String? initialMessage;
-  final bool withOffset;
-  final int limit;
+
+  /// The start of the time range to sync (inclusive, converted to milliseconds for the API).
+  final DateTime start;
+
+  /// The end of the time range to sync (inclusive, converted to milliseconds for the API).
+  final DateTime end;
 
   @override
   State<ChatSyncDialog> createState() => _ChatSyncDialogState();
 }
 
-class _ChatSyncDialogState extends OptimizedState<ChatSyncDialog> {
+class _ChatSyncDialogState extends State<ChatSyncDialog> {
   String? errorCode;
   bool finished = false;
   String? message;
@@ -36,32 +40,67 @@ class _ChatSyncDialogState extends OptimizedState<ChatSyncDialog> {
     syncMessages();
   }
 
-  void syncMessages() async {
+  Future<void> syncMessages() async {
+    const int batchSize = 200;
     int offset = 0;
-    if (widget.withOffset) {
-      offset = Message.countForChat(widget.chat) ?? 0;
+    int totalSynced = 0;
+    Message? latestMessage;
+
+    try {
+      while (true) {
+        final batch = (await ChatsSvc.getMessages(
+          widget.chat.guid,
+          after: widget.start.millisecondsSinceEpoch,
+          before: widget.end.millisecondsSinceEpoch,
+          offset: offset,
+          limit: batchSize,
+        ))
+            .cast<Map<String, dynamic>>();
+
+        if (batch.isEmpty) break;
+
+        final result = await SyncInterface.bulkSyncData(
+          chatData: widget.chat.toMap(),
+          messagesData: batch,
+        );
+
+        totalSynced += result.messages.length;
+
+        if (mounted) {
+          setState(() {
+            message = "Synced $totalSynced messages...";
+          });
+        }
+
+        // Track the overall latest message across all batches.
+        if (result.messages.isNotEmpty) {
+          final batchLatest = result.messages.reduce((a, b) => (a.dateCreated ?? DateTime.fromMillisecondsSinceEpoch(0))
+                  .isAfter(b.dateCreated ?? DateTime.fromMillisecondsSinceEpoch(0))
+              ? a
+              : b);
+          if (latestMessage == null ||
+              (batchLatest.dateCreated ?? DateTime.fromMillisecondsSinceEpoch(0))
+                  .isAfter(latestMessage.dateCreated ?? DateTime.fromMillisecondsSinceEpoch(0))) {
+            latestMessage = batchLatest;
+          }
+        }
+
+        // A page smaller than batchSize means we've reached the end.
+        if (batch.length < batchSize) break;
+        offset += batchSize;
+      }
+    } catch (_) {
+      onFinish(false);
+      return;
     }
 
-    cm.getMessages(widget.chat.guid, offset: offset, limit: widget.limit).then((dynamic messages) {
-      if (mounted) {
-        setState(() {
-          message = "Adding ${messages.length} messages...";
-        });
-      }
+    final chatState = ChatsSvc.getChatState(widget.chat.guid);
+    final currentLatest = chatState?.latestMessage.value?.dateCreated ?? DateTime.fromMillisecondsSinceEpoch(0);
+    if (latestMessage != null && (latestMessage.dateCreated?.isAfter(currentLatest) ?? false)) {
+      ChatsSvc.updateChatLatestMessage(widget.chat.guid, latestMessage);
+    }
 
-      MessageHelper.bulkAddMessages(widget.chat, messages, onProgress: (int progress, int length) {
-        if (progress == 0 || length == 0) {
-          this.progress = null;
-        } else {
-          this.progress = progress / length;
-        }
-        setState(() {});
-      }).then((List<Message> __) {
-        onFinish(true);
-      });
-    }).catchError((_) {
-      onFinish(false);
-    });
+    onFinish(true);
   }
 
   void onFinish([bool success = true]) {
@@ -71,30 +110,12 @@ class _ChatSyncDialogState extends OptimizedState<ChatSyncDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Text(errorCode != null ? "Error!" : message!, style: context.theme.textTheme.titleLarge),
-      content: errorCode != null
-          ? Text(errorCode!, style: context.theme.textTheme.bodyLarge)
-          : SizedBox(
-              height: 5,
-              child: Center(
-                child: LinearProgressIndicator(
-                  value: progress,
-                  backgroundColor: context.theme.colorScheme.outline,
-                  valueColor: AlwaysStoppedAnimation<Color>(context.theme.colorScheme.primary),
-                ),
-              ),
-            ),
-      backgroundColor: context.theme.colorScheme.properSurface,
+    return BBProgressDialog(
+      title: errorCode != null ? "Error!" : message!,
+      progress: progress,
+      body: errorCode != null ? Text(errorCode!, style: context.theme.textTheme.bodyLarge) : null,
       actions: [
-        TextButton(
-          onPressed: () {
-            Navigator.of(context).pop();
-          },
-          child: Text(
-            "OK", style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.primary),
-          ),
-        )
+        BBDialogAction(text: "OK", onPressed: () => Navigator.of(context).pop()),
       ],
     );
   }

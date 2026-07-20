@@ -1,3 +1,4 @@
+import 'package:bluebubbles/app/layouts/settings/widgets/content/settings_leading_icon.dart';
 import 'package:bluebubbles/helpers/types/constants.dart';
 import 'package:bluebubbles/helpers/ui/theme_helpers.dart';
 import 'package:bluebubbles/services/services.dart';
@@ -6,7 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 class SettingsOptions<T extends Object> extends StatelessWidget {
-  SettingsOptions({
+  const SettingsOptions({
     super.key,
     required this.onChanged,
     required this.options,
@@ -21,6 +22,7 @@ class SettingsOptions<T extends Object> extends StatelessWidget {
     this.secondaryColor,
     this.useCupertino = true,
     this.clampWidth = true,
+    this.leading,
   });
   final String title;
   final void Function(T?) onChanged;
@@ -35,18 +37,21 @@ class SettingsOptions<T extends Object> extends StatelessWidget {
   final Color? secondaryColor;
   final bool useCupertino;
   final bool clampWidth;
+  final SettingsLeadingIcon? leading;
 
   @override
   Widget build(BuildContext context) {
-    if (ss.settings.skin.value == Skins.iOS && useCupertino) {
-      final texts = options.map((e) => Text(capitalize ? textProcessing!(e).capitalize! : textProcessing!(e), style: context.theme.textTheme.bodyLarge!.copyWith(color: e == initial ? context.theme.colorScheme.onPrimary : null)));
+    if (SettingsSvc.settings.skin.value == Skins.iOS && useCupertino) {
+      final texts = options.map((e) => Text(capitalize ? textProcessing!(e).capitalize! : textProcessing!(e),
+          style: context.theme.textTheme.bodyLarge!
+              .copyWith(color: e == initial ? context.theme.colorScheme.onPrimary : null)));
       final map = Map<T, Widget>.fromIterables(options, cupertinoCustomWidgets ?? texts);
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 13),
         height: 50,
         width: context.width,
         child: MouseRegion(
-          cursor: SystemMouseCursors.click,
+          cursor: MouseCursor.defer,
           child: CupertinoSlidingSegmentedControl<T>(
             children: map,
             groupValue: initial,
@@ -58,9 +63,9 @@ class SettingsOptions<T extends Object> extends StatelessWidget {
         ),
       );
     }
-    Color surfaceColor = context.theme.colorScheme.properSurface;
-    if (ss.settings.skin.value == Skins.Material
-        && surfaceColor.computeDifference(context.theme.colorScheme.background) < 15) {
+    Color surfaceColor = context.theme.colorScheme.surfaceContainerHighest;
+    if (SettingsSvc.settings.skin.value == Skins.Material &&
+        surfaceColor.computeDifference(context.theme.colorScheme.surface) < 15) {
       surfaceColor = context.theme.colorScheme.surfaceVariant;
     }
     return Container(
@@ -70,8 +75,12 @@ class SettingsOptions<T extends Object> extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: ns.width(context) * 3 / 5, minWidth: ns.width(context) / 5),
+            if (leading != null)
+              Padding(
+                padding: const EdgeInsets.only(left: 5.0, right: 10.0),
+                child: leading,
+              ),
+            Expanded(
               child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -82,17 +91,17 @@ class SettingsOptions<T extends Object> extends StatelessWidget {
                     ),
                     (subtitle != null)
                         ? Padding(
-                          padding: const EdgeInsets.only(top: 3.0),
-                          child: Text(
-                            subtitle ?? "",
-                            style: context.theme.textTheme.bodySmall!.copyWith(color: context.theme.colorScheme.properOnSurface),
-                          ),
-                        )
+                            padding: const EdgeInsets.only(top: 3.0),
+                            child: Text(
+                              subtitle ?? "",
+                              style: context.theme.textTheme.bodySmall!
+                                  .copyWith(color: context.theme.colorScheme.onSurfaceVariant),
+                            ),
+                          )
                         : const SizedBox.shrink(),
                   ]),
             ),
             const SizedBox(width: 15),
-            if (clampWidth) const Spacer(),
             Builder(
               builder: (context) {
                 final widget = Container(
@@ -105,7 +114,7 @@ class SettingsOptions<T extends Object> extends StatelessWidget {
                       child: DropdownButton<T>(
                         padding: const EdgeInsets.symmetric(horizontal: 9),
                         borderRadius: BorderRadius.circular(8),
-                        dropdownColor: secondaryColor?.withOpacity(1) ?? surfaceColor,
+                        dropdownColor: secondaryColor?.withValues(alpha: 1) ?? surfaceColor,
                         icon: Icon(
                           Icons.arrow_drop_down,
                           color: context.theme.textTheme.bodyLarge!.color,
@@ -115,10 +124,11 @@ class SettingsOptions<T extends Object> extends StatelessWidget {
                         items: options.map<DropdownMenuItem<T>>((e) {
                           return DropdownMenuItem(
                             value: e,
-                            child: materialCustomWidgets?.call(e) ?? Text(
-                              capitalize ? textProcessing!(e).capitalize! : textProcessing!(e),
-                              style: context.theme.textTheme.bodyLarge,
-                            ),
+                            child: materialCustomWidgets?.call(e) ??
+                                Text(
+                                  capitalize ? textProcessing!(e).capitalize! : textProcessing!(e),
+                                  style: context.theme.textTheme.bodyLarge,
+                                ),
                           );
                         }).toList(),
                         onChanged: onChanged,
@@ -129,11 +139,17 @@ class SettingsOptions<T extends Object> extends StatelessWidget {
                 );
                 if (clampWidth) {
                   return ConstrainedBox(
-                    constraints: BoxConstraints(maxWidth: ns.width(context) * 2 / 5 - 47),
+                    constraints: BoxConstraints(
+                        maxWidth: leading != null
+                            ? NavigationSvc.width(context) * 2 / 5 - 80 // Account for leading icon space
+                            : NavigationSvc.width(context) * 2 / 5 - 47),
                     child: widget,
                   );
                 } else {
-                  return Expanded(
+                  return ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: leading != null ? 200 : 250, // Reasonable max width
+                    ),
                     child: widget,
                   );
                 }

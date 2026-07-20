@@ -1,5 +1,5 @@
 import 'package:bluebubbles/database/database.dart';
-import 'package:bluebubbles/objectbox.g.dart';
+import 'package:bluebubbles/generated/objectbox.g.dart';
 import 'package:bluebubbles/services/services.dart';
 import 'package:flutter/foundation.dart';
 import 'package:objectbox/objectbox.dart';
@@ -45,85 +45,54 @@ class FCMData {
     id = !Database.fcmData.isEmpty() ? data.first.id : null;
     Database.fcmData.put(this);
     final future = Future(() async {
-      if (projectID != null) {
-        await ss.prefs.setString('projectID', projectID!);
-      } else {
-        await ss.prefs.remove('projectID');
-      }
-      if (storageBucket != null) {
-        await ss.prefs.setString('storageBucket', storageBucket!);
-      } else {
-        await ss.prefs.remove('storageBucket');
-      }
-      if (apiKey != null) {
-        await ss.prefs.setString('apiKey', apiKey!);
-      } else {
-        await ss.prefs.remove('apiKey');
-      }
-      if (firebaseURL != null) {
-        await ss.prefs.setString('firebaseURL', firebaseURL!);
-      } else {
-        await ss.prefs.remove('firebaseURL');
-      }
-      if (clientID != null) {
-        await ss.prefs.setString('clientID', clientID!);
-      } else {
-        await ss.prefs.remove('clientID');
-      }
-      if (applicationID != null) {
-        await ss.prefs.setString('applicationID', applicationID!);
-      } else {
-        await ss.prefs.remove('applicationID');
-      }
+      await PrefsSvc.firebase.saveConfig(
+        projectID: projectID,
+        storageBucket: storageBucket,
+        apiKey: apiKey,
+        firebaseURL: firebaseURL,
+        clientID: clientID,
+        applicationID: applicationID,
+      );
     });
 
     if (wait) {
       await future;
     }
 
-    ss.fcmData = this;
+    SettingsSvc.fcmData = this;
     return this;
   }
 
   static Future<void> deleteFcmData() async {
     Database.fcmData.removeAll();
-    await ss.prefs.remove('projectID');
-    await ss.prefs.remove('storageBucket');
-    await ss.prefs.remove('apiKey');
-    await ss.prefs.remove('firebaseURL');
-    await ss.prefs.remove('clientID');
-    await ss.prefs.remove('applicationID');
-    ss.fcmData = FCMData();
+    await PrefsSvc.firebase.clearConfig();
+    SettingsSvc.fcmData = FCMData();
   }
 
   static FCMData getFCM() {
     final result = Database.fcmData.getAll();
     if (result.isEmpty) {
       return FCMData(
-        projectID: ss.prefs.getString('projectID'),
-        storageBucket: ss.prefs.getString('storageBucket'),
-        apiKey: ss.prefs.getString('apiKey'),
-        firebaseURL: ss.prefs.getString('firebaseURL'),
-        clientID: ss.prefs.getString('clientID'),
-        applicationID: ss.prefs.getString('applicationID'),
+        projectID: PrefsSvc.firebase.getProjectID(),
+        storageBucket: PrefsSvc.firebase.getStorageBucket(),
+        apiKey: PrefsSvc.firebase.getApiKey(),
+        firebaseURL: PrefsSvc.firebase.getFirebaseURL(),
+        clientID: PrefsSvc.firebase.getClientID(),
+        applicationID: PrefsSvc.firebase.getApplicationID(),
       );
     }
     return result.first;
   }
 
   Map<String, dynamic> toMap() => {
-    "project_id": projectID,
-    "storage_bucket": storageBucket,
-    "api_key": apiKey,
-    "firebase_url": firebaseURL,
-    "client_id": clientID,
-    "application_id": applicationID,
-  };
+        "project_id": projectID,
+        "storage_bucket": storageBucket,
+        "api_key": apiKey,
+        "firebase_url": firebaseURL,
+        "client_id": clientID,
+        "application_id": applicationID,
+      };
 
   bool get isNull =>
-      projectID == null ||
-      storageBucket == null ||
-      apiKey == null ||
-      clientID == null ||
-      applicationID == null;
+      projectID == null || storageBucket == null || apiKey == null || clientID == null || applicationID == null;
 }

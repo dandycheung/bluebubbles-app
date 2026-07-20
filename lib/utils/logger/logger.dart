@@ -1,23 +1,26 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:isolate';
 
 import 'package:archive/archive_io.dart';
+import 'package:bluebubbles/env.dart';
 import 'package:bluebubbles/services/services.dart';
 import 'package:bluebubbles/utils/logger/outputs/log_stream_output.dart';
 import 'package:flutter/foundation.dart';
-import 'package:get/get.dart';
 import 'package:logger/logger.dart';
 import 'package:path/path.dart';
 import 'package:universal_io/io.dart';
+import 'package:get_it/get_it.dart';
 
 // ignore: library_prefixes
 import 'package:logger/logger.dart' as LoggerFactory;
 
 import 'outputs/debug_console_output.dart';
+import 'outputs/file_output_wrapper.dart';
+import 'outputs/rotating_file_output.dart';
 
 // ignore: non_constant_identifier_names
-BaseLogger Logger = Get.isRegistered<BaseLogger>()
-    ? Get.find<BaseLogger>()
-    : Get.put(BaseLogger());
+BaseLogger get Logger => GetIt.I<BaseLogger>();
 
 enum LogLevel { INFO, WARN, ERROR, DEBUG, TRACE, FATAL }
 
@@ -25,33 +28,39 @@ const Map<Level, bool> defaultExcludeBoxes = {
   LoggerFactory.Level.debug: true,
   LoggerFactory.Level.info: true,
   LoggerFactory.Level.warning: true,
-  LoggerFactory.Level.error: false,
-  LoggerFactory.Level.trace: false,
-  LoggerFactory.Level.fatal: false,
+  // Disable boxing for all levels — box-drawing chars (┌, │, └) break the
+  // date-prefix detection in getLogs() and cause error entries to be absorbed
+  // into the preceding entry's body instead of starting their own record.
+  LoggerFactory.Level.error: true,
+  LoggerFactory.Level.trace: true,
+  LoggerFactory.Level.fatal: true,
 };
 
-class BaseLogger extends GetxService {
+class BaseLogger {
   LoggerFactory.Logger _logger = LoggerFactory.Logger();
 
-  final StreamController<String> logStream =
-      StreamController<String>.broadcast();
+  final StreamController<String> logStream = StreamController<String>.broadcast();
   final latestLogName = 'bluebubbles-latest.log';
 
   LoggerFactory.LogOutput get fileOutput {
-    return LoggerFactory.AdvancedFileOutput(
-        path: logDir,
-        maxFileSizeKB: 1024, // 1 MB
-        maxRotatedFilesCount: 5,
-        maxDelay: const Duration(seconds: 5),
-        latestFileName: latestLogName,
-        fileNameFormatter: (timestamp) {
-          final now = DateTime.now();
-          return 'bluebubbles-${now.toIso8601String().split('T').first}-${now.millisecondsSinceEpoch ~/ 1000}.log';
-        });
+    final baseFileOutput = RotatingFileOutput(
+      dirPath: logDir,
+      latestFileName: latestLogName,
+      maxFileSizeKB: 1024 * 5, // 5 MB
+      maxRotatedFilesCount: 5, // Total: 25 MB of logs before old logs are deleted
+      encoding: utf8,
+      fileNameFormatter: (_) {
+        final now = DateTime.now();
+        return 'bluebubbles-${now.toIso8601String().split('T').first}-${now.millisecondsSinceEpoch ~/ 1000}.log';
+      },
+    );
+
+    // Wrap with ANSI stripper to ensure file is valid UTF-8
+    return FileOutputWrapper(baseFileOutput);
   }
 
   LoggerFactory.LogOutput get defaultOutput {
-    List<LogOutput> outputs = [DebugConsoleOutput()];
+    List<LogOutput> outputs = kDebugMode ? [DebugConsoleOutput()] : [];
     if (!kIsWeb) outputs.add(fileOutput);
     return LoggerFactory.MultiOutput(outputs);
   }
@@ -108,21 +117,34 @@ class BaseLogger extends GetxService {
   }
 
   String get logDir {
-    return join(fs.appDocDir.path, 'logs');
+    return FilesystemSvc.logsPath;
   }
 
   LoggerFactory.Logger get logger {
     return _logger;
   }
 
-  Future<void> init() async {
-    _logger = createLogger();
+  String _isolateName = "main";
 
-    if (ss.initCompleted.isCompleted) {
-      currentLevel = ss.settings.logLevel.value;
+  Future<void> init() async {
+    // Ensure log directory and latest log file exist before AdvancedFileOutput
+    // initializes — it calls file.length() which throws PathNotFoundException if
+    // the file has not been created yet (e.g. first run or after cache clear).
+    if (!kIsWeb) {
+      final dir = Directory(logDir);
+      if (!dir.existsSync()) dir.createSync(recursive: true);
+      final latestLog = File(join(logDir, latestLogName));
+      if (!latestLog.existsSync()) latestLog.createSync();
+    }
+
+    _logger = createLogger();
+    _isolateName = isolateNameOverride ?? Isolate.current.debugName ?? "main";
+
+    if (SettingsSvc.initCompleted.isCompleted) {
+      currentLevel = SettingsSvc.settings.logLevel.value;
     } else {
-      ss.initCompleted.future.then((_) {
-        currentLevel = ss.settings.logLevel.value;
+      SettingsSvc.initCompleted.future.then((_) {
+        currentLevel = SettingsSvc.settings.logLevel.value;
       });
     }
 
@@ -135,7 +157,7 @@ class BaseLogger extends GetxService {
       filter: currentFilter,
       printer: LoggerFactory.PrettyPrinter(
         methodCount: 0,
-        errorMethodCount: 10,
+        errorMethodCount: 25,
         lineLength: 120,
         colors: showColors,
         printEmojis: false,
@@ -164,8 +186,8 @@ class BaseLogger extends GetxService {
     _showColors = null;
     _excludeBoxes = null;
 
-    if (ss.initCompleted.isCompleted) {
-      _currentLevel = ss.settings.logLevel.value;
+    if (SettingsSvc.initCompleted.isCompleted) {
+      _currentLevel = SettingsSvc.settings.logLevel.value;
     }
 
     _logger = createLogger();
@@ -185,108 +207,226 @@ class BaseLogger extends GetxService {
     _logger = createLogger();
   }
 
-  String compressLogs() {
-    final Directory logDir = Directory(Logger.logDir);
-    final date = DateTime.now().toIso8601String().split('T').first;
-    final File zippedLogFile =
-        File("${fs.appDocDir.path}/bluebubbles-logs-$date.zip");
-    if (zippedLogFile.existsSync()) zippedLogFile.deleteSync();
+  Future<String> compressLogs() async {
+    try {
+      final Directory logDir = Directory(Logger.logDir);
+      if (!logDir.existsSync()) {
+        throw Exception("Log directory does not exist");
+      }
 
-    final List<FileSystemEntity> files = logDir.listSync();
-    final List<FileSystemEntity> logFiles =
-        files.where((file) => file.path.endsWith(".log")).toList();
-    final List<String> logPaths = logFiles.map((file) => file.path).toList();
+      final date = DateTime.now().toIso8601String().split('T').first;
+      final File zippedLogFile = File(join(FilesystemSvc.appDocDir.path, "bluebubbles-logs-$date.zip"));
+      if (zippedLogFile.existsSync()) zippedLogFile.deleteSync();
 
-    final encoder = ZipFileEncoder();
-    encoder.create(zippedLogFile.path);
-    for (final logPath in logPaths) {
-      encoder.addFile(File(logPath));
+      final List<FileSystemEntity> files = logDir.listSync();
+      final List<FileSystemEntity> logFiles = files.where((file) => file.path.endsWith(".log")).toList();
+
+      if (logFiles.isEmpty) {
+        throw Exception("No log files found to compress");
+      }
+
+      final List<String> logPaths = logFiles.map((file) => file.path).toList();
+
+      final encoder = ZipFileEncoder();
+      encoder.create(zippedLogFile.path);
+      for (final logPath in logPaths) {
+        await encoder.addFile(File(logPath));
+      }
+      await encoder.close();
+
+      return zippedLogFile.path;
+    } catch (e, stackTrace) {
+      error("Failed to compress logs", error: e, trace: stackTrace);
+      rethrow;
     }
-    encoder.close();
-
-    return zippedLogFile.path;
   }
 
-  Future<List<String>> getLogs({maxLines = 1000}) async {
-    final Directory logDir = Directory(Logger.logDir);
-    if (!logDir.existsSync()) return [];
+  Future<List<String>> getLogs({int maxLines = 1000}) async {
+    try {
+      final Directory logDir = Directory(Logger.logDir);
+      if (!logDir.existsSync()) return [];
 
-    final List<FileSystemEntity> files = logDir.listSync();
-    final List<FileSystemEntity> logFiles =
-        files.where((file) => file.path.endsWith(latestLogName)).toList();
-    if (logFiles.isEmpty) return [];
+      final List<FileSystemEntity> files = logDir.listSync();
+      final List<FileSystemEntity> logFiles = files.where((file) => file.path.endsWith(latestLogName)).toList();
+      if (logFiles.isEmpty) return [];
 
-    final File logFile = logFiles.first as File;
-    List<String> lines = await logFile.readAsLines();
+      final File logFile = logFiles.first as File;
+      if (!logFile.existsSync()) return [];
 
-    // Combine lines that are part of the same log message
-    List<String> logs = [];
-    String currentLog = "";
-    for (final log in lines) {
-      // Remove ansi colors
-      String line = log.replaceAll(RegExp(r'\x1B\[[0-?]*[ -/]*[@-~]'), '');
+      final int fileSize = await logFile.length();
+      if (fileSize == 0) return [];
 
-      // If the log starts with a date, then it's a new log
-      if (line.startsWith(RegExp(r"\d{4}-\d{2}-\d{2}"))) {
-        if (currentLog.isNotEmpty) logs.add(currentLog);
-        currentLog = line;
-      } else {
-        currentLog += "\n$line";
+      // Seek backwards to find the byte offset for the last [maxLines] entries.
+      // This avoids reading the entire file into memory.
+      final int startOffset = await _findTailStartOffset(logFile, fileSize, maxLines);
+
+      // Stream only the relevant tail of the file.
+      final List<String> lines = await logFile
+          .openRead(startOffset)
+          .transform(const Utf8Decoder(allowMalformed: true))
+          .transform(const LineSplitter())
+          .toList();
+
+      // Combine lines that are part of the same log message.
+      // PrettyPrinter wraps ERROR/TRACE/FATAL entries in Unicode box borders:
+      //   ┌──...  (top border — skip)
+      //   │ 2024-...  (content with │ prefix — strip prefix)
+      //   └──...  (bottom border — skip)
+      // Stripping these allows the date-start check below to work for all levels.
+      final List<String> logs = [];
+      String currentLog = '';
+      final dateStart = RegExp(r'^\d{4}-\d{2}-\d{2}');
+      for (final rawLine in lines) {
+        String line = rawLine.replaceAll(RegExp(r'\x1B\[[0-?]*[ -/]*[@-~]'), '');
+
+        // Skip horizontal box border lines (┌, └, ├).
+        if (line.startsWith('┌') || line.startsWith('└') || line.startsWith('├')) continue;
+        // Strip the vertical-bar prefix used by boxed content lines.
+        if (line.startsWith('│ ')) line = line.substring(2);
+
+        if (dateStart.hasMatch(line)) {
+          if (currentLog.isNotEmpty) logs.add(currentLog);
+          currentLog = line;
+        } else if (currentLog.isNotEmpty) {
+          currentLog += '\n$line';
+        }
       }
-    }
+      if (currentLog.isNotEmpty) logs.add(currentLog);
 
-    // Take the last [maxLines] logs.
-    // We only want the logs starting from the end. But we want to keep the order of the logs.
-    logs = logs.reversed.take(maxLines).toList().reversed.toList();
-    return logs;
+      // Safety trim in case startOffset==0 and the file has more entries than maxLines.
+      if (logs.length > maxLines) {
+        return logs.sublist(logs.length - maxLines);
+      }
+      return logs;
+    } catch (e, stackTrace) {
+      debugPrint('Error reading logs: $e\n$stackTrace');
+      return [];
+    }
+  }
+
+  /// Scans [file] backwards in 64 KB chunks looking for newline bytes followed
+  /// by an ASCII date prefix (`YYYY-`).  Returns the absolute byte offset of
+  /// the [maxEntries]-th log-entry start from the end of the file, so callers
+  /// can open a stream starting at that offset and avoid reading the entire file.
+  ///
+  /// Returns 0 if the file contains fewer than [maxEntries] entries.
+  Future<int> _findTailStartOffset(File file, int fileSize, int maxEntries) async {
+    const int chunkSize = 65536; // 64 KB
+    final RandomAccessFile raf = await file.open();
+    try {
+      int entriesFound = 0;
+      int scanPos = fileSize;
+      // Holds the first few bytes of the chunk processed in the previous (rightward)
+      // iteration so we can detect a date pattern that straddles a chunk boundary.
+      List<int> rightBoundary = [];
+
+      while (scanPos > 0) {
+        final int readFrom = (scanPos - chunkSize).clamp(0, scanPos);
+        final int length = scanPos - readFrom;
+
+        await raf.setPosition(readFrom);
+        final List<int> chunk = await raf.read(length);
+
+        // Scan backwards through this chunk for \n followed by YYYY-.
+        for (int i = chunk.length - 1; i >= 0; i--) {
+          if (chunk[i] != 0x0A) continue; // not a newline
+
+          // Collect the 5 bytes after this \n (may span into rightBoundary).
+          final List<int> after;
+          final int available = chunk.length - i - 1;
+          if (available >= 5) {
+            after = chunk.sublist(i + 1, i + 6);
+          } else {
+            after = [
+              ...chunk.sublist(i + 1),
+              ...rightBoundary.take(5 - available),
+            ];
+          }
+
+          if (_isLogEntryStart(after)) {
+            entriesFound++;
+            if (entriesFound == maxEntries) {
+              return readFrom + i + 1;
+            }
+          }
+        }
+
+        // Keep the leading bytes of this chunk for the next (leftward) iteration.
+        rightBoundary = chunk.take(6).toList();
+        scanPos = readFrom;
+      }
+
+      // Fewer entries in the file than maxEntries — read from the start.
+      return 0;
+    } finally {
+      await raf.close();
+    }
+  }
+
+  /// Returns true when [bytes] starts with the ASCII pattern for a log-entry
+  /// date prefix: four decimal digits followed by a hyphen (`YYYY-`).
+  bool _isLogEntryStart(List<int> bytes) {
+    if (bytes.length < 5) return false;
+    return bytes[0] >= 0x30 &&
+        bytes[0] <= 0x39 &&
+        bytes[1] >= 0x30 &&
+        bytes[1] <= 0x39 &&
+        bytes[2] >= 0x30 &&
+        bytes[2] <= 0x39 &&
+        bytes[3] >= 0x30 &&
+        bytes[3] <= 0x39 &&
+        bytes[4] == 0x2D; // '-'
   }
 
   void clearLogs() {
-    final Directory logDir = Directory(Logger.logDir);
-    if (!logDir.existsSync()) return;
+    try {
+      final Directory logDir = Directory(Logger.logDir);
+      if (!logDir.existsSync()) return;
 
-    for (final file in logDir.listSync()) {
-      if (file is File) {
-        file.deleteSync();
+      for (final file in logDir.listSync()) {
+        if (file is File) {
+          file.deleteSync();
+        }
       }
+    } catch (e, stackTrace) {
+      debugPrint("Error clearing logs: $e\n$stackTrace");
     }
   }
 
+  /// Dispose of resources when the logger is no longer needed
+  Future<void> dispose() async {
+    await logStream.close();
+    // Close the underlying logger output if needed
+    await currentOutput.destroy();
+  }
+
   void info(dynamic log, {String? tag, Object? error, StackTrace? trace}) =>
-      logger.i(
-          "${DateTime.now().toUtc().toIso8601String()} [INFO] [${tag ?? "BlueBubblesApp"}] $log",
-          error: error,
-          stackTrace: trace);
+      logger.i("${DateTime.now().toUtc().toIso8601String()} [INFO] [$_isolateName] [${tag ?? "BlueBubblesApp"}] $log",
+          error: error, stackTrace: trace);
 
   void warn(dynamic log, {String? tag, Object? error, StackTrace? trace}) =>
-      logger.w(
-          "${DateTime.now().toUtc().toIso8601String()} [WARN] [${tag ?? "BlueBubblesApp"}] $log",
-          error: error,
-          stackTrace: trace);
+      logger.w("${DateTime.now().toUtc().toIso8601String()} [WARN] [$_isolateName] [${tag ?? "BlueBubblesApp"}] $log",
+          error: error, stackTrace: trace);
 
   void debug(dynamic log, {String? tag, Object? error, StackTrace? trace}) =>
-      logger.d(
-          "${DateTime.now().toUtc().toIso8601String()} [DEBUG] [${tag ?? "BlueBubblesApp"}] $log",
-          error: error,
-          stackTrace: trace);
+      logger.d("${DateTime.now().toUtc().toIso8601String()} [DEBUG] [$_isolateName] [${tag ?? "BlueBubblesApp"}] $log",
+          error: error, stackTrace: trace);
 
   void error(dynamic log, {String? tag, Object? error, StackTrace? trace}) =>
-      logger.e(
-          "${DateTime.now().toUtc().toIso8601String()} [ERROR] [${tag ?? "BlueBubblesApp"}] $log",
-          error: error,
-          stackTrace: trace);
+      logger.e("${DateTime.now().toUtc().toIso8601String()} [ERROR] [$_isolateName] [${tag ?? "BlueBubblesApp"}] $log",
+          error: error, stackTrace: trace);
 
   void trace(dynamic log, {String? tag, Object? error, StackTrace? trace}) =>
-      logger.t(
-          "${DateTime.now().toUtc().toIso8601String()} [TRACE] [${tag ?? "BlueBubblesApp"}] $log",
-          error: error ?? Traceback(),
-          stackTrace: trace);
+      logger.t("${DateTime.now().toUtc().toIso8601String()} [TRACE] [$_isolateName] [${tag ?? "BlueBubblesApp"}] $log",
+          error: error ?? Traceback(), stackTrace: trace);
 
   void fatal(dynamic log, {String? tag, Object? error, StackTrace? trace}) =>
-      logger.f(
-          "${DateTime.now().toUtc().toIso8601String()} [FATAL] [${tag ?? "BlueBubblesApp"}] $log",
-          error: error,
-          stackTrace: trace);
+      logger.f("${DateTime.now().toUtc().toIso8601String()} [FATAL] [$_isolateName] [${tag ?? "BlueBubblesApp"}] $log",
+          error: error, stackTrace: trace);
+
+  void test(dynamic log, {String? tag, Object? error, StackTrace? trace}) =>
+      logger.f("${DateTime.now().toUtc().toIso8601String()} [TEST] [$_isolateName] [${tag ?? "BlueBubblesApp"}] $log",
+          error: error, stackTrace: trace);
 }
 
 class Traceback implements Exception {

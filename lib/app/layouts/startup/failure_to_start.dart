@@ -1,3 +1,4 @@
+import 'package:bluebubbles/app/wrappers/bb_scaffold.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -13,12 +14,12 @@ class FailureToStart extends StatelessWidget {
       title: 'BlueBubbles',
       home: AnnotatedRegion<SystemUiOverlayStyle>(
         value: const SystemUiOverlayStyle(
-          systemNavigationBarColor: Colors.black, // navigation bar color
+          systemNavigationBarColor: Colors.black,
           systemNavigationBarIconBrightness: Brightness.light,
-          statusBarColor: Colors.transparent, // status bar color
           statusBarIconBrightness: Brightness.light,
+          statusBarColor: Colors.transparent,
         ),
-        child: Scaffold(
+        child: BBScaffold(
           backgroundColor: Colors.black,
           body: Padding(
             padding: const EdgeInsets.all(8.0),
@@ -28,7 +29,8 @@ class FailureToStart extends StatelessWidget {
               children: [
                 Center(
                   child: Text(
-                    otherTitle ?? "Whoops, looks like we messed up. Unfortunately you will need to reinstall the app, sorry for the inconvenience :(",
+                    otherTitle ??
+                        "Whoops, looks like we messed up. Unfortunately you will need to reinstall the app, sorry for the inconvenience :(",
                     style: const TextStyle(color: Colors.white, fontSize: 30),
                     textAlign: TextAlign.center,
                   ),
@@ -42,7 +44,8 @@ class FailureToStart extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.only(top: 20.0),
                   child: Center(
-                    child: Text("Stacktrace: ${s.toString()}", style: const TextStyle(color: Colors.white, fontSize: 10)),
+                    child:
+                        Text("Stacktrace: ${s.toString()}", style: const TextStyle(color: Colors.white, fontSize: 10)),
                   ),
                 )
               ],

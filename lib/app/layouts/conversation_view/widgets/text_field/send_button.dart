@@ -1,4 +1,3 @@
-import 'package:bluebubbles/app/wrappers/stateful_boilerplate.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/services/services.dart';
 import 'package:flutter/cupertino.dart';
@@ -20,13 +19,22 @@ class SendButton extends StatefulWidget {
   SendButtonState createState() => SendButtonState();
 }
 
-class SendButtonState extends OptimizedState<SendButton> with SingleTickerProviderStateMixin {
+class SendButtonState extends State<SendButton> with SingleTickerProviderStateMixin, ThemeHelpers {
   late final controller = AnimationController(
       vsync: this,
-      duration: Duration(seconds: ss.settings.sendDelay.value),
+      duration: Duration(seconds: SettingsSvc.settings.sendDelay.value),
       animationBehavior: AnimationBehavior.preserve);
 
-  Color get baseColor => iOS ? context.theme.colorScheme.primary : context.theme.colorScheme.properSurface;
+  // Colors cached here and refreshed in didChangeDependencies so they update
+  // when an inherited Theme changes (e.g. per-chat adaptive theme loading).
+  late Color _iosBaseColor;
+  late Color _materialBaseColor;
+  late Color _errorColor;
+  late Color _iosOnPrimary;
+  late Color _materialIconColor;
+  late Color _onError;
+
+  Color get baseColor => iOS ? _iosBaseColor : _materialBaseColor;
 
   @override
   void initState() {
@@ -37,6 +45,18 @@ class SendButtonState extends OptimizedState<SendButton> with SingleTickerProvid
         widget.sendMessage.call();
       }
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _iosBaseColor = context.theme.colorScheme.primary;
+    _materialBaseColor = context.theme.colorScheme.surfaceContainerHighest;
+    _errorColor = context.theme.colorScheme.error;
+    _iosOnPrimary = context.theme.colorScheme.onPrimary;
+    _materialIconColor =
+        ThemeSvc.isAnyMaterialYouSelected ? context.theme.colorScheme.onPrimary : context.theme.colorScheme.secondary;
+    _onError = context.theme.colorScheme.onError;
   }
 
   @override
@@ -51,7 +71,7 @@ class SendButtonState extends OptimizedState<SendButton> with SingleTickerProvid
       },
       child: TextButton(
         style: TextButton.styleFrom(
-          backgroundColor: iOS ? context.theme.colorScheme.primary : null,
+          backgroundColor: iOS ? _iosBaseColor : null,
           shape: const CircleBorder(),
           padding: const EdgeInsets.all(0),
           maximumSize: const Size(32, 32),
@@ -61,41 +81,20 @@ class SendButtonState extends OptimizedState<SendButton> with SingleTickerProvid
         child: AnimatedBuilder(
           animation: controller,
           builder: (context, widget) {
-            return Container(
-              constraints: const BoxConstraints(minHeight: 32, minWidth: 32),
-              decoration: BoxDecoration(
-                  shape: iOS ? BoxShape.circle : BoxShape.rectangle,
-                  borderRadius: iOS ? null : BorderRadius.circular(10),
-                  gradient: iOS || controller.value != 0
-                      ? LinearGradient(
-                          begin: Alignment.bottomCenter,
-                          end: Alignment.topCenter,
-                          colors: [
-                            baseColor,
-                            baseColor,
-                            context.theme.colorScheme.error,
-                            context.theme.colorScheme.error
-                          ],
-                          stops: [0.0, 1 - controller.value, 1 - controller.value, 1.0],
-                        )
-                      : null),
-              alignment: Alignment.center,
-              child: Icon(
-                controller.value == 0
-                    ? (iOS ? CupertinoIcons.arrow_up : Icons.send_outlined)
-                    : (iOS ? CupertinoIcons.xmark : Icons.close),
-                color: controller.value == 0
-                    ? (iOS ? context.theme.colorScheme.onPrimary : context.theme.colorScheme.secondary)
-                    : context.theme.colorScheme.onError,
-                size: iOS || controller.value != 0 ? 20 : 28,
-              ),
+            return _SendButtonIcon(
+              animationValue: controller.value,
+              baseColor: baseColor,
+              errorColor: _errorColor,
+              iosOnPrimary: _iosOnPrimary,
+              materialSecondary: _materialIconColor,
+              onError: _onError,
             );
           },
         ),
         onPressed: () {
           if (controller.isAnimating) {
             controller.reset();
-          } else if (ss.settings.sendDelay.value != 0) {
+          } else if (SettingsSvc.settings.sendDelay.value != 0) {
             controller.forward();
           } else {
             HapticFeedback.lightImpact();
@@ -111,5 +110,56 @@ class SendButtonState extends OptimizedState<SendButton> with SingleTickerProvid
         },
       ),
     );
+  }
+}
+
+/// Extracted animated icon to reduce rebuild scope
+class _SendButtonIcon extends StatelessWidget {
+  const _SendButtonIcon({
+    required this.animationValue,
+    required this.baseColor,
+    required this.errorColor,
+    required this.iosOnPrimary,
+    required this.materialSecondary,
+    required this.onError,
+  });
+
+  final double animationValue;
+  final Color baseColor;
+  final Color errorColor;
+  final Color iosOnPrimary;
+  final Color materialSecondary;
+  final Color onError;
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      final isIOS = SettingsSvc.settings.skin.value == Skins.iOS;
+      final isAnimating = animationValue != 0;
+
+      return Container(
+        constraints: const BoxConstraints(minHeight: 32, minWidth: 32),
+        decoration: BoxDecoration(
+          shape: isIOS ? BoxShape.circle : BoxShape.rectangle,
+          borderRadius: isIOS ? null : BorderRadius.circular(10),
+          gradient: isIOS || isAnimating
+              ? LinearGradient(
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.topCenter,
+                  colors: [baseColor, baseColor, errorColor, errorColor],
+                  stops: [0.0, 1 - animationValue, 1 - animationValue, 1.0],
+                )
+              : null,
+        ),
+        alignment: Alignment.center,
+        child: Icon(
+          animationValue == 0
+              ? (isIOS ? CupertinoIcons.arrow_up : Icons.send_outlined)
+              : (isIOS ? CupertinoIcons.xmark : Icons.close),
+          color: animationValue == 0 ? (isIOS ? iosOnPrimary : materialSecondary) : onError,
+          size: isIOS || isAnimating ? 20 : 28,
+        ),
+      );
+    });
   }
 }

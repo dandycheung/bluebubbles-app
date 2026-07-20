@@ -1,4 +1,4 @@
-import 'package:bluebubbles/services/services.dart';
+import 'package:bluebubbles/services/backend/settings/shared_preferences_service.dart';
 
 class FCMData {
   int? id;
@@ -36,33 +36,30 @@ class FCMData {
   FCMData save() {
     if (isNull) return this;
     Future.delayed(Duration.zero, () async {
-      await ss.prefs.setString('projectID', projectID!);
-      await ss.prefs.setString('storageBucket', storageBucket!);
-      await ss.prefs.setString('apiKey', apiKey!);
-      if (firebaseURL != null) await ss.prefs.setString('firebaseURL', firebaseURL!);
-      await ss.prefs.setString('clientID', clientID!);
-      await ss.prefs.setString('applicationID', applicationID!);
+      await PrefsSvc.firebase.saveConfig(
+        projectID: projectID,
+        storageBucket: storageBucket,
+        apiKey: apiKey,
+        firebaseURL: firebaseURL,
+        clientID: clientID,
+        applicationID: applicationID,
+      );
     });
     return this;
   }
 
   static void deleteFcmData() async {
-    await ss.prefs.remove('projectID');
-    await ss.prefs.remove('storageBucket');
-    await ss.prefs.remove('apiKey');
-    await ss.prefs.remove('firebaseURL');
-    await ss.prefs.remove('clientID');
-    await ss.prefs.remove('applicationID');
+    await PrefsSvc.firebase.clearConfig();
   }
 
   static FCMData getFCM() {
     return FCMData(
-      projectID: ss.prefs.getString('projectID'),
-      storageBucket: ss.prefs.getString('storageBucket'),
-      apiKey: ss.prefs.getString('apiKey'),
-      firebaseURL: ss.prefs.getString('firebaseURL'),
-      clientID: ss.prefs.getString('clientID'),
-      applicationID: ss.prefs.getString('applicationID'),
+      projectID: PrefsSvc.firebase.getProjectID(),
+      storageBucket: PrefsSvc.firebase.getStorageBucket(),
+      apiKey: PrefsSvc.firebase.getApiKey(),
+      firebaseURL: PrefsSvc.firebase.getFirebaseURL(),
+      clientID: PrefsSvc.firebase.getClientID(),
+      applicationID: PrefsSvc.firebase.getApplicationID(),
     );
   }
 
@@ -76,9 +73,5 @@ class FCMData {
       };
 
   bool get isNull =>
-      projectID == null ||
-      storageBucket == null ||
-      apiKey == null ||
-      clientID == null ||
-      applicationID == null;
+      projectID == null || storageBucket == null || apiKey == null || clientID == null || applicationID == null;
 }

@@ -1,9 +1,14 @@
 name: bluebubbles
 title: BlueBubbles
-version: 1.14.0.0
+version: 1.15.104.0
 summary: BlueBubbles client for Linux
 description: BlueBubbles is an open-source and cross-platform ecosystem of apps aimed to bring iMessage to Android, Windows, Linux, and more! With BlueBubbles, you'll be able to send messages, media, and much more to your friends and family.
-
+license: Apache-2.0
+website: https://bluebubbles.app
+source-code: https://github.com/BlueBubblesApp/bluebubbles-app
+issues: https://github.com/BlueBubblesApp/bluebubbles-app/issues
+donation: https://bluebubbles.app/donate
+contact: https://discord.gg/6nrGRHT
 confinement: strict
 base: core24
 grade: stable
@@ -46,14 +51,16 @@ apps:
       - desktop-legacy
       - wayland
       - x11
+      - unity7
       - home
       - opengl
       - alsa
       - audio-playback
       - audio-record
     environment:
-      LD_LIBRARY_PATH: $LD_LIBRARY_PATH:$SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/blas:$SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/lapack:$SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/samba:$SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/vdpau:$SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/dri
+      LD_LIBRARY_PATH: $LD_LIBRARY_PATH:$SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/blas:$SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/lapack:$SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/samba:$SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/vdpau:$SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/dri:$SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/libproxy
       ALWAYS_USE_PULSEAUDIO: '1'
+      GIO_USE_PROXY_RESOLVER: libproxy
 
 parts:
   desktop-glib-only:
@@ -91,14 +98,14 @@ parts:
 
   fmedia:
     source:
-      - on amd64: https://github.com/stsaz/fmedia/releases/download/v1.31/fmedia-1.31-linux-amd64.tar.xz
+      - on amd64: https://master.dl.sourceforge.net/project/fmedia/v1.23.1/fmedia-1.23.1-linux-amd64.tar.xz
       - on arm64: ""
     plugin: dump
     override-build: |
       arch=$(uname -i)
       if [ "$arch" == 'x86_64' ]; then
         set -eux
-        rm mod/libwavpack-ff.so
+        rm mod/libwavpack-ff.so mod/wavpack.so
         mkdir -p $CRAFT_PART_INSTALL/bin/fmedia-1
         cp -r . $CRAFT_PART_INSTALL/bin/fmedia-1/
         ln -s fmedia-1/fmedia $CRAFT_PART_INSTALL/bin/fmedia
@@ -110,8 +117,8 @@ parts:
       - alsa-mixin
       - fmedia
     source:
-      - on amd64: https://github.com/BlueBubblesApp/bluebubbles-app/releases/download/v1.14.0%2B69/bluebubbles-linux-x86_64.tar
-      - on arm64: https://github.com/BlueBubblesApp/bluebubbles-app/releases/download/v1.14.0%2B69/bluebubbles-linux-aarch64.tar
+      - on amd64: https://github.com/BlueBubblesApp/bluebubbles-app/releases/download/v2.0.0%2Bdesktop.88-b.11/bluebubbles-linux-x86_64.tar.gz
+      - on arm64: https://github.com/BlueBubblesApp/bluebubbles-app/releases/download/v2.0.0%2Bdesktop.88-b.11/bluebubbles-linux-aarch64.tar.gz
     plugin: nil
     override-build: |
       set -eux
@@ -119,13 +126,63 @@ parts:
       cp -r ./* $CRAFT_PART_INSTALL/bin/
       mv lib/libobjectbox.so $CRAFT_PART_INSTALL/usr/lib/
     stage-packages:
-      - gir1.2-appindicator3-0.1
+      - libayatana-appindicator3-1
       - libglu1-mesa
       - libmpv2
       - libnotify4
+      - libproxy1v5
       - net-tools
       - wmctrl
-      - zenity
+    stage:
+      - -usr/lib/*/libasound*
+      - -usr/lib/*/libmpv.so*
+      - -usr/lib/*/libgtk-3*
+      - -usr/lib/*/libgdk-3*
+      - -usr/lib/*/libgdk_pixbuf-2.0*
+      - -usr/lib/*/gdk-pixbuf-2.0/**
+      - -usr/lib/*/librsvg-2*
+      - -usr/lib/*/libpango*
+      - -usr/lib/*/libcairo*
+      - -usr/lib/*/libharfbuzz*
+
+  mpv:
+    plugin: meson
+    source: https://github.com/mpv-player/mpv.git
+    source-tag: v0.41.0
+    source-depth: 1
+    meson-parameters:
+      - --prefix=/usr
+      - -Dlibmpv=true
+      - -Dcplayer=false
+      - -Dmanpage-build=disabled
+      - -Dalsa=disabled
+      - -Db_ndebug=true
+    build-packages:
+      - pkg-config
+      - libavcodec-dev
+      - libavfilter-dev
+      - libavformat-dev
+      - libavutil-dev
+      - libswresample-dev
+      - libswscale-dev
+      - libass-dev
+      - libplacebo-dev
+      - libdrm-dev
+      - libegl1-mesa-dev
+      - libgbm-dev
+      - libgl-dev
+      - libx11-dev
+      - libxext-dev
+      - libxkbcommon-dev
+      - libxpresent-dev
+      - libxrandr-dev
+      - libxss-dev
+      - libxv-dev
+      - libpulse-dev
+      - libjpeg-dev
+    prime:
+      - usr/lib/*/libmpv.so*
+      - usr/lib/libmpv.so*
 
   gpu-2404:
     after:
@@ -147,7 +204,7 @@ parts:
       - gtk-common-themes
     override-prime: |
       set -eux
-      for snap in "core22" "gtk-common-themes"; do
+      for snap in "core24" "gtk-common-themes"; do
           cd "/snap/$snap/current" && find . -type f,l -exec rm -f "$SNAPCRAFT_PRIME/{}" \;
       done
 

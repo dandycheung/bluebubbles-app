@@ -1,7 +1,8 @@
+import 'package:bluebubbles/app/state/handle_state.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
-import 'package:bluebubbles/app/wrappers/stateful_boilerplate.dart';
 import 'package:bluebubbles/database/models.dart';
 import 'package:bluebubbles/services/services.dart';
+import 'package:bluebubbles/utils/logger/logger.dart';
 import 'package:flex_color_picker/flex_color_picker.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -9,7 +10,7 @@ import 'package:get/get.dart';
 import 'package:universal_io/io.dart';
 
 class ContactAvatarWidget extends StatefulWidget {
-  ContactAvatarWidget(
+  const ContactAvatarWidget(
       {super.key,
       this.size,
       this.fontSize,
@@ -20,8 +21,15 @@ class ContactAvatarWidget extends StatefulWidget {
       this.scaleSize = true,
       this.preferHighResAvatar = false,
       this.padding = EdgeInsets.zero});
+
+  /// Canonical decode size for avatar images. Every avatar usage shares one
+  /// ImageCache entry per file regardless of on-screen size — one decode per
+  /// contact and a much higher cache-hit rate. The conversation list warm-up
+  /// must use identical ResizeImage params for its precached entry to be hit.
+  static const int avatarDecodeSize = 256;
+
   final Handle? handle;
-  final Contact? contact;
+  final ContactV2? contact;
   final double? size;
   final double? fontSize;
   final double borderThickness;
@@ -34,39 +42,48 @@ class ContactAvatarWidget extends StatefulWidget {
   State<ContactAvatarWidget> createState() => _ContactAvatarWidgetState();
 }
 
-class _ContactAvatarWidgetState extends OptimizedState<ContactAvatarWidget> {
-  Contact? get contact => widget.contact ?? widget.handle?.contact;
-  String get keyPrefix => widget.handle?.address ?? randomString(8);
+class _ContactAvatarWidgetState extends State<ContactAvatarWidget> with ThemeHelpers {
+  ContactV2? get contactV2 => widget.contact ?? widget.handle?.contactsV2.firstOrNull;
+  late final String keyPrefix = widget.handle?.address ?? randomString(8);
+
+  HandleState? _handleState;
 
   @override
   void initState() {
     super.initState();
-    eventDispatcher.stream.listen((event) {
-      if (event.item1 != 'refresh-avatar') return;
-      if (event.item2[0] != widget.handle?.address) return;
-      widget.handle?.color = event.item2[1];
-      setState(() {});
-    });
+    if (widget.handle?.id != null) {
+      _handleState = HandleSvc.getOrCreateHandleState(widget.handle!);
+    }
+  }
+
+  @override
+  void didUpdateWidget(ContactAvatarWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.handle?.id != widget.handle?.id) {
+      _handleState = widget.handle?.id != null ? HandleSvc.getOrCreateHandleState(widget.handle!) : null;
+    }
   }
 
   void onAvatarTap() async {
-    if (!ss.settings.colorfulAvatars.value && !ss.settings.colorfulBubbles.value) return;
+    final isIOS = SettingsSvc.settings.skin.value == Skins.iOS;
+    if (isIOS && !SettingsSvc.settings.colorfulAvatars.value && !SettingsSvc.settings.colorfulBubbles.value) return;
 
     bool didReset = false;
     final Color color = await showColorPickerDialog(
       context,
       widget.handle?.color != null ? HexColor(widget.handle!.color!) : toColorGradient(widget.handle!.address)[0],
-      title: Container(
-          width: ns.width(context) - 112,
+      title: SizedBox(
+          width: NavigationSvc.width(context) - 112,
           child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
             Text('Choose a Color', style: context.theme.textTheme.titleLarge),
             TextButton(
               onPressed: () async {
                 didReset = true;
-                Get.back();
+                Navigator.of(context, rootNavigator: true).pop();
                 widget.handle!.color = null;
-                widget.handle!.save(updateColor: true);
-                eventDispatcher.emit("refresh-avatar", [widget.handle?.address, widget.handle?.color]);
+                await widget.handle!.saveAsync(updateColor: true);
+                // Notify ContactServiceV2 that this handle was updated
+                ContactsSvcV2.notifyHandlesUpdated([widget.handle!.id!]);
               },
               child: const Text("RESET"),
             )
@@ -80,6 +97,8 @@ class _ContactAvatarWidgetState extends OptimizedState<ContactAvatarWidget> {
       enableOpacity: false,
       showColorCode: true,
       colorCodeHasColor: true,
+      backgroundColor: context.theme.dialogTheme.backgroundColor ?? context.theme.colorScheme.surfaceContainerHighest,
+      barrierColor: context.theme.dialogTheme.barrierColor ?? context.theme.colorScheme.shadow.withValues(alpha: 0.6),
       pickersEnabled: <ColorPickerType, bool>{
         ColorPickerType.wheel: true,
       },
@@ -89,7 +108,8 @@ class _ContactAvatarWidgetState extends OptimizedState<ContactAvatarWidget> {
       actionButtons: const ColorPickerActionButtons(
         dialogActionButtons: true,
       ),
-      constraints: BoxConstraints(minHeight: 480, minWidth: ns.width(context) - 70, maxWidth: ns.width(context) - 70),
+      constraints: BoxConstraints(
+          minHeight: 480, minWidth: NavigationSvc.width(context) - 70, maxWidth: NavigationSvc.width(context) - 70),
     );
 
     if (didReset) return;
@@ -103,117 +123,180 @@ class _ContactAvatarWidgetState extends OptimizedState<ContactAvatarWidget> {
       widget.handle!.color = color.value.toRadixString(16);
     }
 
-    widget.handle!.save(updateColor: true);
+    await widget.handle!.saveAsync(updateColor: true);
+    // Notify ContactServiceV2 that this handle was updated
+    ContactsSvcV2.notifyHandlesUpdated([widget.handle!.id!]);
+  }
 
-    eventDispatcher.emit("refresh-avatar", [widget.handle?.address, widget.handle?.color]);
+  /// Shared fallback for the avatar circle: initials when available, otherwise
+  /// a generic person icon. Used by the no-avatar branch, while an avatar image
+  /// is still decoding (frameBuilder), and when the image file fails to load.
+  Widget _buildInitialsOrIcon(double size, bool iOS, String? initials) {
+    if (!isNullOrEmpty(initials)) {
+      return SizedBox(
+        width: size,
+        child: Text(
+          initials!,
+          key: Key("$keyPrefix-avatar-text"),
+          style: TextStyle(
+            fontSize: size * 0.5,
+            height: 1.0,
+            leadingDistribution: TextLeadingDistribution.even,
+            color: material ? context.theme.colorScheme.surface : Colors.white,
+          ),
+          textAlign: TextAlign.center,
+          textHeightBehavior: const TextHeightBehavior(
+            applyHeightToFirstAscent: false,
+            applyHeightToLastDescent: false,
+          ),
+        ),
+      );
+    }
+    return Padding(
+      padding: const EdgeInsets.only(left: 1),
+      child: Icon(
+        iOS ? CupertinoIcons.person_fill : Icons.person,
+        color: material ? context.theme.colorScheme.surface : Colors.white,
+        key: Key("$keyPrefix-avatar-icon"),
+        size: size / 2 * (material ? 1.25 : 1),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    Color tileColor =
-        ts.inDarkMode(context) ? context.theme.colorScheme.properSurface : context.theme.colorScheme.background;
+    final tileColor = ThemeSvc.inDarkMode(context)
+        ? context.theme.colorScheme.surfaceContainerHighest
+        : context.theme.colorScheme.surface;
 
-    final size = ((widget.size ?? 40) * (widget.scaleSize ? ss.settings.avatarScale.value : 1)).roundToDouble();
-    List<Color> colors = [];
-    if (widget.handle?.color == null) {
-      colors = toColorGradient(widget.handle?.address);
-    } else {
-      colors = [
-        HexColor(widget.handle!.color!).lightenAmount(0.02),
-        HexColor(widget.handle!.color!),
-      ];
-    }
+    // Build once with all reactive values in outer Obx
+    return Obx(() {
+      final size =
+          ((widget.size ?? 40) * (widget.scaleSize ? SettingsSvc.settings.avatarScale.value : 1)).roundToDouble();
+      // Read from HandleState reactively so Obx rebuilds on contact sync.
+      final colorStr = _handleState?.color.value;
+      final colors = colorStr != null
+          ? [HexColor(colorStr).lightenAmount(0.02), HexColor(colorStr)]
+          : toColorGradient(widget.handle?.address);
+      final cachedAvatarPath = _handleState?.avatarPath.value ?? contactV2?.avatarPath;
+      final cachedInitials = _handleState?.initials.value ?? contactV2?.initials ?? widget.handle?.initials;
+      final hideContactInfo = SettingsSvc.settings.redactedMode.value && SettingsSvc.settings.hideContactInfo.value;
+      final genAvatars = SettingsSvc.settings.redactedMode.value && SettingsSvc.settings.generateFakeAvatars.value;
+      final iOS = SettingsSvc.settings.skin.value == Skins.iOS;
+      final colorfulAvatars = !iOS ||
+          SettingsSvc.settings.colorfulAvatars.value ||
+          (SettingsSvc.settings.skin.value == Skins.Material && ThemeSvc.isAnyMaterialYouSelected);
+      final userAvatarPath = SettingsSvc.settings.userAvatarPath.value;
 
-    return Obx(() => MouseRegion(
-          cursor: !widget.editable || !ss.settings.colorfulAvatars.value || widget.handle == null
-              ? MouseCursor.defer
-              : SystemMouseCursors.click,
-          child: GestureDetector(
-            onTap: !widget.editable || (widget.handle == null && contact == null)
-                ? null
-                : () async {
-                    if (contact != null) {
-                      await mcs.invokeMethod("view-contact-form", {'id': contact!.id});
-                    } else {
-                      await mcs.invokeMethod("open-contact-form", {
-                        'address': widget.handle!.address,
-                        'address_type': widget.handle!.address.isEmail ? 'email' : 'phone'
-                      });
+      return Material(
+        color: Colors.transparent,
+        shape: const CircleBorder(),
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          splashColor: Colors.black,
+          onTap: (!widget.editable || (!kIsDesktop && widget.handle == null && contactV2 == null))
+              ? null
+              : () async {
+                  if (kIsDesktop) {
+                    onAvatarTap();
+                  } else if (contactV2 != null && contactV2!.isNative) {
+                    try {
+                      await MethodChannelSvc.actions.viewContactForm(nativeContactId: contactV2!.nativeContactId);
+                    } catch (e, s) {
+                      Logger.error("Failed to find contact on device", error: e, trace: s);
+                      showSnackbar("Error", "Failed to find contact on device!");
                     }
-                  },
-            onLongPress: !widget.editable || widget.handle == null ? null : onAvatarTap,
-            child: Container(
-              key: Key("$keyPrefix-avatar-container"),
-              width: size,
-              height: size,
-              padding: widget.padding,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: AlignmentDirectional.topStart,
-                  end: AlignmentDirectional.bottomEnd,
-                  colors: [
-                    !ss.settings.colorfulAvatars.value ? HexColor("928E8E") : (iOS ? colors[1] : colors[0]),
-                    !ss.settings.colorfulAvatars.value ? HexColor("686868") : colors[0]
-                  ],
-                  stops: [0.3, 0.9],
-                ),
-                border: Border.all(
-                    color: ss.settings.skin.value == Skins.Samsung ? tileColor : context.theme.colorScheme.background,
-                    width: widget.borderThickness,
-                    strokeAlign: BorderSide.strokeAlignOutside),
-                shape: BoxShape.circle,
-              ),
-              clipBehavior: Clip.antiAlias,
-              alignment: Alignment.center,
-              child: Obx(() {
-                final hide = ss.settings.redactedMode.value && ss.settings.hideContactInfo.value;
-                final iOS = ss.settings.skin.value == Skins.iOS;
-                final avatar = contact?.avatar;
-                if (!hide && widget.handle == null && ss.settings.userAvatarPath.value != null) {
-                  dynamic file = File(ss.settings.userAvatarPath.value!);
-                  return CircleAvatar(
-                    key: ValueKey(ss.settings.userAvatarPath.value!),
-                    radius: size / 2,
-                    backgroundImage: FileImage(file),
-                    backgroundColor: Colors.transparent,
-                  );
-                } else if (isNullOrEmpty(avatar) || hide) {
-                  String? initials = widget.handle?.initials?.substring(0, iOS ? null : 1);
-                  if (!isNullOrEmpty(initials) && !hide) {
-                    return Text(
-                      initials!,
-                      key: Key("$keyPrefix-avatar-text"),
-                      style: TextStyle(
-                        fontSize: (widget.fontSize ?? 18).roundToDouble() * (material ? 1.25 : 1),
-                        color: material ? context.theme.colorScheme.background : Colors.white,
-                      ),
-                      textAlign: TextAlign.center,
+                  } else if (widget.handle != null) {
+                    await MethodChannelSvc.actions.openContactForm(
+                      address: widget.handle!.address,
+                      isEmail: widget.handle!.address.isEmail,
                     );
-                  } else {
-                    return Padding(
-                        padding: const EdgeInsets.only(left: 1),
-                        child: Icon(
-                          iOS ? CupertinoIcons.person_fill : Icons.person,
-                          color: material ? context.theme.colorScheme.background : Colors.white,
-                          key: Key("$keyPrefix-avatar-icon"),
-                          size: size / 2 * (material ? 1.25 : 1),
-                        ));
                   }
-                } else {
-                  return SizedBox.expand(
-                    child: Image.memory(
-                      avatar!,
-                      cacheHeight: size.toInt() * 2,
-                      cacheWidth: size.toInt() * 2,
-                      filterQuality: FilterQuality.none,
-                      fit: BoxFit.cover,
-                      gaplessPlayback: true,
-                    ),
-                  );
-                }
-              }),
+                },
+          onLongPress: kIsDesktop || !widget.editable || widget.handle == null ? null : onAvatarTap,
+          child: Container(
+            key: Key("$keyPrefix-avatar-container"),
+            width: size,
+            height: size,
+            padding: widget.padding,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: AlignmentDirectional.topStart,
+                end: AlignmentDirectional.bottomEnd,
+                colors: [
+                  !colorfulAvatars
+                      ? (ThemeSvc.inDarkMode(context) ? HexColor("8A8686") : HexColor("B8B4B4"))
+                      : (iOS ? colors[1] : colors[0]),
+                  !colorfulAvatars
+                      ? (ThemeSvc.inDarkMode(context) ? HexColor("6B6868") : HexColor("928E8E"))
+                      : colors[0],
+                ],
+                stops: [0.3, 0.9],
+              ),
+              border: Border.all(
+                  color: iOS || SettingsSvc.settings.skin.value == Skins.Samsung
+                      ? tileColor
+                      : context.theme.colorScheme.surface,
+                  width: widget.borderThickness,
+                  strokeAlign: BorderSide.strokeAlignOutside),
+              shape: BoxShape.circle,
             ),
+            clipBehavior: Clip.antiAlias,
+            alignment: Alignment.center,
+            child: () {
+              // Reactive values already computed above in Obx scope.
+              final contactV2Avatar = cachedAvatarPath;
+
+              if (!hideContactInfo && widget.handle == null && userAvatarPath != null) {
+                dynamic file = File(userAvatarPath);
+                return CircleAvatar(
+                  key: ValueKey(userAvatarPath),
+                  radius: size / 2,
+                  backgroundImage: Image.file(file).image,
+                  backgroundColor: Colors.transparent,
+                );
+              } else if (!hideContactInfo && !genAvatars && contactV2Avatar != null) {
+                final initials = cachedInitials?.substring(0, iOS ? null : 1);
+                // Use ContactV2 avatar (from file path)
+                return SizedBox.expand(
+                  child: Image.file(
+                    File(contactV2Avatar),
+                    cacheHeight: ContactAvatarWidget.avatarDecodeSize,
+                    cacheWidth: ContactAvatarWidget.avatarDecodeSize,
+                    // Bilinear so the canonical 256px decode downscales cleanly
+                    // to the small on-screen sizes (nearest-neighbor aliases).
+                    filterQuality: FilterQuality.low,
+                    fit: BoxFit.cover,
+                    gaplessPlayback: true,
+                    frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+                      if (wasSynchronouslyLoaded || frame != null) return child;
+                      // Decode still in flight (cold image cache) — show the
+                      // initials/icon fallback instead of a blank gradient circle.
+                      return Center(child: _buildInitialsOrIcon(size, iOS, initials));
+                    },
+                    errorBuilder: (context, error, stackTrace) {
+                      // If file doesn't exist, show initials instead
+                      return Center(child: _buildInitialsOrIcon(size, iOS, initials));
+                    },
+                  ),
+                );
+              } else if (isNullOrEmpty(contactV2Avatar) || hideContactInfo || genAvatars) {
+                // Use reactive initials from HandleState
+                String? initials = cachedInitials?.substring(0, iOS ? null : 1);
+                if (!isNullOrEmpty(initials) && !hideContactInfo && !genAvatars) {
+                  return _buildInitialsOrIcon(size, iOS, initials);
+                } else if (genAvatars && widget.handle?.fakeAvatar != null) {
+                  return widget.handle!.fakeAvatar;
+                } else if (genAvatars && contactV2?.fakeAvatar != null) {
+                  return contactV2!.fakeAvatar;
+                } else {
+                  return _buildInitialsOrIcon(size, iOS, null);
+                }
+              }
+            }(),
           ),
-        ));
+        ),
+      );
+    });
   }
 }

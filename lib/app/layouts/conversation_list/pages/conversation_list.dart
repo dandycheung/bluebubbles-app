@@ -1,6 +1,7 @@
 import 'dart:async';
 
-import 'package:bluebubbles/app/layouts/chat_creator/chat_creator.dart';
+import 'package:bluebubbles/app/components/avatars/contact_avatar_widget.dart';
+import 'package:bluebubbles/app/layouts/chat_creator/new_chat_creator.dart';
 import 'package:bluebubbles/app/layouts/conversation_list/widgets/conversation_list_fab.dart';
 import 'package:bluebubbles/app/layouts/conversation_list/widgets/footer/samsung_footer.dart';
 import 'package:bluebubbles/app/layouts/conversation_list/widgets/header/material_header.dart';
@@ -10,6 +11,7 @@ import 'package:bluebubbles/app/layouts/conversation_list/widgets/tile/conversat
 import 'package:bluebubbles/app/layouts/conversation_list/widgets/tile/material_conversation_tile.dart';
 import 'package:bluebubbles/app/layouts/conversation_list/widgets/tile/samsung_conversation_tile.dart';
 import 'package:bluebubbles/app/layouts/conversation_view/pages/conversation_view.dart';
+import 'package:bluebubbles/app/wrappers/bb_scaffold.dart';
 import 'package:bluebubbles/app/wrappers/stateful_boilerplate.dart';
 import 'package:bluebubbles/app/wrappers/tablet_mode_wrapper.dart';
 import 'package:bluebubbles/database/models.dart';
@@ -24,9 +26,9 @@ import 'package:bluebubbles/app/layouts/conversation_list/pages/material_convers
 import 'package:bluebubbles/app/layouts/conversation_list/pages/samsung_conversation_list.dart';
 import 'package:bluebubbles/app/wrappers/theme_switcher.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:universal_io/io.dart';
 
 class ConversationListController extends StatefulController {
   final bool showArchivedChats;
@@ -41,10 +43,10 @@ class ConversationListController extends StatefulController {
   ConversationListController({required this.showArchivedChats, required this.showUnknownSenders});
 
   void updateSelectedChats() {
-    if (ss.settings.skin.value == Skins.Material) {
+    if (SettingsSvc.settings.skin.value == Skins.Material) {
       updateWidgets<MaterialHeader>(null);
       updateMaterialFAB();
-    } else if (ss.settings.skin.value == Skins.Samsung) {
+    } else if (SettingsSvc.settings.skin.value == Skins.Samsung) {
       updateWidgets<SamsungFooter>(null);
       updateWidgets<ExpandedHeaderText>(null);
     }
@@ -74,7 +76,7 @@ class ConversationListController extends StatefulController {
       }
     }
 
-    final file = await ImagePicker().pickImage(source: ImageSource.camera);
+    final XFile? file = await ImagePicker().pickImage(source: ImageSource.camera);
     if (file == null) return;
 
     openNewChatCreator(context, existing: [
@@ -88,9 +90,9 @@ class ConversationListController extends StatefulController {
   }
 
   void openNewChatCreator(BuildContext context, {List<PlatformFile>? existing}) async {
-    ns.pushAndRemoveUntil(
+    NavigationSvc.pushAndRemoveUntil(
       context,
-      ChatCreator(initialAttachments: existing ?? []),
+      NewChatCreator(initialAttachments: existing ?? []),
       (route) => route.isFirst,
     );
   }
@@ -114,7 +116,10 @@ class ConversationList extends CustomStateful<ConversationListController> {
   State<StatefulWidget> createState() => _ConversationListState();
 }
 
-class _ConversationListState extends CustomState<ConversationList, void, ConversationListController> {
+class _ConversationListState extends CustomState<ConversationList, void, ConversationListController>
+    with WidgetsBindingObserver {
+  Timer? _initTimer;
+
   @override
   void initState() {
     super.initState();
@@ -124,16 +129,25 @@ class _ConversationListState extends CustomState<ConversationList, void, Convers
             ? "Unknown"
             : "Messages";
 
-    if (!ss.settings.reachedConversationList.value) {
-      Timer.periodic(const Duration(seconds: 1), (Timer t) {
-        bool notInSettings = ns.isTabletMode(context)
+    if (!kIsWeb && !controller.showArchivedChats && !controller.showUnknownSenders) {
+      WidgetsBinding.instance.addObserver(this);
+      ChatsSvc.loadedAllChats.future.then((_) => _precacheAvatars());
+    }
+
+    if (!SettingsSvc.settings.reachedConversationList.value) {
+      _initTimer = Timer.periodic(const Duration(seconds: 1), (Timer t) {
+        if (!mounted) {
+          t.cancel();
+          return;
+        }
+
+        bool notInSettings = NavigationSvc.isTabletMode(context)
             ? !Get.keys.containsKey(3) || Get.keys[3]?.currentContext == null
             : Get.rawRoute?.settings.name == "/";
         // This only runs once
         if (notInSettings) {
-          ss.settings.reachedConversationList.value = true;
-          ss.saveSettings();
-          ss.getServerDetails(refresh: true);
+          SettingsSvc.settings.reachedConversationList.value = true;
+          SettingsSvc.settings.saveOneAsync('reachedConversationList');
           t.cancel();
         }
       });
@@ -141,25 +155,65 @@ class _ConversationListState extends CustomState<ConversationList, void, Convers
 
     // Extra safety check to make sure Android doesn't open the last chat when opening the app
     if (kIsDesktop || kIsWeb) {
-      if (ss.prefs.getString('lastOpenedChat') != null &&
+      final lastOpenedChat = PrefsSvc.messaging.getLastOpenedChat();
+      if (lastOpenedChat != null &&
           showAltLayoutContextless &&
-          cm.activeChat?.chat.guid != ss.prefs.getString('lastOpenedChat') &&
-          !ls.isBubble) {
+          ChatsSvc.activeChat?.chat.guid != lastOpenedChat &&
+          !LifecycleSvc.isBubble) {
         WidgetsBinding.instance.addPostFrameCallback((_) async {
           if (kIsWeb) {
-            await chats.loadedAllChats.future;
+            await ChatsSvc.loadedAllChats.future;
           }
-          ns.pushAndRemoveUntil(
+          NavigationSvc.pushAndRemoveUntil(
             context,
             ConversationView(
-                chat: kIsWeb
-                    ? (await Chat.findOneWeb(guid: ss.prefs.getString('lastOpenedChat')))!
-                    : Chat.findOne(guid: ss.prefs.getString('lastOpenedChat'))!),
+                chat: kIsWeb ? (await Chat.findOneWeb(guid: lastOpenedChat))! : Chat.findOne(guid: lastOpenedChat)!),
             (route) => route.isFirst,
           );
         });
       }
     }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Re-warm the avatar image cache after a resume — the OS may have cleared
+    // Flutter's ImageCache (memory trim) while the app was backgrounded.
+    if (state == AppLifecycleState.resumed) _precacheAvatars();
+  }
+
+  /// Decodes the avatars for the top chats into Flutter's ImageCache so tiles
+  /// render them synchronously instead of falling back to initials while the
+  /// file decodes. The ResizeImage params must exactly match what
+  /// ContactAvatarWidget passes to Image.file, or the warmed entries are never hit.
+  void _precacheAvatars() {
+    if (!mounted) return;
+    const decodeSize = ContactAvatarWidget.avatarDecodeSize;
+    for (final chat in ChatsSvc.allChats.take(30)) {
+      final state = ChatsSvc.getChatState(chat.guid);
+      if (state == null) continue;
+      final customPath = state.customAvatarPath.value;
+      if (customPath != null) {
+        // Group custom avatars render unresized (CircleAvatar + FileImage).
+        unawaited(precacheImage(FileImage(File(customPath)), context));
+        continue;
+      }
+      for (final hs in state.participants) {
+        final path = hs.avatarPath.value;
+        if (path == null) continue;
+        unawaited(precacheImage(
+          ResizeImage(FileImage(File(path)), width: decodeSize, height: decodeSize),
+          context,
+        ));
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _initTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
   }
 
   @override
@@ -172,14 +226,10 @@ class _ConversationListState extends CustomState<ConversationList, void, Convers
 
     if (controller.showArchivedChats || controller.showUnknownSenders) return child;
 
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle(
-        systemNavigationBarColor: ss.settings.immersiveMode.value ? Colors.transparent : context.theme.colorScheme.background, // navigation bar color
-        systemNavigationBarIconBrightness: brightness,
-        statusBarColor: Colors.transparent, // status bar color
-        statusBarIconBrightness: brightness.opposite,
-      ),
-      child: TabletModeWrapper(
+    return BBScaffold(
+      safeAreaLeft: false,
+      safeAreaRight: false,
+      body: TabletModeWrapper(
         initialRatio: 0.4,
         minWidthLeft: kIsDesktop || kIsWeb ? 150 : null,
         minRatio: kIsDesktop || kIsWeb ? 0.1 : 0.33,
@@ -188,10 +238,10 @@ class _ConversationListState extends CustomState<ConversationList, void, Convers
         left: !showAltLayout
             ? child
             : LayoutBuilder(builder: (context, constraints) {
-                ns.maxWidthLeft = constraints.maxWidth;
+                NavigationSvc.maxWidthLeft = constraints.maxWidth;
                 return PopScope(
                   canPop: false,
-                  onPopInvoked: (_) async {
+                  onPopInvokedWithResult: <T>(bool _, T? __) async {
                     Get.until((route) {
                       bool id2result = false;
                       // check if we should pop the left side first
@@ -201,10 +251,9 @@ class _ConversationListState extends CustomState<ConversationList, void, Convers
                           id2result = true;
                         }
                         if (!(Get.global(2).currentState?.canPop() ?? true)) {
-                          if (cm.activeChat != null) {
-                            cvc(cm.activeChat!.chat).close();
+                          if (ChatsSvc.activeChat != null) {
+                            cvc(ChatsSvc.activeChat!.chat).close();
                           }
-                          eventDispatcher.emit('update-highlight', null);
                         }
                         return true;
                       }, id: 2);
@@ -235,10 +284,10 @@ class _ConversationListState extends CustomState<ConversationList, void, Convers
               }),
         right: LayoutBuilder(
           builder: (context, constraints) {
-            ns.maxWidthRight = constraints.maxWidth;
+            NavigationSvc.maxWidthRight = constraints.maxWidth;
             return PopScope(
               canPop: false,
-              onPopInvoked: (_) async {
+              onPopInvokedWithResult: <T>(bool _, T? __) async {
                 Get.back(id: 2);
               },
               child: Navigator(

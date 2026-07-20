@@ -12,7 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 class CupertinoHeader extends StatelessWidget {
-  const CupertinoHeader({Key? key, required this.controller});
+  const CupertinoHeader({super.key, required this.controller});
 
   final ConversationListController controller;
 
@@ -36,56 +36,58 @@ class CupertinoHeader extends StatelessWidget {
             bottom: 5,
           ),
           child: Obx(() {
-            ns.listener.value;
+            NavigationSvc.listener.value;
             return Row(
-              mainAxisAlignment: ns.isAvatarOnly(context) ? MainAxisAlignment.center : MainAxisAlignment.spaceBetween,
+              mainAxisAlignment:
+                  NavigationSvc.isAvatarOnly(context) ? MainAxisAlignment.center : MainAxisAlignment.spaceBetween,
               children: <Widget>[
-                if (!ns.isAvatarOnly(context))
+                if (!NavigationSvc.isAvatarOnly(context))
                   Expanded(
                     child: HeaderText(controller: controller),
                   ),
-                if (ns.isAvatarOnly(context))
+                if (NavigationSvc.isAvatarOnly(context))
                   Material(
                     color: Colors.transparent,
                     shape: const CircleBorder(),
                     clipBehavior: Clip.antiAlias,
                     child: OverflowMenu(extraItems: true, controller: controller),
                   ),
-                if (!ns.isAvatarOnly(context))
+                if (!NavigationSvc.isAvatarOnly(context))
                   Row(
                     mainAxisSize: MainAxisSize.max,
                     crossAxisAlignment: CrossAxisAlignment.center,
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
-                      SyncIndicator(size: 16),
+                      const SyncIndicator(size: 16),
                       const SizedBox(width: 10.0),
                       ClipOval(
                         child: Material(
-                          color: context.theme.colorScheme.properSurface, // button color
+                          color: context.theme.colorScheme.surfaceContainerHighest,
                           child: SizedBox(
                             width: 30,
                             height: 30,
                             child: InkWell(
-                              child: Icon(CupertinoIcons.search, color: context.theme.colorScheme.properOnSurface, size: 18),
+                              child: Icon(CupertinoIcons.search,
+                                  color: context.theme.colorScheme.onSurfaceVariant, size: 18),
                               onTap: () {
-                                ns.pushLeft(context, SearchView());
+                                NavigationSvc.pushLeft(context, const SearchView());
                               },
                             ),
                           ),
                         ),
                       ),
                       const SizedBox(width: 10.0),
-                      if (ss.settings.moveChatCreatorToHeader.value)
+                      if (SettingsSvc.settings.moveChatCreatorToHeader.value)
                         ClipOval(
                           child: Material(
-                            color: context.theme.colorScheme.properSurface, // button color
+                            color: context.theme.colorScheme.surfaceContainerHighest,
                             child: InkWell(
                               child: SizedBox(
                                 width: 30,
                                 height: 30,
                                 child: Icon(
                                   CupertinoIcons.pencil,
-                                  color: context.theme.colorScheme.properOnSurface,
+                                  color: context.theme.colorScheme.onSurfaceVariant,
                                   size: 20,
                                 ),
                               ),
@@ -93,22 +95,29 @@ class CupertinoHeader extends StatelessWidget {
                             ),
                           ),
                         ),
-                      if (ss.settings.moveChatCreatorToHeader.value && ss.settings.cameraFAB.value && !kIsWeb && !kIsDesktop)
+                      if (SettingsSvc.settings.moveChatCreatorToHeader.value &&
+                          SettingsSvc.settings.cameraFAB.value &&
+                          !kIsWeb &&
+                          !kIsDesktop)
                         const SizedBox(width: 10.0),
-                      if (ss.settings.moveChatCreatorToHeader.value && ss.settings.cameraFAB.value && !kIsWeb && !kIsDesktop)
+                      if (SettingsSvc.settings.moveChatCreatorToHeader.value &&
+                          SettingsSvc.settings.cameraFAB.value &&
+                          !kIsWeb &&
+                          !kIsDesktop)
                         ClipOval(
                           child: Material(
-                            color: context.theme.colorScheme.properSurface, // button color
+                            color: context.theme.colorScheme.surfaceContainerHighest,
                             child: InkWell(
                                 child: SizedBox(
                                   width: 30,
                                   height: 30,
-                                  child: Icon(CupertinoIcons.camera, color: context.theme.colorScheme.properOnSurface, size: 20),
+                                  child: Icon(CupertinoIcons.camera,
+                                      color: context.theme.colorScheme.onSurfaceVariant, size: 20),
                                 ),
                                 onTap: () => controller.openCamera(context)),
                           ),
                         ),
-                      if (ss.settings.moveChatCreatorToHeader.value) const SizedBox(width: 10.0),
+                      if (SettingsSvc.settings.moveChatCreatorToHeader.value) const SizedBox(width: 10.0),
                       const Material(
                         color: Colors.transparent,
                         shape: CircleBorder(),
@@ -127,7 +136,7 @@ class CupertinoHeader extends StatelessWidget {
 }
 
 class CupertinoMiniHeader extends StatelessWidget {
-  const CupertinoMiniHeader({Key? key, required this.controller});
+  const CupertinoMiniHeader({super.key, required this.controller});
 
   final ConversationListController controller;
 
@@ -145,28 +154,27 @@ class CupertinoMiniHeader extends StatelessWidget {
         fullOpacityOffset: topMargin + 15,
         child: ClipRect(
           child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-            child: Obx(() {
-              ns.listener.value;
-              return Container(
-                width: ns.width(context),
-                height: (topMargin - 20).clamp(kIsDesktop ? 65 : 40, double.infinity),
-                color: context.theme.colorScheme.properSurface.withOpacity(0.5),
-                alignment: Alignment.bottomCenter,
-                child: Padding(
-                  padding: EdgeInsets.only(bottom: kIsDesktop ? 10 : 5),
-                  child: Text(
-                    controller.showArchivedChats
-                        ? "Archive"
-                        : controller.showUnknownSenders
-                        ? "Unknown Senders"
-                        : "Messages",
-                    style: context.textTheme.titleMedium!.copyWith(color: context.theme.colorScheme.properOnSurface),
+              filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+              child: Obx(() {
+                NavigationSvc.listener.value;
+                return Container(
+                  width: NavigationSvc.width(context),
+                  height: (topMargin - 20).clamp(kIsDesktop ? 65 : 40, double.infinity),
+                  color: context.theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                  alignment: Alignment.bottomCenter,
+                  child: Padding(
+                    padding: EdgeInsets.only(bottom: kIsDesktop ? 10 : 5),
+                    child: Text(
+                      controller.showArchivedChats
+                          ? "Archive"
+                          : controller.showUnknownSenders
+                              ? "Unknown Senders"
+                              : "Messages",
+                      style: context.textTheme.titleMedium!.copyWith(color: context.theme.colorScheme.onSurfaceVariant),
+                    ),
                   ),
-                ),
-              );
-            })
-          ),
+                );
+              })),
         ),
       ),
     );

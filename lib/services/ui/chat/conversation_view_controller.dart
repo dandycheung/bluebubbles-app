@@ -1,29 +1,38 @@
 import 'dart:async';
-import 'dart:isolate';
 
 import 'package:audio_waveforms/audio_waveforms.dart';
 import 'package:bluebubbles/app/components/custom_text_editing_controllers.dart';
 import 'package:bluebubbles/app/wrappers/stateful_boilerplate.dart';
 import 'package:bluebubbles/database/models.dart';
+import 'package:bluebubbles/services/backend/interfaces/prefs_interface.dart';
 import 'package:bluebubbles/services/services.dart';
-import 'package:emojis/emoji.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_keyboard_visibility/flutter_keyboard_visibility.dart';
 import 'package:get/get.dart';
-import 'package:google_ml_kit/google_ml_kit.dart' hide Message;
+import 'package:google_mlkit_entity_extraction/google_mlkit_entity_extraction.dart';
 import 'package:metadata_fetch/metadata_fetch.dart';
 import 'package:scroll_to_index/scroll_to_index.dart';
-import 'package:tuple/tuple.dart';
-import 'package:universal_io/io.dart';
+import 'package:bluebubbles/services/ui/chat/send_data.dart';
+import 'package:bluebubbles/models/models.dart' show MessageReplyContext;
+import 'package:unicode_emojis/unicode_emojis.dart';
 
-ConversationViewController cvc(Chat chat, {String? tag}) => Get.isRegistered<ConversationViewController>(tag: tag ?? chat.guid)
-? Get.find<ConversationViewController>(tag: tag ?? chat.guid) : Get.put(ConversationViewController(chat, tag_: tag), tag: tag ?? chat.guid);
+class MessageEditEntry {
+  final Message message;
+  final MessagePart part;
+  final SpellCheckTextEditingController controller;
+  const MessageEditEntry({required this.message, required this.part, required this.controller});
+}
+
+ConversationViewController cvc(Chat chat, {String? tag}) =>
+    Get.isRegistered<ConversationViewController>(tag: tag ?? chat.guid)
+        ? Get.find<ConversationViewController>(tag: tag ?? chat.guid)
+        : Get.put(ConversationViewController(chat, tag_: tag), tag: tag ?? chat.guid);
 
 class ConversationViewController extends StatefulController with GetSingleTickerProviderStateMixin {
   final Chat chat;
   late final String tag;
   bool fromChatCreator = false;
+  bool fromSearchResult = false;
   bool addedRecentPhotoReply = false;
   final AutoScrollController scrollController = AutoScrollController();
 
@@ -32,9 +41,6 @@ class ConversationViewController extends StatefulController with GetSingleTicker
   }
 
   // caching items
-  final Map<String, Uint8List> imageData = {};
-  final List<Tuple4<Attachment, PlatformFile, BuildContext, Completer<Uint8List>>> imageCacheQueue = [];
-  final Map<String, Map<String, Uint8List>> stickerData = {};
   final Map<String, Metadata> legacyUrlPreviews = {};
   final Map<String, VideoController> videoPlayers = {};
   final Map<String, PlayerController> audioPlayers = {};
@@ -47,17 +53,25 @@ class ConversationViewController extends StatefulController with GetSingleTicker
   final RxDouble timestampOffset = 0.0.obs;
   final RxBool inSelectMode = false.obs;
   final RxList<Message> selected = <Message>[].obs;
-  final RxList<Tuple3<Message, MessagePart, SpellCheckTextEditingController>> editing = <Tuple3<Message, MessagePart, SpellCheckTextEditingController>>[].obs;
+  final RxList<MessageEditEntry> editing = <MessageEditEntry>[].obs;
   final GlobalKey focusInfoKey = GlobalKey();
+  final GlobalKey typingInfoKey = GlobalKey();
   final RxBool recipientNotifsSilenced = false.obs;
+  final RxBool showSmartReplyRow = false.obs;
+  final RxDouble smartReplyRowHeight = 0.0.obs;
   bool showingOverlays = false;
+
+  /// True while any route is pushed on top of the conversation view route (e.g.
+  /// ConversationDetails). Used by onAppResume to skip keyboard auto-focus on mobile.
+  bool showingSubRoute = false;
   bool _subjectWasLastFocused = false; // If this is false, then message field was last focused (default)
 
   FocusNode get lastFocusedNode => _subjectWasLastFocused ? subjectFocusNode : focusNode;
-  SpellCheckTextEditingController get lastFocusedTextController => _subjectWasLastFocused ? subjectTextController : textController;
+  SpellCheckTextEditingController get lastFocusedTextController =>
+      _subjectWasLastFocused ? subjectTextController : textController;
 
   // text field items
-  bool showAttachmentPicker = false;
+  final RxBool showAttachmentPicker = false.obs;
   RxBool showEmojiPicker = false.obs;
   final GlobalKey textFieldKey = GlobalKey();
   final RxList<PlatformFile> pickedAttachments = <PlatformFile>[].obs;
@@ -72,23 +86,55 @@ class ConversationViewController extends StatefulController with GetSingleTicker
   final RxInt mentionSelectedIndex = 0.obs;
   final ScrollController emojiScrollController = ScrollController();
   final Rxn<DateTime> scheduledDate = Rxn<DateTime>(null);
-  final Rxn<Tuple2<Message, int>> _replyToMessage = Rxn<Tuple2<Message, int>>(null);
-  Tuple2<Message, int>? get replyToMessage => _replyToMessage.value;
-  set replyToMessage(Tuple2<Message, int>? m) {
+  final Rxn<MessageReplyContext> _replyToMessage = Rxn<MessageReplyContext>(null);
+  MessageReplyContext? get replyToMessage => _replyToMessage.value;
+  set replyToMessage(MessageReplyContext? m) {
     _replyToMessage.value = m;
     if (m != null) {
       lastFocusedNode.requestFocus();
     }
   }
-  late final mentionables = chat.participants.map((e) => Mentionable(
-    handle: e,
-  )).toList();
+
+  late final mentionables = chat.handles
+      .map((e) => Mentionable(
+            handle: e,
+          ))
+      .toList();
 
   bool keyboardOpen = false;
   double _keyboardOffset = 0;
   Timer? _scrollDownDebounce;
-  Future<void> Function(Tuple6<List<PlatformFile>, String, String, String?, int?, String?>, bool)? sendFunc;
-  bool isProcessingImage = false;
+  Future<void> Function(SendData)? sendFunc;
+
+  /// When set, [_SendAnimationState] will auto-fire this send as soon as it
+  /// registers [sendFunc] (i.e. immediately after the widget is built).
+  /// Used by ChatCreator to pre-queue a send before navigating to ConversationView.
+  SendData? pendingSend;
+
+  /// Completer that resolves once [MessagesView] has finished setting up its
+  /// handlers AND its list key (both sync and async loadChunk paths).
+  ///
+  /// [SendAnimation] waits on this before firing a [pendingSend] so that
+  /// [handleNewMessage] → [_listKey.currentState?.insertItem] is guaranteed
+  /// to find a mounted [SliverAnimatedList], preventing the silent no-op race.
+  Completer<void> _messagesViewReady = Completer<void>();
+
+  /// Called by [MessagesView] once its handlers and list key are fully set up.
+  void markMessagesViewReady() {
+    if (!_messagesViewReady.isCompleted) {
+      _messagesViewReady.complete();
+    }
+  }
+
+  /// Called by [MessagesView.dispose] so that the next visit starts fresh.
+  void resetMessagesViewReady() {
+    if (_messagesViewReady.isCompleted) {
+      _messagesViewReady = Completer<void>();
+    }
+  }
+
+  /// Future that resolves once [MessagesView] has fully initialized.
+  Future<void> get messagesViewReady => _messagesViewReady.future;
 
   @override
   void onInit() {
@@ -97,16 +143,16 @@ class ConversationViewController extends StatefulController with GetSingleTicker
     textController.mentionables = mentionables;
     KeyboardVisibilityController().onChange.listen((bool visible) async {
       keyboardOpen = visible;
-      if (scrollController.hasClients) {
+      if (scrollController.hasClients && scrollController.positions.length == 1) {
         _keyboardOffset = scrollController.offset;
       }
     });
 
     scrollController.addListener(() {
-      if (!scrollController.hasClients) return;
-      if (keyboardOpen
-          && ss.settings.hideKeyboardOnScroll.value
-          && scrollController.offset > _keyboardOffset + 100) {
+      if (!scrollController.hasClients || scrollController.positions.length != 1) return;
+      if (keyboardOpen &&
+          SettingsSvc.settings.hideKeyboardOnScroll.value &&
+          scrollController.offset > _keyboardOffset + 100) {
         focusNode.unfocus();
         subjectFocusNode.unfocus();
       }
@@ -140,6 +186,7 @@ class ConversationViewController extends StatefulController with GetSingleTicker
 
   @override
   void onClose() {
+    updateSmartReplyLayout(visible: false, height: 0);
     for (PlayerController a in audioPlayers.values) {
       a.pausePlayer();
       a.dispose();
@@ -164,59 +211,13 @@ class ConversationViewController extends StatefulController with GetSingleTicker
       );
     }
 
-    if (ss.settings.openKeyboardOnSTB.value) {
+    if (SettingsSvc.settings.openKeyboardOnSTB.value) {
       focusNode.requestFocus();
     }
   }
 
-  Future<void> send(List<PlatformFile> attachments, String text, String subject, String? replyGuid, int? replyPart, String? effectId, bool isAudioMessage) async {
-    sendFunc?.call(Tuple6(attachments, text, subject, replyGuid, replyPart, effectId), isAudioMessage);
-  }
-
-  void queueImage(Tuple4<Attachment, PlatformFile, BuildContext, Completer<Uint8List>> item) {
-    imageCacheQueue.add(item);
-    if (!isProcessingImage) _processNextImage();
-  }
-
-  Future<void> _processNextImage() async {
-    if (imageCacheQueue.isEmpty) {
-      isProcessingImage = false;
-      return;
-    }
-
-    isProcessingImage = true;
-    final queued = imageCacheQueue.removeAt(0);
-    final attachment = queued.item1;
-    final file = queued.item2;
-    Uint8List? tmpData;
-    // If it's an image, compress the image when loading it
-    if (kIsWeb || file.path == null) {
-      if (attachment.mimeType?.contains("image/tif") ?? false) {
-        final receivePort = ReceivePort();
-        await Isolate.spawn(unsupportedToPngIsolate, IsolateData(file, receivePort.sendPort));
-        // Get the processed image from the isolate.
-        final image = await receivePort.first as Uint8List?;
-        tmpData = image;
-      } else {
-        tmpData = file.bytes;
-      }
-    } else if (attachment.canCompress) {
-      tmpData = await as.loadAndGetProperties(attachment, actualPath: file.path!);
-      // All other attachments can be held in memory as bytes
-    } else {
-      tmpData = await File(file.path!).readAsBytes();
-    }
-    if (tmpData == null) {
-      queued.item4.complete(Uint8List.fromList([]));
-      return;
-    }
-    imageData[attachment.guid!] = tmpData;
-    try {
-      await precacheImage(MemoryImage(tmpData), queued.item3);
-    } catch (_) {}
-    queued.item4.complete(tmpData);
-
-    await _processNextImage();
+  Future<void> send(SendData data) async {
+    await sendFunc?.call(data);
   }
 
   bool isSelected(String guid) {
@@ -224,32 +225,42 @@ class ConversationViewController extends StatefulController with GetSingleTicker
   }
 
   bool isEditing(String guid, int part) {
-    return editing.firstWhereOrNull((e) => e.item1.guid == guid && e.item2.part == part) != null;
+    return editing.firstWhereOrNull((e) => e.message.guid == guid && e.part.part == part) != null;
+  }
+
+  void updateSmartReplyLayout({required bool visible, required double height}) {
+    if (showSmartReplyRow.value != visible) {
+      showSmartReplyRow.value = visible;
+    }
+
+    final nextHeight = visible ? height : 0.0;
+    if (smartReplyRowHeight.value != nextHeight) {
+      smartReplyRowHeight.value = nextHeight;
+    }
   }
 
   void close() {
-    eventDispatcher.emit("update-highlight", null);
-    cm.setAllInactiveSync();
+    updateSmartReplyLayout(visible: false, height: 0);
+    ChatsSvc.setAllInactiveSync();
     Get.delete<ConversationViewController>(tag: tag);
   }
 
   Future<void> saveReplyToMessageState() async {
-    if (replyToMessage != null) {
-      await ss.prefs.setString('replyToMessage_${chat.guid}', replyToMessage!.item1.guid!);
-      await ss.prefs.setInt('replyToMessagePart_${chat.guid}', replyToMessage!.item2);
-    } else {
-      await ss.prefs.remove('replyToMessage_${chat.guid}');
-      await ss.prefs.remove('replyToMessagePart_${chat.guid}');
-    }
+    await PrefsInterface.saveReplyToMessageState(
+      chat.guid,
+      replyToMessage?.message.guid,
+      replyToMessage?.partIndex,
+    );
   }
 
   Future<void> loadReplyToMessageState() async {
-    final replyToMessageGuid = ss.prefs.getString('replyToMessage_${chat.guid}');
-    final replyToMessagePart = ss.prefs.getInt('replyToMessagePart_${chat.guid}');
-    if (replyToMessageGuid != null && replyToMessagePart != null) {
-      final message = Message.findOne(guid: replyToMessageGuid);
+    final data = await PrefsInterface.loadReplyToMessageState(chat.guid);
+    if (data != null) {
+      final messageGuid = data['messageGuid'] as String;
+      final messagePart = data['messagePart'] as int;
+      final message = Message.findOne(guid: messageGuid);
       if (message != null) {
-        replyToMessage = Tuple2(message, replyToMessagePart);
+        replyToMessage = MessageReplyContext(message, messagePart);
       }
     }
   }

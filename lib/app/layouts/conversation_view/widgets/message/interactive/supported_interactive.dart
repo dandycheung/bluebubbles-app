@@ -1,4 +1,4 @@
-import 'package:bluebubbles/app/wrappers/stateful_boilerplate.dart';
+import 'package:bluebubbles/app/state/message_state_scope.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/database/models.dart';
 import 'package:bluebubbles/services/services.dart';
@@ -9,19 +9,17 @@ import 'package:universal_io/io.dart';
 
 class SupportedInteractive extends StatefulWidget {
   final iMessageAppData data;
-  final Message message;
 
-  SupportedInteractive({
+  const SupportedInteractive({
     super.key,
     required this.data,
-    required this.message,
   });
 
   @override
-  OptimizedState createState() => _SupportedInteractiveState();
+  State<StatefulWidget> createState() => _SupportedInteractiveState();
 }
 
-class _SupportedInteractiveState extends OptimizedState<SupportedInteractive> with AutomaticKeepAliveClientMixin {
+class _SupportedInteractiveState extends State<SupportedInteractive> with AutomaticKeepAliveClientMixin {
   iMessageAppData get data => widget.data;
   dynamic get file => File(content.path!);
   dynamic content;
@@ -30,26 +28,24 @@ class _SupportedInteractiveState extends OptimizedState<SupportedInteractive> wi
   bool get wantKeepAlive => true;
 
   @override
-  void initState() {
-    super.initState();
-    updateObx(() async {
-      final attachment = widget.message.attachments.firstOrNull;
-      if (attachment != null) {
-        content = as.getContent(attachment, autoDownload: true, onComplete: (file) {
-          setState(() {
-            content = file;
-          });
-        });
-        if (content is PlatformFile) {
-          setState(() {});
-        }
-      }
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
     super.build(context);
+    if (content == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final attachment = MessageStateScope.messageOf(context).dbAttachments.firstOrNull;
+        if (attachment != null) {
+          content = AttachmentsSvc.getContent(attachment, autoDownload: true, onComplete: (file) {
+            if (mounted) {
+              setState(() {
+                content = file;
+              });
+            }
+          });
+          if (content != null && mounted) setState(() {});
+        }
+      });
+    }
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -93,12 +89,10 @@ class _SupportedInteractiveState extends OptimizedState<SupportedInteractive> wi
                         overflow: TextOverflow.ellipsis,
                       ),
                     if (!isNullOrEmpty(data.userInfo?.imageSubtitle))
-                      Text(
-                        data.userInfo!.imageSubtitle!,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: context.theme.textTheme.labelMedium!.copyWith(fontWeight: FontWeight.normal)
-                      ),
+                      Text(data.userInfo!.imageSubtitle!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: context.theme.textTheme.labelMedium!.copyWith(fontWeight: FontWeight.normal)),
                   ],
                 ),
               ),
@@ -106,63 +100,56 @@ class _SupportedInteractiveState extends OptimizedState<SupportedInteractive> wi
         ),
         Padding(
           padding: const EdgeInsets.all(15.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (!isNullOrEmpty(data.userInfo?.caption))
-                    Flexible(
-                      fit: !isNullOrEmpty(data.userInfo?.secondarySubcaption) ? FlexFit.tight : FlexFit.loose,
-                      child: Text(
-                        data.userInfo!.caption!,
-                        style: context.theme.textTheme.bodyLarge!.apply(fontWeightDelta: 2),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  if (isNullOrEmpty(data.userInfo?.caption) && !isNullOrEmpty(data.ldText))
-                    Flexible(
-                      fit: !isNullOrEmpty(data.userInfo?.secondarySubcaption) ? FlexFit.tight : FlexFit.loose,
-                      child: Text(
-                        data.ldText!,
-                        style: context.theme.textTheme.bodyLarge!.apply(fontWeightDelta: 2),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  if (!isNullOrEmpty(data.userInfo?.secondarySubcaption))
-                    Text(
-                      data.userInfo!.secondarySubcaption!,
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (!isNullOrEmpty(data.userInfo?.caption))
+                  Flexible(
+                    fit: !isNullOrEmpty(data.userInfo?.secondarySubcaption) ? FlexFit.tight : FlexFit.loose,
+                    child: Text(
+                      data.userInfo!.caption!,
                       style: context.theme.textTheme.bodyLarge!.apply(fontWeightDelta: 2),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
-                ],
-              ),
-              if (!isNullOrEmpty(data.userInfo?.subcaption))
-                const SizedBox(height: 2.5),
-              if (!isNullOrEmpty(data.userInfo?.subcaption))
-                Text(
-                  data.userInfo!.subcaption!,
+                  ),
+                if (isNullOrEmpty(data.userInfo?.caption) && !isNullOrEmpty(data.ldText))
+                  Flexible(
+                    fit: !isNullOrEmpty(data.userInfo?.secondarySubcaption) ? FlexFit.tight : FlexFit.loose,
+                    child: Text(
+                      data.ldText!,
+                      style: context.theme.textTheme.bodyLarge!.apply(fontWeightDelta: 2),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                if (!isNullOrEmpty(data.userInfo?.secondarySubcaption))
+                  Text(
+                    data.userInfo!.secondarySubcaption!,
+                    style: context.theme.textTheme.bodyLarge!.apply(fontWeightDelta: 2),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+              ],
+            ),
+            if (!isNullOrEmpty(data.userInfo?.subcaption)) const SizedBox(height: 2.5),
+            if (!isNullOrEmpty(data.userInfo?.subcaption))
+              Text(data.userInfo!.subcaption!,
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
-                  style: context.theme.textTheme.labelMedium!.copyWith(fontWeight: FontWeight.normal)
-                ),
-              if (!isNullOrEmpty(data.appName))
-                const SizedBox(height: 5),
-              if (!isNullOrEmpty(data.appName))
-                Text(
-                  data.appName!,
-                  style: context.theme.textTheme.labelMedium!.copyWith(fontWeight: FontWeight.normal, color: context.theme.colorScheme.outline),
-                  overflow: TextOverflow.clip,
-                  maxLines: 1,
-                ),
-            ]
-          ),
+                  style: context.theme.textTheme.labelMedium!.copyWith(fontWeight: FontWeight.normal)),
+            if (!isNullOrEmpty(data.appName)) const SizedBox(height: 5),
+            if (!isNullOrEmpty(data.appName))
+              Text(
+                data.appName!,
+                style: context.theme.textTheme.labelMedium!
+                    .copyWith(fontWeight: FontWeight.normal, color: context.theme.colorScheme.outline),
+                overflow: TextOverflow.clip,
+                maxLines: 1,
+              ),
+          ]),
         )
       ],
     );

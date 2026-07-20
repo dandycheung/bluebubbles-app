@@ -1,32 +1,35 @@
 import 'package:bluebubbles/helpers/backend/foreground_service_helpers.dart';
 import 'package:bluebubbles/helpers/network/network_helpers.dart';
+import 'package:bluebubbles/helpers/network/network_tasks.dart';
 import 'package:bluebubbles/services/services.dart';
 import 'package:bluebubbles/utils/logger/logger.dart';
 import 'package:disable_battery_optimization/disable_battery_optimization.dart';
 
-Future<bool> saveNewServerUrl(
-  String newServerUrl,
-  {
-    bool tryRestartForegroundService = true,
+Future<bool> saveNewServerUrl(String newServerUrl,
+    {bool tryRestartForegroundService = true,
     bool restartSocket = true,
     bool force = false,
-    List<String> saveAdditionalSettings = const []
-  }
-) async {
+    List<String> saveAdditionalSettings = const []}) async {
   String sanitized = sanitizeServerAddress(address: newServerUrl)!;
-  if (force || sanitized != ss.settings.serverAddress.value) {
-    ss.settings.serverAddress.value = sanitized;
+  if (force || sanitized != SettingsSvc.settings.serverAddress.value) {
+    SettingsSvc.settings.serverAddress.value = sanitized;
 
-    await ss.settings.saveMany(["serverAddress", ...saveAdditionalSettings]);
+    // The origin override (if any) was resolved against the previous server's
+    // local network — it's meaningless for the newly configured server, so it
+    // must be cleared or the app will keep silently connecting to the old
+    // address until the next app start or manual re-probe.
+    NetworkTasks.setOriginOverride(null);
+
+    await SettingsSvc.settings.saveManyAsync(["serverAddress", ...saveAdditionalSettings]);
 
     // Don't await because we don't care about the result
     if (tryRestartForegroundService) {
       restartForegroundService();
     }
-    
+
     try {
       if (restartSocket) {
-        socket.restartSocket();
+        SocketSvc.restartSocket();
       }
     } catch (e, stack) {
       Logger.error("Failed to restart socket!", error: e, trace: stack);
@@ -39,13 +42,10 @@ Future<bool> saveNewServerUrl(
 }
 
 Future<void> clearServerUrl(
-  {
-    bool tryRestartForegroundService = true,
-    List<String> saveAdditionalSettings = const []
-  }
-) async {
-  ss.settings.serverAddress.value = "";
-  await ss.settings.saveMany(["serverAddress", ...saveAdditionalSettings]);
+    {bool tryRestartForegroundService = true, List<String> saveAdditionalSettings = const []}) async {
+  SettingsSvc.settings.serverAddress.value = "";
+  NetworkTasks.setOriginOverride(null);
+  await SettingsSvc.settings.saveManyAsync(["serverAddress", ...saveAdditionalSettings]);
 
   // Don't await because we don't care about the result
   if (tryRestartForegroundService) {
@@ -54,7 +54,7 @@ Future<void> clearServerUrl(
 }
 
 /// Prompts the user to disable battery optimizations for the app
-/// 
+///
 /// Returns true if the user has disabled battery optimizations
 Future<bool> disableBatteryOptimizations() async {
   bool? isDisabled = await DisableBatteryOptimization.isAllBatteryOptimizationDisabled;

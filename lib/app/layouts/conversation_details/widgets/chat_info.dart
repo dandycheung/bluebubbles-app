@@ -5,7 +5,6 @@ import 'package:bluebubbles/app/layouts/settings/pages/theming/avatar/avatar_cro
 import 'package:bluebubbles/app/wrappers/theme_switcher.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/app/components/avatars/contact_avatar_group_widget.dart';
-import 'package:bluebubbles/app/wrappers/stateful_boilerplate.dart';
 import 'package:bluebubbles/database/models.dart';
 import 'package:bluebubbles/services/services.dart';
 import 'package:defer_pointer/defer_pointer.dart';
@@ -21,137 +20,134 @@ class ChatInfo extends StatefulWidget {
   final Chat chat;
 
   @override
-  OptimizedState createState() => _ChatInfoState();
+  State<StatefulWidget> createState() => _ChatInfoState();
 }
 
-class _ChatInfoState extends OptimizedState<ChatInfo> {
+class _ChatInfoState extends State<ChatInfo> with ThemeHelpers {
   Chat get chat => widget.chat;
 
   Future<bool?> showMethodDialog(String title) async {
-    return await showDialog<bool>(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            backgroundColor: context.theme.colorScheme.properSurface,
-            title: Text(
-              title,
-              style: context.theme.textTheme.titleLarge,
-            ),
-            content: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (ss.settings.enablePrivateAPI.value && chat.isIMessage)
-                  Text(
-                      "Local - Changes only apply to this device.\nPrivate API - Changes will apply to everyone's devices.",
-                      style: context.theme.textTheme.bodyLarge),
-              ],
-            ),
-            actions: [
-              TextButton(
-                  child: Text("Local",
-                      style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.primary)),
-                  onPressed: () {
-                    Navigator.of(context).pop(false);
-                  }),
-              TextButton(
-                  child: Text("Private API",
-                      style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.primary)),
-                  onPressed: () {
-                    Navigator.of(context).pop(true);
-                  }),
-            ],
-          );
-        });
+    return await showBBDialog<bool>(
+      context: context,
+      title: title,
+      content: SettingsSvc.settings.enablePrivateAPI.value && chat.isIMessage
+          ? Text(
+              "Local - Changes only apply to this device.\nPrivate API - Changes will apply to everyone's devices.",
+              style: context.theme.textTheme.bodyLarge,
+            )
+          : null,
+      actions: [
+        BBDialogAction(
+          text: "Local",
+          onPressed: () => Navigator.of(context, rootNavigator: true).pop(false),
+        ),
+        BBDialogAction(
+          text: "Private API",
+          isDefault: true,
+          onPressed: () => Navigator.of(context, rootNavigator: true).pop(true),
+        ),
+      ],
+    );
   }
 
   void updatePhoto() async {
     bool? papi = false;
-    if (ss.settings.enablePrivateAPI.value && chat.isIMessage) {
+    if (SettingsSvc.settings.enablePrivateAPI.value && chat.isIMessage && chat.isGroup) {
       papi = await showMethodDialog("Group Icon Update Method");
     }
     if (papi == null) return;
+    final usePrivateApi = papi;
     final String? result = await Navigator.of(context).push(
       ThemeSwitcher.buildPageRoute(
         builder: (context) => AvatarCrop(chat: chat),
       ),
     );
-    if (result != null) {
-      chat.customAvatarPath = result;
+    if (result == null) return;
+
+    if (!usePrivateApi) {
+      await ChatsSvc.setChatCustomAvatarPath(chat, result);
+      return;
     }
-    if (papi &&
-        ss.settings.enablePrivateAPI.value &&
-        result != null &&
-        (await ss.isMinBigSur) &&
-        ss.serverDetailsSync().item4 >= 226) {
+
+    if (usePrivateApi &&
+        SettingsSvc.settings.enablePrivateAPI.value &&
+        SettingsSvc.serverDetails.isMinBigSur &&
+        SettingsSvc.serverDetails.supportsGroupChatManagement) {
       showDialog(
           context: context,
           builder: (BuildContext context) {
             return AlertDialog(
-              backgroundColor: context.theme.colorScheme.properSurface,
+              backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
               title: Text(
                 "Updating group photo...",
                 style: context.theme.textTheme.titleLarge,
               ),
-              content: Container(
+              content: SizedBox(
                 height: 70,
                 child: Center(
                   child: CircularProgressIndicator(
-                    backgroundColor: context.theme.colorScheme.properSurface,
+                    backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
                     valueColor: AlwaysStoppedAnimation<Color>(context.theme.colorScheme.primary),
                   ),
                 ),
               ),
             );
           });
-      final response = await http.setChatIcon(chat.guid, chat.customAvatarPath!);
+      final response = await HttpSvc.chat.setIcon(chat.guid, result);
       if (response.statusCode == 200) {
-        Get.back();
+        await ChatsSvc.setChatCustomAvatarPath(chat, result);
+        Navigator.of(context, rootNavigator: true).pop();
         showSnackbar("Notice", "Updated group photo successfully!");
       } else {
-        Get.back();
+        try {
+          await File(result).delete();
+        } catch (_) {}
+        Navigator.of(context, rootNavigator: true).pop();
         showSnackbar("Error", "Failed to update group photo!");
       }
+    } else if (usePrivateApi) {
+      try {
+        await File(result).delete();
+      } catch (_) {}
+      showSnackbar("Error", "Failed to update group photo!");
     }
   }
 
   void deletePhoto() async {
     bool? papi = false;
-    if (ss.settings.enablePrivateAPI.value && chat.isIMessage) {
+    if (SettingsSvc.settings.enablePrivateAPI.value && chat.isIMessage && chat.isGroup) {
       papi = await showMethodDialog("Group Icon Deletion Method");
     }
     if (papi == null) return;
-    try {
-      File file = File(chat.customAvatarPath!);
-      file.delete();
-    } catch (_) {}
-    chat.customAvatarPath = null;
-    chat.save(updateCustomAvatarPath: true);
-    if (papi && ss.settings.enablePrivateAPI.value && (await ss.isMinBigSur) && ss.serverDetailsSync().item4 >= 226) {
-      final response = await http.deleteChatIcon(chat.guid);
+    final usePrivateApi = papi;
+
+    if (usePrivateApi &&
+        SettingsSvc.settings.enablePrivateAPI.value &&
+        SettingsSvc.serverDetails.isMinBigSur &&
+        SettingsSvc.serverDetails.supportsGroupChatManagement) {
+      final response = await HttpSvc.chat.removeIcon(chat.guid);
       if (response.statusCode == 200) {
+        await ChatsSvc.setChatCustomAvatarPath(chat, null);
         showSnackbar("Notice", "Deleted group photo successfully!");
       } else {
         showSnackbar("Error", "Failed to delete group photo!");
       }
+      return;
     }
+
+    await ChatsSvc.setChatCustomAvatarPath(chat, null);
   }
 
   @override
   Widget build(BuildContext context) {
-    final hideInfo = ss.settings.redactedMode.value && ss.settings.hideContactInfo.value;
-    String _title = chat.properTitle;
-    if (hideInfo) {
-      _title = chat.participants.length > 1 ? "Group Chat" : chat.participants[0].fakeName;
-    }
+    final chatState = ChatsSvc.getChatState(chat.guid);
 
     bool canCall = !kIsWeb &&
         !kIsDesktop &&
         !chat.chatIdentifier!.startsWith("urn:biz") &&
-        (chat.participants.isNotEmpty &&
-            ((chat.participants.first.contact?.phones.isNotEmpty ?? false) ||
-                !chat.participants.first.address.contains("@")));
+        (chat.handles.isNotEmpty &&
+            ((chat.handles.first.contactsV2.firstOrNull?.phoneNumbers.isNotEmpty ?? false) ||
+                !chat.handles.first.address.contains("@")));
 
     return DeferredPointerHandler(
       child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -168,7 +164,6 @@ class _ChatInfoState extends OptimizedState<ChatInfo> {
                         }
                       : null,
                   child: ContactAvatarGroupWidget(
-                    chat: chat,
                     size: 100,
                     editable: !chat.isGroup,
                   ),
@@ -186,7 +181,7 @@ class _ChatInfoState extends OptimizedState<ChatInfo> {
                               width: 30,
                               height: 30,
                               decoration: BoxDecoration(
-                                border: Border.all(color: context.theme.colorScheme.background, width: 1),
+                                border: Border.all(color: context.theme.colorScheme.surface, width: 1),
                                 shape: BoxShape.circle,
                                 color: context.theme.colorScheme.tertiaryContainer,
                               ),
@@ -205,26 +200,45 @@ class _ChatInfoState extends OptimizedState<ChatInfo> {
           ),
         if (iOS)
           Padding(
-            padding: const EdgeInsets.only(top: 12.0),
+            padding: const EdgeInsets.only(top: 12.0, left: 20.0, right: 20.0),
             child: Center(
-              child: RichText(
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                text: TextSpan(
-                  style: context.theme.textTheme.headlineMedium!.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: context.theme.colorScheme.onBackground,
-                  ),
-                  children: MessageHelper.buildEmojiText(
-                    _title,
-                    context.theme.textTheme.headlineMedium!.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: context.theme.colorScheme.onBackground,
+              child: Obx(() => RichText(
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    text: TextSpan(
+                      style: context.theme.textTheme.headlineMedium!.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: context.theme.colorScheme.onSurface,
+                      ),
+                      children: MessageHelper.buildEmojiText(
+                        chatState?.title.value ?? chat.getTitle(),
+                        context.theme.textTheme.headlineMedium!.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: context.theme.colorScheme.onSurface,
+                        ),
+                      ),
                     ),
+                  )),
+            ),
+          ),
+        if (!chat.isGroup && iOS && chatState != null && chatState.participants.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 4.0, left: 20.0, right: 20.0),
+            child: Center(
+              child: Obx(() {
+                final address = chatState.participants.first.formattedAddress.value;
+                if (address == null) return const SizedBox.shrink();
+                return Text(
+                  address,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: context.theme.textTheme.bodyMedium!.copyWith(
+                    color: context.theme.colorScheme.outline,
                   ),
-                ),
-              ),
+                );
+              }),
             ),
           ),
         if (chat.isGroup && !iOS)
@@ -242,7 +256,7 @@ class _ChatInfoState extends OptimizedState<ChatInfo> {
                 mouseCursor: MouseCursor.defer,
                 onTap: () async {
                   bool? papi = false;
-                  if (ss.settings.enablePrivateAPI.value && chat.isIMessage) {
+                  if (SettingsSvc.settings.enablePrivateAPI.value && chat.isIMessage) {
                     papi = await showMethodDialog("Group Name Update Method");
                   }
                   if (papi == null) return;
@@ -252,16 +266,16 @@ class _ChatInfoState extends OptimizedState<ChatInfo> {
                     showChangeName(chat, "private-api", context);
                   }
                 },
-                title: RichText(
-                  text: TextSpan(
-                    style: context.theme.textTheme.bodyLarge,
-                    children: MessageHelper.buildEmojiText(
-                      _title,
-                      context.theme.textTheme.bodyLarge!,
-                    ),
-                  ),
-                ),
-                trailing: Icon(Icons.edit_outlined, color: context.theme.colorScheme.onBackground),
+                title: Obx(() => RichText(
+                      text: TextSpan(
+                        style: context.theme.textTheme.bodyLarge,
+                        children: MessageHelper.buildEmojiText(
+                          chatState?.title.value ?? chat.getTitle(),
+                          context.theme.textTheme.bodyLarge!,
+                        ),
+                      ),
+                    )),
+                trailing: Icon(Icons.edit_outlined, color: context.theme.colorScheme.onSurface),
               ),
             ),
           ),
@@ -276,7 +290,7 @@ class _ChatInfoState extends OptimizedState<ChatInfo> {
                   updatePhoto();
                 },
                 title: Text("Update group photo", style: context.theme.textTheme.bodyLarge!),
-                trailing: Icon(Icons.edit_outlined, color: context.theme.colorScheme.onBackground),
+                trailing: Icon(Icons.edit_outlined, color: context.theme.colorScheme.onSurface),
               ),
             ),
           ),
@@ -300,8 +314,8 @@ class _ChatInfoState extends OptimizedState<ChatInfo> {
               : const SizedBox.shrink()),
         if (!chat.isGroup && !iOS)
           ContactTile(
-            key: Key(chat.participants.first.address),
-            handle: chat.participants.first,
+            key: Key(chat.handles.first.address),
+            handle: chat.handles.first,
             chat: chat,
             canBeRemoved: false,
           ),
@@ -315,7 +329,7 @@ class _ChatInfoState extends OptimizedState<ChatInfo> {
               ),
               onPressed: () async {
                 bool? papi = false;
-                if (ss.settings.enablePrivateAPI.value && chat.isIMessage) {
+                if (SettingsSvc.settings.enablePrivateAPI.value && chat.isIMessage) {
                   papi = await showMethodDialog("Group Name Update Method");
                 }
                 if (papi == null) return;
@@ -329,15 +343,15 @@ class _ChatInfoState extends OptimizedState<ChatInfo> {
           ),
         if (!chat.isGroup && iOS)
           Padding(
-            padding: const EdgeInsets.only(left: 10.0, right: 10, top: 20),
+            padding: const EdgeInsets.only(left: 18.0, right: 18, top: 20),
             child: Row(
               mainAxisAlignment: kIsWeb || kIsDesktop ? MainAxisAlignment.center : MainAxisAlignment.spaceBetween,
               children: intersperse(const SizedBox(width: 5), [
                 if (canCall) CallButton(tileColor: tileColor, chat: chat, iOS: iOS),
                 VideoCallButton(tileColor: tileColor, chat: chat, iOS: iOS),
-                if (chat.participants.isNotEmpty &&
-                    ((chat.participants.first.contact?.emails.isNotEmpty ?? false) ||
-                        chat.participants.first.address.contains("@")))
+                if (chat.handles.isNotEmpty &&
+                    ((chat.handles.first.contactsV2.firstOrNull?.emailAddresses.isNotEmpty ?? false) ||
+                        chat.handles.first.address.contains("@")))
                   MailButton(tileColor: tileColor, chat: chat, iOS: iOS),
                 if (!kIsWeb && !kIsDesktop) InfoButton(tileColor: tileColor, chat: chat, iOS: iOS),
               ]).toList(),
@@ -345,8 +359,8 @@ class _ChatInfoState extends OptimizedState<ChatInfo> {
           ),
         if (chat.isGroup)
           Padding(
-            padding: const EdgeInsets.only(left: 15.0, bottom: 5.0),
-            child: Text("${chat.participants.length} ${iOS ? "OTHER MEMBERS" : "OTHER PEOPLE"}",
+            padding: const EdgeInsets.only(left: 15.0, top: 20.0, bottom: 5.0),
+            child: Text("${chat.handles.length} ${iOS ? "OTHER MEMBERS" : "OTHER PEOPLE"}",
                 style: context.theme.textTheme.bodyMedium!.copyWith(color: context.theme.colorScheme.outline)),
           ),
       ]),
@@ -374,14 +388,16 @@ class InfoButton extends StatelessWidget {
         color: tileColor,
         child: InkWell(
           onTap: () async {
-            final contact = chat.participants.first.contact;
-            final handle = chat.participants.first;
-            if (contact == null) {
-              await mcs.invokeMethod("open-contact-form",
-                  {'address': handle.address, 'address_type': handle.address.isEmail ? 'email' : 'phone'});
+            final contact = chat.handles.first.contactsV2.firstOrNull;
+            final handle = chat.handles.first;
+            if (contact == null || !contact.isNative) {
+              await MethodChannelSvc.actions.openContactForm(
+                address: handle.address,
+                isEmail: handle.address.isEmail,
+              );
             } else {
               try {
-                await mcs.invokeMethod("view-contact-form", {'id': contact.id});
+                await MethodChannelSvc.actions.viewContactForm(nativeContactId: contact.nativeContactId);
               } catch (_) {
                 showSnackbar("Error", "Failed to find contact on device!");
               }
@@ -395,14 +411,21 @@ class InfoButton extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(
-                  chat.participants.isNotEmpty && chat.participants.first.contact != null
+                  chat.handles.isNotEmpty &&
+                          chat.handles.first.contactsV2.isNotEmpty &&
+                          chat.handles.first.contactsV2.first.isNative
                       ? (iOS ? CupertinoIcons.info : Icons.info)
                       : (iOS ? CupertinoIcons.plus_circle : Icons.add_circle_outline),
                   color: context.theme.colorScheme.onSurface,
                   size: 20,
                 ),
                 const SizedBox(height: 7.5),
-                Text(chat.participants.isNotEmpty && chat.participants.first.contact != null ? "Info" : "Add Contact",
+                Text(
+                    chat.handles.isNotEmpty &&
+                            chat.handles.first.contactsV2.isNotEmpty &&
+                            chat.handles.first.contactsV2.first.isNative
+                        ? "Info"
+                        : "Add Contact",
                     style: context.theme.textTheme.bodySmall!.copyWith(color: context.theme.colorScheme.onSurface)),
               ],
             ),
@@ -433,12 +456,12 @@ class MailButton extends StatelessWidget {
         color: tileColor,
         child: InkWell(
           onTap: () {
-            final contact = chat.participants.first.contact;
-            showAddressPicker(contact, chat.participants.first, context, isEmail: true);
+            final contact = chat.handles.first.contactsV2.firstOrNull;
+            showAddressPicker(contact, chat.handles.first, context, isEmail: true);
           },
           onLongPress: () {
-            final contact = chat.participants.first.contact;
-            showAddressPicker(contact, chat.participants.first, context, isEmail: true, isLongPressed: true);
+            final contact = chat.handles.first.contactsV2.firstOrNull;
+            showAddressPicker(contact, chat.handles.first, context, isEmail: true, isLongPressed: true);
           },
           borderRadius: BorderRadius.circular(15),
           child: SizedBox(
@@ -480,12 +503,12 @@ class VideoCallButton extends StatelessWidget {
         color: tileColor,
         child: InkWell(
           onTap: () {
-            final contact = chat.participants.first.contact;
-            showAddressPicker(contact, chat.participants.first, context, video: true);
+            final contact = chat.handles.first.contactsV2.firstOrNull;
+            showAddressPicker(contact, chat.handles.first, context, video: true);
           },
           onLongPress: () {
-            final contact = chat.participants.first.contact;
-            showAddressPicker(contact, chat.participants.first, context, isLongPressed: true, video: true);
+            final contact = chat.handles.first.contactsV2.firstOrNull;
+            showAddressPicker(contact, chat.handles.first, context, isLongPressed: true, video: true);
           },
           borderRadius: BorderRadius.circular(15),
           child: SizedBox(
@@ -528,12 +551,12 @@ class CallButton extends StatelessWidget {
         color: tileColor,
         child: InkWell(
           onTap: () {
-            final contact = chat.participants.first.contact;
-            showAddressPicker(contact, chat.participants.first, context);
+            final contact = chat.handles.first.contactsV2.firstOrNull;
+            showAddressPicker(contact, chat.handles.first, context);
           },
           onLongPress: () {
-            final contact = chat.participants.first.contact;
-            showAddressPicker(contact, chat.participants.first, context, isLongPressed: true);
+            final contact = chat.handles.first.contactsV2.firstOrNull;
+            showAddressPicker(contact, chat.handles.first, context, isLongPressed: true);
           },
           borderRadius: BorderRadius.circular(15),
           child: SizedBox(

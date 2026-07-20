@@ -1,9 +1,9 @@
 import 'package:bluebubbles/helpers/helpers.dart';
+import 'package:bluebubbles/app/layouts/setup/pages/permissions/request_permissions.dart';
 import 'package:bluebubbles/app/layouts/setup/pages/setup_checks/battery_optimization.dart';
 import 'package:bluebubbles/app/layouts/setup/dialogs/failed_to_connect_dialog.dart';
 import 'package:bluebubbles/app/layouts/setup/pages/sync/sync_settings.dart';
 import 'package:bluebubbles/app/layouts/setup/pages/sync/server_credentials.dart';
-import 'package:bluebubbles/app/layouts/setup/pages/contacts/request_contacts.dart';
 import 'package:bluebubbles/app/layouts/setup/pages/setup_checks/mac_setup_check.dart';
 import 'package:bluebubbles/app/layouts/setup/pages/sync/sync_progress.dart';
 import 'package:bluebubbles/app/layouts/setup/pages/welcome/welcome_page.dart';
@@ -14,7 +14,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_acrylic/flutter_acrylic.dart';
 import 'package:get/get.dart';
-import 'package:permission_handler/permission_handler.dart';
 
 class SetupViewController extends StatefulController {
   final pageController = PageController(initialPage: 0);
@@ -22,6 +21,8 @@ class SetupViewController extends StatefulController {
   int numberToDownload = 25;
   bool skipEmptyChats = true;
   bool saveToDownloads = false;
+  bool syncGroupChatIcons = false;
+  int? syncTimeFilter = 15552000000; // 6 months in milliseconds (default)
   String error = "";
   bool obscurePass = true;
 
@@ -44,24 +45,24 @@ class SetupViewController extends StatefulController {
 }
 
 class SetupView extends StatefulWidget {
-  SetupView({super.key});
+  const SetupView({super.key});
 
   @override
   State<SetupView> createState() => _SetupViewState();
 }
 
-class _SetupViewState extends OptimizedState<SetupView> {
+class _SetupViewState extends State<SetupView> {
   final controller = Get.put(SetupViewController(), permanent: true);
 
   @override
   void initState() {
     super.initState();
 
-    ever(socket.state, (event) {
-      if (event == SocketState.error
-          && !ss.settings.finishedSetup.value
-          && controller.pageController.hasClients
-          && controller.currentPage > controller.pageOfNoReturn) {
+    ever(SocketSvc.state, (event) {
+      if (event == SocketState.error &&
+          !SettingsSvc.settings.finishedSetup.value &&
+          controller.pageController.hasClients &&
+          controller.currentPage > controller.pageOfNoReturn) {
         showDialog(
           context: context,
           barrierDismissible: false,
@@ -85,7 +86,9 @@ class _SetupViewState extends OptimizedState<SetupView> {
     return PopScope(
       canPop: false,
       child: Scaffold(
-        backgroundColor: ss.settings.windowEffect.value != WindowEffect.disabled ? Colors.transparent : context.theme.colorScheme.background,
+        backgroundColor: SettingsSvc.settings.windowEffect.value != WindowEffect.disabled
+            ? Colors.transparent
+            : context.theme.colorScheme.surface,
         body: SafeArea(
           child: Column(
             children: <Widget>[
@@ -103,6 +106,8 @@ class _SetupViewState extends OptimizedState<SetupView> {
 class SetupHeader extends StatelessWidget {
   final SetupViewController controller = Get.find<SetupViewController>();
 
+  SetupHeader({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -113,10 +118,7 @@ class SetupHeader extends StatelessWidget {
         children: [
           Row(
             children: [
-              Hero(
-                tag: "setup-icon",
-                child: Image.asset("assets/icon/icon.png", width: 30, fit: BoxFit.contain)
-              ),
+              Hero(tag: "setup-icon", child: Image.asset("assets/icon/icon.png", width: 30, fit: BoxFit.contain)),
               const SizedBox(width: 10),
               Text(
                 "BlueBubbles",
@@ -144,14 +146,13 @@ class SetupHeader extends StatelessWidget {
 }
 
 class PageNumber extends CustomStateful<SetupViewController> {
-  PageNumber({required super.parentController});
+  const PageNumber({super.key, required super.parentController});
 
   @override
   State<StatefulWidget> createState() => _PageNumberState();
 }
 
 class _PageNumberState extends CustomState<PageNumber, int, SetupViewController> {
-
   @override
   void updateWidget(int newVal) {
     controller.currentPage = newVal;
@@ -164,13 +165,11 @@ class _PageNumberState extends CustomState<PageNumber, int, SetupViewController>
       text: TextSpan(
         children: [
           TextSpan(
-            text: "${controller.currentPage}",
-            style: context.theme.textTheme.bodyLarge!.copyWith(color: Colors.white, fontWeight: FontWeight.bold)
-          ),
+              text: "${controller.currentPage}",
+              style: context.theme.textTheme.bodyLarge!.copyWith(color: Colors.white, fontWeight: FontWeight.bold)),
           TextSpan(
-            text: " of ${kIsWeb ? "4" : kIsDesktop ? "5" : "7"}",
-            style: context.theme.textTheme.bodyLarge!.copyWith(color: Colors.white38, fontWeight: FontWeight.bold)
-          ),
+              text: " of ${kIsWeb ? "4" : kIsDesktop ? "5" : "7"}",
+              style: context.theme.textTheme.bodyLarge!.copyWith(color: Colors.white38, fontWeight: FontWeight.bold)),
         ],
       ),
     );
@@ -180,22 +179,14 @@ class _PageNumberState extends CustomState<PageNumber, int, SetupViewController>
 class SetupPages extends StatelessWidget {
   final SetupViewController controller = Get.find<SetupViewController>();
 
+  SetupPages({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Expanded(
       child: PageView(
         onPageChanged: (page) {
           // skip pages if the things required are already complete
-          if (!kIsWeb && !kIsDesktop && page == 1 && controller.currentPage == 1) {
-            Permission.contacts.status.then((status) {
-              if (status.isGranted) {
-                controller.pageController.nextPage(
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeInOut,
-                );
-              }
-            });
-          }
           if (!kIsWeb && !kIsDesktop && page == 2 && controller.currentPage == 2) {
             DisableBatteryOptimization.isAllBatteryOptimizationDisabled.then((isDisabled) {
               if (isDisabled ?? false) {
@@ -211,14 +202,13 @@ class SetupPages extends StatelessWidget {
         physics: const NeverScrollableScrollPhysics(),
         controller: controller.pageController,
         children: <Widget>[
-          WelcomePage(),
-          if (!kIsWeb && !kIsDesktop) RequestContacts(),
-          if (!kIsWeb && !kIsDesktop) BatteryOptimizationCheck(),
-          MacSetupCheck(),
-          ServerCredentials(),
-          if (!kIsWeb)
-            SyncSettings(),
-          SyncProgress(),
+          const WelcomePage(),
+          if (!kIsWeb && !kIsDesktop) const RequestPermissions(),
+          if (!kIsWeb && !kIsDesktop) const BatteryOptimizationCheck(),
+          const MacSetupCheck(),
+          const ServerCredentials(),
+          if (!kIsWeb) SyncSettings(),
+          const SyncProgress(),
           //ThemeSelector(),
         ],
       ),

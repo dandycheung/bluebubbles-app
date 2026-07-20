@@ -1,7 +1,6 @@
 import 'package:bluebubbles/app/layouts/conversation_details/dialogs/timeframe_picker.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/app/layouts/settings/widgets/settings_widgets.dart';
-import 'package:bluebubbles/app/wrappers/stateful_boilerplate.dart';
 import 'package:bluebubbles/services/services.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -9,15 +8,13 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:get/get.dart' hide Response;
 
 class MessageRemindersPanel extends StatefulWidget {
-  MessageRemindersPanel({
-    Key? key,
-  });
+  const MessageRemindersPanel({super.key});
 
   @override
   State<MessageRemindersPanel> createState() => _MessageRemindersPanelState();
 }
 
-class _MessageRemindersPanelState extends OptimizedState<MessageRemindersPanel> {
+class _MessageRemindersPanelState extends State<MessageRemindersPanel> with ThemeHelpers {
   List<PendingNotificationRequest> scheduled = [];
   bool? fetching = true;
 
@@ -28,7 +25,7 @@ class _MessageRemindersPanelState extends OptimizedState<MessageRemindersPanel> 
   }
 
   void getExistingMessages() async {
-    final _pending = await notif.flnp.pendingNotificationRequests();
+    final _pending = await NotificationsSvc.flnp.pendingNotificationRequests();
     setState(() {
       scheduled = _pending;
       fetching = false;
@@ -39,7 +36,7 @@ class _MessageRemindersPanelState extends OptimizedState<MessageRemindersPanel> 
     setState(() {
       scheduled.removeWhere((element) => element.id == item.id);
     });
-    notif.flnp.cancel(item.id);
+    NotificationsSvc.flnp.cancel(id: item.id);
   }
 
   @override
@@ -80,12 +77,13 @@ class _MessageRemindersPanelState extends OptimizedState<MessageRemindersPanel> 
                     child: ListView.builder(
                       physics: const NeverScrollableScrollPhysics(),
                       shrinkWrap: true,
-                      findChildIndexCallback: (key) => findChildIndexByKey(scheduled, key, (item) => item.id.toString()),
+                      findChildIndexCallback: (key) =>
+                          findChildIndexByKey(scheduled, key, (item) => item.id.toString()),
                       itemBuilder: (context, index) {
                         final item = scheduled[index];
                         return ListTile(
                           key: ValueKey(item.id.toString()),
-                          mouseCursor: SystemMouseCursors.click,
+                          mouseCursor: MouseCursor.defer,
                           title: Text(item.body!, maxLines: 2, overflow: TextOverflow.ellipsis),
                           subtitle: int.tryParse(item.payload!) == null
                               ? Text(item.title!.replaceAll("Reminder: ", ""))
@@ -106,7 +104,7 @@ class _MessageRemindersPanelState extends OptimizedState<MessageRemindersPanel> 
                                 return;
                               }
                               deleteMessage(item);
-                              await notif.createReminder(null, null, finalDate,
+                              await NotificationsSvc.createReminder(null, null, finalDate,
                                   chatTitle: item.title, messageText: item.body);
                               showSnackbar("Notice", "Scheduled reminder for ${buildDate(finalDate)}");
                               getExistingMessages();

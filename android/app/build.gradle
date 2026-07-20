@@ -30,7 +30,8 @@ if (flutterVersionName == null) {
 
 android {
     namespace "com.bluebubbles.messaging"
-    compileSdk 34
+    compileSdk 36
+    ndkVersion = "28.2.13676358"
 
     lintOptions {
         checkReleaseBuilds false
@@ -43,8 +44,8 @@ android {
 
     defaultConfig {
         applicationId "com.bluebubbles.messaging"
-        minSdkVersion 23
-        targetSdkVersion 34
+        minSdkVersion 26
+        targetSdkVersion 35
         versionCode 20002000 + flutterVersionCode.toInteger()
         versionName flutterVersionName
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
@@ -52,8 +53,20 @@ android {
 
     compileOptions {
         coreLibraryDesugaringEnabled true
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
+    }
+
+    kotlinOptions {
+        jvmTarget = '21'
+    }
+
+    // Fix for META-INF/versions/9/OSGI-INF/MANIFEST.MF duplicate file error
+    // This is a known issue with the latest version of OkHttp.
+    packaging {
+        resources {
+            excludes += ['META-INF/versions/9/OSGI-INF/MANIFEST.MF']
+        }
     }
 
     signingConfigs {
@@ -133,14 +146,6 @@ flutter {
     source '../..'
 }
 
-// For Cloud Firestore okio error
-configurations.all {
-    resolutionStrategy {
-        force 'com.squareup.okhttp:okhttp:2.7.5'
-        force 'com.squareup.okio:okio:1.17.5'
-    }
-}
-
 dependencies {
     // Android native functions
     implementation "androidx.core:core-ktx:1.13.1"
@@ -172,9 +177,14 @@ dependencies {
     // JSON parsing
     implementation 'com.google.code.gson:gson:2.10.1'
 
-    // For AGP 7.4+ desugaring
-    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
+    // HTTP Client (OkHttp + Retrofit)
+    implementation 'com.squareup.okhttp3:okhttp:5.3.2'
+    implementation 'com.squareup.okhttp3:logging-interceptor:5.3.2'
+    implementation 'com.squareup.retrofit2:retrofit:3.0.0'
+    implementation 'com.squareup.retrofit2:converter-gson:3.0.0'
 
-    // Unified Push
-    implementation 'com.github.UnifiedPush:android-connector:2.5.0'
+    // For AGP 7.4+ desugaring
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+
+    implementation 'org.unifiedpush.android:connector:2.5.0'
 }

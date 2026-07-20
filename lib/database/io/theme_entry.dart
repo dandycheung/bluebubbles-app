@@ -1,5 +1,5 @@
 import 'package:bluebubbles/helpers/ui/theme_helpers.dart';
-import 'package:bluebubbles/objectbox.g.dart';
+import 'package:bluebubbles/generated/objectbox.g.dart';
 import 'package:bluebubbles/database/io/theme_object.dart';
 import 'package:flutter/material.dart';
 // (needed when generating objectbox model code)
@@ -49,5 +49,4 @@ class ThemeEntry {
           fontSize: fontSize?.toDouble(),
         )
       : color;
-
 }

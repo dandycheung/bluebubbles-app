@@ -12,7 +12,7 @@ void launchIntent(bool video, String address) async {
   } else if (await Permission.phone.request().isGranted) {
     if (video) {
       try {
-        await mcs.invokeMethod("google-duo", {"number": address});
+        await MethodChannelSvc.actions.googleDuo(number: address);
       } catch (_) {
         showSnackbar("Error", "Something went wrong, Google Duo may not be installed!");
       }
@@ -22,11 +22,14 @@ void launchIntent(bool video, String address) async {
   }
 }
 
-void showAddressPicker(Contact? contact, Handle handle, BuildContext context, {bool isEmail = false, bool video = false, bool isLongPressed = false}) async {
+void showAddressPicker(ContactV2? contact, Handle handle, BuildContext context,
+    {bool isEmail = false, bool video = false, bool isLongPressed = false}) async {
   if (contact == null) {
     launchIntent(video, handle.address);
   } else {
-    List<String> items = isEmail ? getUniqueEmails(contact.emails) : getUniqueNumbers(contact.phones);
+    List<String> items = isEmail
+        ? getUniqueEmails(contact.emailAddresses.map((e) => e.address))
+        : getUniqueNumbers(contact.phoneNumbers.map((p) => p.number));
     if (items.length == 1) {
       launchIntent(video, items.first);
     } else if (!isEmail && handle.defaultPhone != null && !isLongPressed) {
@@ -34,76 +37,70 @@ void showAddressPicker(Contact? contact, Handle handle, BuildContext context, {b
     } else if (isEmail && handle.defaultEmail != null && !isLongPressed) {
       launchIntent(video, handle.defaultEmail!);
     } else {
-      showDialog(
+      showBBDialog(
         context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            backgroundColor: context.theme.colorScheme.properSurface,
-            title:
-            Text("Select Address", style: context.theme.textTheme.titleLarge),
-            content: ObxValue<Rx<bool>>((data) => Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                for (int i = 0; i < items.length; i++)
-                  TextButton(
-                    child: Text(
-                      items[i],
-                      style: context.theme.textTheme.bodyLarge,
-                      textAlign: TextAlign.start,
-                    ),
-                    onPressed: () {
-                      if (data.value) {
-                        if (isEmail) {
-                          handle.defaultEmail = items[i];
-                          handle.updateDefaultEmail(items[i]);
-                        } else {
-                          handle.defaultPhone = items[i];
-                          handle.updateDefaultPhone(items[i]);
-                        }
-                      }
-                      launchIntent(video, items[i]);
-                      Navigator.of(context).pop();
-                    },
+        title: "Select Address",
+        content: ObxValue<Rx<bool>>(
+          (data) => Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (int i = 0; i < items.length; i++)
+                TextButton(
+                  child: Text(
+                    items[i],
+                    style: context.theme.textTheme.bodyLarge,
+                    textAlign: TextAlign.start,
                   ),
-                Row(
-                  children: <Widget>[
-                    SizedBox(
-                      height: 48.0,
-                      width: 24.0,
-                      child: Checkbox(
-                        value: data.value,
-                        activeColor: context.theme.colorScheme.primary,
-                        onChanged: (bool? value) {
-                          data.value = value!;
-                        },
-                      ),
-                    ),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.transparent,
-                        padding: const EdgeInsets.only(left: 5),
-                        elevation: 0.0
-                      ),
-                      onPressed: () {
-                        data = data.toggle();
+                  onPressed: () {
+                    if (data.value) {
+                      if (isEmail) {
+                        handle.defaultEmail = items[i];
+                        handle.updateDefaultEmail(items[i]);
+                      } else {
+                        handle.defaultPhone = items[i];
+                        handle.updateDefaultPhone(items[i]);
+                      }
+                    }
+                    launchIntent(video, items[i]);
+                    Navigator.of(context, rootNavigator: true).pop();
+                  },
+                ),
+              Row(
+                children: <Widget>[
+                  SizedBox(
+                    height: 48.0,
+                    width: 24.0,
+                    child: Checkbox(
+                      value: data.value,
+                      activeColor: context.theme.colorScheme.primary,
+                      onChanged: (bool? value) {
+                        data.value = value!;
                       },
-                      child: Text(
-                        "Remember my selection", style: context.theme.textTheme.bodyMedium,
-                      ),
                     ),
-                  ],
-                ),
-                Text(
-                  "Long press the ${isEmail ? "email" : "call"} button to reset your default selection",
-                  style: context.theme.textTheme.bodySmall!.copyWith(color: context.theme.colorScheme.properOnSurface),
-                ),
-              ],
-            ),
-            false.obs,
-          ));
-        },
+                  ),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.transparent, padding: const EdgeInsets.only(left: 5), elevation: 0.0),
+                    onPressed: () {
+                      data = data.toggle();
+                    },
+                    child: Text(
+                      "Remember my selection",
+                      style: context.theme.textTheme.bodyMedium,
+                    ),
+                  ),
+                ],
+              ),
+              Text(
+                "Long press the ${isEmail ? "email" : "call"} button to reset your default selection",
+                style: context.theme.textTheme.bodySmall!.copyWith(color: context.theme.colorScheme.onSurfaceVariant),
+              ),
+            ],
+          ),
+          false.obs,
+        ),
       );
     }
   }

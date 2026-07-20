@@ -42,6 +42,7 @@ endif()
 function(APPLY_STANDARD_SETTINGS TARGET)
   target_compile_features(${TARGET} PUBLIC cxx_std_14)
   target_compile_options(${TARGET} PRIVATE -Wall -Werror)
+  target_compile_options(${TARGET} PRIVATE -Wno-error=deprecated-declarations)
   target_compile_options(${TARGET} PRIVATE "$<$<NOT:$<CONFIG:Debug>>:-O3>")
   target_compile_definitions(${TARGET} PRIVATE "$<$<NOT:$<CONFIG:Debug>>:NDEBUG>")
 endfunction()
@@ -63,6 +64,7 @@ add_definitions(-DAPPLICATION_ID="${APPLICATION_ID}")
 add_executable(${BINARY_NAME}
   "main.cc"
   "my_application.cc"
+  "splash_screen.cc"
   "${FLUTTER_MANAGED_DIR}/generated_plugin_registrant.cc"
 )
 
@@ -90,7 +92,43 @@ set_target_properties(${BINARY_NAME}
 # them to the application.
 include(flutter/generated_plugins.cmake)
 
-target_link_libraries(${BINARY_NAME} PRIVATE ${MIMALLOC_LIB})
+# media_kit builds mimalloc with MI_OVERRIDE=ON so that its malloc/free symbols
+# interpose process-wide. The same object also exports C++ new/delete overrides,
+# which trips Flutter's hardened libc++ check. Remove only those C++ symbols:
+# Flutter's own operators then call the still-interposed malloc/free functions,
+# keeping both allocation paths on mimalloc without a runtime-dependent linker
+# version script.
+set(MIMALLOC_ALLOCATOR_OBJECT
+  "${CMAKE_BINARY_DIR}/mimalloc/mimalloc-without-cpp-new-delete.o")
+add_custom_command(
+  OUTPUT "${MIMALLOC_ALLOCATOR_OBJECT}"
+  COMMAND "${CMAKE_COMMAND}" -E make_directory "${CMAKE_BINARY_DIR}/mimalloc"
+  COMMAND "${CMAKE_OBJCOPY}"
+    --strip-symbol=_ZdaPv
+    --strip-symbol=_ZdaPvSt11align_val_t
+    --strip-symbol=_ZdaPvm
+    --strip-symbol=_ZdaPvmSt11align_val_t
+    --strip-symbol=_ZdlPv
+    --strip-symbol=_ZdlPvSt11align_val_t
+    --strip-symbol=_ZdlPvm
+    --strip-symbol=_ZdlPvmSt11align_val_t
+    --strip-symbol=_Znam
+    --strip-symbol=_ZnamRKSt9nothrow_t
+    --strip-symbol=_ZnamSt11align_val_t
+    --strip-symbol=_ZnamSt11align_val_tRKSt9nothrow_t
+    --strip-symbol=_Znwm
+    --strip-symbol=_ZnwmRKSt9nothrow_t
+    --strip-symbol=_ZnwmSt11align_val_t
+    --strip-symbol=_ZnwmSt11align_val_tRKSt9nothrow_t
+    "${MIMALLOC_LIB}" "${MIMALLOC_ALLOCATOR_OBJECT}"
+  DEPENDS "${MIMALLOC_LIB}"
+  COMMENT "Removing mimalloc's C++ new/delete overrides"
+  VERBATIM
+)
+add_custom_target(mimalloc_without_cpp_new_delete
+  DEPENDS "${MIMALLOC_ALLOCATOR_OBJECT}")
+add_dependencies(${BINARY_NAME} mimalloc_without_cpp_new_delete)
+target_link_libraries(${BINARY_NAME} PRIVATE "${MIMALLOC_ALLOCATOR_OBJECT}")
 
 # === Installation ===
 # By default, "installing" just makes a relocatable bundle in the build

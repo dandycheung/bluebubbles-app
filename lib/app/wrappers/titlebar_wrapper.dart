@@ -10,7 +10,7 @@ import 'package:get/get_utils/src/extensions/context_extensions.dart';
 import 'package:window_manager/window_manager.dart';
 
 class TitleBarWrapper extends StatelessWidget {
-  TitleBarWrapper({super.key, required this.child});
+  const TitleBarWrapper({super.key, required this.child});
 
   final Widget child;
 
@@ -20,29 +20,29 @@ class TitleBarWrapper extends StatelessWidget {
       return Stack(
         children: <Widget>[
           child,
-          if (ss.settings.showConnectionIndicator.value) const ConnectionIndicator(),
+          const ConnectionIndicator(),
         ],
       );
     }
 
-    return Obx(() => (ss.settings.useCustomTitleBar.value && Platform.isLinux) || (kIsDesktop && !Platform.isLinux) ? WindowBorder(
-        color: Colors.transparent,
-        width: 0,
-        child: Stack(
-          children: <Widget>[
-            child,
-            const TitleBar(),
-            if (ss.settings.showConnectionIndicator.value)
-              const ConnectionIndicator(),
-          ]
-        ),
-      ) : Stack(
-        children: <Widget>[
-          child,
-          if (ss.settings.showConnectionIndicator.value)
-            const ConnectionIndicator(),
-        ],
-      ),
+    return Obx(
+      () => (SettingsSvc.settings.titleBarStyle.value == BBTitleBarStyle.custom && Platform.isLinux) ||
+              (kIsDesktop && !Platform.isLinux)
+          ? WindowBorder(
+              color: Colors.transparent,
+              width: 0,
+              child: Stack(children: <Widget>[
+                child,
+                const TitleBar(),
+                const ConnectionIndicator(),
+              ]),
+            )
+          : Stack(
+              children: <Widget>[
+                child,
+                const ConnectionIndicator(),
+              ],
+            ),
     );
   }
 }
@@ -86,7 +86,8 @@ class WindowButtons extends StatelessWidget {
       children: [
         MinimizeWindowButton(
           colors: buttonColors,
-          onPressed: () async => ss.settings.minimizeToTray.value ? await windowManager.hide() : await windowManager.minimize(),
+          onPressed: () async =>
+              SettingsSvc.settings.minimizeToTray.value ? await windowManager.hide() : await windowManager.minimize(),
           animate: true,
         ),
         MaximizeWindowButton(

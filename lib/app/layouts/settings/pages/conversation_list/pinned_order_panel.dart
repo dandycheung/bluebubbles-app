@@ -1,151 +1,141 @@
-import 'dart:ui';
+import 'dart:async';
 
-import 'package:bluebubbles/app/layouts/conversation_list/pages/conversation_list.dart';
-import 'package:bluebubbles/app/layouts/conversation_list/widgets/tile/conversation_tile.dart';
-import 'package:bluebubbles/app/wrappers/scrollbar_wrapper.dart';
-import 'package:bluebubbles/app/wrappers/theme_switcher.dart';
+import 'package:bluebubbles/app/layouts/conversation_list/widgets/tile/draggable_conversation_tile.dart';
+import 'package:bluebubbles/app/wrappers/bb_app_bar.dart';
+import 'package:bluebubbles/app/wrappers/bb_scaffold.dart';
+import 'package:bluebubbles/database/models.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/services/services.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter_acrylic/flutter_acrylic.dart';
 import 'package:get/get.dart';
 
-class PinnedOrderPanel extends StatelessWidget {
+class PinnedOrderPanel extends StatefulWidget {
+  const PinnedOrderPanel({super.key});
+
+  @override
+  State<PinnedOrderPanel> createState() => _PinnedOrderPanelState();
+}
+
+class _PinnedOrderPanelState extends State<PinnedOrderPanel> {
+  List<Chat> _pinnedChats = [];
+  bool _loaded = false;
+  Worker? _loadedWatcher;
+
+  @override
+  void initState() {
+    super.initState();
+    _loaded = ChatsSvc.loadedFirstChatBatch.value;
+    if (_loaded) {
+      _pinnedChats = ChatsSvc.getFilteredChats(pinnedOnly: true);
+    } else {
+      _loadedWatcher = ever(ChatsSvc.loadedFirstChatBatch, (bool loaded) {
+        if (loaded && mounted) {
+          setState(() {
+            _loaded = true;
+            _pinnedChats = ChatsSvc.getFilteredChats(pinnedOnly: true);
+          });
+        }
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _loadedWatcher?.dispose();
+    ChatsSvc.refreshSortOrder();
+    super.dispose();
+  }
+
+  void _onReorder(int oldIndex, int newIndex) {
+    setState(() {
+      if (oldIndex < newIndex) newIndex -= 1;
+      final item = _pinnedChats.removeAt(oldIndex);
+      _pinnedChats.insert(newIndex, item);
+    });
+
+    // Persist new order. Avoid updating reactive pin state here to prevent
+    // mid-animation list rebuilds triggered by GetX listener cascades.
+    for (var i = 0; i < _pinnedChats.length; i++) {
+      _pinnedChats[i].pinIndex = i;
+      unawaited(_pinnedChats[i].saveAsync(updatePinIndex: true));
+    }
+  }
+
+  void _onReset() {
+    ChatsSvc.removePinIndices();
+    setState(() {
+      _pinnedChats = ChatsSvc.getFilteredChats(pinnedOnly: true);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    final Rx<Color> _backgroundColor = (kIsDesktop && ss.settings.windowEffect.value == WindowEffect.disabled
-            ? Colors.transparent
-            : context.theme.colorScheme.background)
-        .obs;
-    final ScrollController scrollController = ScrollController();
-
-    if (kIsDesktop) {
-      ss.settings.windowEffect.listen((WindowEffect effect) => _backgroundColor.value =
-          effect != WindowEffect.disabled ? Colors.transparent : context.theme.colorScheme.background);
-    }
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle(
-        systemNavigationBarColor: ss.settings.immersiveMode.value
-            ? Colors.transparent
-            : context.theme.colorScheme.background, // navigation bar color
-        systemNavigationBarIconBrightness: context.theme.colorScheme.brightness.opposite,
-        statusBarColor: Colors.transparent, // status bar color
-        statusBarIconBrightness: context.theme.colorScheme.brightness.opposite,
+    return BBScaffold(
+      extendBodyBehindAppBar: false,
+      appBar: BBAppBar(
+        titleText: "Pinned Chat Order",
+        leading: buildBackButton(context),
+        actions: [
+          TextButton(
+            onPressed: _onReset,
+            child: Text("Reset",
+                style: context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.primary)),
+          ),
+        ],
       ),
-      child: Obx(
-        () => Scaffold(
-          backgroundColor: _backgroundColor.value,
-          appBar: PreferredSize(
-            preferredSize: Size(ns.width(context), 80),
-            child: ClipRRect(
-              child: BackdropFilter(
-                child: AppBar(
-                  systemOverlayStyle:
-                      ThemeData.estimateBrightnessForColor(context.theme.colorScheme.background) == Brightness.dark
-                          ? SystemUiOverlayStyle.light
-                          : SystemUiOverlayStyle.dark,
-                  toolbarHeight: kIsDesktop ? 80 : 50,
-                  elevation: 0,
-                  scrolledUnderElevation: 3,
-                  surfaceTintColor: context.theme.colorScheme.primary,
-                  leading: buildBackButton(context),
-                  backgroundColor: _backgroundColor.value,
-                  centerTitle: ss.settings.skin.value == Skins.iOS,
-                  title: Text(
-                    "Pinned Chat Order",
-                    style: context.theme.textTheme.titleLarge,
-                  ),
-                  actions: [
-                    TextButton(
-                        child: Text("Reset",
-                            style:
-                                context.theme.textTheme.bodyLarge!.copyWith(color: context.theme.colorScheme.primary)),
-                        onPressed: () {
-                          chats.removePinIndices();
-                        }),
+      body: !_loaded
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.only(top: 50.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Text(
+                        "Loading chats...",
+                        style: context.theme.textTheme.labelLarge,
+                      ),
+                    ),
+                    buildProgressIndicator(context, size: 15),
                   ],
                 ),
-                filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
               ),
-            ),
-          ),
-          body: ScrollbarWrapper(
-            showScrollbar: true,
-            controller: scrollController,
-            child: SingleChildScrollView(
-              controller: scrollController,
-              physics: ThemeSwitcher.getScrollPhysics(),
-              child: Column(
-                mainAxisSize: MainAxisSize.max,
-                children: <Widget>[
-                  Obx(() {
-                    if (!chats.loadedChatBatch.value) {
-                      return Center(
-                        child: Padding(
-                          padding: const EdgeInsets.only(top: 50.0),
-                          child: Column(
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Text(
-                                  "Loading chats...",
-                                  style: context.theme.textTheme.labelLarge,
-                                ),
-                              ),
-                              buildProgressIndicator(context, size: 15),
-                            ],
+            )
+          : _pinnedChats.isEmpty
+              ? Center(
+                  child: Text(
+                    "You have no pinned chats",
+                    style: context.theme.textTheme.labelLarge,
+                  ),
+                )
+              : ReorderableListView.builder(
+                  buildDefaultDragHandles: false,
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  onReorder: _onReorder,
+                  header: Padding(
+                    padding: const EdgeInsets.fromLTRB(15, 5, 15, 8),
+                    child: Text(
+                      "Set the order of pinned chats by dragging the handle next to each chat tile.",
+                      style: context.theme.textTheme.bodyMedium!.copyWith(color: context.theme.colorScheme.outline),
+                    ),
+                  ),
+                  itemBuilder: (context, index) {
+                    final chat = _pinnedChats[index];
+                    return DecoratedBox(
+                      key: Key(chat.guid),
+                      decoration: BoxDecoration(
+                        border: Border(
+                          bottom: BorderSide(
+                            color: context.theme.colorScheme.outline.withValues(alpha: 0.15),
                           ),
                         ),
-                      );
-                    }
-                    if (chats.hasChats.value && chats.chats.bigPinHelper(true).isEmpty) {
-                      return Center(
-                        child: Padding(
-                          padding: const EdgeInsets.only(top: 50.0),
-                          child: Text(
-                            "You have no pinned chats :(",
-                            style: context.theme.textTheme.labelLarge,
-                          ),
-                        ),
-                      );
-                    }
-
-                    return ReorderableListView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      onReorder: chats.updateChatPinIndex,
-                      header: Padding(
-                        padding: const EdgeInsets.all(13.0),
-                        child: Text("Set the order of pinned chats by dragging the chat tile to the desired location.",
-                            style: context.theme.textTheme.bodyLarge),
                       ),
-                      itemBuilder: (context, index) {
-                        return ReorderableDragStartListener(
-                          key: Key(chats.chats.bigPinHelper(true)[index].guid.toString()),
-                          index: index,
-                          child: AbsorbPointer(
-                            absorbing: true,
-                            child: ConversationTile(
-                              chat: chats.chats.bigPinHelper(true)[index],
-                              controller: Get.put(
-                                  ConversationListController(showUnknownSenders: true, showArchivedChats: true),
-                                  tag: "pinned-order-panel"),
-                              inSelectMode: true,
-                              onSelect: (_) {},
-                            ),
-                          ),
-                        );
-                      },
-                      itemCount: chats.chats.bigPinHelper(true).length,
+                      child: DraggableConversationTile(chat: chat, index: index),
                     );
-                  }),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
+                  },
+                  itemCount: _pinnedChats.length,
+                ),
     );
   }
 }

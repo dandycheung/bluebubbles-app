@@ -83,7 +83,7 @@ class TargetColors extends ColorScheme {
     final double chromaAdj = chroma * chromaFactor;
 
     return lightnessMap.map(
-          (key, value) => MapEntry(key, Oklch(value, chromaAdj)),
+      (key, value) => MapEntry(key, Oklch(value, chromaAdj)),
     );
   }
 }
@@ -123,37 +123,33 @@ class DynamicColorScheme extends ColorScheme {
 
   // Main background color. Tinted with the primary color.
   @override
-  ColorSwatch get neutral1 =>
-      _transformSwatch(targetColors.neutral1, primaryNeutral, (_) => _);
+  ColorSwatch get neutral1 => _transformSwatch(targetColors.neutral1, primaryNeutral, (lch) => lch);
 
   // Secondary background color. Slightly tinted with the primary color.
   @override
-  ColorSwatch get neutral2 =>
-      _transformSwatch(targetColors.neutral2, primaryNeutral, (_) => _);
+  ColorSwatch get neutral2 => _transformSwatch(targetColors.neutral2, primaryNeutral, (lch) => lch);
 
   // Main accent color. Generally, this is close to the primary color.
   @override
-  ColorSwatch get accent1 =>
-      _transformSwatch(targetColors.accent1, primaryAccent, (_) => _);
+  ColorSwatch get accent1 => _transformSwatch(targetColors.accent1, primaryAccent, (lch) => lch);
 
   // Secondary accent color. Darker shades of accent1.
   @override
-  ColorSwatch get accent2 =>
-      _transformSwatch(targetColors.accent2, primaryAccent, (_) => _);
+  ColorSwatch get accent2 => _transformSwatch(targetColors.accent2, primaryAccent, (lch) => lch);
 
   // Tertiary accent color. Primary color shifted to the next secondary color via hue offset.
   @override
   ColorSwatch get accent3 => _transformSwatch(
-    targetColors.accent3,
-    primaryAccent,
+        targetColors.accent3,
+        primaryAccent,
         (lch) => Oklch(lch.l, lch.c, lch.h + accent3HueShiftDegrees),
-  );
+      );
 
   ColorSwatch _transformSwatch(
-      ColorSwatch swatch,
-      Lch primary,
-      Oklch Function(Oklch) colorFilter,
-      ) {
+    ColorSwatch swatch,
+    Lch primary,
+    Oklch Function(Oklch) colorFilter,
+  ) {
     return swatch.map((shade, color) {
       final Lch target;
 
@@ -163,8 +159,7 @@ class DynamicColorScheme extends ColorScheme {
         target = color.toLinearSrgb().toOklab().toOklch();
       }
       final double targetLstar = TargetColors.lstarLightnessMap[shade]!;
-      final Oklch newLch =
-      colorFilter(_transformColor(target, primary, targetLstar));
+      final Oklch newLch = colorFilter(_transformColor(target, primary, targetLstar));
       final Srgb newSrgb = newLch.toOklab().toLinearSrgb().toSrgb();
 
       return MapEntry(shade, newSrgb);
@@ -177,8 +172,7 @@ class DynamicColorScheme extends ColorScheme {
     // Use the primary color's hue, since it's the most prominent feature of the theme.
     final double h = primary.h;
     // Binary search for the target lightness for accuracy
-    final double l =
-    accurateShades ? _searchLstar(targetLstar, c, h) : target.l;
+    final double l = accurateShades ? _searchLstar(targetLstar, c, h) : target.l;
 
     return Oklch(l, c, h);
   }
@@ -200,15 +194,10 @@ class DynamicColorScheme extends ColorScheme {
       // The search must be done in 8-bpc sRGB to account for the effects of clipping.
       // Otherwise, results at lightness extremes (especially ~shade 10) are quite far
       // off after quantization and clipping.
-      final int srgbClipped =
-      Oklch(mid, c, h).toOklab().toLinearSrgb().toSrgb().quantize8();
+      final int srgbClipped = Oklch(mid, c, h).toOklab().toLinearSrgb().toSrgb().quantize8();
 
       // Convert back to Color and compare CIELAB L*
-      final double lstar = Srgb.fromColor(ui.Color(srgbClipped))
-          .toLinearSrgb()
-          .toCieXyz()
-          .toCieLab()
-          .l;
+      final double lstar = Srgb.fromColor(ui.Color(srgbClipped)).toLinearSrgb().toCieXyz().toCieLab().l;
       final double delta = (lstar - targetLstar).abs();
 
       if (delta < bestLDelta) {
@@ -230,18 +219,18 @@ class DynamicColorScheme extends ColorScheme {
 
 extension SchemeToColors on ColorScheme {
   MonetColors get asColors => MonetColors(
-    accent1: accent1.asPalette,
-    accent2: accent2.asPalette,
-    accent3: accent3.asPalette,
-    neutral1: neutral1.asPalette,
-    neutral2: neutral2.asPalette,
-  );
+        accent1: accent1.asPalette,
+        accent2: accent2.asPalette,
+        accent3: accent3.asPalette,
+        neutral1: neutral1.asPalette,
+        neutral2: neutral2.asPalette,
+      );
 }
 
 extension MapToPalette on ColorSwatch {
   MonetPalette get asPalette {
     final Map<int, ui.Color> newSwatch = map(
-          (key, value) => MapEntry(
+      (key, value) => MapEntry(
         key,
         ui.Color(value.toLinearSrgb().toSrgb().quantize8()),
       ),
