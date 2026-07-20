@@ -50,6 +50,10 @@ jobs:
       - name: Pub get
         run: fvm flutter pub get --enforce-lockfile
 
+      - name: Write .env
+        run: echo "KLIPY_API_KEY=" > .env
+        shell: bash
+
       # --no-fatal-infos: the codebase carries ~270 pre-existing info-level lints
       # (deprecations, use_build_context_synchronously). Fail only on new
       # warnings/errors a PR introduces, not on that legacy baseline.
@@ -89,6 +93,10 @@ jobs:
       - name: Select Flutter version
         run: fvm use $env:FLUTTER_VERSION --force
         shell: pwsh
+
+      - name: Write .env
+        run: echo "KLIPY_API_KEY=" > .env
+        shell: bash
 
       - name: Pub get
         run: fvm flutter pub get --enforce-lockfile
@@ -143,6 +151,9 @@ jobs:
 
       - name: Select Flutter version
         run: fvm use "$FLUTTER_VERSION" --force
+
+      - name: Write .env
+        run: echo "KLIPY_API_KEY=" > .env
 
       - name: Pub get
         run: fvm flutter pub get --enforce-lockfile
