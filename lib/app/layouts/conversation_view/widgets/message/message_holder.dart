@@ -124,6 +124,15 @@ class _MessageHolderState extends State<MessageHolder> with ThemeHelpers {
     }
   }
 
+  @override
+  void didUpdateWidget(MessageHolder old) {
+    super.didUpdateWidget(old);
+    if (!widget.isReplyThread) {
+      controller.oldMessage = widget.oldMessage;
+      controller.newMessage = widget.newMessage;
+    }
+  }
+
   void completeEdit(String newEdit, int part) async {
     widget.cvController.editing.removeWhere((e2) => e2.message.guid == message.guid! && e2.part.part == part);
     if (newEdit.isNotEmpty && newEdit != controller.parts.firstWhere((element) => element.part == part).text) {

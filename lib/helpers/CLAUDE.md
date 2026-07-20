@@ -1,16 +1,18 @@
 # lib/helpers/ — Cross-Cutting Utilities
 
-Import via barrel: `package:bluebubbles/helpers/helpers.dart` (re-exports everything below).
+Import via barrel: `package:bluebubbles/helpers/helpers.dart` (re-exports most files below — a few are imported directly; see note).
 
 ## UI Helpers (`ui/`) → `ui/CLAUDE.md`
 - `ui_helpers.dart` — general UI utilities (back button, safe area, etc.)
 - `theme_helpers.dart` — `ThemeHelpers` mixin; mixed into `CustomState`; provides `iOS`, `material`, `samsung` skin booleans
 - `message_widget_helpers.dart` — message-specific UI utilities
 - `reaction_helpers.dart` — tapback emoji display helpers
-- `attributed_body_helpers.dart` — renders `AttributedBody` rich text (bold, italic, mention, link)
-- `facetime_helpers.dart` — FaceTime link detection and launch
+- `dialog_helpers.dart` — shared dialog builders
+- `findmy_helpers.dart` — Find My UI helpers
 - `oauth_helpers.dart` — OAuth flow UI (open browser, capture callback)
 - `async_task.dart` — `AsyncTask` wrapper for cancellable async work
+- `attributed_body_helpers.dart` — renders `AttributedBody` rich text (bold, italic, mention, link) — **not** exported by `helpers.dart`, import directly
+- `facetime_helpers.dart` — FaceTime link detection and launch — **not** exported by `helpers.dart`, import directly
 
 ## Type Helpers (`types/`)
 - `constants.dart` — `effectMap` (iMessage effect name → Apple code), `stringToMessageEffect`
@@ -24,9 +26,9 @@ Import via barrel: `package:bluebubbles/helpers/helpers.dart` (re-exports everyt
 - `metadata_helper.dart` — URL metadata / Open Graph extraction for link previews
 
 ## Backend Helpers (`backend/`) → `backend/CLAUDE.md`
-- `settings_helpers.dart` — settings read/write shortcuts
-- `foreground_service_helpers.dart` — Android foreground service start/stop control
-- `startup_tasks.dart` — ordered app initialization task runner
+- `settings_helpers.dart` — settings read/write shortcuts — **not** exported by `helpers.dart`, import directly
+- `foreground_service_helpers.dart` — Android foreground service start/stop control — **not** exported by `helpers.dart`, import directly
+- `startup_tasks.dart` — ordered app initialization task runner — **not** exported by `helpers.dart`, import directly
 - `sync/sync_helpers.dart` — sync coordination utilities
 
 ## Key Routings
