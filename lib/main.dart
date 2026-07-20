@@ -574,9 +574,6 @@ class _HomeState extends State<Home> with WidgetsBindingObserver, TrayListener {
         /* ----- SYSTEM TRAY INITIALIZATION ----- */
         await initSystemTray();
         trayManager.addListener(this);
-
-        /* ----- NOTIFICATIONS INITIALIZATION ----- */
-        await localNotifier.setup(appName: "BlueBubbles");
       }
 
       if (!SettingsSvc.settings.finishedSetup.value) {
