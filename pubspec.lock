@@ -684,6 +684,22 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.2.5+3"
+  extended_image:
+    dependency: transitive
+    description:
+      name: extended_image
+      sha256: e81d801cd692921f152834e01f39bba8b3d6302c48ad420d499c6062a7e24737
+      url: "https://pub.dev"
+    source: hosted
+    version: "10.1.0"
+  extended_image_library:
+    dependency: transitive
+    description:
+      name: extended_image_library
+      sha256: "1f9a24d3a00c2633891c6a7b5cab2807999eb2d5b597e5133b63f49d113811fe"
+      url: "https://pub.dev"
+    source: hosted
+    version: "5.0.1"
   fake_async:
     dependency: transitive
     description:
@@ -834,6 +850,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.7.0"
+  flutter_dotenv:
+    dependency: "direct main"
+    description:
+      name: flutter_dotenv
+      sha256: d41da11fb497314fbf89811ec30af02d1d898b47980a129f0a8c0a1720460ba2
+      url: "https://pub.dev"
+    source: hosted
+    version: "6.0.1"
   flutter_image_compress:
     dependency: "direct main"
     description:
@@ -1399,6 +1423,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.6.0"
+  http_client_helper:
+    dependency: transitive
+    description:
+      name: http_client_helper
+      sha256: "8a9127650734da86b5c73760de2b404494c968a3fd55602045ffec789dac3cb1"
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.0.0"
   http_multi_server:
     dependency: transitive
     description:
@@ -1607,6 +1639,22 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.11.0"
+  klipy_dart:
+    dependency: transitive
+    description:
+      name: klipy_dart
+      sha256: e175946111ded69374b9d13d14d7dae2738b0a4751307a28ea989311ba9ca367
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.0.2"
+  klipy_flutter:
+    dependency: "direct main"
+    description:
+      name: klipy_flutter
+      sha256: b32caff8d11e88b2e4eedd3f3a5f3c74e6435145b4e1f24c966abfbf5044bc8d
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.0.3"
   languagetool_textfield:
     dependency: "direct main"
     description:

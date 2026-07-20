@@ -30,6 +30,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart' hide Priority;
 import 'package:flutter/services.dart';
 import 'package:flutter_acrylic/flutter_acrylic.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:get/get.dart';
 import 'package:google_mlkit_entity_extraction/google_mlkit_entity_extraction.dart';
@@ -208,6 +209,8 @@ Future<Null> initApp(bool bubble, List<String> arguments) async {
             SocketSvc.init();
           }
         });
+
+        await dotenv.load();
       }
 
       /* ----- EMOJI FONT INITIALIZATION ----- */
