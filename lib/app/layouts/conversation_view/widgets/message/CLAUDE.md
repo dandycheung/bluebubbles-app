@@ -15,8 +15,7 @@ A message renders as a composition of specialized sub-widgets.
 | `popup/` | Long-press context menu / action sheet | → CLAUDE.md inside |
 | `interactive/` | Apple Pay, Game Pigeon, URL previews, maps, embedded media | → CLAUDE.md inside |
 | `chat_event/` | System messages (member added, subject changed) | |
-| `effects/` | Send effect overlays (balloon, confetti, etc.) | → CLAUDE.md inside |
-| `misc/` | Message editing, selection, swipe-to-reply dispatcher | → CLAUDE.md inside |
+| `misc/` | Message editing, selection, swipe-to-reply dispatcher, bubble effect overlay (`bubble_effects.dart`) | → CLAUDE.md inside |
 | `parts/` | Per-part-type renderers (a message can have multiple parts) | |
 | `shared/` | Shared utilities across message widgets | |
 
@@ -24,4 +23,5 @@ A message renders as a composition of specialized sub-widgets.
 - Reactive state: `lib/app/state/message_state.dart`
 - DB model: `lib/database/io/message.dart`
 - Animations: `lib/app/animations/`
+- Full-screen send effect overlay + picker (balloon, confetti, etc.): sibling directory `conversation_view/widgets/effects/` → `CLAUDE.md` inside
 - Popup action handlers: `popup/actions/` (menu behavior extracted from `popup/message_popup.dart`)
