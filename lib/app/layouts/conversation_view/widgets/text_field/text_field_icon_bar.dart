@@ -1,3 +1,4 @@
+import 'package:bluebubbles/app/layouts/conversation_view/widgets/text_field/buttons/text_field_button.dart';
 import 'package:bluebubbles/app/layouts/conversation_view/widgets/text_field/conversation_text_field_local_controller.dart';
 import 'package:bluebubbles/database/io/klipy.dart';
 import 'package:bluebubbles/database/models.dart';
@@ -16,8 +17,10 @@ import 'package:get/get.dart';
 import 'package:klipy_flutter/klipy_flutter.dart';
 import 'package:universal_io/io.dart';
 
-/// Left-side icon buttons in the conversation text field row:
-/// add (+), emoji picker toggle, and location share.
+/// Left-side icon buttons in the conversation text field row.
+///
+/// Which buttons appear, and in what order, comes from
+/// `SettingsSvc.settings.textFieldButtons` (configurable — see [TextFieldButton]).
 ///
 /// All button logic is self-contained here; heavy async flows reference
 /// [controller] and [localController] directly.
@@ -39,12 +42,25 @@ class TextFieldIconBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return Obx(() => Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            _attachmentButton(context),
+            ...SettingsSvc.settings.textFieldButtons.platformSupportedButtons.map((b) => _build(context, b)),
+          ],
+        ));
+  }
+
+  Widget _build(BuildContext context, TextFieldButton button) => switch (button) {
+        TextFieldButton.Gif => _gifButton(context),
+        TextFieldButton.Emoji => _emojiButton(context),
+        TextFieldButton.Location => _locationButton(context),
+      };
+
+  Widget _attachmentButton(BuildContext context) {
     final hasBackground = ChatsSvc.getChatState(controller.chat.guid)?.customBackgroundPath.value?.isNotEmpty == true;
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        Padding(
+    return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 10),
           child: IconButton(
             style: IconButton.styleFrom(
@@ -128,9 +144,10 @@ class TextFieldIconBar extends StatelessWidget {
               }
             },
           ),
-        ),
-        if (!kIsWeb && !Platform.isAndroid)
-          IconButton(
+        );
+  }
+
+  Widget _gifButton(BuildContext context) => IconButton(
               icon: Icon(Icons.gif, color: context.theme.colorScheme.outline, size: 28),
               onPressed: () async {
                 if (kIsDesktop || kIsWeb) {
@@ -221,25 +238,22 @@ class TextFieldIconBar extends StatelessWidget {
                     }
                   }
                 }
-              }),
-        if (kIsDesktop || kIsWeb)
-          IconButton(
-            icon: Icon(_iOS ? CupertinoIcons.smiley_fill : Icons.emoji_emotions,
-                color: context.theme.colorScheme.outline, size: 28),
-            onPressed: () {
-              controller.showEmojiPicker.value = !controller.showEmojiPicker.value;
-              (controller.editing.lastOrNull?.controller.focusNode ?? controller.lastFocusedNode).requestFocus();
-            },
-          ),
-        if (kIsDesktop && !Platform.isLinux)
-          IconButton(
-            icon: Icon(_iOS ? CupertinoIcons.location_solid : Icons.location_on_outlined,
-                color: context.theme.colorScheme.outline, size: 28),
-            onPressed: () async {
-              await Share.location(_chat);
-            },
-          ),
-      ],
-    );
-  }
+              });
+
+  Widget _emojiButton(BuildContext context) => IconButton(
+        icon: Icon(_iOS ? CupertinoIcons.smiley_fill : Icons.emoji_emotions,
+            color: context.theme.colorScheme.outline, size: 28),
+        onPressed: () {
+          controller.showEmojiPicker.value = !controller.showEmojiPicker.value;
+          (controller.editing.lastOrNull?.controller.focusNode ?? controller.lastFocusedNode).requestFocus();
+        },
+      );
+
+  Widget _locationButton(BuildContext context) => IconButton(
+        icon: Icon(_iOS ? CupertinoIcons.location_solid : Icons.location_on_outlined,
+            color: context.theme.colorScheme.outline, size: 28),
+        onPressed: () async {
+          await Share.location(_chat);
+        },
+      );
 }
