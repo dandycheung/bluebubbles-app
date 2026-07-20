@@ -31,11 +31,8 @@ GdkPixbuf* g_icon = nullptr;
 guint g_autoclose_id = 0;
 bool g_dark = true;
 
-// Fixed buffers, not std::string: this binary links mimalloc and hides
-// operator new/delete (CMakeLists hide_new_delete.map), so a std::string would
-// allocate via mimalloc but free via the hidden delete — a mismatched free()
-// that segfaults at startup on some toolchains. Stack buffers + GLib string
-// funcs (consistent malloc/free) avoid it.
+// Fixed buffers keep the pre-engine splash independent of the C++ runtime and
+// avoid heap work while the allocator and Flutter engine are starting up.
 char g_status[256] = "Starting...";
 char g_version_line[128] = "";
 
@@ -110,17 +107,26 @@ bool ReadBundleVersion(char* out, size_t n) {
   g_snprintf(path, sizeof(path), "%s/data/flutter_assets/version.json", dir);
   gchar* contents = nullptr;
   if (!g_file_get_contents(path, &contents, nullptr, nullptr)) return false;
-  // Minimal extraction of "version":"<value>" — flat JSON, no parser needed.
+  // Minimal extraction of the version JSON field — no parser needed. Flutter
+  // writes this file pretty-printed, so tolerate whitespace around the colon.
   bool ok = false;
-  const char* key = "\"version\":\"";
+  const char* key = "\"version\"";
   char* start = strstr(contents, key);
   if (start != nullptr) {
     start += strlen(key);
-    char* end = strchr(start, '"');
-    if (end != nullptr && static_cast<size_t>(end - start) < n) {
-      memcpy(out, start, end - start);
-      out[end - start] = '\0';
-      ok = true;
+    while (g_ascii_isspace(*start)) ++start;
+    if (*start == ':') {
+      ++start;
+      while (g_ascii_isspace(*start)) ++start;
+      if (*start == '"') {
+        ++start;
+        char* end = strchr(start, '"');
+        if (end != nullptr && static_cast<size_t>(end - start) < n) {
+          memcpy(out, start, end - start);
+          out[end - start] = '\0';
+          ok = true;
+        }
+      }
     }
   }
   g_free(contents);

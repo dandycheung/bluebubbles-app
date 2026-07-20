@@ -32,10 +32,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_acrylic/flutter_acrylic.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:get/get.dart';
-import 'package:google_ml_kit/google_ml_kit.dart' hide Message;
+import 'package:google_mlkit_entity_extraction/google_mlkit_entity_extraction.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:local_auth/local_auth.dart';
-import 'package:local_notifier/local_notifier.dart';
 import 'package:path/path.dart' as p;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:screen_retriever/screen_retriever.dart';
@@ -543,15 +542,20 @@ class _HomeState extends State<Home> with WidgetsBindingObserver, TrayListener {
           if (await temp.exists()) await temp.delete(recursive: true);
 
           /* ----- BADGE ICON LISTENER ----- */
-          ChatsSvc.unreadCount.listen((count) async {
-            if (count == 0) {
-              await WindowsTaskbar.resetOverlayIcon();
-            } else if (count <= 9) {
-              await WindowsTaskbar.setOverlayIcon(ThumbnailToolbarAssetIcon('assets/badges/badge-$count.ico'));
-            } else {
-              await WindowsTaskbar.setOverlayIcon(ThumbnailToolbarAssetIcon('assets/badges/badge-10.ico'));
-            }
-          });
+          Future<void> updateBadge(int count) async {
+            try {
+              if (count == 0 || !SettingsSvc.settings.windowsTaskbarBadge.value) {
+                await WindowsTaskbar.resetOverlayIcon();
+              } else if (count <= 9) {
+                await WindowsTaskbar.setOverlayIcon(ThumbnailToolbarAssetIcon('assets/badges/badge-$count.ico'));
+              } else {
+                await WindowsTaskbar.setOverlayIcon(ThumbnailToolbarAssetIcon('assets/badges/badge-10.ico'));
+              }
+            } catch (_) {}
+          }
+
+          unawaited(updateBadge(ChatsSvc.unreadCount.value));
+          ChatsSvc.unreadCount.listen(updateBadge);
 
           /* ----- WINDOW EFFECT INITIALIZATION ----- */
           EventDispatcherSvc.stream.listen((event) async {
@@ -589,7 +593,7 @@ class _HomeState extends State<Home> with WidgetsBindingObserver, TrayListener {
 
   @override
   void onTrayIconMouseDown() async {
-    await windowManager.show();
+    await showAndFocusWindow();
   }
 
   @override
@@ -601,7 +605,7 @@ class _HomeState extends State<Home> with WidgetsBindingObserver, TrayListener {
   void onTrayMenuItemClick(MenuItem menuItem) async {
     switch (menuItem.key) {
       case 'show_app':
-        await windowManager.show();
+        await showAndFocusWindow();
         break;
       case 'hide_app':
         await windowManager.hide();

@@ -12,7 +12,6 @@ list(APPEND FLUTTER_PLUGIN_LIST
   flutter_timezone
   gtk
   irondash_engine_context
-  local_notifier
   maps_launcher
   media_kit_libs_linux
   media_kit_video
