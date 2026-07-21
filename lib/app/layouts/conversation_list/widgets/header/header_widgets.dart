@@ -146,6 +146,7 @@ class _MaterialAvatarMenuState extends State<MaterialAvatarMenu> with SingleTick
             .withValues(alpha: windowEffect != WindowEffect.disabled ? 0.95 : 1.0);
         final moveChatCreatorToHeader = SettingsSvc.settings.moveChatCreatorToHeader.value;
         final filterUnknownSenders = SettingsSvc.settings.filterUnknownSenders.value;
+        final hasActiveChatFilter = ChatsSvc.chatListFilters.value.hasActiveFilter;
         final userName = SettingsSvc.settings.userName.value;
         final iCloudAccount = SettingsSvc.settings.iCloudAccount.value;
 
@@ -255,7 +256,8 @@ class _MaterialAvatarMenuState extends State<MaterialAvatarMenu> with SingleTick
                               onTap: () => _hideMenu().then((_) => goToArchived(navContext)),
                             ),
                             _MenuItemRow(
-                              icon: Icons.filter_list_outlined,
+                              icon: hasActiveChatFilter ? Icons.filter_list : Icons.filter_list_outlined,
+                              iconColor: hasActiveChatFilter ? overlayContext.theme.colorScheme.primary : null,
                               label: 'Filter Chats',
                               onTap: () => _hideMenu().then((_) => openChatListFilterSheet(navContext)),
                             ),
@@ -336,11 +338,16 @@ class _MenuItemRow extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.onTap,
+    this.iconColor,
   });
 
   final IconData icon;
   final String label;
   final VoidCallback onTap;
+
+  /// Overrides the default icon color — e.g. to highlight when a toggleable
+  /// action (like "Filter Chats") is currently active.
+  final Color? iconColor;
 
   @override
   Widget build(BuildContext context) {
@@ -355,7 +362,7 @@ class _MenuItemRow extends StatelessWidget {
               Icon(
                 icon,
                 size: 20,
-                color: context.theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.85),
+                color: iconColor ?? context.theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.85),
               ),
               const SizedBox(width: 16),
               Text(
@@ -387,6 +394,7 @@ class CupertinoOverflowMenu extends StatelessWidget {
     final userName = SettingsSvc.settings.userName.value;
     final moveChatCreatorToHeader = SettingsSvc.settings.moveChatCreatorToHeader.value;
     final filterUnknownSenders = SettingsSvc.settings.filterUnknownSenders.value;
+    final hasActiveChatFilter = ChatsSvc.chatListFilters.value.hasActiveFilter;
 
     final itemTheme = PullDownMenuItemTheme(
       textStyle: TextStyle(
@@ -432,7 +440,10 @@ class CupertinoOverflowMenu extends StatelessWidget {
         PullDownMenuItem(
           itemTheme: itemTheme,
           title: 'Filter Chats',
-          icon: CupertinoIcons.line_horizontal_3_decrease_circle,
+          icon: hasActiveChatFilter
+              ? CupertinoIcons.line_horizontal_3_decrease_circle_fill
+              : CupertinoIcons.line_horizontal_3_decrease_circle,
+          iconColor: hasActiveChatFilter ? context.theme.colorScheme.primary : null,
           onTap: () => openChatListFilterSheet(context),
         ),
         if (filterUnknownSenders)
