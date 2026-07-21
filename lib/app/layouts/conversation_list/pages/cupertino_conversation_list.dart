@@ -89,7 +89,10 @@ class CupertinoConversationListState extends State<CupertinoConversationList> wi
                       final _version = ChatsSvc.chatListVersion.value;
                       NavigationSvc.listener.value;
                       final _chats = ChatsSvc.getFilteredChats(
-                          showArchived: showArchived, showUnknown: showUnknown, pinnedOnly: true);
+                          showArchived: showArchived,
+                          showUnknown: showUnknown,
+                          pinnedOnly: true,
+                          filters: ChatsSvc.chatListFilters.value);
 
                       if (_chats.isEmpty) {
                         return const SliverToBoxAdapter(child: SizedBox.shrink());
@@ -259,7 +262,10 @@ class CupertinoConversationListState extends State<CupertinoConversationList> wi
                       // Observe chat list version to trigger rebuild when order changes
                       final _ = ChatsSvc.chatListVersion.value;
                       final _chats = ChatsSvc.getFilteredChats(
-                          showArchived: showArchived, showUnknown: showUnknown, excludePinned: true);
+                          showArchived: showArchived,
+                          showUnknown: showUnknown,
+                          excludePinned: true,
+                          filters: ChatsSvc.chatListFilters.value);
 
                       if (!loaded || _chats.isEmpty) {
                         return SliverToBoxAdapter(
@@ -268,7 +274,9 @@ class CupertinoConversationListState extends State<CupertinoConversationList> wi
                               padding: const EdgeInsets.only(top: 50.0),
                               child: loaded
                                   ? buildEmptyChatListState(context,
-                                      showArchived: showArchived, showUnknown: showUnknown)
+                                      showArchived: showArchived,
+                                      showUnknown: showUnknown,
+                                      filters: ChatsSvc.chatListFilters.value)
                                   : Column(
                                       children: [
                                         Padding(

@@ -69,6 +69,9 @@ class Settings {
   final RxBool colorsFromMedia = false.obs;
   final RxString globalTextDetection = "".obs;
   final RxBool filterUnknownSenders = false.obs;
+  final RxBool rememberChatFilters = false.obs;
+  /// Dimension name -> enum name (e.g. `{"read": "unread", "type": "group"}`).
+  final Rx<Map<String, String>> savedChatFilters = Rx<Map<String, String>>(<String, String>{});
   final RxBool tabletMode = true.obs;
   final RxBool highlightSelectedChat = true.obs;
   final RxBool immersiveMode = true.obs;
@@ -326,6 +329,8 @@ class Settings {
       'notifyReactions': notifyReactions.value,
       'globalTextDetection': globalTextDetection.value,
       'filterUnknownSenders': filterUnknownSenders.value,
+      'rememberChatFilters': rememberChatFilters.value,
+      'savedChatFilters': Map<String, String>.from(savedChatFilters.value),
       'tabletMode': tabletMode.value,
       'immersiveMode': immersiveMode.value,
       'avatarScale': avatarScale.value,
@@ -509,6 +514,11 @@ class Settings {
         map['globalTextDetection'] ?? SettingsSvc.settings.globalTextDetection.value;
     SettingsSvc.settings.filterUnknownSenders.value =
         map['filterUnknownSenders'] ?? SettingsSvc.settings.filterUnknownSenders.value;
+    SettingsSvc.settings.rememberChatFilters.value =
+        map['rememberChatFilters'] ?? SettingsSvc.settings.rememberChatFilters.value;
+    if (map.containsKey('savedChatFilters')) {
+      SettingsSvc.settings.savedChatFilters.value = _processSavedChatFilters(map['savedChatFilters']);
+    }
     SettingsSvc.settings.tabletMode.value = kIsDesktop || (map['tabletMode'] ?? SettingsSvc.settings.tabletMode.value);
     SettingsSvc.settings.highlightSelectedChat.value =
         map['highlightSelectedChat'] ?? SettingsSvc.settings.highlightSelectedChat.value;
@@ -727,6 +737,8 @@ class Settings {
     s.colorsFromMedia.value = map['colorsFromMedia'] ?? false;
     s.globalTextDetection.value = map['globalTextDetection'] ?? "";
     s.filterUnknownSenders.value = map['filterUnknownSenders'] ?? false;
+    s.rememberChatFilters.value = map['rememberChatFilters'] ?? false;
+    s.savedChatFilters.value = _processSavedChatFilters(map['savedChatFilters']);
     s.tabletMode.value = kIsDesktop || (map['tabletMode'] ?? true);
     s.highlightSelectedChat.value = map['highlightSelectedChat'] ?? true;
     s.immersiveMode.value = map['immersiveMode'] ?? true;
@@ -860,6 +872,17 @@ Map<String, String> _processCustomHeaders(dynamic rawJson) {
     return (rawJson is Map ? rawJson : jsonDecode(rawJson) as Map).cast<String, String>();
   } catch (e) {
     debugPrint("Using default customHeaders");
+    return <String, String>{};
+  }
+}
+
+/// Accepts either an already-decoded [Map] (e.g. synced in-memory to the
+/// GlobalIsolate) or a JSON-encoded [String] (round-tripped through disk
+/// prefs, which only store primitives/strings).
+Map<String, String> _processSavedChatFilters(dynamic rawJson) {
+  try {
+    return (rawJson is Map ? rawJson : jsonDecode(rawJson) as Map).cast<String, String>();
+  } catch (e) {
     return <String, String>{};
   }
 }

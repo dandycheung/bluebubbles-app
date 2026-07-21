@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:app_links/app_links.dart';
 import 'package:bluebubbles/app/layouts/chat_creator/chat_creator.dart';
 import 'package:bluebubbles/app/layouts/chat_creator/new_chat_creator.dart';
+import 'package:bluebubbles/app/layouts/conversation_list/widgets/filters/chat_list_filters.dart';
 import 'package:bluebubbles/app/state/chat_state.dart';
 import 'package:bluebubbles/helpers/backend/startup_tasks.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
@@ -64,6 +65,10 @@ class ChatsService {
   /// Used to trigger UI rebuilds when chats are repositioned
   final RxInt chatListVersion = 0.obs;
 
+  /// Currently selected conversation-list filter dimensions. Persisted to
+  /// [Settings] only when [Settings.rememberChatFilters] is enabled.
+  final Rx<ChatListFilters> chatListFilters = const ChatListFilters().obs;
+
   /// Timer for debouncing chatListVersion updates to prevent rapid UI rebuilds
   Timer? _listVersionUpdateTimer;
 
@@ -72,6 +77,10 @@ class ChatsService {
   StreamSubscription? _hideContactInfoListener;
   StreamSubscription? _generateFakeAvatarsListener;
   StreamSubscription? _hideAttachmentsListener;
+
+  /// Listeners backing the "Remember Filters" setting
+  StreamSubscription? _chatListFiltersListener;
+  StreamSubscription? _rememberChatFiltersListener;
 
   // ========== Helper Getters (replacing direct chats access) ==========
 
@@ -114,6 +123,7 @@ class ChatsService {
     bool? showUnknown,
     bool? pinnedOnly,
     bool? excludePinned,
+    ChatListFilters? filters,
   }) {
     var chats = allChats;
 
@@ -134,6 +144,49 @@ class ChatsService {
         chats = chats
             .where((e) => e.isGroup || (!e.isGroup && e.handles.firstOrNull?.contactsV2.isNotEmpty == true))
             .toList();
+      }
+    }
+
+    // Apply conversation-list filter dimensions (chip selections) — these combine with AND semantics.
+    if (filters != null) {
+      if (filters.readFilter == ChatReadFilter.unread) {
+        // Read from ChatState rather than the Chat model directly — markAllAsRead()
+        // updates ChatState.hasUnreadMessage instantly but writes the underlying
+        // Chat.hasUnreadMessage field asynchronously via a background DB/HTTP call,
+        // so the model field can briefly lag behind the reactive state.
+        chats = chats.where((e) => getChatState(e.guid)?.hasUnreadMessage.value ?? (e.hasUnreadMessage ?? false)).toList();
+      }
+
+      // The legacy "Filter Unknown Senders" setting already siphons unknown-sender
+      // chats into their own separate list (see the showUnknown block above and
+      // Chat.shouldMuteNotification) — when it's on, it takes precedence over this
+      // chip so the two mechanisms can't fight and produce a confusing empty list.
+      if (!SettingsSvc.settings.filterUnknownSenders.value) {
+        if (filters.senderFilter == ChatSenderFilter.known) {
+          chats = chats
+              .where((e) => e.isGroup || (!e.isGroup && e.handles.firstOrNull?.contactsV2.isNotEmpty == true))
+              .toList();
+        } else if (filters.senderFilter == ChatSenderFilter.unknown) {
+          chats = chats.where((e) => !e.isGroup && e.handles.firstOrNull?.contactsV2.isEmpty != false).toList();
+        }
+      }
+
+      if (filters.typeFilter == ChatTypeFilter.group) {
+        chats = chats.where((e) => e.isGroup).toList();
+      } else if (filters.typeFilter == ChatTypeFilter.direct) {
+        chats = chats.where((e) => !e.isGroup).toList();
+      }
+
+      if (filters.muteFilter == ChatMuteFilter.muted) {
+        chats = chats.where((e) => e.muteType != null).toList();
+      } else if (filters.muteFilter == ChatMuteFilter.unmuted) {
+        chats = chats.where((e) => e.muteType == null).toList();
+      }
+
+      if (filters.serviceFilter == ChatServiceFilter.iMessage) {
+        chats = chats.where((e) => e.isIMessage).toList();
+      } else if (filters.serviceFilter == ChatServiceFilter.other) {
+        chats = chats.where((e) => !e.isIMessage).toList();
       }
     }
 
@@ -220,6 +273,10 @@ class ChatsService {
     Logger.info("Fetching chats...", tag: "ChatBloc");
 
     reset();
+
+    // Preload the remembered filter selection (if enabled) and keep it in sync
+    // going forward — independent of chat count, so set this up unconditionally.
+    _setupChatListFilterPersistence();
 
     // Get current count from database or server
     currentCount = getChatCount() ??
@@ -342,6 +399,32 @@ class ChatsService {
     chatState.hasUnreadMessage.listen((hasUnread) {
       _recalculateUnreadCount();
     });
+  }
+
+  /// Preloads the remembered filter selection (if [Settings.rememberChatFilters]
+  /// is enabled) and keeps [Settings] in sync with [chatListFilters] going forward.
+  void _setupChatListFilterPersistence() {
+    if (SettingsSvc.settings.rememberChatFilters.value) {
+      chatListFilters.value = ChatListFilters.fromSettingsMap(SettingsSvc.settings.savedChatFilters.value);
+    }
+
+    _chatListFiltersListener?.cancel();
+    _chatListFiltersListener = chatListFilters.listen((filters) {
+      if (!SettingsSvc.settings.rememberChatFilters.value) return;
+      _saveChatListFilters(filters);
+    });
+
+    // Snapshot the current selection immediately when the user turns the setting on,
+    // so it's remembered from that point rather than only after the next change.
+    _rememberChatFiltersListener?.cancel();
+    _rememberChatFiltersListener = SettingsSvc.settings.rememberChatFilters.listen((enabled) {
+      if (enabled) _saveChatListFilters(chatListFilters.value);
+    });
+  }
+
+  void _saveChatListFilters(ChatListFilters filters) {
+    SettingsSvc.settings.savedChatFilters.value = filters.toSettingsMap();
+    unawaited(SettingsSvc.settings.saveOneAsync('savedChatFilters'));
   }
 
   /// Set up global listeners for redacted mode settings that update all chat states

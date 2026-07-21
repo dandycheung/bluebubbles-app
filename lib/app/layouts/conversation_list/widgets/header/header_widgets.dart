@@ -1,6 +1,7 @@
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:bluebubbles/app/components/avatars/contact_avatar_widget.dart';
 import 'package:bluebubbles/app/layouts/conversation_list/pages/search/search_view.dart';
+import 'package:bluebubbles/app/layouts/conversation_list/widgets/filters/chat_list_filters_sheet.dart';
 import 'package:bluebubbles/app/layouts/conversation_view/pages/conversation_view.dart';
 import 'package:bluebubbles/app/layouts/findmy/findmy_page.dart';
 import 'package:bluebubbles/app/layouts/settings/pages/profile/profile_panel.dart';
@@ -143,8 +144,8 @@ class _MaterialAvatarMenuState extends State<MaterialAvatarMenu> with SingleTick
         final windowEffect = SettingsSvc.settings.windowEffect.value;
         final cardColor = overlayContext.theme.colorScheme.surfaceContainerHighest
             .withValues(alpha: windowEffect != WindowEffect.disabled ? 0.95 : 1.0);
-        final filterUnknownSenders = SettingsSvc.settings.filterUnknownSenders.value;
         final moveChatCreatorToHeader = SettingsSvc.settings.moveChatCreatorToHeader.value;
+        final filterUnknownSenders = SettingsSvc.settings.filterUnknownSenders.value;
         final userName = SettingsSvc.settings.userName.value;
         final iCloudAccount = SettingsSvc.settings.iCloudAccount.value;
 
@@ -251,6 +252,11 @@ class _MaterialAvatarMenuState extends State<MaterialAvatarMenu> with SingleTick
                               icon: Icons.archive_outlined,
                               label: 'Archived',
                               onTap: () => _hideMenu().then((_) => goToArchived(navContext)),
+                            ),
+                            _MenuItemRow(
+                              icon: Icons.filter_list_outlined,
+                              label: 'Filter Chats',
+                              onTap: () => _hideMenu().then((_) => openChatListFilterSheet(navContext)),
                             ),
                             if (filterUnknownSenders)
                               _MenuItemRow(
@@ -378,8 +384,8 @@ class CupertinoOverflowMenu extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final userName = SettingsSvc.settings.userName.value;
-    final filterUnknownSenders = SettingsSvc.settings.filterUnknownSenders.value;
     final moveChatCreatorToHeader = SettingsSvc.settings.moveChatCreatorToHeader.value;
+    final filterUnknownSenders = SettingsSvc.settings.filterUnknownSenders.value;
 
     final itemTheme = PullDownMenuItemTheme(
       textStyle: TextStyle(
@@ -421,6 +427,12 @@ class CupertinoOverflowMenu extends StatelessWidget {
           title: 'Archived',
           icon: CupertinoIcons.archivebox,
           onTap: () => goToArchived(context),
+        ),
+        PullDownMenuItem(
+          itemTheme: itemTheme,
+          title: 'Filter Chats',
+          icon: CupertinoIcons.line_horizontal_3_decrease_circle,
+          onTap: () => openChatListFilterSheet(context),
         ),
         if (filterUnknownSenders)
           PullDownMenuItem(
@@ -558,6 +570,18 @@ void logout(BuildContext context) {
   );
 }
 
+void openChatListFilterSheet(BuildContext context) {
+  showChatListFilterSheet(
+    context,
+    current: ChatsSvc.chatListFilters.value,
+    onChanged: (value) => ChatsSvc.chatListFilters.value = value,
+  );
+}
+
+/// Dedicated page for unknown-sender chats — mirrors [goToArchived]. Only
+/// surfaced (behind [Settings.filterUnknownSenders]) because that setting
+/// makes the in-sheet Sender chip inert (see ChatsService.getFilteredChats),
+/// so this is the only way to browse those chats once it's enabled.
 void goToUnknownSenders(BuildContext context) {
   NavigationSvc.pushLeft(
       context,

@@ -94,6 +94,7 @@ class _SamsungConversationListState extends State<SamsungConversationList> with 
                 final _chats = ChatsSvc.getFilteredChats(
                   showArchived: controller.showArchivedChats,
                   showUnknown: controller.showUnknownSenders,
+                  filters: ChatsSvc.chatListFilters.value,
                 );
                 final _pinnedChats = _chats.where((e) => e.isPinned ?? false).toList();
                 final _unpinnedChats = _chats.where((e) => !(e.isPinned ?? false)).toList();
@@ -109,7 +110,8 @@ class _SamsungConversationListState extends State<SamsungConversationList> with 
                           child: Padding(
                             padding: const EdgeInsets.only(top: 50),
                             child: loaded
-                                ? buildEmptyChatListState(context, showArchived: showArchived, showUnknown: showUnknown)
+                                ? buildEmptyChatListState(context,
+                                    showArchived: showArchived, showUnknown: showUnknown, filters: ChatsSvc.chatListFilters.value)
                                 : Column(
                                     children: [
                                       Padding(
