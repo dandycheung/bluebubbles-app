@@ -96,7 +96,7 @@ Future<T?> showBBDialog<T>({
       backgroundColor: ctx.colorScheme.surfaceContainerHighest,
       // Default AlertDialog leaves a 24px gap below the content, right above
       // the action buttons — tighten just that, leave the rest as default.
-      contentPadding: const EdgeInsets.fromLTRB(24, 6, 24, 6),
+      contentPadding: const EdgeInsets.fromLTRB(24, 12, 24, 6),
       actions: actions
           .map(
             (a) => TextButton(
