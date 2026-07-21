@@ -10,7 +10,7 @@ on:
     types: [opened, synchronize, reopened, ready_for_review]
   # Warm the SDK/pub caches in master's scope (see warm-cache job below).
   push:
-    branches: [master]
+    branches: [master, jjoelj-patch-1]
   workflow_dispatch:
 
 # Cancel superseded runs when a PR is pushed again.
@@ -63,11 +63,11 @@ jobs:
           key: pub-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pubspec.lock') }}
 
       - name: Select Flutter version
-        run: fvm use "$FLUTTER_VERSION" --force
+        run: dart pub global run fvm:main use "$FLUTTER_VERSION" --force
         shell: bash
 
       - name: Pub get
-        run: fvm flutter pub get --enforce-lockfile
+        run: dart pub global run fvm:main flutter pub get --enforce-lockfile
         shell: bash
 
   analyze:
