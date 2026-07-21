@@ -4,6 +4,7 @@ import 'package:bluebubbles/services/backend/actions/log_actions.dart';
 import 'package:bluebubbles/services/backend/actions/send_message_actions.dart';
 import 'package:bluebubbles/services/backend/actions/chat_actions.dart';
 import 'package:bluebubbles/services/backend/actions/contact_v2_actions.dart';
+import 'package:bluebubbles/services/backend/actions/custom_group_actions.dart';
 import 'package:bluebubbles/services/backend/actions/handle_actions.dart';
 import 'package:bluebubbles/services/backend/actions/image_actions.dart';
 import 'package:bluebubbles/services/backend/actions/message_actions.dart';
@@ -116,5 +117,12 @@ class IsolateActons {
     IsolateRequestType.sendTapback: SendMessageActions.sendTapback,
     IsolateRequestType.sendMultipartMessage: SendMessageActions.sendMultipartMessage,
     IsolateRequestType.sendAttachmentMessage: SendMessageActions.sendAttachmentMessage,
+
+    // CustomGroup
+    IsolateRequestType.getAllCustomGroups: CustomGroupActions.getAllIds,
+    IsolateRequestType.createCustomGroup: CustomGroupActions.create,
+    IsolateRequestType.renameCustomGroup: CustomGroupActions.rename,
+    IsolateRequestType.updateCustomGroupChats: CustomGroupActions.updateChats,
+    IsolateRequestType.deleteCustomGroup: CustomGroupActions.delete,
   };
 }

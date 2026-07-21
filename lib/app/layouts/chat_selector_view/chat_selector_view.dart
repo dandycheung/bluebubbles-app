@@ -15,10 +15,21 @@ import 'package:slugify/slugify.dart';
 class ChatSelectorView extends StatefulWidget {
   const ChatSelectorView({
     super.key,
-    required this.onSelect,
-  });
+    this.onSelect,
+    this.onMultiSelect,
+    this.multiSelect = false,
+    this.initialSelection = const <String>[],
+  }) : assert(
+          (multiSelect && onMultiSelect != null) || (!multiSelect && onSelect != null),
+          'Provide onSelect for single-select or onMultiSelect for multiSelect mode',
+        );
 
-  final void Function(Chat) onSelect;
+  final void Function(Chat)? onSelect;
+  final void Function(List<Chat>)? onMultiSelect;
+  final bool multiSelect;
+
+  /// Chat guids to pre-select when [multiSelect] is true.
+  final List<String> initialSelection;
 
   @override
   ChatSelectorViewState createState() => ChatSelectorViewState();
@@ -32,6 +43,7 @@ class ChatSelectorViewState extends State<ChatSelectorView> with ThemeHelpers {
   List<Chat> filteredChats = [];
   String? oldSearch;
   Timer? _debounce;
+  late Set<String> selectedGuids = widget.initialSelection.toSet();
 
   @override
   void initState() {
@@ -79,6 +91,18 @@ class ChatSelectorViewState extends State<ChatSelectorView> with ThemeHelpers {
         leading: buildBackButton(context),
         backgroundColor: Colors.transparent,
         toolbarHeight: kIsDesktop ? 90 : 50,
+        actions: widget.multiSelect
+            ? [
+                TextButton(
+                  onPressed: () {
+                    final selected = filteredChats.where((c) => selectedGuids.contains(c.guid)).toList();
+                    widget.onMultiSelect!(selected);
+                    Navigator.of(context).pop(selected);
+                  },
+                  child: const Text("Done"),
+                ),
+              ]
+            : null,
       ),
       body: FocusScope(
         child: Column(
@@ -141,19 +165,47 @@ class ChatSelectorViewState extends State<ChatSelectorView> with ThemeHelpers {
                                 final chat = filteredChats[index];
                                 final chatState = ChatsSvc.getChatState(chat.guid);
                                 final _title = chatState?.title.value ?? chat.getTitle();
+                                final selected = selectedGuids.contains(chat.guid);
                                 return Material(
                                   color: Colors.transparent,
                                   child: InkWell(
                                     onTap: () {
-                                      widget.onSelect(chat);
-                                      Navigator.of(context).pop();
+                                      if (widget.multiSelect) {
+                                        setState(() {
+                                          if (selected) {
+                                            selectedGuids.remove(chat.guid);
+                                          } else {
+                                            selectedGuids.add(chat.guid);
+                                          }
+                                        });
+                                      } else {
+                                        widget.onSelect!(chat);
+                                        Navigator.of(context).pop();
+                                      }
                                     },
-                                    child: ChatCreatorTile(
-                                      key: ValueKey(chat.guid),
-                                      title: _title,
-                                      subtitle: chatState?.chatCreatorSubtitle.value ?? chat.getChatCreatorSubtitle(),
-                                      chat: chat,
-                                      showTrailing: false,
+                                    child: Row(
+                                      children: [
+                                        Expanded(
+                                          child: ChatCreatorTile(
+                                            key: ValueKey(chat.guid),
+                                            title: _title,
+                                            subtitle:
+                                                chatState?.chatCreatorSubtitle.value ?? chat.getChatCreatorSubtitle(),
+                                            chat: chat,
+                                            showTrailing: false,
+                                          ),
+                                        ),
+                                        if (widget.multiSelect)
+                                          Padding(
+                                            padding: const EdgeInsets.only(right: 16),
+                                            child: Icon(
+                                              selected ? Icons.check_circle : Icons.circle_outlined,
+                                              color: selected
+                                                  ? context.theme.colorScheme.primary
+                                                  : context.theme.colorScheme.outline,
+                                            ),
+                                          ),
+                                      ],
                                     ),
                                   ),
                                 );

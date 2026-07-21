@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:bluebubbles/app/layouts/settings/pages/server/backup_restore_actions.dart';
 import 'package:bluebubbles/app/layouts/settings/pages/server/backup_restore_dialogs.dart';
 import 'package:bluebubbles/app/layouts/settings/pages/server/backup_restore_types.dart';
+import 'package:bluebubbles/app/layouts/settings/pages/server/custom_groups_backup.dart';
 import 'package:bluebubbles/app/layouts/settings/pages/server/pinned_chats_backup.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
 import 'package:bluebubbles/app/layouts/settings/widgets/settings_widgets.dart';
@@ -155,6 +156,7 @@ class _BackupRestorePanelState extends State<BackupRestorePanel> with ThemeHelpe
                                               json["description"] = item["description"];
                                               json["timestamp"] = DateTime.now().millisecondsSinceEpoch;
                                               json["pinnedChats"] = PinnedChatsBackup.exportList();
+                                              json["customGroups"] = await CustomGroupsBackup.exportList();
                                               Response response = await HttpSvc.backup.setSettings(item["name"], json);
                                               Navigator.of(context, rootNavigator: true).pop();
                                               if (response.statusCode != 200) {
@@ -206,8 +208,20 @@ class _BackupRestorePanelState extends State<BackupRestorePanel> with ThemeHelpe
                                           if (pinnedChats != null) {
                                             final result = await PinnedChatsBackup.restore(pinnedChats);
                                             if (result.skipped.isNotEmpty && context.mounted) {
-                                              BackupRestoreDialogs.showPinnedChatsRestoreSummary(
+                                              BackupRestoreDialogs.showRestoreSummary(
                                                 context: context,
+                                                title: "Some Pinned Chats Couldn't Be Restored",
+                                                skipped: result.skipped,
+                                              );
+                                            }
+                                          }
+                                          final customGroups = item["customGroups"] as List<dynamic>?;
+                                          if (customGroups != null) {
+                                            final result = await CustomGroupsBackup.restore(customGroups);
+                                            if (result.skipped.isNotEmpty && context.mounted) {
+                                              BackupRestoreDialogs.showRestoreSummary(
+                                                context: context,
+                                                title: "Some Custom Group Chats Couldn't Be Restored",
                                                 skipped: result.skipped,
                                               );
                                             }
@@ -292,6 +306,7 @@ class _BackupRestorePanelState extends State<BackupRestorePanel> with ThemeHelpe
                                 final timestamp = DateTime.now().millisecondsSinceEpoch;
                                 json["timestamp"] = timestamp;
                                 json["pinnedChats"] = PinnedChatsBackup.exportList();
+                                json["customGroups"] = await CustomGroupsBackup.exportList();
                                 if (destination.isCloud) {
                                   var response = await HttpSvc.backup.setSettings(name, json);
                                   if (response.statusCode != 200) {
@@ -483,8 +498,20 @@ class _BackupRestorePanelState extends State<BackupRestorePanel> with ThemeHelpe
                                     if (pinnedChats != null) {
                                       final result = await PinnedChatsBackup.restore(pinnedChats);
                                       if (result.skipped.isNotEmpty && context.mounted) {
-                                        BackupRestoreDialogs.showPinnedChatsRestoreSummary(
+                                        BackupRestoreDialogs.showRestoreSummary(
                                           context: context,
+                                          title: "Some Pinned Chats Couldn't Be Restored",
+                                          skipped: result.skipped,
+                                        );
+                                      }
+                                    }
+                                    final customGroups = json["customGroups"] as List<dynamic>?;
+                                    if (customGroups != null) {
+                                      final result = await CustomGroupsBackup.restore(customGroups);
+                                      if (result.skipped.isNotEmpty && context.mounted) {
+                                        BackupRestoreDialogs.showRestoreSummary(
+                                          context: context,
+                                          title: "Some Custom Group Chats Couldn't Be Restored",
                                           skipped: result.skipped,
                                         );
                                       }

@@ -66,7 +66,8 @@ class ChatsService {
   final RxInt chatListVersion = 0.obs;
 
   /// Currently selected conversation-list filter dimensions. Persisted to
-  /// [Settings] only when [Settings.rememberChatFilters] is enabled.
+  /// [Settings] only via an explicit "Save as Default" action in the filter
+  /// sheet — see [saveChatListFiltersAsDefault].
   final Rx<ChatListFilters> chatListFilters = const ChatListFilters().obs;
 
   /// Timer for debouncing chatListVersion updates to prevent rapid UI rebuilds
@@ -77,10 +78,6 @@ class ChatsService {
   StreamSubscription? _hideContactInfoListener;
   StreamSubscription? _generateFakeAvatarsListener;
   StreamSubscription? _hideAttachmentsListener;
-
-  /// Listeners backing the "Remember Filters" setting
-  StreamSubscription? _chatListFiltersListener;
-  StreamSubscription? _rememberChatFiltersListener;
 
   // ========== Helper Getters (replacing direct chats access) ==========
 
@@ -188,6 +185,10 @@ class ChatsService {
       } else if (filters.serviceFilter == ChatServiceFilter.other) {
         chats = chats.where((e) => !e.isIMessage).toList();
       }
+
+      if (filters.customGroupIds.isNotEmpty) {
+        chats = chats.where((e) => e.customGroups.any((g) => filters.customGroupIds.contains(g.id))).toList();
+      }
     }
 
     // Apply pinned filter
@@ -274,9 +275,9 @@ class ChatsService {
 
     reset();
 
-    // Preload the remembered filter selection (if enabled) and keep it in sync
-    // going forward — independent of chat count, so set this up unconditionally.
-    _setupChatListFilterPersistence();
+    // Preload the saved default filter selection (if any) — independent of
+    // chat count, so set this up unconditionally.
+    _loadDefaultChatListFilters();
 
     // Get current count from database or server
     currentCount = getChatCount() ??
@@ -401,30 +402,49 @@ class ChatsService {
     });
   }
 
-  /// Preloads the remembered filter selection (if [Settings.rememberChatFilters]
-  /// is enabled) and keeps [Settings] in sync with [chatListFilters] going forward.
-  void _setupChatListFilterPersistence() {
-    if (SettingsSvc.settings.rememberChatFilters.value) {
-      chatListFilters.value = ChatListFilters.fromSettingsMap(SettingsSvc.settings.savedChatFilters.value);
-    }
-
-    _chatListFiltersListener?.cancel();
-    _chatListFiltersListener = chatListFilters.listen((filters) {
-      if (!SettingsSvc.settings.rememberChatFilters.value) return;
-      _saveChatListFilters(filters);
-    });
-
-    // Snapshot the current selection immediately when the user turns the setting on,
-    // so it's remembered from that point rather than only after the next change.
-    _rememberChatFiltersListener?.cancel();
-    _rememberChatFiltersListener = SettingsSvc.settings.rememberChatFilters.listen((enabled) {
-      if (enabled) _saveChatListFilters(chatListFilters.value);
-    });
+  /// The filter selection currently saved as default (see
+  /// [saveChatListFiltersAsDefault]). Falls back to [ChatListFilters]'s
+  /// built-in defaults if nothing has been explicitly saved.
+  ChatListFilters get savedDefaultChatListFilters {
+    final saved = SettingsSvc.settings.savedChatFilters.value;
+    return saved.isEmpty ? const ChatListFilters() : ChatListFilters.fromSettingsMap(saved);
   }
 
-  void _saveChatListFilters(ChatListFilters filters) {
-    SettingsSvc.settings.savedChatFilters.value = filters.toSettingsMap();
+  /// Loads the saved default filter selection (if one was explicitly saved via
+  /// [saveChatListFiltersAsDefault]). If nothing has been saved, the chat list
+  /// opens with no active filter, same as a fresh install. Also prunes any
+  /// custom-group ids that no longer exist — this runs after
+  /// [CustomGroupsSvc] has already loaded (see [CustomGroupsService.init]),
+  /// unlike [pruneStaleCustomGroupIds]'s other call site during that same
+  /// boot sequence, which runs before this filter is loaded and so has
+  /// nothing yet to prune.
+  void _loadDefaultChatListFilters() {
+    chatListFilters.value = savedDefaultChatListFilters;
+    pruneStaleCustomGroupIds();
+  }
+
+  /// Persists the current [chatListFilters] selection as the default applied on
+  /// every future launch, overriding whatever was previously saved. If nothing
+  /// is actively filtered (every dimension at its default value), clears the
+  /// saved default instead, since there's nothing meaningful to restore.
+  void saveChatListFiltersAsDefault() {
+    final filters = chatListFilters.value;
+    SettingsSvc.settings.savedChatFilters.value = filters.hasActiveFilter ? filters.toSettingsMap() : {};
     unawaited(SettingsSvc.settings.saveOneAsync('savedChatFilters'));
+  }
+
+  /// Drops any [ChatListFilters.customGroupIds] that no longer correspond to
+  /// an existing [CustomGroup] (e.g. the group was deleted). Called once at
+  /// boot (after [CustomGroupsSvc] has loaded) and every time
+  /// [CustomGroupsSvc] refreshes in response to a `custom-groups-updated`
+  /// event, so a deleted group's id can never sit "active" in the filter.
+  void pruneStaleCustomGroupIds() {
+    final validIds = CustomGroupsSvc.groups.map((g) => g.id!).toSet();
+    final current = chatListFilters.value;
+    final pruned = current.customGroupIds.intersection(validIds);
+    if (pruned.length != current.customGroupIds.length) {
+      chatListFilters.value = current.copyWith(customGroupIds: pruned);
+    }
   }
 
   /// Set up global listeners for redacted mode settings that update all chat states

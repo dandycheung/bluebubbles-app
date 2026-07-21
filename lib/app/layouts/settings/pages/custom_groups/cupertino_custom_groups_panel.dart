@@ -1,0 +1,164 @@
+import 'package:bluebubbles/app/components/avatars/contact_avatar_group_widget.dart';
+import 'package:bluebubbles/app/layouts/chat_selector_view/chat_selector_view.dart';
+import 'package:bluebubbles/app/layouts/settings/pages/custom_groups/create_group_dialog.dart';
+import 'package:bluebubbles/app/layouts/settings/pages/custom_groups/custom_groups_controller.dart';
+import 'package:bluebubbles/app/layouts/settings/widgets/content/next_button.dart';
+import 'package:bluebubbles/app/layouts/settings/widgets/settings_widgets.dart';
+import 'package:bluebubbles/database/models.dart';
+import 'package:bluebubbles/helpers/helpers.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
+import 'package:get/get.dart';
+
+class CupertinoCustomGroupsPanel extends StatefulWidget {
+  const CupertinoCustomGroupsPanel({super.key});
+
+  @override
+  State<CupertinoCustomGroupsPanel> createState() => _CupertinoCustomGroupsPanelState();
+}
+
+class _CupertinoCustomGroupsPanelState extends State<CupertinoCustomGroupsPanel> with ThemeHelpers {
+  final CustomGroupsController controller = Get.find<CustomGroupsController>();
+
+  Future<void> _onCreate() async {
+    final name = await showCreateGroupDialog(context);
+    if (name == null || name.isEmpty) return;
+    if (!mounted) return;
+    final chats = await Navigator.of(context).push<List<Chat>>(
+      MaterialPageRoute(
+        builder: (_) => ChatSelectorView(
+          multiSelect: true,
+          onMultiSelect: (_) {},
+        ),
+      ),
+    );
+    if (chats == null) return;
+    await controller.createGroup(name, chats.map((c) => c.guid).toList());
+  }
+
+  Future<void> _onEditChats(CustomGroup group) async {
+    final chats = await Navigator.of(context).push<List<Chat>>(
+      MaterialPageRoute(
+        builder: (_) => ChatSelectorView(
+          multiSelect: true,
+          initialSelection: group.chats.map((c) => c.guid).toList(),
+          onMultiSelect: (_) {},
+        ),
+      ),
+    );
+    if (chats == null) return;
+    await controller.updateGroupChats(group, chats.map((c) => c.guid).toList());
+  }
+
+  void _onDelete(CustomGroup group) {
+    showAreYouSure(
+      context,
+      title: "Delete '${group.name}'?",
+      content: const Text("This won't delete the chats in it."),
+      onNo: () => Navigator.of(context, rootNavigator: true).pop(),
+      onYes: () {
+        Navigator.of(context, rootNavigator: true).pop();
+        controller.deleteGroup(group);
+      },
+    );
+  }
+
+  List<Handle> _groupHandles(CustomGroup group) {
+    final seen = <String>{};
+    final handles = <Handle>[];
+    for (final chat in group.chats) {
+      for (final handle in chat.handles) {
+        if (seen.add(handle.address)) handles.add(handle);
+      }
+    }
+    return handles;
+  }
+
+  Widget _buildGroupRow(CustomGroup group) {
+    return Slidable(
+      key: ValueKey(group.id),
+      endActionPane: ActionPane(
+        motion: const StretchMotion(),
+        extentRatio: 0.25,
+        children: [
+          SlidableAction(
+            label: 'Delete',
+            backgroundColor: Colors.red,
+            icon: CupertinoIcons.trash,
+            onPressed: (_) => _onDelete(group),
+          ),
+        ],
+      ),
+      child: SettingsTile(
+        backgroundColor: tileColor,
+        title: group.name,
+        subtitle: "${group.chats.length} ${group.chats.length == 1 ? 'chat' : 'chats'}",
+        onTap: () => _onEditChats(group),
+        leading: ContactAvatarGroupWidget(
+          handles: _groupHandles(group),
+          size: 30,
+          editable: false,
+        ),
+        trailing: const NextButton(),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      final groups = controller.groups;
+      return SettingsScaffold(
+        title: "Custom Groups",
+        initialHeader: null,
+        iosSubtitle: iosSubtitle,
+        materialSubtitle: materialSubtitle,
+        tileColor: tileColor,
+        headerColor: headerColor,
+        actions: [
+          CupertinoButton(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            onPressed: _onCreate,
+            child: Icon(CupertinoIcons.add, color: context.theme.colorScheme.onSurface),
+          ),
+        ],
+        bodySlivers: [
+          SliverToBoxAdapter(
+            child: controller.loading.value
+                ? Padding(
+                    padding: const EdgeInsets.only(top: 60),
+                    child: Center(child: buildProgressIndicator(context)),
+                  )
+                : groups.isEmpty
+                    ? Padding(
+                        padding: const EdgeInsets.only(top: 60),
+                        child: Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text("You have no custom groups", style: context.theme.textTheme.labelLarge),
+                              const SizedBox(height: 4),
+                              CupertinoButton(onPressed: _onCreate, child: const Text("Create one")),
+                            ],
+                          ),
+                        ),
+                      )
+                    : Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: SettingsSection(
+                          backgroundColor: tileColor,
+                          children: [
+                            for (int i = 0; i < groups.length; i++) ...[
+                              _buildGroupRow(groups[i]),
+                              if (i < groups.length - 1) const SettingsDivider(),
+                            ],
+                          ],
+                        ),
+                      ),
+          ),
+        ],
+      );
+    });
+  }
+}

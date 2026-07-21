@@ -54,6 +54,7 @@ class Settings {
   final RxBool hideKeyboardOnScroll = false.obs;
   final RxBool moveChatCreatorToHeader = false.obs;
   final RxBool showFiltersInHeader = false.obs;
+  final RxBool showCustomGroupFilterChips = false.obs;
   final RxBool cameraFAB = false.obs;
   final RxBool swipeToCloseKeyboard = false.obs;
   final RxBool swipeToOpenKeyboard = false.obs;
@@ -70,7 +71,6 @@ class Settings {
   final RxBool colorsFromMedia = false.obs;
   final RxString globalTextDetection = "".obs;
   final RxBool filterUnknownSenders = false.obs;
-  final RxBool rememberChatFilters = false.obs;
   /// Dimension name -> enum name (e.g. `{"read": "unread", "type": "group"}`).
   final Rx<Map<String, String>> savedChatFilters = Rx<Map<String, String>>(<String, String>{});
   final RxBool tabletMode = true.obs;
@@ -316,6 +316,7 @@ class Settings {
       'hideKeyboardOnScroll': hideKeyboardOnScroll.value,
       'moveChatCreatorToHeader': moveChatCreatorToHeader.value,
       'showFiltersInHeader': showFiltersInHeader.value,
+      'showCustomGroupFilterChips': showCustomGroupFilterChips.value,
       'cameraFAB': cameraFAB.value,
       'swipeToCloseKeyboard': swipeToCloseKeyboard.value,
       'swipeToOpenKeyboard': swipeToOpenKeyboard.value,
@@ -331,7 +332,6 @@ class Settings {
       'notifyReactions': notifyReactions.value,
       'globalTextDetection': globalTextDetection.value,
       'filterUnknownSenders': filterUnknownSenders.value,
-      'rememberChatFilters': rememberChatFilters.value,
       'savedChatFilters': Map<String, String>.from(savedChatFilters.value),
       'tabletMode': tabletMode.value,
       'immersiveMode': immersiveMode.value,
@@ -490,6 +490,8 @@ class Settings {
         map['moveChatCreatorToHeader'] ?? SettingsSvc.settings.moveChatCreatorToHeader.value;
     SettingsSvc.settings.showFiltersInHeader.value =
         map['showFiltersInHeader'] ?? SettingsSvc.settings.showFiltersInHeader.value;
+    SettingsSvc.settings.showCustomGroupFilterChips.value =
+        map['showCustomGroupFilterChips'] ?? SettingsSvc.settings.showCustomGroupFilterChips.value;
     SettingsSvc.settings.cameraFAB.value = map['cameraFAB'] ?? SettingsSvc.settings.cameraFAB.value;
     SettingsSvc.settings.swipeToCloseKeyboard.value =
         map['swipeToCloseKeyboard'] ?? SettingsSvc.settings.swipeToCloseKeyboard.value;
@@ -518,8 +520,6 @@ class Settings {
         map['globalTextDetection'] ?? SettingsSvc.settings.globalTextDetection.value;
     SettingsSvc.settings.filterUnknownSenders.value =
         map['filterUnknownSenders'] ?? SettingsSvc.settings.filterUnknownSenders.value;
-    SettingsSvc.settings.rememberChatFilters.value =
-        map['rememberChatFilters'] ?? SettingsSvc.settings.rememberChatFilters.value;
     if (map.containsKey('savedChatFilters')) {
       SettingsSvc.settings.savedChatFilters.value = _processSavedChatFilters(map['savedChatFilters']);
     }
@@ -726,6 +726,7 @@ class Settings {
     s.hideKeyboardOnScroll.value = map['hideKeyboardOnScroll'] ?? false;
     s.moveChatCreatorToHeader.value = map['moveChatCreatorToHeader'] ?? false;
     s.showFiltersInHeader.value = map['showFiltersInHeader'] ?? false;
+    s.showCustomGroupFilterChips.value = map['showCustomGroupFilterChips'] ?? false;
     s.cameraFAB.value = map['cameraFAB'] ?? false;
     s.swipeToCloseKeyboard.value = map['swipeToCloseKeyboard'] ?? false;
     s.swipeToOpenKeyboard.value = map['swipeToOpenKeyboard'] ?? false;
@@ -742,7 +743,6 @@ class Settings {
     s.colorsFromMedia.value = map['colorsFromMedia'] ?? false;
     s.globalTextDetection.value = map['globalTextDetection'] ?? "";
     s.filterUnknownSenders.value = map['filterUnknownSenders'] ?? false;
-    s.rememberChatFilters.value = map['rememberChatFilters'] ?? false;
     s.savedChatFilters.value = _processSavedChatFilters(map['savedChatFilters']);
     s.tabletMode.value = kIsDesktop || (map['tabletMode'] ?? true);
     s.highlightSelectedChat.value = map['highlightSelectedChat'] ?? true;

@@ -90,18 +90,6 @@ class _ChatListPanelState extends State<ChatListPanel> with ThemeHelpers {
                           backgroundColor: tileColor,
                           isThreeLine: true,
                         )),
-                    const SettingsDivider(padding: EdgeInsets.only(left: 16.0)),
-                    Obx(() => SettingsSwitch(
-                          onChanged: (bool val) async {
-                            SettingsSvc.settings.rememberChatFilters.value = val;
-                            await SettingsSvc.settings.saveOneAsync('rememberChatFilters');
-                          },
-                          initialVal: SettingsSvc.settings.rememberChatFilters.value,
-                          title: "Remember Filters",
-                          subtitle: "Save your conversation list filter selections and restore them on next launch",
-                          backgroundColor: tileColor,
-                          isThreeLine: true,
-                        )),
                     if (!kIsWeb) const SettingsDivider(padding: EdgeInsets.only(left: 16.0)),
                     if (!kIsWeb)
                       Obx(() => SettingsSwitch(
@@ -549,6 +537,18 @@ class _ChatListPanelState extends State<ChatListPanel> with ThemeHelpers {
                           title: "Show Filters in Header",
                           subtitle:
                               "Adds a shortcut button next to search to quickly open the chat list filters, highlighted when a filter is active",
+                          backgroundColor: tileColor,
+                          isThreeLine: true,
+                        ),
+                        const SettingsDivider(padding: EdgeInsets.only(left: 16.0)),
+                        SettingsSwitch(
+                          onChanged: (bool val) async {
+                            SettingsSvc.settings.showCustomGroupFilterChips.value = val;
+                            await SettingsSvc.settings.saveOneAsync('showCustomGroupFilterChips');
+                          },
+                          initialVal: SettingsSvc.settings.showCustomGroupFilterChips.value,
+                          title: "Show Custom Group Filters",
+                          subtitle: "Adds quick-filter chips for your custom groups above the chat list",
                           backgroundColor: tileColor,
                           isThreeLine: true,
                         ),

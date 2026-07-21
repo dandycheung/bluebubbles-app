@@ -1,15 +1,22 @@
 import 'package:bluebubbles/app/components/bb_chip.dart';
 import 'package:bluebubbles/app/layouts/conversation_list/widgets/filters/chat_list_filters.dart';
+import 'package:bluebubbles/helpers/helpers.dart';
+import 'package:bluebubbles/app/layouts/settings/pages/custom_groups/custom_groups_panel.dart';
+import 'package:bluebubbles/app/layouts/settings/settings_page.dart';
+import 'package:bluebubbles/app/wrappers/theme_switcher.dart';
 import 'package:bluebubbles/services/services.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
+import 'package:pull_down_button/pull_down_button.dart';
 
 /// Opens the conversation-list filter bottom sheet. Each section (Status,
 /// Sender, Chat Type) is single-select via chips, but the sections combine
 /// with AND semantics — e.g. picking "Unread" + "Group Chats" shows only
 /// unread group chats.
 void showChatListFilterSheet(
-  BuildContext context, {
+  BuildContext pageContext, {
   required ChatListFilters current,
   required ValueChanged<ChatListFilters> onChanged,
 }) {
@@ -17,7 +24,7 @@ void showChatListFilterSheet(
 
   // The legacy "Filter Unknown Senders" setting already owns known/unknown
   // sender classification globally (see ChatsService.getFilteredChats) — if a
-  // stale Sender selection was persisted (e.g. via "Remember Filters") from
+  // stale Sender selection was persisted (e.g. via a saved default filter) from
   // before this setting was turned on, normalize it so the greyed-out section
   // doesn't silently show an inert selected chip.
   final legacyUnknownSenderFilterActive = SettingsSvc.settings.filterUnknownSenders.value;
@@ -28,9 +35,11 @@ void showChatListFilterSheet(
   }
 
   showModalBottomSheet<void>(
-    context: context,
-    backgroundColor: Colors.transparent,
+    context: pageContext,
+    backgroundColor: pageContext.theme.colorScheme.surfaceContainerHighest,
+    shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
     isScrollControlled: true,
+    showDragHandle: true,
     builder: (sheetContext) {
       var currentFilters = current0;
 
@@ -68,6 +77,26 @@ void showChatListFilterSheet(
             setSheetState(() {});
           }
 
+          void toggleGroup(int groupId) {
+            final next = Set<int>.from(currentFilters.customGroupIds);
+            if (!next.remove(groupId)) next.add(groupId);
+            currentFilters = currentFilters.copyWith(customGroupIds: next);
+            onChanged(currentFilters);
+            setSheetState(() {});
+          }
+
+          void resetFilters() {
+            currentFilters = const ChatListFilters();
+            onChanged(currentFilters);
+            setSheetState(() {});
+          }
+
+          void loadSavedDefault() {
+            currentFilters = ChatsSvc.savedDefaultChatListFilters;
+            onChanged(currentFilters);
+            setSheetState(() {});
+          }
+
           Widget sectionLabel(String label) => Padding(
                 padding: const EdgeInsets.only(top: 16, left: 10),
                 child: Text(label, style: sectionLabelStyle),
@@ -95,24 +124,152 @@ void showChatListFilterSheet(
             );
           }
 
+          final matchesDefault = currentFilters == ChatsSvc.savedDefaultChatListFilters;
+          final itemTheme = PullDownMenuItemTheme(
+            textStyle: TextStyle(color: context.theme.colorScheme.onSurface),
+            onHoverTextColor: context.theme.colorScheme.onSurface,
+            onHoverBackgroundColor: context.theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
+            subtitleStyle: TextStyle(color: context.theme.colorScheme.onSurface.withValues(alpha: 0.7)),
+          );
+          final routeBackgroundColor = context.theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.9);
+
           return Container(
             constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.75),
-            decoration: BoxDecoration(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-              color: Theme.of(context).colorScheme.surfaceContainerHighest,
-            ),
-            padding: const EdgeInsets.only(left: 10, right: 10, bottom: 20, top: 20),
+            padding: const EdgeInsets.only(left: 10, right: 10, bottom: 36, top: 20),
             child: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Center(
-                    child: Text(
-                      "Filter",
-                      style: Theme.of(context).textTheme.headlineSmall,
-                    ),
+                  Row(
+                    children: [
+                      ThemeSwitcher(
+                        iOSSkin: PullDownButton(
+                          animationAlignmentOverride: Alignment.topLeft,
+                          routeTheme: PullDownMenuRouteTheme(backgroundColor: routeBackgroundColor),
+                          itemBuilder: (context) => [
+                            PullDownMenuItem(
+                              itemTheme: itemTheme,
+                              title: "Clear All Filters",
+                              icon: CupertinoIcons.clear_circled,
+                              enabled: currentFilters.hasActiveFilter,
+                              onTap: resetFilters,
+                            ),
+                            PullDownMenuItem(
+                              itemTheme: itemTheme,
+                              title: "Load Saved Default",
+                              icon: CupertinoIcons.arrow_down_doc,
+                              enabled: !matchesDefault,
+                              onTap: loadSavedDefault,
+                            ),
+                          ],
+                          buttonBuilder: (context, showMenu) => IconButton(
+                            tooltip: "Reset Filters",
+                            icon: const Icon(CupertinoIcons.restart),
+                            onPressed: showMenu,
+                          ),
+                        ),
+                        materialSkin: MenuAnchor(
+                          style: MenuStyle(
+                            backgroundColor: WidgetStatePropertyAll(context.theme.colorScheme.surfaceContainerHighest),
+                            shape: WidgetStatePropertyAll(
+                                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+                          ),
+                          menuChildren: [
+                            MenuItemButton(
+                              leadingIcon: const Icon(Icons.clear_all),
+                              onPressed: currentFilters.hasActiveFilter ? resetFilters : null,
+                              child: const Text("Clear All Filters"),
+                            ),
+                            MenuItemButton(
+                              leadingIcon: const Icon(Icons.download_outlined),
+                              onPressed: !matchesDefault ? loadSavedDefault : null,
+                              child: const Text("Load Saved Default"),
+                            ),
+                          ],
+                          builder: (context, controller, child) => IconButton(
+                            tooltip: "Reset Filters",
+                            icon: const Icon(Icons.restore),
+                            onPressed: () => controller.isOpen ? controller.close() : controller.open(),
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: Center(
+                          child: Text(
+                            "Filter",
+                            style: Theme.of(context).textTheme.headlineSmall,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: "Save as Default",
+                        icon: Icon(
+                            currentFilters.hasActiveFilter && matchesDefault ? Icons.bookmark : Icons.bookmark_outline),
+                        onPressed: () {
+                          final wasActive = currentFilters.hasActiveFilter;
+                          ChatsSvc.saveChatListFiltersAsDefault();
+                          showToast(wasActive ? "Saved as default filters" : "Cleared saved default filters");
+                          setSheetState(() {});
+                        },
+                      ),
+                    ],
                   ),
+                  Obx(() {
+                    final groups = CustomGroupsSvc.groups;
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        sectionLabel("Custom Groups"),
+                        if (groups.isEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(left: 10, right: 10, top: 4),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    "No custom groups created",
+                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                          color: Theme.of(context).colorScheme.outline,
+                                        ),
+                                  ),
+                                ),
+                                TextButton(
+                                  onPressed: () {
+                                    Navigator.of(sheetContext).pop(); // close the sheet
+                                    Navigator.of(pageContext).push(
+                                      ThemeSwitcher.buildPageRoute(
+                                        builder: (BuildContext context) {
+                                          return const SettingsPage(initialPage: CustomGroupsPanel());
+                                        },
+                                      ),
+                                    );
+                                  },
+                                  child: const Text("Create one"),
+                                ),
+                              ],
+                            ),
+                          )
+                        else
+                          SizedBox(
+                            height: 40,
+                            child: SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              padding: const EdgeInsets.only(left: 10, right: 10, top: 4),
+                              child: Row(
+                                children: [
+                                  for (final group in groups) ...[
+                                    filterChip(group.name, currentFilters.customGroupIds.contains(group.id),
+                                        () => toggleGroup(group.id!)),
+                                    const SizedBox(width: 6),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ),
+                      ],
+                    );
+                  }),
                   sectionLabel("Status"),
                   chipWrap([
                     filterChip("All Messages", currentFilters.readFilter == ChatReadFilter.all,
