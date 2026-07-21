@@ -145,6 +145,7 @@ class _MaterialAvatarMenuState extends State<MaterialAvatarMenu> with SingleTick
         final cardColor = overlayContext.theme.colorScheme.surfaceContainerHighest
             .withValues(alpha: windowEffect != WindowEffect.disabled ? 0.95 : 1.0);
         final moveChatCreatorToHeader = SettingsSvc.settings.moveChatCreatorToHeader.value;
+        final filterUnknownSenders = SettingsSvc.settings.filterUnknownSenders.value;
         final userName = SettingsSvc.settings.userName.value;
         final iCloudAccount = SettingsSvc.settings.iCloudAccount.value;
 
@@ -257,6 +258,12 @@ class _MaterialAvatarMenuState extends State<MaterialAvatarMenu> with SingleTick
                               label: 'Filter Chats',
                               onTap: () => _hideMenu().then((_) => openChatListFilterSheet(navContext)),
                             ),
+                            if (filterUnknownSenders)
+                              _MenuItemRow(
+                                icon: Icons.person_off_outlined,
+                                label: 'Unknown Senders',
+                                onTap: () => _hideMenu().then((_) => goToUnknownSenders(navContext)),
+                              ),
                             if (SettingsSvc.serverDetails.isMinCatalina)
                               _MenuItemRow(
                                 icon: Icons.location_on_outlined,
@@ -378,6 +385,7 @@ class CupertinoOverflowMenu extends StatelessWidget {
   Widget build(BuildContext context) {
     final userName = SettingsSvc.settings.userName.value;
     final moveChatCreatorToHeader = SettingsSvc.settings.moveChatCreatorToHeader.value;
+    final filterUnknownSenders = SettingsSvc.settings.filterUnknownSenders.value;
 
     final itemTheme = PullDownMenuItemTheme(
       textStyle: TextStyle(
@@ -426,6 +434,13 @@ class CupertinoOverflowMenu extends StatelessWidget {
           icon: CupertinoIcons.line_horizontal_3_decrease_circle,
           onTap: () => openChatListFilterSheet(context),
         ),
+        if (filterUnknownSenders)
+          PullDownMenuItem(
+            itemTheme: itemTheme,
+            title: 'Unknown Senders',
+            icon: CupertinoIcons.person_crop_circle_badge_xmark,
+            onTap: () => goToUnknownSenders(context),
+          ),
         if (SettingsSvc.serverDetails.isMinCatalina)
           PullDownMenuItem(
             itemTheme: itemTheme,
@@ -561,6 +576,19 @@ void openChatListFilterSheet(BuildContext context) {
     current: ChatsSvc.chatListFilters.value,
     onChanged: (value) => ChatsSvc.chatListFilters.value = value,
   );
+}
+
+/// Dedicated page for unknown-sender chats — mirrors [goToArchived]. Only
+/// surfaced (behind [Settings.filterUnknownSenders]) because that setting
+/// makes the in-sheet Sender chip inert (see ChatsService.getFilteredChats),
+/// so this is the only way to browse those chats once it's enabled.
+void goToUnknownSenders(BuildContext context) {
+  NavigationSvc.pushLeft(
+      context,
+      ConversationList(
+        showArchivedChats: false,
+        showUnknownSenders: true,
+      ));
 }
 
 Future<void> goToSettings(BuildContext context) async {

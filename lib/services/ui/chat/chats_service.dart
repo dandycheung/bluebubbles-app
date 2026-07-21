@@ -157,12 +157,18 @@ class ChatsService {
         chats = chats.where((e) => getChatState(e.guid)?.hasUnreadMessage.value ?? (e.hasUnreadMessage ?? false)).toList();
       }
 
-      if (filters.senderFilter == ChatSenderFilter.known) {
-        chats = chats
-            .where((e) => e.isGroup || (!e.isGroup && e.handles.firstOrNull?.contactsV2.isNotEmpty == true))
-            .toList();
-      } else if (filters.senderFilter == ChatSenderFilter.unknown) {
-        chats = chats.where((e) => !e.isGroup && e.handles.firstOrNull?.contactsV2.isEmpty != false).toList();
+      // The legacy "Filter Unknown Senders" setting already siphons unknown-sender
+      // chats into their own separate list (see the showUnknown block above and
+      // Chat.shouldMuteNotification) — when it's on, it takes precedence over this
+      // chip so the two mechanisms can't fight and produce a confusing empty list.
+      if (!SettingsSvc.settings.filterUnknownSenders.value) {
+        if (filters.senderFilter == ChatSenderFilter.known) {
+          chats = chats
+              .where((e) => e.isGroup || (!e.isGroup && e.handles.firstOrNull?.contactsV2.isNotEmpty == true))
+              .toList();
+        } else if (filters.senderFilter == ChatSenderFilter.unknown) {
+          chats = chats.where((e) => !e.isGroup && e.handles.firstOrNull?.contactsV2.isEmpty != false).toList();
+        }
       }
 
       if (filters.typeFilter == ChatTypeFilter.group) {

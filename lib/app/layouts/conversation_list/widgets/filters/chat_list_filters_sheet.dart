@@ -1,5 +1,6 @@
 import 'package:bluebubbles/app/components/bb_chip.dart';
 import 'package:bluebubbles/app/layouts/conversation_list/widgets/filters/chat_list_filters.dart';
+import 'package:bluebubbles/services/services.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -13,12 +14,25 @@ void showChatListFilterSheet(
   required ValueChanged<ChatListFilters> onChanged,
 }) {
   HapticFeedback.lightImpact();
+
+  // The legacy "Filter Unknown Senders" setting already owns known/unknown
+  // sender classification globally (see ChatsService.getFilteredChats) — if a
+  // stale Sender selection was persisted (e.g. via "Remember Filters") from
+  // before this setting was turned on, normalize it so the greyed-out section
+  // doesn't silently show an inert selected chip.
+  final legacyUnknownSenderFilterActive = SettingsSvc.settings.filterUnknownSenders.value;
+  var current0 = current;
+  if (legacyUnknownSenderFilterActive && current0.senderFilter != ChatSenderFilter.all) {
+    current0 = current0.copyWith(senderFilter: ChatSenderFilter.all);
+    onChanged(current0);
+  }
+
   showModalBottomSheet<void>(
     context: context,
     backgroundColor: Colors.transparent,
     isScrollControlled: true,
     builder: (sheetContext) {
-      var currentFilters = current;
+      var currentFilters = current0;
 
       return StatefulBuilder(
         builder: (context, setSheetState) {
@@ -116,16 +130,26 @@ void showChatListFilterSheet(
                         () => update(typeFilter: ChatTypeFilter.direct)),
                   ]),
                   sectionLabel("Sender"),
+                  if (legacyUnknownSenderFilterActive)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 10, right: 10, top: 2),
+                      child: Text(
+                        "Controlled by \"Filter Unknown Senders\" in Settings",
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Theme.of(context).colorScheme.outline,
+                            ),
+                      ),
+                    ),
                   chipWrap([
                     filterChip("All", currentFilters.senderFilter == ChatSenderFilter.all,
                         () => update(senderFilter: ChatSenderFilter.all),
-                        enabled: currentFilters.typeFilter != ChatTypeFilter.group),
+                        enabled: currentFilters.typeFilter != ChatTypeFilter.group && !legacyUnknownSenderFilterActive),
                     filterChip("Known Senders", currentFilters.senderFilter == ChatSenderFilter.known,
                         () => update(senderFilter: ChatSenderFilter.known),
-                        enabled: currentFilters.typeFilter != ChatTypeFilter.group),
+                        enabled: currentFilters.typeFilter != ChatTypeFilter.group && !legacyUnknownSenderFilterActive),
                     filterChip("Unknown Senders", currentFilters.senderFilter == ChatSenderFilter.unknown,
                         () => update(senderFilter: ChatSenderFilter.unknown),
-                        enabled: currentFilters.typeFilter != ChatTypeFilter.group),
+                        enabled: currentFilters.typeFilter != ChatTypeFilter.group && !legacyUnknownSenderFilterActive),
                   ]),
                   sectionLabel("Mute Status"),
                   chipWrap([
