@@ -8,6 +8,9 @@ name: PR Check
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
+  # Warm the SDK/pub caches in master's scope (see warm-cache job below).
+  push:
+    branches: [master]
   workflow_dispatch:
 
 # Cancel superseded runs when a PR is pushed again.
@@ -20,7 +23,60 @@ env:
   FLUTTER_VERSION: "3.44.6"
 
 jobs:
+  # Populate the SDK + pub caches in master's scope on every merge. PR runs can only
+  # restore caches from their own ref or the base branch (master); without this job
+  # that shared scope stays empty and each PR redownloads the SDK. Just installs the
+  # SDK and resolves packages — no compile — so it's cheap.
+  warm-cache:
+    if: github.event_name == 'push'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            pub_path: ~/.pub-cache
+          - runner: ubuntu-24.04-arm
+            pub_path: ~/.pub-cache
+          - runner: windows-latest
+            pub_path: ~/AppData/Local/Pub/Cache
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 20
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Install fvm (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          curl -fsSL https://fvm.app/install.sh | bash
+          echo "$HOME/fvm/bin" >> "$GITHUB_PATH"
+
+      - name: Install fvm (Windows)
+        if: runner.os == 'Windows'
+        run: choco install fvm -y
+
+      - name: Cache Flutter SDK (fvm)
+        uses: actions/cache@v5
+        with:
+          path: ~/fvm
+          key: fvm-${{ runner.os }}-${{ runner.arch }}-${{ env.FLUTTER_VERSION }}
+
+      - name: Cache pub packages
+        uses: actions/cache@v5
+        with:
+          path: ${{ matrix.pub_path }}
+          key: pub-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pubspec.lock') }}
+
+      - name: Select Flutter version
+        run: fvm use "$FLUTTER_VERSION" --force
+        shell: bash
+
+      - name: Pub get
+        run: fvm flutter pub get --enforce-lockfile
+        shell: bash
+
   analyze:
+    if: github.event_name != 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -112,7 +168,13 @@ jobs:
     # Skip the heavy compile on draft PRs; analyze still runs for fast feedback.
     needs: analyze
     if: ${{ !github.event.pull_request.draft }}
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-latest
+          - runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 60
     steps:
       - name: Checkout code
