@@ -90,7 +90,7 @@ class _MaterialConversationListState extends State<MaterialConversationList> {
                 final _chats = ChatsSvc.getFilteredChats(
                   showArchived: showArchived,
                   showUnknown: showUnknown,
-                  filter: ChatsSvc.chatListFilter.value,
+                  filters: ChatsSvc.chatListFilters.value,
                 );
 
                 if (!loaded || _chats.isEmpty) {
@@ -98,7 +98,8 @@ class _MaterialConversationListState extends State<MaterialConversationList> {
                     child: Padding(
                       padding: const EdgeInsets.only(top: 100),
                       child: loaded
-                          ? buildEmptyChatListState(context, showArchived: showArchived, showUnknown: showUnknown)
+                          ? buildEmptyChatListState(context,
+                              showArchived: showArchived, showUnknown: showUnknown, filters: ChatsSvc.chatListFilters.value)
                           : Column(
                               children: [
                                 Padding(

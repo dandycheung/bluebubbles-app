@@ -558,8 +558,8 @@ void logout(BuildContext context) {
 void openChatListFilterSheet(BuildContext context) {
   showChatListFilterSheet(
     context,
-    current: ChatsSvc.chatListFilter.value,
-    onChanged: (value) => ChatsSvc.chatListFilter.value = value,
+    current: ChatsSvc.chatListFilters.value,
+    onChanged: (value) => ChatsSvc.chatListFilters.value = value,
   );
 }
 

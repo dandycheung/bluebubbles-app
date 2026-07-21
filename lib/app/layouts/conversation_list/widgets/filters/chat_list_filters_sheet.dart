@@ -1,14 +1,16 @@
 import 'package:bluebubbles/app/components/bb_chip.dart';
-import 'package:bluebubbles/services/services.dart';
+import 'package:bluebubbles/app/layouts/conversation_list/widgets/filters/chat_list_filters.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-/// Opens the conversation-list filter bottom sheet, letting the user pick a
-/// single [ChatListFilter] category via tappable chips.
+/// Opens the conversation-list filter bottom sheet. Each section (Status,
+/// Sender, Chat Type) is single-select via chips, but the sections combine
+/// with AND semantics — e.g. picking "Unread" + "Group Chats" shows only
+/// unread group chats.
 void showChatListFilterSheet(
   BuildContext context, {
-  required ChatListFilter current,
-  required ValueChanged<ChatListFilter> onChanged,
+  required ChatListFilters current,
+  required ValueChanged<ChatListFilters> onChanged,
 }) {
   HapticFeedback.lightImpact();
   showModalBottomSheet<void>(
@@ -16,7 +18,7 @@ void showChatListFilterSheet(
     backgroundColor: Colors.transparent,
     isScrollControlled: true,
     builder: (sheetContext) {
-      var selected = current;
+      var currentFilters = current;
 
       return StatefulBuilder(
         builder: (context, setSheetState) {
@@ -25,20 +27,57 @@ void showChatListFilterSheet(
             fontWeight: FontWeight.normal,
             color: Theme.of(context).colorScheme.onSurface,
           );
+          final sectionLabelStyle = Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.outline,
+              );
           final primaryColor = Theme.of(context).colorScheme.primary;
 
-          void select(ChatListFilter value) {
-            setSheetState(() => selected = value);
-            onChanged(value);
+          void update({
+            ChatReadFilter? readFilter,
+            ChatSenderFilter? senderFilter,
+            ChatTypeFilter? typeFilter,
+            ChatMuteFilter? muteFilter,
+            ChatServiceFilter? serviceFilter,
+          }) {
+            currentFilters = currentFilters.copyWith(
+              readFilter: readFilter,
+              // Sender doesn't meaningfully apply to group chats (a group is always
+              // treated as a "known" sender regardless of its participants) — reset
+              // it to All whenever the user switches to the Group Chats chip so the
+              // greyed-out Sender section doesn't silently hold a stale selection.
+              senderFilter: typeFilter == ChatTypeFilter.group ? ChatSenderFilter.all : senderFilter,
+              typeFilter: typeFilter,
+              muteFilter: muteFilter,
+              serviceFilter: serviceFilter,
+            );
+            onChanged(currentFilters);
+            setSheetState(() {});
           }
 
-          Widget filterChip(String label, ChatListFilter value) {
-            return BBChip(
-              showCheckmark: true,
-              selected: selected == value,
-              checkmarkColor: primaryColor,
-              label: Text(label, style: labelStyle),
-              onSelected: (_) => select(value),
+          Widget sectionLabel(String label) => Padding(
+                padding: const EdgeInsets.only(top: 16, left: 10),
+                child: Text(label, style: sectionLabelStyle),
+              );
+
+          Widget chipWrap(List<Widget> chips) => Material(
+                color: Colors.transparent,
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 4, left: 10, right: 10),
+                  child: Wrap(spacing: 6, runSpacing: 6, children: chips),
+                ),
+              );
+
+          Widget filterChip(String label, bool selected, VoidCallback onTap, {bool enabled = true}) {
+            return Opacity(
+              opacity: enabled ? 1.0 : 0.4,
+              child: BBChip(
+                showCheckmark: true,
+                selected: selected,
+                checkmarkColor: primaryColor,
+                tapEnabled: enabled,
+                label: Text(label, style: labelStyle),
+                onSelected: enabled ? (_) => onTap() : null,
+              ),
             );
           }
 
@@ -60,26 +99,60 @@ void showChatListFilterSheet(
                       style: Theme.of(context).textTheme.headlineSmall,
                     ),
                   ),
-                  Material(
-                    color: Colors.transparent,
-                    child: Padding(
-                      padding: const EdgeInsets.only(top: 16, left: 10, right: 10),
-                      child: Wrap(
-                        spacing: 6,
-                        runSpacing: 6,
-                        children: [
-                          filterChip("All Messages", ChatListFilter.all),
-                          filterChip("Unread Messages", ChatListFilter.unreadMessages),
-                          filterChip("Known Senders", ChatListFilter.knownSenders),
-                          filterChip("Unknown Senders", ChatListFilter.unknownSenders),
-                          // filterChip("2FA Codes", ChatListFilter.twoFactor),     // requires Message.isServiceMessage
-                          // filterChip("Spam", ChatListFilter.spam),               // requires Message.isSpam
-                          // filterChip("Promotions", ChatListFilter.promotions),   // future
-                          // filterChip("Transactions", ChatListFilter.transactions), // future
-                        ],
-                      ),
-                    ),
-                  ),
+                  sectionLabel("Status"),
+                  chipWrap([
+                    filterChip("All Messages", currentFilters.readFilter == ChatReadFilter.all,
+                        () => update(readFilter: ChatReadFilter.all)),
+                    filterChip("Unread Messages", currentFilters.readFilter == ChatReadFilter.unread,
+                        () => update(readFilter: ChatReadFilter.unread)),
+                  ]),
+                  sectionLabel("Chat Type"),
+                  chipWrap([
+                    filterChip("All", currentFilters.typeFilter == ChatTypeFilter.all,
+                        () => update(typeFilter: ChatTypeFilter.all)),
+                    filterChip("Group Chats", currentFilters.typeFilter == ChatTypeFilter.group,
+                        () => update(typeFilter: ChatTypeFilter.group)),
+                    filterChip("Direct Messages", currentFilters.typeFilter == ChatTypeFilter.direct,
+                        () => update(typeFilter: ChatTypeFilter.direct)),
+                  ]),
+                  sectionLabel("Sender"),
+                  chipWrap([
+                    filterChip("All", currentFilters.senderFilter == ChatSenderFilter.all,
+                        () => update(senderFilter: ChatSenderFilter.all),
+                        enabled: currentFilters.typeFilter != ChatTypeFilter.group),
+                    filterChip("Known Senders", currentFilters.senderFilter == ChatSenderFilter.known,
+                        () => update(senderFilter: ChatSenderFilter.known),
+                        enabled: currentFilters.typeFilter != ChatTypeFilter.group),
+                    filterChip("Unknown Senders", currentFilters.senderFilter == ChatSenderFilter.unknown,
+                        () => update(senderFilter: ChatSenderFilter.unknown),
+                        enabled: currentFilters.typeFilter != ChatTypeFilter.group),
+                  ]),
+                  sectionLabel("Mute Status"),
+                  chipWrap([
+                    filterChip("All", currentFilters.muteFilter == ChatMuteFilter.all,
+                        () => update(muteFilter: ChatMuteFilter.all)),
+                    filterChip("Muted", currentFilters.muteFilter == ChatMuteFilter.muted,
+                        () => update(muteFilter: ChatMuteFilter.muted)),
+                    filterChip("Unmuted", currentFilters.muteFilter == ChatMuteFilter.unmuted,
+                        () => update(muteFilter: ChatMuteFilter.unmuted)),
+                  ]),
+                  sectionLabel("Message Service"),
+                  chipWrap([
+                    filterChip("All", currentFilters.serviceFilter == ChatServiceFilter.all,
+                        () => update(serviceFilter: ChatServiceFilter.all)),
+                    filterChip("iMessage", currentFilters.serviceFilter == ChatServiceFilter.iMessage,
+                        () => update(serviceFilter: ChatServiceFilter.iMessage)),
+                    filterChip("SMS & Other", currentFilters.serviceFilter == ChatServiceFilter.other,
+                        () => update(serviceFilter: ChatServiceFilter.other)),
+                  ]),
+                  // Future "Category" section, pending Message.isServiceMessage / Message.isSpam:
+                  // sectionLabel("Category"),
+                  // chipWrap([
+                  //   filterChip("2FA Codes", ...),
+                  //   filterChip("Spam", ...),
+                  //   filterChip("Promotions", ...),
+                  //   filterChip("Transactions", ...),
+                  // ]),
                 ],
               ),
             ),

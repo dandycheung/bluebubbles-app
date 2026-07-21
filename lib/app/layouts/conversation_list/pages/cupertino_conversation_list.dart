@@ -92,7 +92,7 @@ class CupertinoConversationListState extends State<CupertinoConversationList> wi
                           showArchived: showArchived,
                           showUnknown: showUnknown,
                           pinnedOnly: true,
-                          filter: ChatsSvc.chatListFilter.value);
+                          filters: ChatsSvc.chatListFilters.value);
 
                       if (_chats.isEmpty) {
                         return const SliverToBoxAdapter(child: SizedBox.shrink());
@@ -265,7 +265,7 @@ class CupertinoConversationListState extends State<CupertinoConversationList> wi
                           showArchived: showArchived,
                           showUnknown: showUnknown,
                           excludePinned: true,
-                          filter: ChatsSvc.chatListFilter.value);
+                          filters: ChatsSvc.chatListFilters.value);
 
                       if (!loaded || _chats.isEmpty) {
                         return SliverToBoxAdapter(
@@ -274,7 +274,9 @@ class CupertinoConversationListState extends State<CupertinoConversationList> wi
                               padding: const EdgeInsets.only(top: 50.0),
                               child: loaded
                                   ? buildEmptyChatListState(context,
-                                      showArchived: showArchived, showUnknown: showUnknown)
+                                      showArchived: showArchived,
+                                      showUnknown: showUnknown,
+                                      filters: ChatsSvc.chatListFilters.value)
                                   : Column(
                                       children: [
                                         Padding(

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:app_links/app_links.dart';
 import 'package:bluebubbles/app/layouts/chat_creator/chat_creator.dart';
 import 'package:bluebubbles/app/layouts/chat_creator/new_chat_creator.dart';
+import 'package:bluebubbles/app/layouts/conversation_list/widgets/filters/chat_list_filters.dart';
 import 'package:bluebubbles/app/state/chat_state.dart';
 import 'package:bluebubbles/helpers/backend/startup_tasks.dart';
 import 'package:bluebubbles/helpers/helpers.dart';
@@ -23,19 +24,6 @@ import 'package:get_it/get_it.dart';
 
 // ignore: non_constant_identifier_names
 ChatsService get ChatsSvc => GetIt.I<ChatsService>();
-
-/// Conversation list filter categories, selectable one at a time from the
-/// "Filter" overflow menu entry.
-enum ChatListFilter {
-  all,
-  unreadMessages,
-  knownSenders,
-  unknownSenders,
-  // twoFactor,    // requires Message.isServiceMessage (not yet implemented)
-  // spam,         // requires Message.isSpam (not yet implemented)
-  // promotions,   // future
-  // transactions, // future
-}
 
 class ChatsService {
   static const batchSize = 100;
@@ -77,8 +65,8 @@ class ChatsService {
   /// Used to trigger UI rebuilds when chats are repositioned
   final RxInt chatListVersion = 0.obs;
 
-  /// Currently selected conversation-list filter category (in-memory, not persisted)
-  final Rx<ChatListFilter> chatListFilter = ChatListFilter.all.obs;
+  /// Currently selected conversation-list filter dimensions (in-memory, not persisted)
+  final Rx<ChatListFilters> chatListFilters = const ChatListFilters().obs;
 
   /// Timer for debouncing chatListVersion updates to prevent rapid UI rebuilds
   Timer? _listVersionUpdateTimer;
@@ -130,7 +118,7 @@ class ChatsService {
     bool? showUnknown,
     bool? pinnedOnly,
     bool? excludePinned,
-    ChatListFilter? filter,
+    ChatListFilters? filters,
   }) {
     var chats = allChats;
 
@@ -154,20 +142,40 @@ class ChatsService {
       }
     }
 
-    // Apply conversation-list filter (chip selection)
-    if (filter != null && filter != ChatListFilter.all) {
-      if (filter == ChatListFilter.unreadMessages) {
+    // Apply conversation-list filter dimensions (chip selections) — these combine with AND semantics.
+    if (filters != null) {
+      if (filters.readFilter == ChatReadFilter.unread) {
         // Read from ChatState rather than the Chat model directly — markAllAsRead()
         // updates ChatState.hasUnreadMessage instantly but writes the underlying
         // Chat.hasUnreadMessage field asynchronously via a background DB/HTTP call,
         // so the model field can briefly lag behind the reactive state.
         chats = chats.where((e) => getChatState(e.guid)?.hasUnreadMessage.value ?? (e.hasUnreadMessage ?? false)).toList();
-      } else if (filter == ChatListFilter.knownSenders) {
+      }
+
+      if (filters.senderFilter == ChatSenderFilter.known) {
         chats = chats
             .where((e) => e.isGroup || (!e.isGroup && e.handles.firstOrNull?.contactsV2.isNotEmpty == true))
             .toList();
-      } else if (filter == ChatListFilter.unknownSenders) {
+      } else if (filters.senderFilter == ChatSenderFilter.unknown) {
         chats = chats.where((e) => !e.isGroup && e.handles.firstOrNull?.contactsV2.isEmpty != false).toList();
+      }
+
+      if (filters.typeFilter == ChatTypeFilter.group) {
+        chats = chats.where((e) => e.isGroup).toList();
+      } else if (filters.typeFilter == ChatTypeFilter.direct) {
+        chats = chats.where((e) => !e.isGroup).toList();
+      }
+
+      if (filters.muteFilter == ChatMuteFilter.muted) {
+        chats = chats.where((e) => e.muteType != null).toList();
+      } else if (filters.muteFilter == ChatMuteFilter.unmuted) {
+        chats = chats.where((e) => e.muteType == null).toList();
+      }
+
+      if (filters.serviceFilter == ChatServiceFilter.iMessage) {
+        chats = chats.where((e) => e.isIMessage).toList();
+      } else if (filters.serviceFilter == ChatServiceFilter.other) {
+        chats = chats.where((e) => !e.isIMessage).toList();
       }
     }
 
