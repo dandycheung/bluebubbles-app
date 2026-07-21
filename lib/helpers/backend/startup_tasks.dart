@@ -264,10 +264,13 @@ class StartupTasks {
     Logger.info(
         "Startup services initialization complete! Running localhost detection then starting incremental sync...");
 
+    // Nothing network-related should run before setup — no server is configured yet.
     // Don't use the global isolate on startup as it'll likely cause a crash
     // if there is no network connection. The cause is not 100% known, but it likely
     // has to do with processing pressure, stale ports, or port binding exhaustion.
-    unawaited(NetworkTasks.detectLocalhost().then((_) => SyncSvc.startIncrementalSync()));
+    if (SettingsSvc.settings.finishedSetup.value) {
+      unawaited(NetworkTasks.detectLocalhost().then((_) => SyncSvc.startIncrementalSync()));
+    }
   }
 
   static Future<void> initGlobalIsolateServices(RootIsolateToken? rootIsolateToken) async {
