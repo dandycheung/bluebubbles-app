@@ -102,10 +102,7 @@ class CupertinoConversationListState extends State<CupertinoConversationList> wi
                           ? SettingsSvc.settings.pinColumnsLandscape.value
                           : SettingsSvc.settings.pinColumnsPortrait.value;
                       int pinCount = _chats.length;
-                      int usedRowCount = min((pinCount / colCount).ceil(), rowCount);
-                      int maxOnPage = rowCount * colCount;
                       PageController _controller = PageController();
-                      int _pageCount = (pinCount / maxOnPage).ceil();
 
                       return SliverPadding(
                         padding: const EdgeInsets.only(top: 10),
@@ -119,9 +116,17 @@ class CupertinoConversationListState extends State<CupertinoConversationList> wi
                             // PageView horizontal padding (10 each side)
                             const double pageHPadding = 20.0;
 
+                            // Reduce the column count so tiles at the minimum avatar size still fit the
+                            // available width instead of overflowing/clipping when the pane is narrow.
+                            final int effectiveColCount = max(
+                                1, min(colCount, ((constraints.maxWidth - pageHPadding) / (70.0 + tileHOverhead)).floor()));
+                            final int effectiveUsedRowCount = min((pinCount / effectiveColCount).ceil(), rowCount);
+                            final int effectiveMaxOnPage = rowCount * effectiveColCount;
+                            final int effectivePageCount = (pinCount / effectiveMaxOnPage).ceil();
+
                             // Derive a clean, capped avatar size from the actual available width
-                            final double rawAvatarSize =
-                                (constraints.maxWidth - pageHPadding - colCount * tileHOverhead) / colCount;
+                            final double rawAvatarSize = (constraints.maxWidth - pageHPadding - effectiveColCount * tileHOverhead) /
+                                effectiveColCount;
                             final double avatarSize =
                                 clampDouble(rawAvatarSize, 70.0, Platform.isAndroid ? 120.0 : 140.0);
                             final double tileWidth = avatarSize + tileHOverhead;
@@ -129,7 +134,7 @@ class CupertinoConversationListState extends State<CupertinoConversationList> wi
                             final TextStyle style = context.theme.textTheme.bodyMedium!;
                             final double textHeight = (style.height ?? 1.2) * (style.fontSize ?? 14);
                             final double tileHeight = avatarSize + textHeight + tileVOverhead;
-                            final double totalHeight = usedRowCount * tileHeight;
+                            final double totalHeight = effectiveUsedRowCount * tileHeight;
 
                             // avatar only
                             if (NavigationSvc.isAvatarOnly(context)) {
@@ -174,21 +179,21 @@ class CupertinoConversationListState extends State<CupertinoConversationList> wi
                                     physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
                                     scrollDirection: Axis.horizontal,
                                     controller: _controller,
-                                    itemCount: _pageCount,
+                                    itemCount: effectivePageCount,
                                     itemBuilder: (context, pageIndex) {
-                                      final int start = pageIndex * maxOnPage;
+                                      final int start = pageIndex * effectiveMaxOnPage;
                                       final List<Chat> pageChats =
-                                          _chats.sublist(start, min(start + maxOnPage, pinCount));
+                                          _chats.sublist(start, min(start + effectiveMaxOnPage, pinCount));
 
                                       return Padding(
                                         padding: const EdgeInsets.symmetric(horizontal: 10),
                                         child: Column(
                                           mainAxisAlignment: MainAxisAlignment.center,
-                                          children: List.generate(usedRowCount, (rowIndex) {
-                                            final int rowStart = rowIndex * colCount;
+                                          children: List.generate(effectiveUsedRowCount, (rowIndex) {
+                                            final int rowStart = rowIndex * effectiveColCount;
                                             final List<Chat> rowChats =
-                                                pageChats.skip(rowStart).take(colCount).toList();
-                                            final bool singleRow = usedRowCount == 1;
+                                                pageChats.skip(rowStart).take(effectiveColCount).toList();
+                                            final bool singleRow = effectiveUsedRowCount == 1;
 
                                             return Row(
                                               mainAxisAlignment:
@@ -206,7 +211,7 @@ class CupertinoConversationListState extends State<CupertinoConversationList> wi
                                                   ),
                                                 // Fill empty slots in multi-row mode so rows align
                                                 if (!singleRow)
-                                                  for (int i = rowChats.length; i < colCount; i++)
+                                                  for (int i = rowChats.length; i < effectiveColCount; i++)
                                                     SizedBox(width: tileWidth),
                                               ],
                                             );
@@ -216,14 +221,14 @@ class CupertinoConversationListState extends State<CupertinoConversationList> wi
                                     },
                                   ),
                                 ),
-                                if (_pageCount > 1)
+                                if (effectivePageCount > 1)
                                   MouseRegion(
                                     cursor: MouseCursor.defer,
                                     hitTestBehavior: HitTestBehavior.deferToChild,
                                     child: Padding(
                                       padding: const EdgeInsets.only(bottom: 10),
                                       child: SmoothPageIndicator(
-                                        count: _pageCount,
+                                        count: effectivePageCount,
                                         controller: _controller,
                                         onDotClicked: kIsDesktop || kIsWeb
                                             ? (page) => _controller.animateToPage(
