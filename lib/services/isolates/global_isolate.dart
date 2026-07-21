@@ -726,6 +726,13 @@ enum IsolateRequestType {
   saveMessageAsync,
   findOneAsync,
   findAsync,
+
+  // CustomGroup actions
+  getAllCustomGroups,
+  createCustomGroup,
+  renameCustomGroup,
+  updateCustomGroupChats,
+  deleteCustomGroup,
 }
 
 /// Internal class to track pending requests

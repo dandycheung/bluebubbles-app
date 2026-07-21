@@ -254,6 +254,10 @@ class StartupTasks {
 
     GetIt.I.registerSingleton<EventDispatcher>(EventDispatcher());
 
+    Logger.info("Registering CustomGroupsService...");
+    GetIt.I.registerSingleton<CustomGroupsService>(CustomGroupsService());
+    await CustomGroupsSvc.init();
+
     Logger.info("Registering OutgoingMessageHandler...");
     GetIt.I.registerSingleton<OutgoingMessageHandler>(
       OutgoingMessageHandler(),

@@ -13,6 +13,7 @@ import 'package:bluebubbles/app/layouts/settings/pages/advanced/private_api_pane
 import 'package:bluebubbles/app/layouts/settings/pages/advanced/redacted_mode_panel.dart';
 import 'package:bluebubbles/app/layouts/settings/pages/advanced/tasker_panel.dart';
 import 'package:bluebubbles/app/layouts/settings/pages/conversation_list/chat_list_panel.dart';
+import 'package:bluebubbles/app/layouts/settings/pages/custom_groups/custom_groups_panel.dart';
 import 'package:bluebubbles/app/layouts/settings/pages/desktop/desktop_panel.dart';
 import 'package:bluebubbles/app/layouts/settings/pages/message_view/attachment_panel.dart';
 import 'package:bluebubbles/app/layouts/settings/pages/message_view/conversation_panel.dart';
@@ -356,7 +357,8 @@ List<Widget> buildSettingItemList({
             "Swipe Right Action",
             "Swipe Left Action",
             "Move Chat Creator Button to Header",
-            "Long Press for Camera"
+            "Long Press for Camera",
+            "Show Custom Group Filters"
           ],
           onTap: () {
             ns.pushAndRemoveSettingsUntil(
@@ -429,6 +431,41 @@ List<Widget> buildSettingItemList({
               iosIcon: CupertinoIcons.chat_bubble_fill,
               materialIcon: Icons.sms,
               containerColor: Colors.green,
+            ),
+            trailing: const NextButton(),
+          ),
+        ),
+
+        // Custom Groups Tile
+        SearchableSettingItem(
+          title: "Custom Groups",
+          searchTags: [
+            "Custom Groups",
+            "Create Group",
+            "Group Chats",
+            "Chat Groups",
+          ],
+          onTap: () {
+            ns.pushAndRemoveSettingsUntil(
+              context,
+              const CustomGroupsPanel(),
+              (Route route) => route.isFirst,
+            );
+          },
+          child: SettingsTile(
+            backgroundColor: tileColor,
+            title: "Custom Groups",
+            onTap: () {
+              ns.pushAndRemoveSettingsUntil(
+                context,
+                const CustomGroupsPanel(),
+                (Route route) => route.isFirst,
+              );
+            },
+            leading: const SettingsLeadingIcon(
+              iosIcon: CupertinoIcons.folder_fill,
+              materialIcon: Icons.folder_outlined,
+              containerColor: Colors.orange,
             ),
             trailing: const NextButton(),
           ),

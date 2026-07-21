@@ -24,6 +24,7 @@ class Database {
   static late final Box<Attachment> attachments;
   static late final Box<Chat> chats;
   static late final Box<ContactV2> contactsV2;
+  static late final Box<CustomGroup> customGroups;
   static late final Box<FCMData> fcmData;
   static late final Box<Handle> handles;
   static late final Box<Message> messages;
@@ -52,6 +53,7 @@ class Database {
       Database.attachments = store.box<Attachment>();
       Database.chats = store.box<Chat>();
       Database.contactsV2 = store.box<ContactV2>();
+      Database.customGroups = store.box<CustomGroup>();
       Database.fcmData = store.box<FCMData>();
       Database.handles = store.box<Handle>();
       Database.messages = store.box<Message>();

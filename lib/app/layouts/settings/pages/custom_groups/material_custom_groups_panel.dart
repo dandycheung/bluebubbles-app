@@ -1,0 +1,133 @@
+import 'package:bluebubbles/app/components/avatars/contact_avatar_group_widget.dart';
+import 'package:bluebubbles/app/layouts/chat_selector_view/chat_selector_view.dart';
+import 'package:bluebubbles/app/layouts/settings/pages/custom_groups/create_group_dialog.dart';
+import 'package:bluebubbles/app/layouts/settings/pages/custom_groups/custom_groups_controller.dart';
+import 'package:bluebubbles/app/wrappers/bb_app_bar.dart';
+import 'package:bluebubbles/app/wrappers/bb_scaffold.dart';
+import 'package:bluebubbles/database/models.dart';
+import 'package:bluebubbles/helpers/helpers.dart';
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+
+class MaterialCustomGroupsPanel extends StatefulWidget {
+  const MaterialCustomGroupsPanel({super.key});
+
+  @override
+  State<MaterialCustomGroupsPanel> createState() => _MaterialCustomGroupsPanelState();
+}
+
+class _MaterialCustomGroupsPanelState extends State<MaterialCustomGroupsPanel> {
+  final CustomGroupsController controller = Get.find<CustomGroupsController>();
+
+  Future<void> _onCreate() async {
+    final name = await showCreateGroupDialog(context);
+    if (name == null || name.isEmpty) return;
+    if (!mounted) return;
+    final chats = await Navigator.of(context).push<List<Chat>>(
+      MaterialPageRoute(
+        builder: (_) => ChatSelectorView(
+          multiSelect: true,
+          onMultiSelect: (_) {},
+        ),
+      ),
+    );
+    if (chats == null) return;
+    await controller.createGroup(name, chats.map((c) => c.guid).toList());
+  }
+
+  Future<void> _onEditChats(CustomGroup group) async {
+    final chats = await Navigator.of(context).push<List<Chat>>(
+      MaterialPageRoute(
+        builder: (_) => ChatSelectorView(
+          multiSelect: true,
+          initialSelection: group.chats.map((c) => c.guid).toList(),
+          onMultiSelect: (_) {},
+        ),
+      ),
+    );
+    if (chats == null) return;
+    await controller.updateGroupChats(group, chats.map((c) => c.guid).toList());
+  }
+
+  List<Handle> _groupHandles(CustomGroup group) {
+    final seen = <String>{};
+    final handles = <Handle>[];
+    for (final chat in group.chats) {
+      for (final handle in chat.handles) {
+        if (seen.add(handle.address)) handles.add(handle);
+      }
+    }
+    return handles;
+  }
+
+  Future<bool> _confirmDelete(CustomGroup group) async {
+    bool confirmed = false;
+    await showAreYouSure(
+      context,
+      title: "Delete '${group.name}'?",
+      content: const Text("This won't delete the chats in it."),
+      onNo: () => Navigator.of(context, rootNavigator: true).pop(),
+      onYes: () {
+        confirmed = true;
+        Navigator.of(context, rootNavigator: true).pop();
+      },
+    );
+    return confirmed;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return BBScaffold(
+      appBar: BBAppBar(
+        titleText: "Custom Groups",
+        leading: buildBackButton(context),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _onCreate,
+        child: const Icon(Icons.add),
+      ),
+      body: Obx(() {
+        if (controller.loading.value) return Center(child: buildProgressIndicator(context));
+        if (controller.groups.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text("You have no custom groups", style: context.theme.textTheme.labelLarge),
+                TextButton(onPressed: _onCreate, child: const Text("Create one")),
+              ],
+            ),
+          );
+        }
+        return ListView.builder(
+          itemCount: controller.groups.length,
+          itemBuilder: (context, index) {
+            final group = controller.groups[index];
+            return Dismissible(
+              key: ValueKey(group.id),
+              direction: DismissDirection.endToStart,
+              background: Container(
+                alignment: Alignment.centerRight,
+                padding: const EdgeInsets.only(right: 20),
+                color: context.theme.colorScheme.errorContainer,
+                child: Icon(Icons.delete_outline, color: context.theme.colorScheme.onErrorContainer),
+              ),
+              confirmDismiss: (_) => _confirmDelete(group),
+              onDismissed: (_) => controller.deleteGroup(group),
+              child: ListTile(
+                leading: ContactAvatarGroupWidget(
+                  handles: _groupHandles(group),
+                  size: 40,
+                  editable: false,
+                ),
+                title: Text(group.name),
+                subtitle: Text("${group.chats.length} chats"),
+                onTap: () => _onEditChats(group),
+              ),
+            );
+          },
+        );
+      }),
+    );
+  }
+}

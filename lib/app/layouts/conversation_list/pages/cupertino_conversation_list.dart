@@ -7,6 +7,7 @@ import 'package:bluebubbles/app/layouts/conversation_list/pages/conversation_lis
 import 'package:bluebubbles/app/layouts/conversation_list/widgets/tile/conversation_tile.dart';
 import 'package:bluebubbles/app/layouts/conversation_list/widgets/tile/pinned_conversation_tile.dart';
 import 'package:bluebubbles/app/layouts/conversation_list/widgets/conversation_list_fab.dart';
+import 'package:bluebubbles/app/layouts/conversation_list/widgets/filters/custom_group_filter_chip_row.dart';
 import 'package:bluebubbles/app/layouts/conversation_list/widgets/header/cupertino_header.dart';
 import 'package:bluebubbles/app/wrappers/scrollbar_wrapper.dart';
 import 'package:bluebubbles/services/services.dart';
@@ -80,6 +81,8 @@ class CupertinoConversationListState extends State<CupertinoConversationList> wi
                   physics: ThemeSvc.scrollPhysics,
                   slivers: <Widget>[
                     if (!showArchived && !showUnknown) CupertinoHeader(controller: controller),
+                    if (!showArchived && !showUnknown)
+                      const SliverToBoxAdapter(child: CustomGroupFilterChipRow()),
                     Obx(() {
                       // Force reactivity by accessing observable values first
                       // ignore: unused_local_variable

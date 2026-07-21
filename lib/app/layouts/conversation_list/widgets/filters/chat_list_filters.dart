@@ -4,6 +4,8 @@
 /// "Unread" + "Group Chats" shows only unread group chats.
 library;
 
+import 'package:collection/collection.dart';
+
 enum ChatReadFilter { all, unread }
 
 enum ChatSenderFilter { all, known, unknown }
@@ -26,12 +28,18 @@ class ChatListFilters {
   final ChatMuteFilter muteFilter;
   final ChatServiceFilter serviceFilter;
 
+  /// Ids of custom groups currently selected as a filter. Empty means no
+  /// group filter is active; multiple ids are OR'd together within this
+  /// dimension (a chat matches if it belongs to any selected group).
+  final Set<int> customGroupIds;
+
   const ChatListFilters({
     this.readFilter = ChatReadFilter.all,
     this.senderFilter = ChatSenderFilter.all,
     this.typeFilter = ChatTypeFilter.all,
     this.muteFilter = ChatMuteFilter.all,
     this.serviceFilter = ChatServiceFilter.all,
+    this.customGroupIds = const {},
   });
 
   static const _keyRead = 'read';
@@ -39,6 +47,7 @@ class ChatListFilters {
   static const _keyType = 'type';
   static const _keyMute = 'mute';
   static const _keyService = 'service';
+  static const _keyCustomGroupIds = 'customGroupIds';
 
   /// Decodes a [Settings.savedChatFilters]-style map (dimension name -> enum
   /// name). Unknown/missing keys fall back to [ChatListFilters]'s defaults —
@@ -50,6 +59,8 @@ class ChatListFilters {
       typeFilter: chatTypeFilterFromName(map[_keyType] ?? ''),
       muteFilter: chatMuteFilterFromName(map[_keyMute] ?? ''),
       serviceFilter: chatServiceFilterFromName(map[_keyService] ?? ''),
+      customGroupIds:
+          (map[_keyCustomGroupIds] ?? '').split(',').where((s) => s.isNotEmpty).map(int.parse).toSet(),
     );
   }
 
@@ -60,6 +71,7 @@ class ChatListFilters {
         _keyType: typeFilter.name,
         _keyMute: muteFilter.name,
         _keyService: serviceFilter.name,
+        _keyCustomGroupIds: customGroupIds.join(','),
       };
 
   bool get hasActiveFilter =>
@@ -67,7 +79,8 @@ class ChatListFilters {
       senderFilter != ChatSenderFilter.all ||
       typeFilter != ChatTypeFilter.all ||
       muteFilter != ChatMuteFilter.all ||
-      serviceFilter != ChatServiceFilter.all;
+      serviceFilter != ChatServiceFilter.all ||
+      customGroupIds.isNotEmpty;
 
   ChatListFilters copyWith({
     ChatReadFilter? readFilter,
@@ -75,6 +88,7 @@ class ChatListFilters {
     ChatTypeFilter? typeFilter,
     ChatMuteFilter? muteFilter,
     ChatServiceFilter? serviceFilter,
+    Set<int>? customGroupIds,
   }) {
     return ChatListFilters(
       readFilter: readFilter ?? this.readFilter,
@@ -82,6 +96,7 @@ class ChatListFilters {
       typeFilter: typeFilter ?? this.typeFilter,
       muteFilter: muteFilter ?? this.muteFilter,
       serviceFilter: serviceFilter ?? this.serviceFilter,
+      customGroupIds: customGroupIds ?? this.customGroupIds,
     );
   }
 
@@ -92,10 +107,18 @@ class ChatListFilters {
       other.senderFilter == senderFilter &&
       other.typeFilter == typeFilter &&
       other.muteFilter == muteFilter &&
-      other.serviceFilter == serviceFilter;
+      other.serviceFilter == serviceFilter &&
+      const SetEquality<int>().equals(other.customGroupIds, customGroupIds);
 
   @override
-  int get hashCode => Object.hash(readFilter, senderFilter, typeFilter, muteFilter, serviceFilter);
+  int get hashCode => Object.hash(
+        readFilter,
+        senderFilter,
+        typeFilter,
+        muteFilter,
+        serviceFilter,
+        Object.hashAllUnordered(customGroupIds),
+      );
 }
 
 /// Looks up an enum value by its [Enum.name], falling back to [orElse]
