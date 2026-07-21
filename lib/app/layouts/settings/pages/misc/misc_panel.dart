@@ -184,6 +184,24 @@ class _MiscPanelState extends State<MiscPanel> with ThemeHelpers {
                             materialIcon: Icons.speed_outlined,
                             containerColor: Colors.green),
                       )),
+                  if (kIsDesktop) ...[
+                    const SettingsDivider(),
+                    Obx(() => SettingsSwitch(
+                          onChanged: (bool val) async {
+                            SettingsSvc.settings.reduceMotion.value = val;
+                            await SettingsSvc.settings.saveOneAsync('reduceMotion');
+                          },
+                          initialVal: SettingsSvc.settings.reduceMotion.value,
+                          title: "Reduce Motion",
+                          subtitle: "Keeps GIFs paused until you hover over them",
+                          isThreeLine: true,
+                          backgroundColor: tileColor,
+                          leading: const SettingsLeadingIcon(
+                              iosIcon: CupertinoIcons.pause_circle,
+                              materialIcon: Icons.motion_photos_pause_outlined,
+                              containerColor: Colors.blue),
+                        )),
+                  ],
                   const SettingsDivider(),
                   Obx(() {
                     if (iOS) {

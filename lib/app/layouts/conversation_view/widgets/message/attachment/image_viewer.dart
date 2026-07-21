@@ -10,6 +10,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:gif_view/gif_view.dart';
 
 class ImageViewer extends StatefulWidget {
   final PlatformFile file;
@@ -40,6 +41,31 @@ class _ImageViewerState extends State<ImageViewer> with AutomaticKeepAliveClient
   // Implement required getter for LivePhotoMixin
   @override
   Attachment get livePhotoAttachment => attachment;
+
+  // Reduce-motion GIF playback (desktop): controller pauses the GIF until hovered.
+  GifController? _gifController;
+  Future<Uint8List?>? _gifBytesFuture;
+  final RxBool _gifHovering = false.obs;
+
+  bool get _isGif => attachment.mimeType?.contains("gif") ?? attachment.path.endsWith(".gif");
+
+  // Read bytes off the UI thread — a synchronous read of a multi-MB GIF during
+  // build freezes the app, especially with several GIFs on screen at once.
+  Future<Uint8List?> _loadGifBytes() async {
+    if (file.bytes != null) return file.bytes;
+    final path = file.path;
+    if (path != null) {
+      final f = File(path);
+      if (await f.exists()) return f.readAsBytes();
+    }
+    return null;
+  }
+
+  @override
+  void dispose() {
+    _gifController?.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -109,6 +135,90 @@ class _ImageViewerState extends State<ImageViewer> with AutomaticKeepAliveClient
       }
     }
 
+    // Reduce Motion (desktop): keep GIFs paused on their first frame and only
+    // animate while hovered. GifView decodes every frame up front, so the native
+    // (streaming) Image path stays the default — routing all GIFs through GifView
+    // stalls the UI on large/many GIFs. Only opt in when Reduce Motion is on.
+    if (_isGif && kIsDesktop) {
+      return Obx(() {
+        if (!SettingsSvc.settings.reduceMotion.value) return _buildStandardImage(context);
+        return FutureBuilder<Uint8List?>(
+          future: _gifBytesFuture ??= _loadGifBytes(),
+          builder: (context, snapshot) {
+            final bytes = snapshot.data;
+            // Until bytes are loaded (or if unavailable), show the native path.
+            if (bytes == null) return _buildStandardImage(context);
+            _gifController ??= GifController();
+            return AnimatedSize(
+              duration: const Duration(milliseconds: 150),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 40, minWidth: 100),
+                child: MouseRegion(
+                  onEnter: (_) {
+                    _gifHovering.value = true;
+                    _gifController?.play();
+                  },
+                  onExit: (_) {
+                    _gifHovering.value = false;
+                    _gifController?.pause();
+                  },
+                  child: Stack(
+                    alignment: !widget.isFromMe ? Alignment.topRight : Alignment.topLeft,
+                    children: [
+                      GifView.memory(
+                        bytes,
+                        controller: _gifController,
+                        autoPlay: false,
+                        fit: BoxFit.contain,
+                      ),
+                      // GIF badge, mirroring the LIVE badge — hidden while playing (hovered).
+                      Obx(() => _gifHovering.value ? const SizedBox.shrink() : _buildGifBadge()),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      });
+    }
+
+    return _buildStandardImage(context);
+  }
+
+  /// "GIF" badge shown on a paused reduce-motion GIF, styled like the LIVE badge.
+  Widget _buildGifBadge() {
+    return Positioned(
+      top: 8,
+      right: widget.isFromMe ? null : 8,
+      left: widget.isFromMe ? 8 : null,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.6),
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.gif_box_outlined, size: 12, color: Colors.white),
+            SizedBox(width: 3),
+            Text(
+              'GIF',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStandardImage(BuildContext context) {
     // Build the appropriate image widget based on platform and file availability
     Widget imageWidget;
     if (kIsWeb || file.path == null) {

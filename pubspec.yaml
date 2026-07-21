@@ -91,6 +91,7 @@ dependencies:
       url: https://github.com/BlueBubblesApp/xgesture_flutter.git
       ref: d63342cb17976f60bd94e7c1a822398115d3f83c
   get: ^4.7.2
+  gif_view: ^1.0.3
   github: ^9.25.0
   google_fonts: ^8.0.2
   google_mlkit_entity_extraction: ^0.15.3 # mobile only
