@@ -24,6 +24,17 @@ class CustomGroupFilterChipRow extends StatelessWidget {
       if (groups.isEmpty) return const SizedBox.shrink();
 
       final current = ChatsSvc.chatListFilters.value.customGroupIds;
+
+      // Read chatListVersion so this rebuilds when chats are added/removed, and
+      // read each ChatState's hasUnreadMessage below so it rebuilds when any
+      // chat's read status changes.
+      ChatsSvc.chatListVersion.value;
+      final unreadStates = ChatsSvc.chatStates.values.where((s) => s.hasUnreadMessage.value).toList();
+      final unreadCounts = <int, int>{
+        for (final group in groups)
+          group.id!: unreadStates.where((s) => s.chat.customGroups.any((g) => g.id == group.id)).length,
+      };
+
       return SizedBox(
         height: 44 + padding.vertical,
         child: ListView.separated(
@@ -34,8 +45,9 @@ class CustomGroupFilterChipRow extends StatelessWidget {
           itemBuilder: (context, index) {
             final group = groups[index];
             final selected = current.contains(group.id);
+            final unreadCount = unreadCounts[group.id] ?? 0;
             return BBChip(
-              label: Text(group.name),
+              label: Text(unreadCount > 0 ? '${group.name} ($unreadCount)' : group.name),
               selected: selected,
               showCheckmark: true,
               onPressed: () {
@@ -46,6 +58,11 @@ class CustomGroupFilterChipRow extends StatelessWidget {
                   next.add(group.id!);
                 }
                 ChatsSvc.chatListFilters.value = ChatsSvc.chatListFilters.value.copyWith(customGroupIds: next);
+              },
+              onLongPress: () {
+                // Long-press singles out this group, replacing any other
+                // selected groups, instead of toggling it alongside them.
+                ChatsSvc.chatListFilters.value = ChatsSvc.chatListFilters.value.copyWith(customGroupIds: {group.id!});
               },
             );
           },

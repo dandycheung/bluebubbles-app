@@ -8,6 +8,7 @@ class BBChip extends StatelessWidget {
   final Widget? avatar;
   final bool tapEnabled;
   final VoidCallback? onPressed;
+  final VoidCallback? onLongPress;
   final VoidCallback? onDeleted;
   final bool showCheckmark;
   final bool selected;
@@ -20,6 +21,7 @@ class BBChip extends StatelessWidget {
     this.avatar,
     this.tapEnabled = true,
     this.onPressed,
+    this.onLongPress,
     this.onDeleted,
     this.showCheckmark = false,
     this.selected = false,
@@ -29,7 +31,7 @@ class BBChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return RawChip(
+    final chip = RawChip(
       tapEnabled: tapEnabled,
       deleteIcon: onDeleted != null ? const Icon(Icons.close, size: 16) : null,
       side: BorderSide(color: context.theme.colorScheme.outline.withValues(alpha: 0.1)),
@@ -42,6 +44,13 @@ class BBChip extends StatelessWidget {
       selected: selected,
       onSelected: onSelected,
       checkmarkColor: checkmarkColor,
+    );
+
+    if (onLongPress == null) return chip;
+
+    return GestureDetector(
+      onLongPress: onLongPress,
+      child: chip,
     );
   }
 }
