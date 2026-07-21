@@ -1,6 +1,7 @@
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:bluebubbles/app/components/avatars/contact_avatar_widget.dart';
 import 'package:bluebubbles/app/layouts/conversation_list/pages/search/search_view.dart';
+import 'package:bluebubbles/app/layouts/conversation_list/widgets/filters/chat_list_filters_sheet.dart';
 import 'package:bluebubbles/app/layouts/conversation_view/pages/conversation_view.dart';
 import 'package:bluebubbles/app/layouts/findmy/findmy_page.dart';
 import 'package:bluebubbles/app/layouts/settings/pages/profile/profile_panel.dart';
@@ -143,7 +144,6 @@ class _MaterialAvatarMenuState extends State<MaterialAvatarMenu> with SingleTick
         final windowEffect = SettingsSvc.settings.windowEffect.value;
         final cardColor = overlayContext.theme.colorScheme.surfaceContainerHighest
             .withValues(alpha: windowEffect != WindowEffect.disabled ? 0.95 : 1.0);
-        final filterUnknownSenders = SettingsSvc.settings.filterUnknownSenders.value;
         final moveChatCreatorToHeader = SettingsSvc.settings.moveChatCreatorToHeader.value;
         final userName = SettingsSvc.settings.userName.value;
         final iCloudAccount = SettingsSvc.settings.iCloudAccount.value;
@@ -252,12 +252,11 @@ class _MaterialAvatarMenuState extends State<MaterialAvatarMenu> with SingleTick
                               label: 'Archived',
                               onTap: () => _hideMenu().then((_) => goToArchived(navContext)),
                             ),
-                            if (filterUnknownSenders)
-                              _MenuItemRow(
-                                icon: Icons.person_off_outlined,
-                                label: 'Unknown Senders',
-                                onTap: () => _hideMenu().then((_) => goToUnknownSenders(navContext)),
-                              ),
+                            _MenuItemRow(
+                              icon: Icons.filter_list_outlined,
+                              label: 'Filter Chats',
+                              onTap: () => _hideMenu().then((_) => openChatListFilterSheet(navContext)),
+                            ),
                             if (SettingsSvc.serverDetails.isMinCatalina)
                               _MenuItemRow(
                                 icon: Icons.location_on_outlined,
@@ -378,7 +377,6 @@ class CupertinoOverflowMenu extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final userName = SettingsSvc.settings.userName.value;
-    final filterUnknownSenders = SettingsSvc.settings.filterUnknownSenders.value;
     final moveChatCreatorToHeader = SettingsSvc.settings.moveChatCreatorToHeader.value;
 
     final itemTheme = PullDownMenuItemTheme(
@@ -422,13 +420,12 @@ class CupertinoOverflowMenu extends StatelessWidget {
           icon: CupertinoIcons.archivebox,
           onTap: () => goToArchived(context),
         ),
-        if (filterUnknownSenders)
-          PullDownMenuItem(
-            itemTheme: itemTheme,
-            title: 'Unknown Senders',
-            icon: CupertinoIcons.person_crop_circle_badge_xmark,
-            onTap: () => goToUnknownSenders(context),
-          ),
+        PullDownMenuItem(
+          itemTheme: itemTheme,
+          title: 'Filter Chats',
+          icon: CupertinoIcons.line_horizontal_3_decrease_circle,
+          onTap: () => openChatListFilterSheet(context),
+        ),
         if (SettingsSvc.serverDetails.isMinCatalina)
           PullDownMenuItem(
             itemTheme: itemTheme,
@@ -558,13 +555,12 @@ void logout(BuildContext context) {
   );
 }
 
-void goToUnknownSenders(BuildContext context) {
-  NavigationSvc.pushLeft(
-      context,
-      ConversationList(
-        showArchivedChats: false,
-        showUnknownSenders: true,
-      ));
+void openChatListFilterSheet(BuildContext context) {
+  showChatListFilterSheet(
+    context,
+    current: ChatsSvc.chatListFilter.value,
+    onChanged: (value) => ChatsSvc.chatListFilter.value = value,
+  );
 }
 
 Future<void> goToSettings(BuildContext context) async {

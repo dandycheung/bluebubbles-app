@@ -90,6 +90,7 @@ class _MaterialConversationListState extends State<MaterialConversationList> {
                 final _chats = ChatsSvc.getFilteredChats(
                   showArchived: showArchived,
                   showUnknown: showUnknown,
+                  filter: ChatsSvc.chatListFilter.value,
                 );
 
                 if (!loaded || _chats.isEmpty) {

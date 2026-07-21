@@ -89,7 +89,10 @@ class CupertinoConversationListState extends State<CupertinoConversationList> wi
                       final _version = ChatsSvc.chatListVersion.value;
                       NavigationSvc.listener.value;
                       final _chats = ChatsSvc.getFilteredChats(
-                          showArchived: showArchived, showUnknown: showUnknown, pinnedOnly: true);
+                          showArchived: showArchived,
+                          showUnknown: showUnknown,
+                          pinnedOnly: true,
+                          filter: ChatsSvc.chatListFilter.value);
 
                       if (_chats.isEmpty) {
                         return const SliverToBoxAdapter(child: SizedBox.shrink());
@@ -259,7 +262,10 @@ class CupertinoConversationListState extends State<CupertinoConversationList> wi
                       // Observe chat list version to trigger rebuild when order changes
                       final _ = ChatsSvc.chatListVersion.value;
                       final _chats = ChatsSvc.getFilteredChats(
-                          showArchived: showArchived, showUnknown: showUnknown, excludePinned: true);
+                          showArchived: showArchived,
+                          showUnknown: showUnknown,
+                          excludePinned: true,
+                          filter: ChatsSvc.chatListFilter.value);
 
                       if (!loaded || _chats.isEmpty) {
                         return SliverToBoxAdapter(

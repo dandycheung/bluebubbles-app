@@ -94,6 +94,7 @@ class _SamsungConversationListState extends State<SamsungConversationList> with 
                 final _chats = ChatsSvc.getFilteredChats(
                   showArchived: controller.showArchivedChats,
                   showUnknown: controller.showUnknownSenders,
+                  filter: ChatsSvc.chatListFilter.value,
                 );
                 final _pinnedChats = _chats.where((e) => e.isPinned ?? false).toList();
                 final _unpinnedChats = _chats.where((e) => !(e.isPinned ?? false)).toList();

@@ -24,6 +24,18 @@ import 'package:get_it/get_it.dart';
 // ignore: non_constant_identifier_names
 ChatsService get ChatsSvc => GetIt.I<ChatsService>();
 
+/// Conversation list filter categories, selectable one at a time from the
+/// "Filter" overflow menu entry.
+enum ChatListFilter {
+  all,
+  knownSenders,
+  unknownSenders,
+  // twoFactor,    // requires Message.isServiceMessage (not yet implemented)
+  // spam,         // requires Message.isSpam (not yet implemented)
+  // promotions,   // future
+  // transactions, // future
+}
+
 class ChatsService {
   static const batchSize = 100;
   int currentCount = 0;
@@ -63,6 +75,9 @@ class ChatsService {
   /// Reactive counter that increments when chat list order changes
   /// Used to trigger UI rebuilds when chats are repositioned
   final RxInt chatListVersion = 0.obs;
+
+  /// Currently selected conversation-list filter category (in-memory, not persisted)
+  final Rx<ChatListFilter> chatListFilter = ChatListFilter.all.obs;
 
   /// Timer for debouncing chatListVersion updates to prevent rapid UI rebuilds
   Timer? _listVersionUpdateTimer;
@@ -114,6 +129,7 @@ class ChatsService {
     bool? showUnknown,
     bool? pinnedOnly,
     bool? excludePinned,
+    ChatListFilter? filter,
   }) {
     var chats = allChats;
 
@@ -134,6 +150,17 @@ class ChatsService {
         chats = chats
             .where((e) => e.isGroup || (!e.isGroup && e.handles.firstOrNull?.contactsV2.isNotEmpty == true))
             .toList();
+      }
+    }
+
+    // Apply conversation-list filter (Known/Unknown Senders chip selection)
+    if (filter != null && filter != ChatListFilter.all) {
+      if (filter == ChatListFilter.knownSenders) {
+        chats = chats
+            .where((e) => e.isGroup || (!e.isGroup && e.handles.firstOrNull?.contactsV2.isNotEmpty == true))
+            .toList();
+      } else if (filter == ChatListFilter.unknownSenders) {
+        chats = chats.where((e) => !e.isGroup && e.handles.firstOrNull?.contactsV2.isEmpty != false).toList();
       }
     }
 
