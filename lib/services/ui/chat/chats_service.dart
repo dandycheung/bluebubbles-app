@@ -683,10 +683,15 @@ class ChatsService {
     _scheduleListVersionUpdate(immediate: true);
   }
 
-  Future<void> markAllAsRead() async {
+  /// Marks unread chats as read. When [chatGuids] is provided, only chats in
+  /// that set are affected (e.g. the currently filtered/visible subset) —
+  /// otherwise every unread chat is marked, regardless of any active filter.
+  Future<void> markAllAsRead({Set<String>? chatGuids}) async {
     try {
       // Phase 1: instant UI update from in-memory state — no DB query needed
-      final unreadStates = chatStates.values.where((s) => s.hasUnreadMessage.value).toList();
+      final unreadStates = chatStates.values
+          .where((s) => s.hasUnreadMessage.value && (chatGuids == null || chatGuids.contains(s.chat.guid)))
+          .toList();
       final chatIds = <int>[];
 
       for (final state in unreadStates) {

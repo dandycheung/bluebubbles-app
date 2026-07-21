@@ -246,7 +246,8 @@ class _MaterialAvatarMenuState extends State<MaterialAvatarMenu> with SingleTick
                             _MenuItemRow(
                               icon: Icons.done_all_outlined,
                               label: 'Mark All As Read',
-                              onTap: () => _hideMenu().then((_) => ChatsSvc.markAllAsRead()),
+                              onTap: () =>
+                                  _hideMenu().then((_) => markAllAsReadRespectingFilter(navContext, widget.controller)),
                             ),
                             _MenuItemRow(
                               icon: Icons.archive_outlined,
@@ -420,7 +421,7 @@ class CupertinoOverflowMenu extends StatelessWidget {
           itemTheme: itemTheme,
           title: 'Mark All As Read',
           icon: CupertinoIcons.check_mark_circled,
-          onTap: ChatsSvc.markAllAsRead,
+          onTap: () => markAllAsReadRespectingFilter(context, controller),
         ),
         PullDownMenuItem(
           itemTheme: itemTheme,
@@ -576,6 +577,39 @@ void openChatListFilterSheet(BuildContext context) {
     current: ChatsSvc.chatListFilters.value,
     onChanged: (value) => ChatsSvc.chatListFilters.value = value,
   );
+}
+
+/// "Mark All As Read", but filter-aware: if a chat list filter is active,
+/// asks whether to mark every chat as read or only the currently filtered
+/// subset — e.g. filtering to SMS chats, then marking only those as read.
+Future<void> markAllAsReadRespectingFilter(BuildContext context, ConversationListController? controller) async {
+  final filters = ChatsSvc.chatListFilters.value;
+  if (!filters.hasActiveFilter) {
+    await ChatsSvc.markAllAsRead();
+    return;
+  }
+
+  final onlyFiltered = await showBBListSelector<bool>(
+    context: context,
+    title: "Mark All As Read",
+    message: "You have an active chat list filter. Which chats should be marked as read?",
+    options: const [
+      BBListSelectorOption(label: "Only Filtered Chats", value: true),
+      BBListSelectorOption(label: "All Chats", value: false),
+    ],
+  );
+  if (onlyFiltered == null) return;
+
+  if (onlyFiltered) {
+    final guids = ChatsSvc.getFilteredChats(
+      showArchived: controller?.showArchivedChats,
+      showUnknown: controller?.showUnknownSenders,
+      filters: filters,
+    ).map((c) => c.guid).toSet();
+    await ChatsSvc.markAllAsRead(chatGuids: guids);
+  } else {
+    await ChatsSvc.markAllAsRead();
+  }
 }
 
 /// Dedicated page for unknown-sender chats — mirrors [goToArchived]. Only
