@@ -77,11 +77,13 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        
+      - name: Setup Dart
+        uses: dart-lang/setup-dart@65eb853c7ba17dde3be364c3d2858773e7144260
 
       - name: Install fvm
-        run: |
-          curl -fsSL https://fvm.app/install.sh | bash
-          echo "$HOME/fvm/bin" >> "$GITHUB_PATH"
+        run: dart pub global activate fvm "$FVM_VERSION"
+        shell: bash
 
       - name: Cache Flutter SDK (fvm)
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
@@ -126,8 +128,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
+      - name: Setup Dart
+        uses: dart-lang/setup-dart@65eb853c7ba17dde3be364c3d2858773e7144260
+
       - name: Install fvm
-        run: choco install fvm -y
+        run: dart pub global activate fvm "$FVM_VERSION"
+        shell: bash
 
       - name: Cache Flutter SDK (fvm)
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
@@ -138,7 +144,7 @@ jobs:
       - name: Cache pub packages
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
-          path: ~/AppData/Local/Pub/Cache
+          path: ~/.pub-cache
           key: pub-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pubspec.lock') }}
 
       - name: Select Flutter version
@@ -189,10 +195,12 @@ jobs:
             libayatana-appindicator3-dev \
             libnotify-dev
 
+      - name: Setup Dart
+        uses: dart-lang/setup-dart@65eb853c7ba17dde3be364c3d2858773e7144260
+
       - name: Install fvm
-        run: |
-          curl -fsSL https://fvm.app/install.sh | bash
-          echo "$HOME/fvm/bin" >> "$GITHUB_PATH"
+        run: dart pub global activate fvm "$FVM_VERSION"
+        shell: bash
 
       - name: Cache Flutter SDK (fvm)
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
