@@ -249,7 +249,7 @@ class _MessagePopupState extends State<MessagePopup> with SingleTickerProviderSt
                                             ? 10
                                             : 30),
                                 child: Container(
-                                  color: context.theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.2),
+                                  color: Colors.transparent.withValues(alpha: 0.1),
                                 ),
                               ))
                         : null,
