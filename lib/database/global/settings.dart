@@ -53,6 +53,7 @@ class Settings {
   final RxBool recipientAsPlaceholder = false.obs;
   final RxBool hideKeyboardOnScroll = false.obs;
   final RxBool moveChatCreatorToHeader = false.obs;
+  final RxBool showFiltersInHeader = false.obs;
   final RxBool cameraFAB = false.obs;
   final RxBool swipeToCloseKeyboard = false.obs;
   final RxBool swipeToOpenKeyboard = false.obs;
@@ -314,6 +315,7 @@ class Settings {
       'recipientAsPlaceholder': recipientAsPlaceholder.value,
       'hideKeyboardOnScroll': hideKeyboardOnScroll.value,
       'moveChatCreatorToHeader': moveChatCreatorToHeader.value,
+      'showFiltersInHeader': showFiltersInHeader.value,
       'cameraFAB': cameraFAB.value,
       'swipeToCloseKeyboard': swipeToCloseKeyboard.value,
       'swipeToOpenKeyboard': swipeToOpenKeyboard.value,
@@ -486,6 +488,8 @@ class Settings {
         map['hideKeyboardOnScroll'] ?? SettingsSvc.settings.hideKeyboardOnScroll.value;
     SettingsSvc.settings.moveChatCreatorToHeader.value =
         map['moveChatCreatorToHeader'] ?? SettingsSvc.settings.moveChatCreatorToHeader.value;
+    SettingsSvc.settings.showFiltersInHeader.value =
+        map['showFiltersInHeader'] ?? SettingsSvc.settings.showFiltersInHeader.value;
     SettingsSvc.settings.cameraFAB.value = map['cameraFAB'] ?? SettingsSvc.settings.cameraFAB.value;
     SettingsSvc.settings.swipeToCloseKeyboard.value =
         map['swipeToCloseKeyboard'] ?? SettingsSvc.settings.swipeToCloseKeyboard.value;
@@ -721,6 +725,7 @@ class Settings {
     s.recipientAsPlaceholder.value = map['recipientAsPlaceholder'] ?? false;
     s.hideKeyboardOnScroll.value = map['hideKeyboardOnScroll'] ?? false;
     s.moveChatCreatorToHeader.value = map['moveChatCreatorToHeader'] ?? false;
+    s.showFiltersInHeader.value = map['showFiltersInHeader'] ?? false;
     s.cameraFAB.value = map['cameraFAB'] ?? false;
     s.swipeToCloseKeyboard.value = map['swipeToCloseKeyboard'] ?? false;
     s.swipeToOpenKeyboard.value = map['swipeToOpenKeyboard'] ?? false;

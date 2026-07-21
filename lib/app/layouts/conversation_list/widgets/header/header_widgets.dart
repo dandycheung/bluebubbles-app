@@ -63,6 +63,79 @@ class SyncIndicator extends StatelessWidget {
   }
 }
 
+/// Header "Filter Chats" shortcut button — Material/Samsung style, matching
+/// the existing search/camera [IconButton]s in those headers. Highlighted in
+/// [ColorScheme.primary] whenever a chat list filter is active; hidden
+/// entirely unless [Settings.showFiltersInHeader] is on.
+///
+/// Self-contained with its own [Obx] (rather than relying on an ancestor
+/// one) since at least one caller (`samsung_header.dart`) nests this inside a
+/// `LayoutBuilder`, whose `builder` callback runs outside the synchronous
+/// call frame of any ancestor `Obx` and so wouldn't be tracked by it.
+class ChatListFilterButton extends StatelessWidget {
+  const ChatListFilterButton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      if (!SettingsSvc.settings.showFiltersInHeader.value) return const SizedBox.shrink();
+      final hasActiveFilter = ChatsSvc.chatListFilters.value.hasActiveFilter;
+      return Padding(
+        // Extra breathing room before the profile/overflow button that follows.
+        padding: const EdgeInsets.only(right: 6),
+        child: IconButton(
+          onPressed: () => openChatListFilterSheet(context),
+          icon: Icon(
+            hasActiveFilter ? Icons.filter_list : Icons.filter_list_outlined,
+            color: hasActiveFilter ? context.theme.colorScheme.primary : context.theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+      );
+    });
+  }
+}
+
+/// Header "Filter Chats" shortcut button — iOS style, matching the existing
+/// circular search/compose buttons in the Cupertino header. Same
+/// visibility/highlight rules as [ChatListFilterButton].
+class CupertinoChatListFilterButton extends StatelessWidget {
+  const CupertinoChatListFilterButton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      if (!SettingsSvc.settings.showFiltersInHeader.value) return const SizedBox.shrink();
+      final hasActiveFilter = ChatsSvc.chatListFilters.value.hasActiveFilter;
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(width: 10.0),
+          ClipOval(
+            child: Material(
+              color: context.theme.colorScheme.surfaceContainerHighest,
+              child: SizedBox(
+                width: 30,
+                height: 30,
+                child: InkWell(
+                  child: Icon(
+                    hasActiveFilter
+                        ? CupertinoIcons.line_horizontal_3_decrease_circle_fill
+                        : CupertinoIcons.line_horizontal_3_decrease_circle,
+                    color:
+                        hasActiveFilter ? context.theme.colorScheme.primary : context.theme.colorScheme.onSurfaceVariant,
+                    size: 18,
+                  ),
+                  onTap: () => openChatListFilterSheet(context),
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    });
+  }
+}
+
 class OverflowMenu extends StatelessWidget {
   final bool extraItems;
   final ConversationListController? controller;

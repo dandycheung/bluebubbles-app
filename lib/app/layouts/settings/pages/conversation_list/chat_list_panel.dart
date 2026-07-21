@@ -538,7 +538,21 @@ class _ChatListPanelState extends State<ChatListPanel> with ThemeHelpers {
                             backgroundColor: tileColor,
                             isThreeLine: true,
                           ),
-                        if (SettingsSvc.settings.skin.value == Skins.iOS && !kIsWeb && !kIsDesktop)
+                        if (SettingsSvc.settings.skin.value == Skins.iOS)
+                          const SettingsDivider(padding: EdgeInsets.only(left: 16.0)),
+                        SettingsSwitch(
+                          onChanged: (bool val) async {
+                            SettingsSvc.settings.showFiltersInHeader.value = val;
+                            await SettingsSvc.settings.saveOneAsync('showFiltersInHeader');
+                          },
+                          initialVal: SettingsSvc.settings.showFiltersInHeader.value,
+                          title: "Show Filters in Header",
+                          subtitle:
+                              "Adds a shortcut button next to search to quickly open the chat list filters, highlighted when a filter is active",
+                          backgroundColor: tileColor,
+                          isThreeLine: true,
+                        ),
+                        if (!kIsWeb && !kIsDesktop)
                           const SettingsDivider(padding: EdgeInsets.only(left: 16.0)),
                         if (!kIsWeb && !kIsDesktop)
                           SettingsSwitch(
