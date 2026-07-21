@@ -70,38 +70,40 @@ class SettingsOptions<T extends Object> extends StatelessWidget {
     }
     return Container(
       color: Colors.transparent,
+      width: double.infinity,
       child: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        child: Wrap(
+          alignment: WrapAlignment.spaceBetween,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          runAlignment: WrapAlignment.spaceBetween,
+          runSpacing: 8.0,
+          spacing: 15.0,
           children: [
             if (leading != null)
               Padding(
                 padding: const EdgeInsets.only(left: 5.0, right: 10.0),
                 child: leading,
               ),
-            Expanded(
-              child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: context.theme.textTheme.bodyLarge,
-                    ),
-                    (subtitle != null)
-                        ? Padding(
-                            padding: const EdgeInsets.only(top: 3.0),
-                            child: Text(
-                              subtitle ?? "",
-                              style: context.theme.textTheme.bodySmall!
-                                  .copyWith(color: context.theme.colorScheme.onSurfaceVariant),
-                            ),
-                          )
-                        : const SizedBox.shrink(),
-                  ]),
-            ),
-            const SizedBox(width: 15),
+            Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: context.theme.textTheme.bodyLarge,
+                ),
+                (subtitle != null)
+                    ? Padding(
+                        padding: const EdgeInsets.only(top: 3.0),
+                        child: Text(
+                          subtitle ?? "",
+                          style: context.theme.textTheme.bodySmall!
+                              .copyWith(color: context.theme.colorScheme.onSurfaceVariant),
+                        ),
+                      )
+                    : const SizedBox.shrink(),
+            ]),
             Builder(
               builder: (context) {
                 final widget = Container(

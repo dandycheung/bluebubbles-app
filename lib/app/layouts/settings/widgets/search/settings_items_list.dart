@@ -53,49 +53,47 @@ List<Widget> buildSettingItemList({
 }) {
   // return searchable items, headers, tiles, or sections
   return [
-    if (!kIsWeb && (!iOS || kIsDesktop))
-      SearchableSettingItem(
-        title: "Profile",
-        child: SettingsHeader(
-          height: 40,
-          iosSubtitle: iosSubtitle,
-          materialSubtitle: materialSubtitle,
-          text: "Profile",
-        ),
+    SearchableSettingItem(
+      title: "Profile",
+      child: SettingsHeader(
+        height: 40,
+        iosSubtitle: iosSubtitle,
+        materialSubtitle: materialSubtitle,
+        text: "Profile",
       ),
-    if (!kIsWeb && (!iOS || kIsDesktop))
-      SearchableSettingItem(
-        title: SettingsSvc.settings.redactedMode.value && SettingsSvc.settings.hideContactInfo.value
-            ? "User Name"
-            : SettingsSvc.settings.userName.value,
-        child: SettingsSection(
-          backgroundColor: tileColor,
-          children: [
-            SettingsTile(
-              backgroundColor: tileColor,
-              title: SettingsSvc.settings.redactedMode.value && SettingsSvc.settings.hideContactInfo.value
-                  ? "User Name"
-                  : SettingsSvc.settings.userName.value,
-              subtitle: "Tap to view more details",
-              onTap: () {
-                ns.pushAndRemoveSettingsUntil(
-                  context,
-                  const ProfilePanel(),
-                  (Route route) => route.isFirst,
-                );
-              },
-              leading: const ContactAvatarWidget(
-                handle: null,
-                borderThickness: 0.1,
-                editable: false,
-                fontSize: 22,
-                size: 50,
-              ),
-              trailing: const NextButton(),
+    ),
+    SearchableSettingItem(
+      title: SettingsSvc.settings.redactedMode.value && SettingsSvc.settings.hideContactInfo.value
+          ? "User Name"
+          : SettingsSvc.settings.userName.value,
+      child: SettingsSection(
+        backgroundColor: tileColor,
+        children: [
+          SettingsTile(
+            backgroundColor: tileColor,
+            title: SettingsSvc.settings.redactedMode.value && SettingsSvc.settings.hideContactInfo.value
+                ? "User Name"
+                : SettingsSvc.settings.userName.value,
+            subtitle: "Tap to view more details",
+            onTap: () {
+              ns.pushAndRemoveSettingsUntil(
+                context,
+                const ProfilePanel(),
+                (Route route) => route.isFirst,
+              );
+            },
+            leading: const ContactAvatarWidget(
+              handle: null,
+              borderThickness: 0.1,
+              editable: false,
+              fontSize: 22,
+              size: 50,
             ),
-          ],
-        ),
+            trailing: const NextButton(),
+          ),
+        ],
       ),
+    ),
     if (!kIsWeb)
       SearchableSettingItem(
         title: "Server & Message Management",
