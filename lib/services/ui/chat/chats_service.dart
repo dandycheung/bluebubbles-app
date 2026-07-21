@@ -65,7 +65,8 @@ class ChatsService {
   /// Used to trigger UI rebuilds when chats are repositioned
   final RxInt chatListVersion = 0.obs;
 
-  /// Currently selected conversation-list filter dimensions (in-memory, not persisted)
+  /// Currently selected conversation-list filter dimensions. Persisted to
+  /// [Settings] only when [Settings.rememberChatFilters] is enabled.
   final Rx<ChatListFilters> chatListFilters = const ChatListFilters().obs;
 
   /// Timer for debouncing chatListVersion updates to prevent rapid UI rebuilds
@@ -76,6 +77,10 @@ class ChatsService {
   StreamSubscription? _hideContactInfoListener;
   StreamSubscription? _generateFakeAvatarsListener;
   StreamSubscription? _hideAttachmentsListener;
+
+  /// Listeners backing the "Remember Filters" setting
+  StreamSubscription? _chatListFiltersListener;
+  StreamSubscription? _rememberChatFiltersListener;
 
   // ========== Helper Getters (replacing direct chats access) ==========
 
@@ -263,6 +268,10 @@ class ChatsService {
 
     reset();
 
+    // Preload the remembered filter selection (if enabled) and keep it in sync
+    // going forward — independent of chat count, so set this up unconditionally.
+    _setupChatListFilterPersistence();
+
     // Get current count from database or server
     currentCount = getChatCount() ??
         (await HttpSvc.chat.getCount().catchError((err) {
@@ -384,6 +393,32 @@ class ChatsService {
     chatState.hasUnreadMessage.listen((hasUnread) {
       _recalculateUnreadCount();
     });
+  }
+
+  /// Preloads the remembered filter selection (if [Settings.rememberChatFilters]
+  /// is enabled) and keeps [Settings] in sync with [chatListFilters] going forward.
+  void _setupChatListFilterPersistence() {
+    if (SettingsSvc.settings.rememberChatFilters.value) {
+      chatListFilters.value = ChatListFilters.fromSettingsMap(SettingsSvc.settings.savedChatFilters.value);
+    }
+
+    _chatListFiltersListener?.cancel();
+    _chatListFiltersListener = chatListFilters.listen((filters) {
+      if (!SettingsSvc.settings.rememberChatFilters.value) return;
+      _saveChatListFilters(filters);
+    });
+
+    // Snapshot the current selection immediately when the user turns the setting on,
+    // so it's remembered from that point rather than only after the next change.
+    _rememberChatFiltersListener?.cancel();
+    _rememberChatFiltersListener = SettingsSvc.settings.rememberChatFilters.listen((enabled) {
+      if (enabled) _saveChatListFilters(chatListFilters.value);
+    });
+  }
+
+  void _saveChatListFilters(ChatListFilters filters) {
+    SettingsSvc.settings.savedChatFilters.value = filters.toSettingsMap();
+    unawaited(SettingsSvc.settings.saveOneAsync('savedChatFilters'));
   }
 
   /// Set up global listeners for redacted mode settings that update all chat states

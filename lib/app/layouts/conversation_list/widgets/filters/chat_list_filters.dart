@@ -34,6 +34,34 @@ class ChatListFilters {
     this.serviceFilter = ChatServiceFilter.all,
   });
 
+  static const _keyRead = 'read';
+  static const _keySender = 'sender';
+  static const _keyType = 'type';
+  static const _keyMute = 'mute';
+  static const _keyService = 'service';
+
+  /// Decodes a [Settings.savedChatFilters]-style map (dimension name -> enum
+  /// name). Unknown/missing keys fall back to [ChatListFilters]'s defaults —
+  /// safe to call on a map from an older app version missing newer keys.
+  factory ChatListFilters.fromSettingsMap(Map<String, String> map) {
+    return ChatListFilters(
+      readFilter: chatReadFilterFromName(map[_keyRead] ?? ''),
+      senderFilter: chatSenderFilterFromName(map[_keySender] ?? ''),
+      typeFilter: chatTypeFilterFromName(map[_keyType] ?? ''),
+      muteFilter: chatMuteFilterFromName(map[_keyMute] ?? ''),
+      serviceFilter: chatServiceFilterFromName(map[_keyService] ?? ''),
+    );
+  }
+
+  /// Encodes this selection into a [Settings.savedChatFilters]-style map.
+  Map<String, String> toSettingsMap() => {
+        _keyRead: readFilter.name,
+        _keySender: senderFilter.name,
+        _keyType: typeFilter.name,
+        _keyMute: muteFilter.name,
+        _keyService: serviceFilter.name,
+      };
+
   bool get hasActiveFilter =>
       readFilter != ChatReadFilter.all ||
       senderFilter != ChatSenderFilter.all ||
@@ -69,3 +97,25 @@ class ChatListFilters {
   @override
   int get hashCode => Object.hash(readFilter, senderFilter, typeFilter, muteFilter, serviceFilter);
 }
+
+/// Looks up an enum value by its [Enum.name], falling back to [orElse]
+/// instead of throwing if the stored string doesn't match any current value
+/// (e.g. after a future enum rename).
+T _enumByName<T extends Enum>(List<T> values, String name, T orElse) {
+  for (final value in values) {
+    if (value.name == name) return value;
+  }
+  return orElse;
+}
+
+ChatReadFilter chatReadFilterFromName(String name) => _enumByName(ChatReadFilter.values, name, ChatReadFilter.all);
+
+ChatSenderFilter chatSenderFilterFromName(String name) =>
+    _enumByName(ChatSenderFilter.values, name, ChatSenderFilter.all);
+
+ChatTypeFilter chatTypeFilterFromName(String name) => _enumByName(ChatTypeFilter.values, name, ChatTypeFilter.all);
+
+ChatMuteFilter chatMuteFilterFromName(String name) => _enumByName(ChatMuteFilter.values, name, ChatMuteFilter.all);
+
+ChatServiceFilter chatServiceFilterFromName(String name) =>
+    _enumByName(ChatServiceFilter.values, name, ChatServiceFilter.all);
