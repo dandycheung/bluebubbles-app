@@ -36,6 +36,7 @@ class Settings {
   final RxBool hideTextPreviews = false.obs;
   final RxBool showIncrementalSync = false.obs;
   final RxBool highPerfMode = false.obs;
+  final RxBool reduceMotion = false.obs;
   final RxInt lastIncrementalSync = 0.obs;
   final RxInt lastIncrementalSyncRowId = 0.obs;
   final RxInt refreshRate = 0.obs;
@@ -293,6 +294,7 @@ class Settings {
       'hideTextPreviews': hideTextPreviews.value,
       'showIncrementalSync': showIncrementalSync.value,
       'highPerfMode': highPerfMode.value,
+      'reduceMotion': reduceMotion.value,
       'lastIncrementalSync': lastIncrementalSync.value,
       'lastIncrementalSyncRowId': lastIncrementalSyncRowId.value,
       'refreshRate': refreshRate.value,
@@ -454,6 +456,7 @@ class Settings {
     SettingsSvc.settings.showIncrementalSync.value =
         map['showIncrementalSync'] ?? SettingsSvc.settings.showIncrementalSync.value;
     SettingsSvc.settings.highPerfMode.value = map['highPerfMode'] ?? SettingsSvc.settings.highPerfMode.value;
+    SettingsSvc.settings.reduceMotion.value = map['reduceMotion'] ?? SettingsSvc.settings.reduceMotion.value;
     SettingsSvc.settings.lastIncrementalSync.value =
         map['lastIncrementalSync'] ?? SettingsSvc.settings.lastIncrementalSync.value;
     SettingsSvc.settings.lastIncrementalSyncRowId.value =
@@ -691,6 +694,7 @@ class Settings {
     s.hideTextPreviews.value = map['hideTextPreviews'] ?? false;
     s.showIncrementalSync.value = map['showIncrementalSync'] ?? false;
     s.highPerfMode.value = map['highPerfMode'] ?? false;
+    s.reduceMotion.value = map['reduceMotion'] ?? false;
     s.lastIncrementalSync.value = map['lastIncrementalSync'] ?? 0;
     s.lastIncrementalSyncRowId.value = map['lastIncrementalSyncRowId'] ?? 0;
     s.refreshRate.value = map['refreshRate'] ?? 0;
