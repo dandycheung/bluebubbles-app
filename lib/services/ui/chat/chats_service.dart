@@ -28,6 +28,7 @@ ChatsService get ChatsSvc => GetIt.I<ChatsService>();
 /// "Filter" overflow menu entry.
 enum ChatListFilter {
   all,
+  unreadMessages,
   knownSenders,
   unknownSenders,
   // twoFactor,    // requires Message.isServiceMessage (not yet implemented)
@@ -153,9 +154,15 @@ class ChatsService {
       }
     }
 
-    // Apply conversation-list filter (Known/Unknown Senders chip selection)
+    // Apply conversation-list filter (chip selection)
     if (filter != null && filter != ChatListFilter.all) {
-      if (filter == ChatListFilter.knownSenders) {
+      if (filter == ChatListFilter.unreadMessages) {
+        // Read from ChatState rather than the Chat model directly — markAllAsRead()
+        // updates ChatState.hasUnreadMessage instantly but writes the underlying
+        // Chat.hasUnreadMessage field asynchronously via a background DB/HTTP call,
+        // so the model field can briefly lag behind the reactive state.
+        chats = chats.where((e) => getChatState(e.guid)?.hasUnreadMessage.value ?? (e.hasUnreadMessage ?? false)).toList();
+      } else if (filter == ChatListFilter.knownSenders) {
         chats = chats
             .where((e) => e.isGroup || (!e.isGroup && e.handles.firstOrNull?.contactsV2.isNotEmpty == true))
             .toList();

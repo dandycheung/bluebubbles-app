@@ -69,6 +69,7 @@ void showChatListFilterSheet(
                         runSpacing: 6,
                         children: [
                           filterChip("All Messages", ChatListFilter.all),
+                          filterChip("Unread Messages", ChatListFilter.unreadMessages),
                           filterChip("Known Senders", ChatListFilter.knownSenders),
                           filterChip("Unknown Senders", ChatListFilter.unknownSenders),
                           // filterChip("2FA Codes", ChatListFilter.twoFactor),     // requires Message.isServiceMessage
