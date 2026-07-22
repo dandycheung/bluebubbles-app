@@ -31,8 +31,13 @@ class CustomGroupFilterChipRow extends StatelessWidget {
       ChatsSvc.chatListVersion.value;
       final unreadStates = ChatsSvc.chatStates.values.where((s) => s.hasUnreadMessage.value).toList();
       final unreadCounts = <int, int>{
+        // Membership is read from `group.chats` (the group's own ToMany,
+        // refreshed whenever CustomGroupsSvc reloads) rather than
+        // `s.chat.customGroups` — that backlink is lazily cached per Chat
+        // instance and goes stale as soon as membership changes elsewhere
+        // (e.g. the conversation peek view's "Add to Custom Group" action).
         for (final group in groups)
-          group.id!: unreadStates.where((s) => s.chat.customGroups.any((g) => g.id == group.id)).length,
+          group.id!: unreadStates.where((s) => group.chats.any((c) => c.guid == s.chat.guid)).length,
       };
 
       return SizedBox(
