@@ -162,7 +162,7 @@ class DesktopNotifications {
   ) => _messageInteractionHandler = handler;
 
   static void handleResponse(NotificationResponse response) {
-    Logger.error(response);
+    Logger.info(response);
     final DesktopMessageInteraction? messageInteraction = DesktopMessageInteraction.fromResponse(response);
     if (messageInteraction != null) {
       _messageInteractionHandler?.call(messageInteraction);
