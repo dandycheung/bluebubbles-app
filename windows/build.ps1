@@ -6,6 +6,10 @@
 #   -Phase Package  package the sideload MSIX + Inno installer from the (now-signed) Release\ dir.
 #   -Phase All      both, back-to-back (default — local builds with no signing round-trip).
 #
+# Flags:
+#   -NoEnforceLockfile  resolve dependencies fresh rather than requiring pubspec.lock to
+#                       be current. Local use only; CI relies on enforcement.
+#
 # Outputs:
 #   windows\bluebubbles-store.msix      (Build/All) MS Store submission only — not attached to releases
 #   windows\bluebubbles.msix            (Package/All) directly-distributed, unsigned; SignPath signs it in CI
@@ -13,7 +17,13 @@
 #   windows\bluebubbles_installer.exe   (Package/All)
 param(
     [ValidateSet('All', 'Build', 'Package')]
-    [string]$Phase = 'All'
+    [string]$Phase = 'All',
+
+    # Resolve dependencies fresh instead of failing when pubspec.lock is out of date.
+    # For local builds right after bumping a git dependency ref, where the lockfile is
+    # knowingly stale. CI should never pass this — enforcement is what makes its builds
+    # reproducible.
+    [switch]$NoEnforceLockfile
 )
 
 $ErrorActionPreference = 'Stop'
@@ -50,14 +60,16 @@ if ($Phase -ne 'Package') {
     # so leftovers from removed plugins would get packaged into the installer.
     if (Test-Path $releaseDir) { Remove-Item $releaseDir -Recurse -Force }
 
-    Invoke-Checked $flutterCmd pub get --enforce-lockfile
+    $pubGetArgs = @('pub', 'get')
+    if (-not $NoEnforceLockfile) { $pubGetArgs += '--enforce-lockfile' }
+    Invoke-Checked $flutterCmd @pubGetArgs
 
     # Runs `flutter build windows` and packages the MS Store MSIX
     # (windows\bluebubbles-store.msix). Microsoft signs this one, so pass --store
     # explicitly (store mode is no longer set in pubspec.yaml). Built from the
     # unsigned Release output — Microsoft re-signs the package at ingestion.
     # --windows-build-args=--no-pub: the inner `flutter build windows` reuses the
-    # lockfile-enforced resolution above instead of re-running pub get unenforced.
+    # resolution performed above instead of re-running pub get with different flags.
     # --split-debug-info pulls the Dart AOT debug symbols out of the binary (they trip
     # AV malware heuristics otherwise) into build\windows\symbols, which CI uploads.
     Invoke-Checked $dartCmd run msix:create --store '--windows-build-args=--no-pub --split-debug-info=build/windows/symbols' --output-name bluebubbles-store
