@@ -200,7 +200,7 @@ dependency_overrides:
   flutter_local_notifications_windows: # no identity + crashing fixes + suppressPopup
     git:
       url: https://github.com/jjoelj/flutter_local_notifications.git
-      ref: 3e7fb1172968dd3d53e2f1f307261c1bc60d1b96
+      ref: 4e48420b2d533027e4879b4165d56c0e100f645f
       path: flutter_local_notifications_windows
   flutter_map: # https://github.com/fleaflet/flutter_map/issues/2152
     git:
@@ -342,3 +342,6 @@ msix_config:
   architecture: x64
   capabilities: internetClient, location, microphone, webcam
   protocol_activation: imessage
+  toast_activator:
+    clsid: 1c09a4af-0327-4a79-a0f3-a1404df74ed1
+    display_name: BlueBubbles
