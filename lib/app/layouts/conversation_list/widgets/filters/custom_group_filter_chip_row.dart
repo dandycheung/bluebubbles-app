@@ -41,34 +41,48 @@ class CustomGroupFilterChipRow extends StatelessWidget {
       };
 
       return SizedBox(
-        height: 44 + padding.vertical,
+        // Extra top room so the overlapping badge isn't clipped.
+        height: 50 + padding.vertical,
         child: ListView.separated(
           scrollDirection: Axis.horizontal,
-          padding: padding,
+          padding: padding.copyWith(top: padding.top + 6),
           itemCount: groups.length,
           separatorBuilder: (context, index) => const SizedBox(width: 8),
           itemBuilder: (context, index) {
             final group = groups[index];
             final selected = current.contains(group.id);
             final unreadCount = unreadCounts[group.id] ?? 0;
-            return BBChip(
-              label: Text(unreadCount > 0 ? '${group.name} ($unreadCount)' : group.name),
-              selected: selected,
-              showCheckmark: true,
-              onPressed: () {
-                final next = Set<int>.from(current);
-                if (selected) {
-                  next.remove(group.id);
-                } else {
-                  next.add(group.id!);
-                }
-                ChatsSvc.chatListFilters.value = ChatsSvc.chatListFilters.value.copyWith(customGroupIds: next);
-              },
-              onLongPress: () {
-                // Long-press singles out this group, replacing any other
-                // selected groups, instead of toggling it alongside them.
-                ChatsSvc.chatListFilters.value = ChatsSvc.chatListFilters.value.copyWith(customGroupIds: {group.id!});
-              },
+            return Badge(
+              isLabelVisible: unreadCount > 0,
+              label: Text(unreadCount > 99 ? '99+' : unreadCount.toString()),
+              backgroundColor: context.theme.colorScheme.primary,
+              textColor: context.theme.colorScheme.onPrimary,
+              child: BBChip(
+                label: Text(
+                  group.name,
+                  style: TextStyle(
+                    color: selected ? context.theme.colorScheme.primary : null,
+                    fontWeight: selected ? FontWeight.bold : null,
+                  ),
+                ),
+                selected: selected,
+                showCheckmark: false,
+                onPressed: () {
+                  final next = Set<int>.from(current);
+                  if (selected) {
+                    next.remove(group.id);
+                  } else {
+                    next.add(group.id!);
+                  }
+                  ChatsSvc.chatListFilters.value = ChatsSvc.chatListFilters.value.copyWith(customGroupIds: next);
+                },
+                onLongPress: () {
+                  // Long-press singles out this group, replacing any other
+                  // selected groups, instead of toggling it alongside them.
+                  ChatsSvc.chatListFilters.value =
+                      ChatsSvc.chatListFilters.value.copyWith(customGroupIds: {group.id!});
+                },
+              ),
             );
           },
         ),

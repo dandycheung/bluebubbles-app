@@ -66,6 +66,9 @@ class _SamsungCustomGroupsPanelState extends State<SamsungCustomGroupsPanel> {
       context,
       title: "Delete '${group.name}'?",
       content: const Text("This won't delete the chats in it."),
+      yesText: "Delete",
+      yesColor: context.theme.colorScheme.error,
+      yesIsDestructive: true,
       onNo: () => Navigator.of(context, rootNavigator: true).pop(),
       onYes: () {
         confirmed = true;
