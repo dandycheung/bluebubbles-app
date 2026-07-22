@@ -5,7 +5,9 @@ import 'package:bluebubbles/utils/logger/logger.dart';
 class CustomGroupActions {
   static Future<int> create(dynamic data) async {
     final name = data['name'] as String;
-    final chatGuids = (data['chatGuids'] as List).cast<String>();
+    // Dedupe so a repeated guid in the input can't create duplicate rows in
+    // the group<->chat relation.
+    final chatGuids = (data['chatGuids'] as List).cast<String>().toSet();
     return Database.runInTransaction(TxMode.write, () {
       final group = CustomGroup(name: name);
       final matchedChats = chatGuids
@@ -39,7 +41,9 @@ class CustomGroupActions {
 
   static Future<int> updateChats(dynamic data) async {
     final id = data['id'] as int;
-    final chatGuids = (data['chatGuids'] as List).cast<String>();
+    // Dedupe so a repeated guid in the input can't create duplicate rows in
+    // the group<->chat relation.
+    final chatGuids = (data['chatGuids'] as List).cast<String>().toSet();
     return Database.runInTransaction(TxMode.write, () {
       final group = Database.customGroups.get(id)!;
       final matchedChats = chatGuids
