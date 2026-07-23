@@ -52,7 +52,6 @@ apps:
       - wayland
       - x11
       - unity7
-      - home
       - opengl
       - alsa
       - audio-playback
