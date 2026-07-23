@@ -34,11 +34,7 @@ dependencies:
   chunked_stream: ^1.4.2
   collection: ^1.19.0
   confetti: ^0.8.0
-  connectivity_plus:
-    git:
-      url: https://github.com/edde746/plus_plugins
-      ref: 2b614414ce95d920880765d07cbb9759699a4563
-      path: packages/connectivity_plus/connectivity_plus
+  connectivity_plus: ^7.3.0
   crop_your_image: ^2.0.0
   csslib: ^1.0.2
   cupertino_icons: ^1.0.8
@@ -333,7 +329,7 @@ msix_config:
   display_name: BlueBubbles
   publisher_display_name: BlueBubbles
   identity_name: 23344BlueBubbles.BlueBubbles
-  msix_version: 1.15.104.0
+  msix_version: 2.0.0.0
   publisher: CN=BEC9154D-191E-4375-BF30-698BD4C141C4
   vs_generated_images_folder_path: windows/icons
   logo_path: assets/icon/icon.ico
