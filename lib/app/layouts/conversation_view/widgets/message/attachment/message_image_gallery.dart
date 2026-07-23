@@ -427,16 +427,6 @@ class _MessageImageGalleryState extends State<MessageImageGallery> with ThemeHel
           crossAxisAlignment:
               widget.fanDirection == GalleryFanDirection.left ? CrossAxisAlignment.end : CrossAxisAlignment.start,
           children: [
-            SizedBox(
-              width: fanCanvasWidth,
-              height: fanCanvasHeight,
-              child: Stack(
-                alignment: Alignment.center,
-                clipBehavior: Clip.none,
-                children: stackChildren,
-              ),
-            ),
-            const SizedBox(height: 4),
             Padding(
               padding: (widget.fanDirection == GalleryFanDirection.left
                   ? const EdgeInsets.only(right: 20)
@@ -485,6 +475,16 @@ class _MessageImageGalleryState extends State<MessageImageGallery> with ThemeHel
                     ],
                   ),
                 ),
+              ),
+            ),
+            const SizedBox(height: 4),
+            SizedBox(
+              width: fanCanvasWidth,
+              height: fanCanvasHeight,
+              child: Stack(
+                alignment: Alignment.center,
+                clipBehavior: Clip.none,
+                children: stackChildren,
               ),
             ),
           ],
