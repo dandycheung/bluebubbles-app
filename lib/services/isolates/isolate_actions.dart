@@ -123,6 +123,7 @@ class IsolateActons {
     IsolateRequestType.createCustomGroup: CustomGroupActions.create,
     IsolateRequestType.renameCustomGroup: CustomGroupActions.rename,
     IsolateRequestType.updateCustomGroupChats: CustomGroupActions.updateChats,
+    IsolateRequestType.setCustomGroupShowUnreadBadge: CustomGroupActions.setShowUnreadBadge,
     IsolateRequestType.deleteCustomGroup: CustomGroupActions.delete,
   };
 }

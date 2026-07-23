@@ -41,6 +41,15 @@ class CustomGroupInterface {
     return Database.customGroups.get(resultId)!;
   }
 
+  static Future<CustomGroup> setShowUnreadBadge({required int id, required bool value}) async {
+    final data = {'id': id, 'value': value};
+    final resultId = isIsolate
+        ? await CustomGroupActions.setShowUnreadBadge(data)
+        : await GetIt.I<GlobalIsolate>().send<int>(IsolateRequestType.setCustomGroupShowUnreadBadge, input: data);
+    EventDispatcherSvc.emit('custom-groups-updated', null);
+    return Database.customGroups.get(resultId)!;
+  }
+
   static Future<void> delete({required int id}) async {
     final data = {'id': id};
     if (isIsolate) {

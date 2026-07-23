@@ -1,6 +1,7 @@
 import 'package:bluebubbles/app/components/avatars/contact_avatar_group_widget.dart';
 import 'package:bluebubbles/app/layouts/chat_selector_view/chat_selector_view.dart';
 import 'package:bluebubbles/app/layouts/settings/pages/custom_groups/create_group_dialog.dart';
+import 'package:bluebubbles/app/layouts/settings/pages/custom_groups/custom_group_options_menu.dart';
 import 'package:bluebubbles/app/layouts/settings/pages/custom_groups/custom_groups_controller.dart';
 import 'package:bluebubbles/app/layouts/settings/widgets/content/next_button.dart';
 import 'package:bluebubbles/app/layouts/settings/widgets/settings_widgets.dart';
@@ -67,6 +68,23 @@ class _CupertinoCustomGroupsPanelState extends State<CupertinoCustomGroupsPanel>
     );
   }
 
+  Future<void> _onRename(CustomGroup group) async {
+    final name = await showCreateGroupDialog(context, initialName: group.name);
+    if (name == null || name.isEmpty || !mounted) return;
+    await controller.renameGroup(group, name);
+  }
+
+  void _onOptions(CustomGroup group) {
+    showCustomGroupOptionsMenu(
+      context,
+      group: group,
+      onRename: () => _onRename(group),
+      onEditChats: () => _onEditChats(group),
+      onToggleUnreadBadge: () => controller.setShowUnreadBadge(group, !group.showUnreadBadge),
+      onDelete: () => _onDelete(group),
+    );
+  }
+
   List<Handle> _groupHandles(CustomGroup group) {
     final seen = <String>{};
     final handles = <Handle>[];
@@ -103,7 +121,26 @@ class _CupertinoCustomGroupsPanelState extends State<CupertinoCustomGroupsPanel>
           size: 30,
           editable: false,
         ),
-        trailing: const NextButton(),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (!group.showUnreadBadge)
+              Tooltip(
+                message: "Unread badge hidden",
+                child: Icon(
+                  CupertinoIcons.bell_slash_fill,
+                  size: 16,
+                  color: context.theme.colorScheme.outline,
+                ),
+              ),
+            CupertinoButton(
+              padding: EdgeInsets.zero,
+              onPressed: () => _onOptions(group),
+              child: Icon(CupertinoIcons.ellipsis_circle, color: context.theme.colorScheme.onSurfaceVariant),
+            ),
+            const NextButton(),
+          ],
+        ),
       ),
     );
   }

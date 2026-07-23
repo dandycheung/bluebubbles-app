@@ -732,6 +732,7 @@ enum IsolateRequestType {
   createCustomGroup,
   renameCustomGroup,
   updateCustomGroupChats,
+  setCustomGroupShowUnreadBadge,
   deleteCustomGroup,
 }
 

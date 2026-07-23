@@ -57,6 +57,16 @@ class CustomGroupActions {
     });
   }
 
+  static Future<int> setShowUnreadBadge(dynamic data) async {
+    final id = data['id'] as int;
+    final value = data['value'] as bool;
+    return Database.runInTransaction(TxMode.write, () {
+      final group = Database.customGroups.get(id)!;
+      group.showUnreadBadge = value;
+      return Database.customGroups.put(group);
+    });
+  }
+
   static Future<List<int>> getAllIds(dynamic data) async {
     return Database.runInTransaction(
         TxMode.read, () => Database.customGroups.getAll().map((g) => g.id!).toList());

@@ -1,6 +1,7 @@
 import 'package:bluebubbles/app/components/avatars/contact_avatar_group_widget.dart';
 import 'package:bluebubbles/app/layouts/chat_selector_view/chat_selector_view.dart';
 import 'package:bluebubbles/app/layouts/settings/pages/custom_groups/create_group_dialog.dart';
+import 'package:bluebubbles/app/layouts/settings/pages/custom_groups/custom_group_options_menu.dart';
 import 'package:bluebubbles/app/layouts/settings/pages/custom_groups/custom_groups_controller.dart';
 import 'package:bluebubbles/app/wrappers/bb_app_bar.dart';
 import 'package:bluebubbles/app/wrappers/bb_scaffold.dart';
@@ -47,6 +48,25 @@ class _MaterialCustomGroupsPanelState extends State<MaterialCustomGroupsPanel> {
     );
     if (chats == null) return;
     await controller.updateGroupChats(group, chats.map((c) => c.guid).toList());
+  }
+
+  Future<void> _onRename(CustomGroup group) async {
+    final name = await showCreateGroupDialog(context, initialName: group.name);
+    if (name == null || name.isEmpty || !mounted) return;
+    await controller.renameGroup(group, name);
+  }
+
+  void _onOptions(CustomGroup group) {
+    showCustomGroupOptionsMenu(
+      context,
+      group: group,
+      onRename: () => _onRename(group),
+      onEditChats: () => _onEditChats(group),
+      onToggleUnreadBadge: () => controller.setShowUnreadBadge(group, !group.showUnreadBadge),
+      onDelete: () async {
+        if (await _confirmDelete(group)) controller.deleteGroup(group);
+      },
+    );
   }
 
   List<Handle> _groupHandles(CustomGroup group) {
@@ -125,6 +145,25 @@ class _MaterialCustomGroupsPanelState extends State<MaterialCustomGroupsPanel> {
                 ),
                 title: Text(group.name),
                 subtitle: Text("${group.chats.length} chats"),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (!group.showUnreadBadge)
+                      Tooltip(
+                        message: "Unread badge hidden",
+                        child: Icon(
+                          Icons.notifications_off_outlined,
+                          size: 18,
+                          color: context.theme.colorScheme.outline,
+                        ),
+                      ),
+                    IconButton(
+                      icon: const Icon(Icons.more_vert),
+                      tooltip: "More options",
+                      onPressed: () => _onOptions(group),
+                    ),
+                  ],
+                ),
                 onTap: () => _onEditChats(group),
               ),
             );
