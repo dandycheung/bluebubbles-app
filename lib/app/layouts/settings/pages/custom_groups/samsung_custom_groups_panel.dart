@@ -80,6 +80,14 @@ class _SamsungCustomGroupsPanelState extends State<SamsungCustomGroupsPanel> {
     return handles;
   }
 
+  void _onReorder(int oldIndex, int newIndex) {
+    if (oldIndex < newIndex) newIndex -= 1;
+    final newOrder = controller.groups.toList();
+    final group = newOrder.removeAt(oldIndex);
+    newOrder.insert(newIndex, group);
+    controller.reorderGroups(newOrder);
+  }
+
   Future<bool> _confirmDelete(CustomGroup group) async {
     bool confirmed = false;
     await showAreYouSure(
@@ -101,6 +109,7 @@ class _SamsungCustomGroupsPanelState extends State<SamsungCustomGroupsPanel> {
   @override
   Widget build(BuildContext context) {
     return BBScaffold(
+      extendBodyBehindAppBar: false,
       appBar: BBAppBar(
         titleText: "Custom Groups",
         leading: buildBackButton(context),
@@ -122,7 +131,9 @@ class _SamsungCustomGroupsPanelState extends State<SamsungCustomGroupsPanel> {
             ),
           );
         }
-        return ListView.builder(
+        return ReorderableListView.builder(
+          buildDefaultDragHandles: false,
+          onReorder: _onReorder,
           itemCount: controller.groups.length,
           itemBuilder: (context, index) {
             final group = controller.groups[index];
@@ -161,6 +172,13 @@ class _SamsungCustomGroupsPanelState extends State<SamsungCustomGroupsPanel> {
                       icon: const Icon(Icons.more_vert),
                       tooltip: "More options",
                       onPressed: () => _onOptions(group),
+                    ),
+                    ReorderableDragStartListener(
+                      index: index,
+                      child: Icon(
+                        Icons.drag_handle,
+                        color: context.theme.colorScheme.outline,
+                      ),
                     ),
                   ],
                 ),

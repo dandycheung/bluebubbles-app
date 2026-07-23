@@ -125,5 +125,6 @@ class IsolateActons {
     IsolateRequestType.updateCustomGroupChats: CustomGroupActions.updateChats,
     IsolateRequestType.setCustomGroupShowUnreadBadge: CustomGroupActions.setShowUnreadBadge,
     IsolateRequestType.deleteCustomGroup: CustomGroupActions.delete,
+    IsolateRequestType.reorderCustomGroups: CustomGroupActions.reorder,
   };
 }

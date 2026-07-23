@@ -734,6 +734,7 @@ enum IsolateRequestType {
   updateCustomGroupChats,
   setCustomGroupShowUnreadBadge,
   deleteCustomGroup,
+  reorderCustomGroups,
 }
 
 /// Internal class to track pending requests

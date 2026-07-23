@@ -51,4 +51,9 @@ class CustomGroupsController extends GetxController {
   Future<void> deleteGroup(CustomGroup group) async {
     await CustomGroupInterface.delete(id: group.id!);
   }
+
+  Future<void> reorderGroups(List<CustomGroup> newOrder) async {
+    groups.value = newOrder;
+    await CustomGroupInterface.reorder(ids: newOrder.map((g) => g.id!).toList());
+  }
 }

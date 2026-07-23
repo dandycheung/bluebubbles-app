@@ -68,8 +68,23 @@ class CustomGroupActions {
   }
 
   static Future<List<int>> getAllIds(dynamic data) async {
-    return Database.runInTransaction(
-        TxMode.read, () => Database.customGroups.getAll().map((g) => g.id!).toList());
+    return Database.runInTransaction(TxMode.read, () {
+      final groups = Database.customGroups.getAll();
+      groups.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+      return groups.map((g) => g.id!).toList();
+    });
+  }
+
+  static Future<void> reorder(dynamic data) async {
+    final ids = (data['ids'] as List).cast<int>();
+    Database.runInTransaction(TxMode.write, () {
+      for (var i = 0; i < ids.length; i++) {
+        final group = Database.customGroups.get(ids[i]);
+        if (group == null) continue;
+        group.sortOrder = i;
+        Database.customGroups.put(group);
+      }
+    });
   }
 
   static Future<void> delete(dynamic data) async {

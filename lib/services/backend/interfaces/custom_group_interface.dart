@@ -50,6 +50,16 @@ class CustomGroupInterface {
     return Database.customGroups.get(resultId)!;
   }
 
+  static Future<void> reorder({required List<int> ids}) async {
+    final data = {'ids': ids};
+    if (isIsolate) {
+      await CustomGroupActions.reorder(data);
+    } else {
+      await GetIt.I<GlobalIsolate>().send<void>(IsolateRequestType.reorderCustomGroups, input: data);
+    }
+    EventDispatcherSvc.emit('custom-groups-updated', null);
+  }
+
   static Future<void> delete({required int id}) async {
     final data = {'id': id};
     if (isIsolate) {

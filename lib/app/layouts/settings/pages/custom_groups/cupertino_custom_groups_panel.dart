@@ -96,7 +96,15 @@ class _CupertinoCustomGroupsPanelState extends State<CupertinoCustomGroupsPanel>
     return handles;
   }
 
-  Widget _buildGroupRow(CustomGroup group) {
+  void _onReorder(int oldIndex, int newIndex) {
+    if (oldIndex < newIndex) newIndex -= 1;
+    final newOrder = controller.groups.toList();
+    final group = newOrder.removeAt(oldIndex);
+    newOrder.insert(newIndex, group);
+    controller.reorderGroups(newOrder);
+  }
+
+  Widget _buildGroupRow(CustomGroup group, int index) {
     return Slidable(
       key: ValueKey(group.id),
       endActionPane: ActionPane(
@@ -139,6 +147,14 @@ class _CupertinoCustomGroupsPanelState extends State<CupertinoCustomGroupsPanel>
               child: Icon(CupertinoIcons.ellipsis_circle, color: context.theme.colorScheme.onSurfaceVariant),
             ),
             const NextButton(),
+            const SizedBox(width: 12),
+            ReorderableDragStartListener(
+              index: index,
+              child: Icon(
+                CupertinoIcons.line_horizontal_3,
+                color: context.theme.colorScheme.outline,
+              ),
+            ),
           ],
         ),
       ),
@@ -186,14 +202,20 @@ class _CupertinoCustomGroupsPanelState extends State<CupertinoCustomGroupsPanel>
                       )
                     : Padding(
                         padding: const EdgeInsets.only(top: 8),
-                        child: SettingsSection(
-                          backgroundColor: tileColor,
-                          children: [
-                            for (int i = 0; i < groups.length; i++) ...[
-                              _buildGroupRow(groups[i]),
-                              if (i < groups.length - 1) const SettingsDivider(),
+                        child: ReorderableListView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          buildDefaultDragHandles: false,
+                          onReorder: _onReorder,
+                          itemCount: groups.length,
+                          itemBuilder: (context, index) => Column(
+                            key: ValueKey(groups[index].id),
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _buildGroupRow(groups[index], index),
+                              if (index < groups.length - 1) const SettingsDivider(),
                             ],
-                          ],
+                          ),
                         ),
                       ),
           ),
