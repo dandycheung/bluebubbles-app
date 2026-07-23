@@ -505,7 +505,9 @@ class _MessageHolderState extends State<MessageHolder> with ThemeHelpers {
                                                                             e.part, () => ValueNotifier(0))
                                                                         : null,
                                                                     child: SwipeToReplyWrapper(
-                                                                      enabled: canSwipeToReply && !isEditing(e.part),
+                                                                      enabled: canSwipeToReply &&
+                                                                          !isEditing(e.part) &&
+                                                                          !(iOS && e.isMediaGallery),
                                                                       partIndex: index,
                                                                       replyOffset: replyOffsets[index],
                                                                       cvController: widget.cvController,
