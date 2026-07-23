@@ -574,13 +574,17 @@ class _MessageHolderState extends State<MessageHolder> with ThemeHelpers {
                                                                   ),
                                                                 ),
                                                                 // Reactions are in the inner Stack so they are always
-                                                                // positioned relative to the bubble, not the sticker
-                                                                MessageReactions(
-                                                                  messageParts: messageParts,
-                                                                  part: e,
-                                                                  chatGuid: chat.guid,
-                                                                  reactionsForPart: reactionsForPart,
-                                                                ),
+                                                                // positioned relative to the bubble, not the sticker.
+                                                                // Gallery parts show a reaction per attachment instead
+                                                                // (inside MessageImageGallery), since a tapback can be
+                                                                // associated with just one image/video in the gallery.
+                                                                if (!(iOS && e.isMediaGallery))
+                                                                  MessageReactions(
+                                                                    messageParts: messageParts,
+                                                                    part: e,
+                                                                    chatGuid: chat.guid,
+                                                                    reactionsForPart: reactionsForPart,
+                                                                  ),
                                                               ],
                                                             ),
                                                             // Stickers are in the outer Stack so they contribute to
