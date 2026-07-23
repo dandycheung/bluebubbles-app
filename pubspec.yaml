@@ -43,6 +43,7 @@ dependencies:
   csslib: ^1.0.2
   cupertino_icons: ^1.0.8
   defer_pointer: ^0.0.2
+  desktop_drop: ^0.7.1
   desktop_webview_auth:
     git:
       url: https://github.com/BlueBubblesApp/flutter_desktop_webview_auth.git
@@ -164,7 +165,6 @@ dependencies:
   sprung: ^3.0.1
   store_checker: ^1.8.0
   synchronized: ^3.3.0+3
-  super_drag_and_drop: ^0.9.1
   supercharged: ^2.1.1
   system_info2: ^4.0.0
   tray_manager: ^0.5.1
