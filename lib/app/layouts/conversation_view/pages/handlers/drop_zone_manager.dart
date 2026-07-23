@@ -1,13 +1,10 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:bluebubbles/database/global/platform_file.dart';
 import 'package:bluebubbles/services/services.dart';
-import 'package:bluebubbles/utils/logger/logger.dart';
 import 'package:desktop_drop/desktop_drop.dart';
 import 'package:get/get.dart';
-import 'package:path/path.dart' hide context;
 import 'package:universal_io/io.dart';
 
 /// Manages drag-and-drop file operations on the message list.
