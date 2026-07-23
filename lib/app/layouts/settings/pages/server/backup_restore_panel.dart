@@ -291,14 +291,18 @@ class _BackupRestorePanelState extends State<BackupRestorePanel> with ThemeHelpe
                                       "Are you sure you want to replace this backup with your current Settings?",
                                     ),
                                     onYes: () {
-                                      Navigator.of(_context).pop();
+                                      // Confirmation dialog is on the root navigator (showBBDialog uses
+                                      // useRootNavigator: true), so it must be popped from there.
+                                      Navigator.of(_context, rootNavigator: true).pop();
                                       yes = true;
                                     },
                                   );
                                   if (!yes) return;
-                                } else {
-                                  Navigator.of(_context).pop();
                                 }
+                                // Dismiss the name-entry dialog (also on the root navigator) before
+                                // performing the backup. Using the non-root navigator here would pop
+                                // the settings page instead, leaving the dialog stuck open.
+                                Navigator.of(_context, rootNavigator: true).pop();
                                 Map<String, dynamic> json = SettingsSvc.settings.toMap(includeAll: false);
                                 if (desc.isNotEmpty) {
                                   json["description"] = desc;
