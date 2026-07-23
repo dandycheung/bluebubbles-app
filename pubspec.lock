@@ -557,10 +557,11 @@ packages:
   desktop_drop:
     dependency: "direct main"
     description:
-      name: desktop_drop
-      sha256: aa1e797255bfbc76f9eb5aa4f61e5b68dbf69962ab1be6495816d2f251bc0d1f
-      url: "https://pub.dev"
-    source: hosted
+      path: "packages/desktop_drop"
+      ref: "83d5f846f83307b115191a80a1e9ecbda9804570"
+      resolved-ref: "83d5f846f83307b115191a80a1e9ecbda9804570"
+      url: "https://github.com/jjoelj/flutter-plugins.git"
+    source: git
     version: "0.7.1"
   desktop_webview_auth:
     dependency: "direct main"

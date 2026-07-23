@@ -43,7 +43,11 @@ dependencies:
   csslib: ^1.0.2
   cupertino_icons: ^1.0.8
   defer_pointer: ^0.0.2
-  desktop_drop: ^0.7.1
+  desktop_drop:
+    git:
+      url: https://github.com/jjoelj/flutter-plugins.git
+      ref: 83d5f846f83307b115191a80a1e9ecbda9804570
+      path: packages/desktop_drop
   desktop_webview_auth:
     git:
       url: https://github.com/BlueBubblesApp/flutter_desktop_webview_auth.git
